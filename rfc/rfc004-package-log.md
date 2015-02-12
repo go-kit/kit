@@ -1,7 +1,7 @@
 ---
 RFC: 004
 Author: Peter Bourgon <peter@bourgon.org>
-Status: Proposed
+Status: Draft
 ---
 
 # package log

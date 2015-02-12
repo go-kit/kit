@@ -1,7 +1,7 @@
 ---
 RFC: 005
 Author: Peter Bourgon <peter@bourgon.org>
-Status: Proposed
+Status: Draft
 ---
 
 # Service discovery

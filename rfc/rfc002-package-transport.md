@@ -1,7 +1,7 @@
 ---
 RFC: 002
 Author: Peter Bourgon <peter@bourgon.org>
-Status: Proposed
+Status: Draft
 ---
 
 # package transport
