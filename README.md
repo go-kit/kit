@@ -4,7 +4,7 @@
 
 - [GitHub repository](https://github.com/peterbourgon/gokit) -- RFCs, issues, PRs, etc.
 - [go-kit mailing list](https://groups.google.com/forum/#!forum/go-kit)
-- #gokit on [Freenode](https://freenode.net)
+- [Freenode](https://freenode.net) #gokit
 
 ## Motivation
 
