@@ -37,7 +37,7 @@ Package server is probably the biggest and most important component of the toolk
 *   A server MAY limit the total number of concurrent requests it can serve.
 *   A server MAY impose rate limits on specific clients.
 *   Rate limit behaviour MAY range from minimum request intervals, to time based, or leaky bucket algorithms.
-*   A server MAY implement a pluggable throttle interface, allowing richer implementations - such as an implementation which shares information across instances of the service, using some system such as memcached.
+*   A server MAY implement a pluggable throttle interface, allowing richer implementations - such as an implementation which shares information across instances of the service
 
 ### Backpressure
 
