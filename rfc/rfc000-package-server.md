@@ -23,7 +23,7 @@ Package server is probably the biggest and most important component of the toolk
 *   An endpoint is defined as a handler interface which receives a request and returns a response or an error to the client.
 *   A server SHALL have one or more endpoints.
 *   An endpoint SHALL accept a request context and propagate this - allowing access to request-specific values such as the identity of the end user, authorization tokens, and the request's deadline.
-*   An endpoint MAY respect request cancellation if or when the request's deadline expires.
+*   An endpoint SHALL respect request cancellation if or when the request's deadline expires.
 *   A server MAY expose information about its endpoints, to allow integration with additional tools.
 
 ### Contexts
