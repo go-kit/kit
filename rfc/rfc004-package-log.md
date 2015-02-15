@@ -18,7 +18,7 @@ http://peter.bourgon.org/go-kit/#package-log
 ** Log MAY provide some pre-canned default keys (level, time, etc) for convenience
 * Log MAY allow multiple stored logging contexts each with a different set of k/v pairs.
 ** Log MAY allow per log call adhoc k/v pairs (see Logrus as an example)
-* Log SHALL be transport agnostic by accepting and io.Writer as output target.
+* Log SHALL be transport agnostic with pluggable transports.
 * Log SHALL provide a default stdout io.Writer.
 * Log MAY implement io.MultiWriters allowing broadcast of logs over multiple transports.
 ** Log MAY use channels instead
