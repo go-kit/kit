@@ -49,7 +49,7 @@ Package server is probably the biggest and most important component of the toolk
 
 ### Healthchecks
 
-*   A server SHALL accept registratration of healthchecks with a defined interface.
+*   A server SHALL accept registration of healthchecks with a defined interface.
 *   A server MAY register default healthchecks to report the health of built in components of the server.
 *   A server SHALL register an endpoint which can be queried to obtain healthcheck information and status.
 *   A server MAY publish these healthcheck statuses via a pluggable transport.
