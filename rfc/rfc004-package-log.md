@@ -1,7 +1,7 @@
 ---
 RFC: 004
 Authors: Brian Knox <bknox@digitalocean.com>
-Status: Draft
+Status: Accepted
 ---
 
 # package log
