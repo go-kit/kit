@@ -26,10 +26,12 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and, eventually,
 
 ## Related projects
 
+Projects with a ★ have had particular influence on gokit's design.
+
 ### Service frameworks
 
 - [Kite](https://github.com/koding/kite), a micro-service framework
-- [go-micro](https://github.com/asim/go-micro), a microservices client/server library
+- [go-micro](https://github.com/asim/go-micro), a microservices client/server library ★
 - [gocircuit](https://github.com/gocircuit/circuit), dynamic cloud orchestration
 - [gotalk](https://github.com/rsms/gotalk), async peer communication protocol &amp; library
 
@@ -44,7 +46,8 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and, eventually,
 - [sourcegraph/apptrace](https://github.com/sourcegraph/apptrace), application tracing system based on Google's Dapper
 - [eapache/go-resiliency](https://github.com/eapache/go-resiliency), resiliency patterns
 - [FogCreek/logging](https://github.com/FogCreek/logging), a tagged style of logging
-- [Sirupsen/logrus](https://github.com/Sirupsen/logrus), structured, pluggable logging for Go
+- [Sirupsen/logrus](https://github.com/Sirupsen/logrus), structured, pluggable logging for Go ★
+- [mailgun/vulcand](https://github.com/mailgun/vulcand), prorammatic load balancer backed by etcd
 
 ### Web frameworks
 
