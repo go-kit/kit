@@ -30,18 +30,14 @@ Package server is probably the biggest and most important component of the toolk
 
 *   Requests SHALL be executed within a request [context](https://blog.golang.org/context), which the server will pass through the request chain.
 
-### Throttling
+### Throttling & Backpressure
 
 *   A server MAY throttle inbound requests and reject requests from clients based on a number of factors.
 *   A server MAY respond with either an Out Of Capacity error, or a Rate Limit Exceeded error when rejecting requests.
 *   A server MAY limit the total number of concurrent requests it can serve.
 *   A server MAY impose rate limits on specific clients.
 *   Rate limit behaviour MAY range from minimum request intervals, to time based, or leaky bucket algorithms.
-*   A server MAY implement a pluggable throttle interface, allowing richer implementations - such as an implementation which shares information across instances of the service
-
-### Backpressure
-
-*   A server MAY return back-pressure information to clients, via the transport.
+*   A server MAY implement a pluggable throttle interface, allowing richer implementations - such as an implementation which shares information across instances of the service.
 
 ### SLAs
 
