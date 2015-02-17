@@ -43,7 +43,7 @@ Projects with a ★ have had particular influence on gokit's design.
 - [spacemonkeygo/monitor](https://github.com/spacemonkeygo/monitor), data collection, monitoring, instrumentation, and Zipkin client library
 - [mattheath/phosphor](https://github.com/mattheath/phosphor), distributed system tracing
 - [codahale/lunk](https://github.com/codahale/lunk), structured logging in the style of Google's Dapper or Twitter's Zipkin
-- [sourcegraph/apptrace](https://github.com/sourcegraph/apptrace), application tracing system based on Google's Dapper
+- [sourcegraph/appdash](https://github.com/sourcegraph/appdash), application tracing system based on Google's Dapper
 - [eapache/go-resiliency](https://github.com/eapache/go-resiliency), resiliency patterns
 - [FogCreek/logging](https://github.com/FogCreek/logging), a tagged style of logging
 - [Sirupsen/logrus](https://github.com/Sirupsen/logrus), structured, pluggable logging for Go ★
