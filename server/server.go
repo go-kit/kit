@@ -24,7 +24,7 @@ type Service func(context.Context, Request) (Response, error)
 
 // Codec TODO
 type Codec interface {
-	Decode(src io.Reader) (Request, error)
+	Decode(ctx context.Context, src io.Reader) (Request, error)
 	Encode(dst io.Writer, resp Response) error
 }
 
@@ -38,7 +38,8 @@ func HTTPService(c Codec, s Service) http.Handler {
 
 		// TODO populate with trace ID, etc.
 
-		req, err := c.Decode(r.Body)
+		// Codecs may also populate the context with information.
+		req, err := c.Decode(ctx, r.Body)
 		r.Body.Close()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

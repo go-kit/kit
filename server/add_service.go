@@ -51,7 +51,7 @@ func AddService(ctx context.Context, req Request) (Response, error) {
 type AddCodecJSON struct{}
 
 // Decode TODO
-func (c *AddCodecJSON) Decode(src io.Reader) (Request, error) {
+func (c *AddCodecJSON) Decode(_ context.Context, src io.Reader) (Request, error) {
 	var req AddRequest
 	if err := json.NewDecoder(src).Decode(&req); err != nil {
 		return nil, err
