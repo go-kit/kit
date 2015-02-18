@@ -12,7 +12,7 @@ import (
 
 func TestOkay(t *testing.T) {
 	codec := &AddCodecJSON{}
-	service := AddService
+	service := AddService(PureAdd)
 	server := httptest.NewServer(HTTPService(codec, service))
 	defer server.Close()
 
