@@ -11,13 +11,13 @@ import (
 )
 
 func TestOkay(t *testing.T) {
-	codec := &Add_Codec_JSON{}
-	service := Add_Service
-	server := httptest.NewServer(HTTPServer(codec, service))
+	codec := &AddCodecJSON{}
+	service := AddService
+	server := httptest.NewServer(HTTPService(codec, service))
 	defer server.Close()
 
 	var a, b int = 1, 2
-	buf, err := json.Marshal(Add_Request{A: a, B: b})
+	buf, err := json.Marshal(AddRequest{A: a, B: b})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestOkay(t *testing.T) {
 		t.Fatalf("want HTTP %d, have %d (%s)", want, have, buf)
 	}
 
-	var addResp Add_Response
+	var addResp AddResponse
 	if err := json.NewDecoder(resp.Body).Decode(&addResp); err != nil {
 		t.Fatal(err)
 	}

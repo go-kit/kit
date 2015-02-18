@@ -4,24 +4,40 @@ import (
 	"errors"
 	"io"
 	"net/http"
+
+	"golang.org/x/net/context"
 )
 
 var (
+	// ErrBadCast is an internal error.
 	ErrBadCast = errors.New("bad cast")
 )
 
+// Request TODO
 type Request interface{}
+
+// Response TODO
 type Response interface{}
 
-type Service func(Request) (Response, error)
+// Service represents a single method.
+type Service func(context.Context, Request) (Response, error)
 
+// Codec TODO
 type Codec interface {
 	Decode(src io.Reader) (Request, error)
 	Encode(dst io.Writer, resp Response) error
 }
 
-func HTTPServer(c Codec, s Service) http.Handler {
+// HTTPService TODO
+func HTTPService(c Codec, s Service) http.Handler {
+	ctx := context.Background()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// TODO if deadline/timeout specified, use a different constructor?
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		// TODO populate with trace ID, etc.
+
 		req, err := c.Decode(r.Body)
 		r.Body.Close()
 		if err != nil {
@@ -29,7 +45,7 @@ func HTTPServer(c Codec, s Service) http.Handler {
 			return
 		}
 
-		resp, err := s(req)
+		resp, err := s(ctx, req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
