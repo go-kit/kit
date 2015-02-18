@@ -29,8 +29,7 @@ type Codec interface {
 }
 
 // HTTPService TODO
-func HTTPService(c Codec, s Service) http.Handler {
-	ctx := context.Background()
+func HTTPService(ctx context.Context, c Codec, s Service) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// TODO if deadline/timeout specified, use a different constructor?
 		ctx, cancel := context.WithCancel(ctx)

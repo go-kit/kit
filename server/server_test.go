@@ -6,14 +6,16 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-
 	"testing"
+
+	"golang.org/x/net/context"
 )
 
 func TestOkay(t *testing.T) {
+	ctx := context.Background()
 	codec := &AddCodecJSON{}
 	service := AddService(PureAdd)
-	server := httptest.NewServer(HTTPService(codec, service))
+	server := httptest.NewServer(HTTPService(ctx, codec, service))
 	defer server.Close()
 
 	var a, b int = 1, 2
