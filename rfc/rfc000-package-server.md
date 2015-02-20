@@ -1,10 +1,10 @@
-# Package Server
-
 ---
 RFC: 000
 Author: Matt Heath <matt@mattheath.com>
 Status: Accepted
 ---
+
+# Package Server
 
 ## Motivation
 
