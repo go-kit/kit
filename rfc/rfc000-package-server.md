@@ -3,10 +3,8 @@
 ---
 
 RFC: 000
-
 Author: Matt Heath <matt@mattheath.com>
-
-Status: Draft
+Status: Accepted
 
 ---
 
@@ -14,9 +12,11 @@ Status: Draft
 
 [http://peter.bourgon.org/go-kit/#package-server](http://peter.bourgon.org/go-kit/#package-server)
 
-Package server is probably the biggest and most important component of the toolkit. Ideally, we should be able to write our services as implementations of normal, nominal Go interfaces, and delegate integration with the environment to the server package. The package should encode and enforce conventions for server-side concerns, like health checks, system-wide request tracing, connection management, backpressure and throttling, and so on. For each of those topics, it should provide interfaces for different, pluggable strategies. It should integrate with service discovery, and work equally well over multiple transports. Considerable prior art exists in the form of Finagle, Karyon (Netflixs application service library), and likely many more.
+Package server is probably the biggest and most important component of the toolkit. Ideally, we should be able to write our services as implementations of normal, nominal Go interfaces, and delegate integration with the environment to the server package. The package should encode and enforce conventions for server-side concerns, like health checks, system-wide request tracing, connection management, backpressure and throttling, and so on. For each of those topics, it should provide interfaces for different, pluggable strategies. It should integrate with service discovery, and work equally well over multiple transports. Considerable prior art exists in the form of Finagle, Karyon (Netflix's application service library), and likely many more.
 
 ## Scope
+
+Sections with a ★ are considered particularly volatile, and may change significantly in the future.
 
 ### Endpoints
 
@@ -39,11 +39,12 @@ Package server is probably the biggest and most important component of the toolk
 *   Rate limit behaviour MAY range from minimum request intervals, to time based, or leaky bucket algorithms.
 *   A server MAY implement a pluggable throttle interface, allowing richer implementations - such as an implementation which shares information across instances of the service.
 
-### SLAs
+### SLAs & SLIs
 
-*   A server MAY report its SLA per endpoint to a discovery system, allowing clients to estimate response time.
+*   A server MAY report its contractual SLA per endpoint to a discovery system, allowing clients to estimate response time.
+*	A server MAY expose its actual SLI per endpoint, allowing third-parties to reason about healthiness.
 
-### Healthchecks
+### Healthchecks ★
 
 *   A server SHALL accept registration of healthchecks with a defined interface.
 *   A server MAY register default healthchecks to report the health of built in components of the server.
@@ -66,7 +67,7 @@ Package server is probably the biggest and most important component of the toolk
 *   A server SHALL receive and respond to requests via a Transport.
 *   The Transport mechanism SHALL be interchangeable, and satisfy a defined interface, however the mechanism of the transport is beyond the scope of this RFC.
 
-### Codec
+### Codec ★
 
 *   A server SHALL encode and decode requests and responses via an interchangeable Codec.
 *   A server MAY support multiple encodings, and use the appropriate Codec as indicated by the transport.
@@ -78,10 +79,7 @@ To be defined.
 
 ## Further Reading
 
-[Your Server as a Function](http://monkey.org/~marius/funsrv.pdf) - Marius Eriksen
-
-[Finagle](https://twitter.github.io/finagle/) - Twitter
-
-[Karyon](https://github.com/Netflix/karyon) - Netflix
-
-[State of the Art in Microservices](https://www.slideshare.net/adriancockcroft/dockercon-state-of-the-art-in-microservices) - Adrian Cockcroft
+*	[Your Server as a Function](http://monkey.org/~marius/funsrv.pdf) - Marius Eriksen
+*	[Finagle](https://twitter.github.io/finagle/) - Twitter
+*	[Karyon](https://github.com/Netflix/karyon) - Netflix
+*	[State of the Art in Microservices](https://www.slideshare.net/adriancockcroft/dockercon-state-of-the-art-in-microservices) - Adrian Cockcroft
