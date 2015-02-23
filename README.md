@@ -49,6 +49,7 @@ Projects with a ★ have had particular influence on gokit's design.
 - [Sirupsen/logrus](https://github.com/Sirupsen/logrus), structured, pluggable logging for Go ★
 - [mailgun/vulcand](https://github.com/mailgun/vulcand), prorammatic load balancer backed by etcd
 - [vitess/rpcplus](https://godoc.org/code.google.com/p/vitess/go/rpcplus), package rpc + context.Context
+- [pivotal-golang/lager](https://github.com/pivotal-golang/lager), an opinionated logging library
 
 ### Web frameworks
 
