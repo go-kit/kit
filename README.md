@@ -37,6 +37,7 @@ Projects with a ★ have had particular influence on gokit's design.
 
 ### Individual components
 
+- [grpc/grpc-go](https://github.com/grpc/grpc-go), HTTP/2 based RPC
 - [afex/hystrix-go](https://github.com/afex/hystrix-go), client-side latency and fault tolerance library
 - [streadway/handy](https://github.com/streadway/handy), net/http handler filters
 - [rubyist/circuitbreaker](https://github.com/rubyist/circuitbreaker), circuit breaker library
