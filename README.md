@@ -24,6 +24,28 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and, eventually,
 - Having opinions on configuration passing -- flags vs. env vars vs. files vs. ...
 - _more TODO_
 
+## Contributing
+
+At this stage, we're still developing the initial drafts of all of the
+packages, using an
+[RFC workflow](https://github.com/peterbourgon/gokit/tree/master/rfc). 
+Before submitting major changes, please write to
+ [the mailing list](groups.google.com/forum/#!forum/go-kit)
+to register your interest, and check the 
+ [open issues](https://github.com/peterbourgon/gokit/issues) and 
+ [pull requests](https://github.com/peterbourgon/gokit/pulls)
+for existing discussions.
+
+### Dependency management
+
+Users who import gokit into their `package main` are responsible to organize
+and maintain all of their dependencies to ensure code compatibility and build
+reproducibility. Gokit makes no direct use of dependency management tools like
+[Godep](https://github.com/tools/godep).
+
+We will use a variety of continuous integration providers to find and fix
+compatibility problems as soon as they occur.
+
 ## Related projects
 
 Projects with a ★ have had particular influence on gokit's design.
