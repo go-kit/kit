@@ -28,11 +28,11 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and, eventually,
 
 At this stage, we're still developing the initial drafts of all of the
 packages, using an
-[RFC workflow](https://github.com/peterbourgon/gokit/tree/master/rfc). 
+[RFC workflow](https://github.com/peterbourgon/gokit/tree/master/rfc).
 Before submitting major changes, please write to
  [the mailing list](groups.google.com/forum/#!forum/go-kit)
-to register your interest, and check the 
- [open issues](https://github.com/peterbourgon/gokit/issues) and 
+to register your interest, and check the
+ [open issues](https://github.com/peterbourgon/gokit/issues) and
  [pull requests](https://github.com/peterbourgon/gokit/pulls)
 for existing discussions.
 
@@ -73,6 +73,7 @@ Projects with a ★ have had particular influence on gokit's design.
 - [mailgun/vulcand](https://github.com/mailgun/vulcand), prorammatic load balancer backed by etcd
 - [vitess/rpcplus](https://godoc.org/code.google.com/p/vitess/go/rpcplus), package rpc + context.Context
 - [pivotal-golang/lager](https://github.com/pivotal-golang/lager), an opinionated logging library
+- [inconshreveable/log15](https://github.com/inconshreveable/log15), simple, powerful logging for Go
 
 ### Web frameworks
 
