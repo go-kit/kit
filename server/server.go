@@ -19,8 +19,8 @@ type Request interface{}
 // Response TODO
 type Response interface{}
 
-// Service represents a single method.
-type Service func(context.Context, Request) (Response, error)
+// Endpoint represents a single method.
+type Endpoint func(context.Context, Request) (Response, error)
 
 // Codec TODO
 type Codec interface {
@@ -28,8 +28,8 @@ type Codec interface {
 	Encode(dst io.Writer, resp Response) error
 }
 
-// HTTPService TODO
-func HTTPService(ctx context.Context, c Codec, s Service) http.Handler {
+// HTTPEndpoint TODO
+func HTTPEndpoint(ctx context.Context, c Codec, e Endpoint) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// TODO if deadline/timeout specified, use a different constructor?
 		ctx, cancel := context.WithCancel(ctx)
@@ -45,7 +45,7 @@ func HTTPService(ctx context.Context, c Codec, s Service) http.Handler {
 			return
 		}
 
-		resp, err := s(ctx, req)
+		resp, err := e(ctx, req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

@@ -14,8 +14,8 @@ import (
 func TestOkay(t *testing.T) {
 	ctx := context.Background()
 	codec := &AddCodecJSON{}
-	service := AddService(PureAdd)
-	server := httptest.NewServer(HTTPService(ctx, codec, service))
+	endpoint := AddEndpoint(PureAdd)
+	server := httptest.NewServer(HTTPEndpoint(ctx, codec, endpoint))
 	defer server.Close()
 
 	var a, b int = 1, 2
