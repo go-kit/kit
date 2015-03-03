@@ -29,10 +29,11 @@ type Codec interface {
 }
 
 // HTTPEndpoint TODO
-func HTTPEndpoint(ctx context.Context, c Codec, e Endpoint) http.Handler {
+func HTTPEndpoint(parent context.Context, c Codec, e Endpoint) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// TODO if parent is canceled, return an error code
 		// TODO if deadline/timeout specified, use a different constructor?
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(parent)
 		defer cancel()
 
 		// TODO populate with trace ID, etc.
