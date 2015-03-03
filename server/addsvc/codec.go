@@ -12,19 +12,13 @@ import (
 type jsonCodec struct{}
 
 // Decode TODO
-func (c jsonCodec) Decode(_ context.Context, src io.Reader) (server.Request, error) {
+func (jsonCodec) Decode(_ context.Context, src io.Reader) (server.Request, error) {
 	var addReq Request
-	if err := json.NewDecoder(src).Decode(&addReq); err != nil {
-		return nil, err
-	}
-	return addReq, nil
+	err := json.NewDecoder(src).Decode(&addReq)
+	return addReq, err
 }
 
 // Encode TODO
-func (c jsonCodec) Encode(dst io.Writer, resp server.Response) error {
-	addResp, ok := resp.(Response)
-	if !ok {
-		return server.ErrBadCast
-	}
-	return json.NewEncoder(dst).Encode(addResp)
+func (jsonCodec) Encode(dst io.Writer, resp server.Response) error {
+	return json.NewEncoder(dst).Encode(resp)
 }
