@@ -8,7 +8,7 @@
 
 ## Motivation
 
-See [the motivating blog post](http://peter.bourgon.org/go-kit) and, eventually, the video of the talk.
+See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video of the talk](https://www.youtube.com/watch?v=iFR_7AKkJFU).
 
 ## Goals
 
