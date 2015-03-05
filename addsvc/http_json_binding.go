@@ -5,10 +5,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/peterbourgon/gokit/transport/codec"
+	"golang.org/x/net/context"
 
 	"github.com/peterbourgon/gokit/server"
-	"golang.org/x/net/context"
+	"github.com/peterbourgon/gokit/transport/codec"
 )
 
 type jsonCodec struct{}
