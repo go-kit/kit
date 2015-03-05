@@ -4,7 +4,7 @@ package pb;
 
 // The Add service definition.
 service Add {
-  // Adds two int32s.
+  // Adds two integers.
   rpc Add (AddRequest) returns (AddReply) {}
 }
 

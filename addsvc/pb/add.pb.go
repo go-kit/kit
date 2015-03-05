@@ -53,7 +53,7 @@ func init() {
 // Client API for Add service
 
 type AddClient interface {
-	// Adds two int32s.
+	// Adds two integers.
 	Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddReply, error)
 }
 
@@ -77,7 +77,7 @@ func (c *addClient) Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOp
 // Server API for Add service
 
 type AddServer interface {
-	// Adds two int32s.
+	// Adds two integers.
 	Add(context.Context, *AddRequest) (*AddReply, error)
 }
 
