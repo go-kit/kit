@@ -30,7 +30,7 @@ At this stage, we're still developing the initial drafts of all of the
 packages, using an
 [RFC workflow](https://github.com/peterbourgon/gokit/tree/master/rfc).
 Before submitting major changes, please write to
- [the mailing list](groups.google.com/forum/#!forum/go-kit)
+ [the mailing list](https://groups.google.com/forum/#!forum/go-kit)
 to register your interest, and check the
  [open issues](https://github.com/peterbourgon/gokit/issues) and
  [pull requests](https://github.com/peterbourgon/gokit/pulls)
