@@ -111,6 +111,53 @@ func (g prometheusGauge) Add(delta int64) {
 	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Add(float64(delta))
 }
 
+type prometheusGaugeFloat struct {
+	*prometheus.GaugeVec
+	Pairs map[string]string
+}
+
+// NewGaugeFloat returns a new GaugeFloat backed by a Prometheus metric. The gauge is
+// automatically registered via prometheus.Register.
+func NewGaugeFloat(namespace, subsystem, name, help string, fieldKeys []string) metrics.GaugeFloat {
+	return NewGaugeFloatWithLabels(namespace, subsystem, name, help, fieldKeys, prometheus.Labels{})
+}
+
+// NewGaugeWithLabels is the same as NewGauge, but attaches a set of const
+// label pairs to the metric.
+func NewGaugeFloatWithLabels(namespace, subsystem, name, help string, fieldKeys []string, constLabels prometheus.Labels) metrics.GaugeFloat {
+	m := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace:   namespace,
+			Subsystem:   subsystem,
+			Name:        name,
+			Help:        help,
+			ConstLabels: constLabels,
+		},
+		fieldKeys,
+	)
+	prometheus.MustRegister(m)
+
+	return prometheusGaugeFloat{
+		GaugeVec: m,
+		Pairs:    pairsFrom(fieldKeys),
+	}
+}
+
+func (g prometheusGaugeFloat) With(f metrics.Field) metrics.GaugeFloat {
+	return prometheusGaugeFloat{
+		GaugeVec: g.GaugeVec,
+		Pairs:    merge(g.Pairs, f),
+	}
+}
+
+func (g prometheusGaugeFloat) Set(value float64) {
+	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Set(value)
+}
+
+func (g prometheusGaugeFloat) Add(delta float64) {
+	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Add(delta)
+}
+
 type prometheusHistogram struct {
 	*prometheus.SummaryVec
 	Pairs map[string]string

@@ -57,6 +57,22 @@ func (g *gauge) Add(delta int64) { g.v.Add(delta) }
 
 func (g *gauge) Set(value int64) { g.v.Set(value) }
 
+type gaugeFloat struct {
+	v *expvar.Float
+}
+
+// NewGaugeFloat returns a new GaugeFloat backed by an expvar with the given name.
+// Fields are ignored.
+func NewGaugeFloat(name string) metrics.GaugeFloat {
+	return &gaugeFloat{expvar.NewFloat(name)}
+}
+
+func (g *gaugeFloat) With(metrics.Field) metrics.GaugeFloat { return g }
+
+func (g *gaugeFloat) Add(delta float64) { g.v.Add(delta) }
+
+func (g *gaugeFloat) Set(value float64) { g.v.Set(value) }
+
 type histogram struct {
 	mu   sync.Mutex
 	hist *hdrhistogram.WindowedHistogram
