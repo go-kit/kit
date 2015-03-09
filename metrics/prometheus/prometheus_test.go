@@ -66,6 +66,26 @@ func TestPrometheusGauge(t *testing.T) {
 	}
 }
 
+func TestPrometheusGaugeFloat(t *testing.T) {
+	c := prometheus.NewGaugeFloat("test", "prometheus_gaugeFloat", "foobar", "Dolor sit.", []string{})
+	c.Set(42.5)
+	if want, have := strings.Join([]string{
+		`# HELP test_prometheus_gaugeFloat_foobar Dolor sit.`,
+		`# TYPE test_prometheus_gaugeFloat_foobar gauge`,
+		`test_prometheus_gaugeFloat_foobar 42.5`,
+	}, "\n"), teststat.ScrapePrometheus(t); !strings.Contains(have, want) {
+		t.Errorf("metric stanza not found or incorrect\n%s", have)
+	}
+	c.Add(-43.5)
+	if want, have := strings.Join([]string{
+		`# HELP test_prometheus_gaugeFloat_foobar Dolor sit.`,
+		`# TYPE test_prometheus_gaugeFloat_foobar gauge`,
+		`test_prometheus_gaugeFloat_foobar -1`,
+	}, "\n"), teststat.ScrapePrometheus(t); !strings.Contains(have, want) {
+		t.Errorf("metric stanza not found or incorrect\n%s", have)
+	}
+}
+
 func TestPrometheusHistogram(t *testing.T) {
 	h := prometheus.NewHistogram("test", "prometheus_histogram", "foobar", "Qwerty asdf.", []string{})
 

@@ -21,6 +21,8 @@ http://peter.bourgon.org/go-kit/#package-metrics
 
 - Gauge SHALL be an arbitrarily-settable register of type int64.
 
+- GaugeFloat SHALL be an arbitrarily-settable register of type float64.
+
 - Histogram SHALL collect observations of type int64.
 
 - These interfaces SHALL be the primary and exclusive API for metrics.
@@ -44,6 +46,12 @@ type Gauge interface {
 	With(Field) Gauge
 	Set(value int64)
 	Add(delta int64)
+}
+
+type GaugeFloat interface {
+	With(Field) GaugeFloat
+	Set(value float64)
+	Add(delta float64)
 }
 ```
 

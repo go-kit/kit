@@ -21,6 +21,14 @@ type Gauge interface {
 	Add(delta int64)
 }
 
+// GaugeFloat captures instantaneous measurements of something using 64 bit
+// floating point number. The value does not need to be monotonic.
+type GaugeFloat interface {
+	With(Field) GaugeFloat
+	Set(value float64)
+	Add(delta float64)
+}
+
 // Histogram tracks the distribution of a stream of values (e.g. the number of
 // milliseconds it takes to handle requests). Implementations may choose to
 // add gauges for values at meaningful quantiles.
