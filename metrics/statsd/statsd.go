@@ -61,17 +61,17 @@ func NewGauge(w io.Writer, key string, interval time.Duration) metrics.Gauge {
 
 func (g statsdGauge) With(metrics.Field) metrics.Gauge { return g }
 
-func (g statsdGauge) Add(delta int64) {
+func (g statsdGauge) Add(delta float64) {
 	// https://github.com/etsy/statsd/blob/master/docs/metric_types.md#gauges
 	sign := "+"
 	if delta < 0 {
 		sign, delta = "-", -delta
 	}
-	g <- fmt.Sprintf("%s%d|g", sign, delta)
+	g <- fmt.Sprintf("%s%f|g", sign, delta)
 }
 
-func (g statsdGauge) Set(value int64) {
-	g <- fmt.Sprintf("%d|g", value)
+func (g statsdGauge) Set(value float64) {
+	g <- fmt.Sprintf("%f|g", value)
 }
 
 type statsdHistogram chan string

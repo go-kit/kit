@@ -44,13 +44,13 @@ func (g multiGauge) With(f Field) Gauge {
 	return next
 }
 
-func (g multiGauge) Set(value int64) {
+func (g multiGauge) Set(value float64) {
 	for _, gauge := range g {
 		gauge.Set(value)
 	}
 }
 
-func (g multiGauge) Add(delta int64) {
+func (g multiGauge) Add(delta float64) {
 	for _, gauge := range g {
 		gauge.Add(delta)
 	}
