@@ -42,20 +42,20 @@ func (c *counter) With(metrics.Field) metrics.Counter { return c }
 func (c *counter) Add(delta uint64) { c.v.Add(int64(delta)) }
 
 type gauge struct {
-	v *expvar.Int
+	v *expvar.Float
 }
 
 // NewGauge returns a new Gauge backed by an expvar with the given name.
 // Fields are ignored.
 func NewGauge(name string) metrics.Gauge {
-	return &gauge{expvar.NewInt(name)}
+	return &gauge{expvar.NewFloat(name)}
 }
 
 func (g *gauge) With(metrics.Field) metrics.Gauge { return g }
 
-func (g *gauge) Add(delta int64) { g.v.Add(delta) }
+func (g *gauge) Add(delta float64) { g.v.Add(delta) }
 
-func (g *gauge) Set(value int64) { g.v.Set(value) }
+func (g *gauge) Set(value float64) { g.v.Set(value) }
 
 type histogram struct {
 	mu   sync.Mutex
@@ -100,7 +100,7 @@ func (h *histogram) Observe(value int64) {
 	}
 
 	for q, gauge := range h.gauges {
-		gauge.Set(h.hist.Current.ValueAtQuantile(float64(q)))
+		gauge.Set(float64(h.hist.Current.ValueAtQuantile(float64(q))))
 	}
 }
 

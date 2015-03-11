@@ -42,7 +42,7 @@ func TestGauge(t *testing.T) {
 	runtime.Gosched() // yield to buffer write
 	ch <- time.Now()  // signal flush
 	runtime.Gosched() // yield to flush
-	if want, have := "test_statsd_gauge:+1|g\n", buf.String(); want != have {
+	if want, have := "test_statsd_gauge:+1.000000|g\n", buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
 
@@ -52,7 +52,7 @@ func TestGauge(t *testing.T) {
 	runtime.Gosched()
 	ch <- time.Now()
 	runtime.Gosched()
-	if want, have := "test_statsd_gauge:-2|g\n", buf.String(); want != have {
+	if want, have := "test_statsd_gauge:-2.000000|g\n", buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
 
@@ -62,7 +62,7 @@ func TestGauge(t *testing.T) {
 	runtime.Gosched()
 	ch <- time.Now()
 	runtime.Gosched()
-	if want, have := "test_statsd_gauge:3|g\n", buf.String(); want != have {
+	if want, have := "test_statsd_gauge:3.000000|g\n", buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
 }

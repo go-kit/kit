@@ -14,11 +14,11 @@ type Counter interface {
 }
 
 // Gauge captures instantaneous measurements of something using signed, 64-bit
-// integers. The value does not need to be monotonic.
+// floats. The value does not need to be monotonic.
 type Gauge interface {
 	With(Field) Gauge
-	Set(value int64)
-	Add(delta int64)
+	Set(value float64)
+	Add(delta float64)
 }
 
 // Histogram tracks the distribution of a stream of values (e.g. the number of
