@@ -66,10 +66,11 @@ func main() {
 			return
 		}
 		s := grpc.NewServer() // uses its own context?
+		field := metrics.Field{Key: "transport", Value: "grpc"}
 
 		var addServer pb.AddServer
 		addServer = grpcBinding{e}
-		addServer = grpcInstrument(requests, duration, addServer)
+		addServer = grpcInstrument(requests.With(field), duration.With(field), addServer)
 
 		pb.RegisterAddServer(s, addServer)
 		log.Printf("gRPC server on TCP %s", *grpcTCPAddr)
@@ -81,10 +82,11 @@ func main() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
 		mux := http.NewServeMux()
+		field := metrics.Field{Key: "transport", Value: "http"}
 
 		var handler http.Handler
 		handler = httpBinding{ctx, jsonCodec{}, "application/json", e}
-		handler = httpInstrument(requests, duration, handler)
+		handler = httpInstrument(requests.With(field), duration.With(field), handler)
 
 		mux.Handle("/add", handler)
 		log.Printf("HTTP/JSON server on %s", *httpJSONAddr)
