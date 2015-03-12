@@ -19,6 +19,7 @@ package expvar
 import (
 	"expvar"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -38,15 +39,15 @@ func NewCounter(name string) metrics.Counter {
 }
 
 func (c *counter) With(metrics.Field) metrics.Counter { return c }
-
-func (c *counter) Add(delta uint64) { c.v.Add(int64(delta)) }
+func (c *counter) Add(delta uint64)                   { c.v.Add(int64(delta)) }
 
 type gauge struct {
 	v *expvar.Float
 }
 
-// NewGauge returns a new Gauge backed by an expvar with the given name.
-// Fields are ignored.
+// NewGauge returns a new Gauge backed by an expvar with the given name. It
+// should be updated manually; for a callback-based approach, see
+// NewCallbackGauge. Fields are ignored.
 func NewGauge(name string) metrics.Gauge {
 	return &gauge{expvar.NewFloat(name)}
 }
@@ -56,6 +57,18 @@ func (g *gauge) With(metrics.Field) metrics.Gauge { return g }
 func (g *gauge) Add(delta float64) { g.v.Add(delta) }
 
 func (g *gauge) Set(value float64) { g.v.Set(value) }
+
+// PublishCallbackGauge publishes a Gauge as an expvar with the given name,
+// whose value is determined at collect time by the passed callback function.
+// The callback determines the value, and fields are ignored, so
+// PublishCallbackGauge returns nothing.
+func PublishCallbackGauge(name string, callback func() float64) {
+	expvar.Publish(name, callbackGauge(callback))
+}
+
+type callbackGauge func() float64
+
+func (g callbackGauge) String() string { return strconv.FormatFloat(g(), 'g', -1, 64) }
 
 type histogram struct {
 	mu   sync.Mutex
