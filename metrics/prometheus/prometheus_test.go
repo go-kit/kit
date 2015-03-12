@@ -66,6 +66,19 @@ func TestPrometheusGauge(t *testing.T) {
 	}
 }
 
+func TestPrometheusCallbackGauge(t *testing.T) {
+	value := 123.456
+	cb := func() float64 { return value }
+	prometheus.RegisterCallbackGauge("test", "prometheus_gauge", "bazbaz", "Help string.", cb)
+	if want, have := strings.Join([]string{
+		`# HELP test_prometheus_gauge_bazbaz Help string.`,
+		`# TYPE test_prometheus_gauge_bazbaz gauge`,
+		`test_prometheus_gauge_bazbaz 123.456`,
+	}, "\n"), teststat.ScrapePrometheus(t); !strings.Contains(have, want) {
+		t.Errorf("metric stanza not found or incorrect\n%s", have)
+	}
+}
+
 func TestPrometheusHistogram(t *testing.T) {
 	h := prometheus.NewHistogram("test", "prometheus_histogram", "foobar", "Qwerty asdf.", []string{})
 

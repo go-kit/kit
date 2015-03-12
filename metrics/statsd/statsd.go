@@ -78,16 +78,17 @@ func (g statsdGauge) Set(value float64) {
 // It collects values every scrape interval from the callback. Values are
 // buffered for the report interval or until the buffer exceeds a max packet
 // size, whichever comes first. The report and scrape intervals may be the
-// same. Fields are ignored.
+// same. The callback determines the value, and fields are ignored, so
+// NewCallbackGauge returns nothing.
 func NewCallbackGauge(w io.Writer, key string, reportInterval, scrapeInterval time.Duration, callback func() float64) {
 	go fwd(w, key, reportInterval, emitEvery(scrapeInterval, callback))
 }
 
-func emitEvery(d time.Duration, f func() float64) <-chan string {
+func emitEvery(d time.Duration, callback func() float64) <-chan string {
 	c := make(chan string)
 	go func() {
-		for range time.Tick(d) {
-			c <- fmt.Sprintf("%f|g", f())
+		for range tick(d) {
+			c <- fmt.Sprintf("%f|g", callback())
 		}
 	}()
 	return c
