@@ -5,6 +5,11 @@ import (
 	"golang.org/x/net/context"
 )
 
+// makeEndpoint returns a server.Endpoint wrapping the passed Add. If Add were
+// an interface with multiple methods, we'd need individual endpoints for
+// each.
+//
+// This function is just boiler-plate; in theory, it could be generated.
 func makeEndpoint(a Add) server.Endpoint {
 	return func(ctx context.Context, req server.Request) (server.Response, error) {
 		addReq, ok := req.(*request)

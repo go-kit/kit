@@ -12,6 +12,7 @@ func addVia(r Resource) Add {
 	}
 }
 
+// Resource represents some dependency, outside of our control.
 type Resource interface {
 	Value(int64) int64
 }

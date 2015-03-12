@@ -3,17 +3,22 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	"github.com/peterbourgon/gokit/addsvc/pb"
+	"github.com/peterbourgon/gokit/metrics"
+	"github.com/peterbourgon/gokit/metrics/expvar"
+	"github.com/peterbourgon/gokit/metrics/statsd"
 	"github.com/peterbourgon/gokit/server"
 )
 
@@ -35,6 +40,16 @@ func main() {
 	// e = server.ChainableEnhancement(arg1, arg2, e)
 	// e = server.ChainableEnhancement(arg1, arg2, e)
 
+	// `package metrics` domain
+	requests := metrics.NewMultiCounter(
+		expvar.NewCounter("requests"),
+		statsd.NewCounter(ioutil.Discard, "requests", time.Second),
+	)
+	duration := metrics.NewMultiHistogram(
+		expvar.NewHistogram("duration_ns", 0, 100000000, 3),
+		statsd.NewHistogram(ioutil.Discard, "duration_ns", time.Second),
+	)
+
 	// Mechanical stuff
 	root := context.Background()
 	errc := make(chan error)
@@ -51,7 +66,12 @@ func main() {
 			return
 		}
 		s := grpc.NewServer() // uses its own context?
-		pb.RegisterAddServer(s, grpcBinding{e})
+
+		var addServer pb.AddServer
+		addServer = grpcBinding{e}
+		addServer = grpcInstrument(requests, duration, addServer)
+
+		pb.RegisterAddServer(s, addServer)
 		log.Printf("gRPC server on TCP %s", *grpcTCPAddr)
 		errc <- s.Serve(ln)
 	}()
@@ -61,7 +81,12 @@ func main() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
 		mux := http.NewServeMux()
-		mux.Handle("/add", httpBinding{ctx, jsonCodec{}, e})
+
+		var handler http.Handler
+		handler = httpBinding{ctx, jsonCodec{}, "application/json", e}
+		handler = httpInstrument(requests, duration, handler)
+
+		mux.Handle("/add", handler)
 		log.Printf("HTTP/JSON server on %s", *httpJSONAddr)
 		errc <- http.ListenAndServe(*httpJSONAddr, mux)
 	}()
