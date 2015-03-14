@@ -42,31 +42,18 @@ type httpBinding struct {
 }
 
 func (b httpBinding) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// If the context is canceled, we should not perform work.
-	select {
-	case <-b.Context.Done():
-		http.Error(w, "context is canceled", http.StatusServiceUnavailable)
-		return
-	default:
-	}
-
-	// Generate a context for this request.
-	// TODO read headers to determine what kind of context to create
-	ctx, cancel := context.WithCancel(b.Context)
-	defer cancel()
-
 	// Perform HTTP-specific context amendments.
 	// TODO extract e.g. trace ID
 
 	// Decode request.
-	req, err := b.Codec.Decode(ctx, r.Body)
+	req, err := b.Codec.Decode(b.Context, r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Execute RPC.
-	resp, err := b.Endpoint(ctx, req)
+	resp, err := b.Endpoint(b.Context, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -18,3 +18,7 @@ type Endpoint func(context.Context, Request) (Response, error)
 
 // ErrBadCast indicates a type error during decoding or encoding.
 var ErrBadCast = errors.New("bad cast")
+
+// ErrContextCanceled indicates a controlling context was canceled before the
+// request could be served.
+var ErrContextCanceled = errors.New("context was canceled")
