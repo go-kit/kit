@@ -1,4 +1,4 @@
-# gokit [![Build Status](https://drone.io/github.com/peterbourgon/gokit/status.png)](https://drone.io/github.com/peterbourgon/gokit/latest) [![Build Status](https://travis-ci.org/peterbourgon/gokit.svg?branch=master)](https://travis-ci.org/peterbourgon/gokit) [![GoDoc](https://godoc.org/github.com/peterbourgon/gokit?status.svg)](https://godoc.org/github.com/peterbourgon/gokit)
+# gokit [![Circle CI](https://circleci.com/gh/peterbourgon/gokit.svg?style=svg)](https://circleci.com/gh/peterbourgon/gokit) [![Drone.io](https://drone.io/github.com/peterbourgon/gokit/status.png)](https://drone.io/github.com/peterbourgon/gokit/latest) [![Travis CI](https://travis-ci.org/peterbourgon/gokit.svg?branch=master)](https://travis-ci.org/peterbourgon/gokit) [![GoDoc](https://godoc.org/github.com/peterbourgon/gokit?status.svg)](https://godoc.org/github.com/peterbourgon/gokit)
 
 **gokit** is a working name for a **distributed programming toolkit** to serve the needs of the modern service-oriented enterprise.
 
