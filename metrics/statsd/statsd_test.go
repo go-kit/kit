@@ -4,6 +4,7 @@ package statsd
 
 import (
 	"bytes"
+	"fmt"
 	"runtime"
 	"testing"
 	"time"
@@ -38,31 +39,54 @@ func TestGauge(t *testing.T) {
 	buf := &bytes.Buffer{}
 	g := NewGauge(buf, "test_statsd_gauge", time.Second)
 
-	g.Add(1)          // send command
+	delta := 1.0
+	g.Add(delta)      // send command
 	runtime.Gosched() // yield to buffer write
 	ch <- time.Now()  // signal flush
 	runtime.Gosched() // yield to flush
-	if want, have := "test_statsd_gauge:+1.000000|g\n", buf.String(); want != have {
+	if want, have := fmt.Sprintf("test_statsd_gauge:+%f|g\n", delta), buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
 
 	buf.Reset()
 
-	g.Add(-2)
+	delta = -2.0
+	g.Add(delta)
 	runtime.Gosched()
 	ch <- time.Now()
 	runtime.Gosched()
-	if want, have := "test_statsd_gauge:-2.000000|g\n", buf.String(); want != have {
+	if want, have := fmt.Sprintf("test_statsd_gauge:%f|g\n", delta), buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
 
 	buf.Reset()
 
-	g.Set(3)
+	value := 3.0
+	g.Set(value)
 	runtime.Gosched()
 	ch <- time.Now()
 	runtime.Gosched()
-	if want, have := "test_statsd_gauge:3.000000|g\n", buf.String(); want != have {
+	if want, have := fmt.Sprintf("test_statsd_gauge:%f|g\n", value), buf.String(); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+}
+
+func TestCallbackGauge(t *testing.T) {
+	ch := make(chan time.Time)
+	tick = func(time.Duration) <-chan time.Time { return ch }
+	defer func() { tick = time.Tick }()
+
+	buf := &bytes.Buffer{}
+	value := 55.55
+	cb := func() float64 { return value }
+	NewCallbackGauge(buf, "test_statsd_callback_gauge", time.Second, time.Nanosecond, cb)
+
+	ch <- time.Now()  // signal emitter
+	runtime.Gosched() // yield to emitter
+	ch <- time.Now()  // signal flush
+	runtime.Gosched() // yield to flush
+
+	if want, have := fmt.Sprintf("test_statsd_callback_gauge:%f|g\n", value), buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
 }
