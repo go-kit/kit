@@ -1,7 +1,7 @@
 ---
 RFC: 007
 Author: Andrew Gerrand <adg@golang.org>
-Status: Draft
+Status: Accepted
 ---
 
 # API Stability Policy
