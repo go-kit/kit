@@ -24,7 +24,7 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 
 ## Component status
 
-- API stability — [RFC complete](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc007-api-stability.md), [adopted](API_stability_policy)
+- API stability — [RFC complete](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc007-api-stability.md), adopted
 - `package metrics` — [RFC complete](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc003-package-metrics.md), [first draft complete](https://github.com/peterbourgon/gokit/tree/master/metrics)
 - `package server` — [RFC complete](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc000-package-server.md), [prototyping](https://github.com/peterbourgon/gokit/pull/14)
 - `package transport` — [RFC pending](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc002-package-transport.md), [prototyping](https://github.com/peterbourgon/gokit/pull/14)
