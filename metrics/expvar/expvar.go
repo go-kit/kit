@@ -47,7 +47,7 @@ type gauge struct {
 
 // NewGauge returns a new Gauge backed by an expvar with the given name. It
 // should be updated manually; for a callback-based approach, see
-// NewCallbackGauge. Fields are ignored.
+// PublishCallbackGauge. Fields are ignored.
 func NewGauge(name string) metrics.Gauge {
 	return &gauge{expvar.NewFloat(name)}
 }
