@@ -8,7 +8,7 @@
 //    c := NewFieldedCounter(..., "path", "status")
 //    c.Add(1) // "myprefix.unknown.unknown:1|c\n"
 //    c2 := c.With("path", "foo").With("status": "200")
-//    c2.Add(1) // "myprefix.foo.status:1|c\n"
+//    c2.Add(1) // "myprefix.foo.200:1|c\n"
 //
 package statsd
 

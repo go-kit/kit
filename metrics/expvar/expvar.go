@@ -6,9 +6,9 @@
 // bucket (key) names. That is,
 //
 //    c := NewFieldedCounter(..., "path", "status")
-//    c.Add(1) // "myprefix.unknown.unknown" += 1
+//    c.Add(1) // "myprefix_unknown_unknown" += 1
 //    c2 := c.With("path", "foo").With("status": "200")
-//    c2.Add(1) // "myprefix.foo.200" += 1
+//    c2.Add(1) // "myprefix_foo_200" += 1
 //
 // It would also be possible to have an implementation that generated more
 // sophisticated expvar.Values. For example, a Counter could be implemented as
