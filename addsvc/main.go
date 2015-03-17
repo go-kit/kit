@@ -23,6 +23,8 @@ import (
 	"github.com/peterbourgon/gokit/metrics/expvar"
 	"github.com/peterbourgon/gokit/metrics/statsd"
 	"github.com/peterbourgon/gokit/server"
+	"github.com/peterbourgon/gokit/server/zipkin"
+	"github.com/peterbourgon/gokit/transport/http/cors"
 )
 
 func main() {
@@ -44,7 +46,7 @@ func main() {
 	// `package server` domain
 	var e server.Endpoint
 	e = makeEndpoint(a)
-	// e = server.ChainableEnhancement(arg1, arg2, e)
+	e = server.Gate(zipkin.RequireInContext, e) // must have Zipkin headers
 	// e = server.ChainableEnhancement(arg1, arg2, e)
 
 	// `package metrics` domain
@@ -78,6 +80,8 @@ func main() {
 		var addServer pb.AddServer
 		addServer = grpcBinding{e}
 		addServer = grpcInstrument(requests.With(field), duration.With(field), addServer)
+		// Note that this will always fail, because the Endpoint is gated on
+		// Zipkin headers, and we don't extract them from the gRPC request.
 
 		pb.RegisterAddServer(s, addServer)
 		log.Printf("gRPC server on TCP %s", *grpcTCPAddr)
@@ -94,6 +98,7 @@ func main() {
 		var handler http.Handler
 		handler = httpBinding{ctx, jsonCodec{}, "application/json", e}
 		handler = httpInstrument(requests.With(field), duration.With(field), handler)
+		handler = cors.Middleware(cors.MaxAge(5 * time.Minute))(handler)
 
 		mux.Handle("/add", handler)
 		log.Printf("HTTP/JSON server on %s", *httpJSONAddr)
@@ -141,6 +146,8 @@ func main() {
 		handler = thriftBinding{ctx, e}
 		field := metrics.Field{Key: "transport", Value: "thrift"}
 		handler = thriftInstrument(requests.With(field), duration.With(field), handler)
+		// Note that this will always fail, because the Endpoint is gated on
+		// Zipkin headers, and we don't extract them from the Thrift request.
 
 		log.Printf("Thrift (TCP) server on %s", *thriftTCPAddr)
 		errc <- thrift.NewTSimpleServer4(

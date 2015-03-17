@@ -10,6 +10,7 @@ import (
 
 	"github.com/peterbourgon/gokit/metrics"
 	"github.com/peterbourgon/gokit/server"
+	"github.com/peterbourgon/gokit/server/zipkin"
 	"github.com/peterbourgon/gokit/transport/codec"
 )
 
@@ -20,10 +21,10 @@ import (
 // This type is mostly boiler-plate; in theory, it could be generated.
 type jsonCodec struct{}
 
-func (jsonCodec) Decode(_ context.Context, r io.Reader) (server.Request, error) {
+func (jsonCodec) Decode(ctx context.Context, r io.Reader) (server.Request, context.Context, error) {
 	var req request
 	err := json.NewDecoder(r).Decode(&req)
-	return &req, err
+	return &req, ctx, err
 }
 
 func (jsonCodec) Encode(w io.Writer, resp server.Response) error {
@@ -43,14 +44,15 @@ type httpBinding struct {
 
 func (b httpBinding) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Perform HTTP-specific context amendments.
-	// TODO extract e.g. trace ID
+	b.Context = zipkin.GetHeaders(b.Context, r.Header)
 
 	// Decode request.
-	req, err := b.Codec.Decode(b.Context, r.Body)
+	req, ctx, err := b.Codec.Decode(b.Context, r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	b.Context = ctx
 
 	// Execute RPC.
 	resp, err := b.Endpoint(b.Context, req)
