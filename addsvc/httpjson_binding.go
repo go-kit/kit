@@ -69,18 +69,12 @@ func (b httpBinding) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func httpInstrument(requests metrics.Counter, duration metrics.Histogram, next http.Handler) http.Handler {
-	return httpInstrumented{requests, duration, next}
-}
-
-type httpInstrumented struct {
-	requests metrics.Counter
-	duration metrics.Histogram
-	next     http.Handler
-}
-
-func (i httpInstrumented) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	i.requests.Add(1)
-	defer func(begin time.Time) { i.duration.Observe(time.Since(begin).Nanoseconds()) }(time.Now())
-	i.next.ServeHTTP(w, r)
+func httpInstrument(requests metrics.Counter, duration metrics.Histogram) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests.Add(1)
+			defer func(begin time.Time) { duration.Observe(time.Since(begin).Nanoseconds()) }(time.Now())
+			next.ServeHTTP(w, r)
+		})
+	}
 }

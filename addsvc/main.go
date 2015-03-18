@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
-
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -46,7 +45,7 @@ func main() {
 	// `package server` domain
 	var e server.Endpoint
 	e = makeEndpoint(a)
-	e = server.Gate(zipkin.RequireInContext, e) // must have Zipkin headers
+	e = server.Gate(zipkin.RequireInContext)(e) // must have Zipkin headers
 	// e = server.ChainableEnhancement(arg1, arg2, e)
 
 	// `package metrics` domain
@@ -79,7 +78,7 @@ func main() {
 
 		var addServer pb.AddServer
 		addServer = grpcBinding{e}
-		addServer = grpcInstrument(requests.With(field), duration.With(field), addServer)
+		addServer = grpcInstrument(requests.With(field), duration.With(field))(addServer)
 		// Note that this will always fail, because the Endpoint is gated on
 		// Zipkin headers, and we don't extract them from the gRPC request.
 
@@ -97,7 +96,7 @@ func main() {
 
 		var handler http.Handler
 		handler = httpBinding{ctx, jsonCodec{}, "application/json", e}
-		handler = httpInstrument(requests.With(field), duration.With(field), handler)
+		handler = httpInstrument(requests.With(field), duration.With(field))(handler)
 		handler = cors.Middleware(cors.MaxAge(5 * time.Minute))(handler)
 
 		mux.Handle("/add", handler)
@@ -145,7 +144,7 @@ func main() {
 		var handler thriftadd.AddService
 		handler = thriftBinding{ctx, e}
 		field := metrics.Field{Key: "transport", Value: "thrift"}
-		handler = thriftInstrument(requests.With(field), duration.With(field), handler)
+		handler = thriftInstrument(requests.With(field), duration.With(field))(handler)
 		// Note that this will always fail, because the Endpoint is gated on
 		// Zipkin headers, and we don't extract them from the Thrift request.
 

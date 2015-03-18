@@ -32,8 +32,10 @@ func (tb thriftBinding) Add(a, b int64) (*thriftadd.AddReply, error) {
 	return &thriftadd.AddReply{Value: resp.V}, nil
 }
 
-func thriftInstrument(requests metrics.Counter, duration metrics.Histogram, next thriftadd.AddService) thriftadd.AddService {
-	return thriftInstrumented{requests, duration, next}
+func thriftInstrument(requests metrics.Counter, duration metrics.Histogram) func(thriftadd.AddService) thriftadd.AddService {
+	return func(next thriftadd.AddService) thriftadd.AddService {
+		return thriftInstrumented{requests, duration, next}
+	}
 }
 
 type thriftInstrumented struct {

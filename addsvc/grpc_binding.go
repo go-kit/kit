@@ -31,8 +31,10 @@ func (b grpcBinding) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddReply,
 	}, nil
 }
 
-func grpcInstrument(requests metrics.Counter, duration metrics.Histogram, next pb.AddServer) pb.AddServer {
-	return grpcInstrumented{requests, duration, next}
+func grpcInstrument(requests metrics.Counter, duration metrics.Histogram) func(pb.AddServer) pb.AddServer {
+	return func(next pb.AddServer) pb.AddServer {
+		return grpcInstrumented{requests, duration, next}
+	}
 }
 
 type grpcInstrumented struct {
