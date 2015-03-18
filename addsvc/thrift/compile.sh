@@ -1,4 +1,8 @@
 #!/usr/bin/env sh
 
+# Thrift code generation for Go is broken in the current stable (0.9.2)
+# release. Leaving this stubbed out until the fix is released.
+# https://issues.apache.org/jira/browse/THRIFT-3021
+
 # https://thrift.apache.org/tutorial/go
 thrift -r --gen go add.thrift
