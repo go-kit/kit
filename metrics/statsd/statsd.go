@@ -8,7 +8,7 @@
 //    c := NewFieldedCounter(..., "path", "status")
 //    c.Add(1) // "myprefix.unknown.unknown:1|c\n"
 //    c2 := c.With("path", "foo").With("status": "200")
-//    c2.Add(1) // "myprefix.foo.status:1|c\n"
+//    c2.Add(1) // "myprefix.foo.200:1|c\n"
 //
 package statsd
 
@@ -30,14 +30,14 @@ const maxBufferSize = 1400 // bytes
 type statsdCounter chan string
 
 // NewCounter returns a Counter that emits observations in the statsd protocol
-// to the passed writer. Observations are buffered for the reporting interval
-// or until the buffer exceeds a max packet size, whichever comes first.
-// Fields are ignored.
+// to the passed writer. Observations are buffered for the report interval or
+// until the buffer exceeds a max packet size, whichever comes first. Fields
+// are ignored.
 //
 // TODO: support for sampling.
-func NewCounter(w io.Writer, key string, interval time.Duration) metrics.Counter {
+func NewCounter(w io.Writer, key string, reportInterval time.Duration) metrics.Counter {
 	c := make(chan string)
-	go fwd(w, key, interval, c)
+	go fwd(w, key, reportInterval, c)
 	return statsdCounter(c)
 }
 
@@ -48,30 +48,50 @@ func (c statsdCounter) Add(delta uint64) { c <- fmt.Sprintf("%d|c", delta) }
 type statsdGauge chan string
 
 // NewGauge returns a Gauge that emits values in the statsd protocol to the
-// passed writer. Values are buffered for the reporting interval or until the
+// passed writer. Values are buffered for the report interval or until the
 // buffer exceeds a max packet size, whichever comes first. Fields are
 // ignored.
 //
 // TODO: support for sampling.
-func NewGauge(w io.Writer, key string, interval time.Duration) metrics.Gauge {
+func NewGauge(w io.Writer, key string, reportInterval time.Duration) metrics.Gauge {
 	g := make(chan string)
-	go fwd(w, key, interval, g)
+	go fwd(w, key, reportInterval, g)
 	return statsdGauge(g)
 }
 
 func (g statsdGauge) With(metrics.Field) metrics.Gauge { return g }
 
-func (g statsdGauge) Add(delta int64) {
+func (g statsdGauge) Add(delta float64) {
 	// https://github.com/etsy/statsd/blob/master/docs/metric_types.md#gauges
 	sign := "+"
 	if delta < 0 {
 		sign, delta = "-", -delta
 	}
-	g <- fmt.Sprintf("%s%d|g", sign, delta)
+	g <- fmt.Sprintf("%s%f|g", sign, delta)
 }
 
-func (g statsdGauge) Set(value int64) {
-	g <- fmt.Sprintf("%d|g", value)
+func (g statsdGauge) Set(value float64) {
+	g <- fmt.Sprintf("%f|g", value)
+}
+
+// NewCallbackGauge emits values in the statsd protocol to the passed writer.
+// It collects values every scrape interval from the callback. Values are
+// buffered for the report interval or until the buffer exceeds a max packet
+// size, whichever comes first. The report and scrape intervals may be the
+// same. The callback determines the value, and fields are ignored, so
+// NewCallbackGauge returns nothing.
+func NewCallbackGauge(w io.Writer, key string, reportInterval, scrapeInterval time.Duration, callback func() float64) {
+	go fwd(w, key, reportInterval, emitEvery(scrapeInterval, callback))
+}
+
+func emitEvery(d time.Duration, callback func() float64) <-chan string {
+	c := make(chan string)
+	go func() {
+		for range tick(d) {
+			c <- fmt.Sprintf("%f|g", callback())
+		}
+	}()
+	return c
 }
 
 type statsdHistogram chan string
@@ -93,9 +113,9 @@ type statsdHistogram chan string
 //    NewTimeHistogram(statsdHistogram, time.Millisecond)
 //
 // TODO: support for sampling.
-func NewHistogram(w io.Writer, key string, interval time.Duration) metrics.Histogram {
+func NewHistogram(w io.Writer, key string, reportInterval time.Duration) metrics.Histogram {
 	h := make(chan string)
-	go fwd(w, key, interval, h)
+	go fwd(w, key, reportInterval, h)
 	return statsdHistogram(h)
 }
 
@@ -107,9 +127,9 @@ func (h statsdHistogram) Observe(value int64) {
 
 var tick = time.Tick
 
-func fwd(w io.Writer, key string, interval time.Duration, c chan string) {
+func fwd(w io.Writer, key string, reportInterval time.Duration, c <-chan string) {
 	buf := &bytes.Buffer{}
-	tick := tick(interval)
+	tick := tick(reportInterval)
 	for {
 		select {
 		case s := <-c:

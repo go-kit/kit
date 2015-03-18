@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/peterbourgon/gokit/metrics"
+	"github.com/peterbourgon/gokit/metrics/expvar"
 )
 
 func TestScaledHistogram(t *testing.T) {
@@ -12,7 +13,7 @@ func TestScaledHistogram(t *testing.T) {
 	metricName := "test_scaled_histogram"
 
 	var h metrics.Histogram
-	h = metrics.NewExpvarHistogram(metricName, 0, 1000, 3, quantiles...)
+	h = expvar.NewHistogram(metricName, 0, 1000, 3, quantiles...)
 	h = metrics.NewScaledHistogram(h, scale)
 
 	const seed, mean, stdev = 333, 500, 100          // input values

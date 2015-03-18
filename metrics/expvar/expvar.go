@@ -8,7 +8,7 @@
 //    c := NewFieldedCounter(..., "path", "status")
 //    c.Add(1) // "myprefix_unknown_unknown" += 1
 //    c2 := c.With("path", "foo").With("status": "200")
-//    c2.Add(1) // "myprefix_foo_status" += 1
+//    c2.Add(1) // "myprefix_foo_200" += 1
 //
 // It would also be possible to have an implementation that generated more
 // sophisticated expvar.Values. For example, a Counter could be implemented as
@@ -19,6 +19,7 @@ package expvar
 import (
 	"expvar"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -38,24 +39,36 @@ func NewCounter(name string) metrics.Counter {
 }
 
 func (c *counter) With(metrics.Field) metrics.Counter { return c }
-
-func (c *counter) Add(delta uint64) { c.v.Add(int64(delta)) }
+func (c *counter) Add(delta uint64)                   { c.v.Add(int64(delta)) }
 
 type gauge struct {
-	v *expvar.Int
+	v *expvar.Float
 }
 
-// NewGauge returns a new Gauge backed by an expvar with the given name.
-// Fields are ignored.
+// NewGauge returns a new Gauge backed by an expvar with the given name. It
+// should be updated manually; for a callback-based approach, see
+// PublishCallbackGauge. Fields are ignored.
 func NewGauge(name string) metrics.Gauge {
-	return &gauge{expvar.NewInt(name)}
+	return &gauge{expvar.NewFloat(name)}
 }
 
 func (g *gauge) With(metrics.Field) metrics.Gauge { return g }
 
-func (g *gauge) Add(delta int64) { g.v.Add(delta) }
+func (g *gauge) Add(delta float64) { g.v.Add(delta) }
 
-func (g *gauge) Set(value int64) { g.v.Set(value) }
+func (g *gauge) Set(value float64) { g.v.Set(value) }
+
+// PublishCallbackGauge publishes a Gauge as an expvar with the given name,
+// whose value is determined at collect time by the passed callback function.
+// The callback determines the value, and fields are ignored, so
+// PublishCallbackGauge returns nothing.
+func PublishCallbackGauge(name string, callback func() float64) {
+	expvar.Publish(name, callbackGauge(callback))
+}
+
+type callbackGauge func() float64
+
+func (g callbackGauge) String() string { return strconv.FormatFloat(g(), 'g', -1, 64) }
 
 type histogram struct {
 	mu   sync.Mutex
@@ -100,7 +113,7 @@ func (h *histogram) Observe(value int64) {
 	}
 
 	for q, gauge := range h.gauges {
-		gauge.Set(h.hist.Current.ValueAtQuantile(float64(q)))
+		gauge.Set(float64(h.hist.Current.ValueAtQuantile(float64(q))))
 	}
 }
 

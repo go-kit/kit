@@ -103,12 +103,35 @@ func (g prometheusGauge) With(f metrics.Field) metrics.Gauge {
 	}
 }
 
-func (g prometheusGauge) Set(value int64) {
-	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Set(float64(value))
+func (g prometheusGauge) Set(value float64) {
+	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Set(value)
 }
 
-func (g prometheusGauge) Add(delta int64) {
-	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Add(float64(delta))
+func (g prometheusGauge) Add(delta float64) {
+	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Add(delta)
+}
+
+// RegisterCallbackGauge registers a Gauge with Prometheus whose value is
+// determined at collect time by the passed callback function. The callback
+// determines the value, and fields are ignored, so RegisterCallbackGauge
+// returns nothing.
+func RegisterCallbackGauge(namespace, subsystem, name, help string, callback func() float64) {
+	RegisterCallbackGaugeWithLabels(namespace, subsystem, name, help, prometheus.Labels{}, callback)
+}
+
+// RegisterCallbackGaugeWithLabels is the same as RegisterCallbackGauge, but
+// attaches a set of const label pairs to the metric.
+func RegisterCallbackGaugeWithLabels(namespace, subsystem, name, help string, constLabels prometheus.Labels, callback func() float64) {
+	prometheus.MustRegister(prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Namespace:   namespace,
+			Subsystem:   subsystem,
+			Name:        name,
+			Help:        help,
+			ConstLabels: constLabels,
+		},
+		callback,
+	))
 }
 
 type prometheusHistogram struct {
