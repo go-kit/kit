@@ -77,6 +77,7 @@ Projects with a ★ have had particular influence on gokit's design.
 ### Individual components
 
 - [afex/hystrix-go](https://github.com/afex/hystrix-go), client-side latency and fault tolerance library
+- [armon/go-metrics](https://github.com/armon/go-metrics), library for exporting performance and runtime metrics to external metrics systems
 - [codahale/lunk](https://github.com/codahale/lunk), structured logging in the style of Google's Dapper or Twitter's Zipkin
 - [eapache/go-resiliency](https://github.com/eapache/go-resiliency), resiliency patterns
 - [FogCreek/logging](https://github.com/FogCreek/logging), a tagged style of logging
