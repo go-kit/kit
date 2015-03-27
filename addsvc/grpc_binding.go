@@ -3,10 +3,11 @@ package main
 import (
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/peterbourgon/gokit/addsvc/pb"
 	"github.com/peterbourgon/gokit/metrics"
 	"github.com/peterbourgon/gokit/server"
-	"golang.org/x/net/context"
 )
 
 // A binding wraps an Endpoint so that it's usable by a transport. grpcBinding
