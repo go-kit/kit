@@ -35,7 +35,7 @@ func (l *kvLogger) Log(s string) error {
 		return err
 	}
 	if s[len(s)-1] != '\n' {
-		if _, err := fmt.Fprint(l.Writer, "\n"); err != nil {
+		if _, err := fmt.Fprintln(l.Writer); err != nil {
 			return err
 		}
 	}
