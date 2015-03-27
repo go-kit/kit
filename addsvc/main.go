@@ -12,6 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/justinas/alice"
+	"github.com/streadway/handy/cors"
+	"github.com/streadway/handy/encoding"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -21,7 +24,6 @@ import (
 	"github.com/peterbourgon/gokit/metrics/statsd"
 	"github.com/peterbourgon/gokit/server"
 	"github.com/peterbourgon/gokit/server/zipkin"
-	"github.com/peterbourgon/gokit/transport/http/cors"
 )
 
 func main() {
@@ -88,10 +90,11 @@ func main() {
 		mux := http.NewServeMux()
 		field := metrics.Field{Key: "transport", Value: "http"}
 
-		var handler http.Handler
-		handler = httpBinding{ctx, jsonCodec{}, "application/json", e}
-		handler = httpInstrument(requests.With(field), duration.With(field))(handler)
-		handler = cors.Middleware(cors.MaxAge(5 * time.Minute))(handler)
+		handler := alice.New(
+			httpInstrument(requests.With(field), duration.With(field)),
+			encoding.Gzip,
+			cors.Middleware(cors.Config{}),
+		).Then(httpBinding{ctx, jsonCodec{}, "application/json", e})
 
 		mux.Handle("/add", handler)
 		log.Printf("HTTP/JSON server on %s", *httpJSONAddr)
