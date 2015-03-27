@@ -1,79 +1,48 @@
 package log
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
+
 	"io"
 )
 
-// JSONFieldBehavior dictates how fields are encoded in a JSON logger.
-type JSONFieldBehavior int
-
-const (
-	// PrefixedFields encodes each field as its own JSON object, and prefixes
-	// each log event with those objects, separated by spaces.
-	PrefixedFields JSONFieldBehavior = iota
-
-	// MixedFields encodes each field into the same JSON object as the log
-	// event. Logged events take precedence.
-	MixedFields
-)
-
-// NewJSONLogger returns a Logger that encodes log events as JSON objects.
-// Logged events are expected to be valid JSON.
-func NewJSONLogger(w io.Writer, fieldBehavior JSONFieldBehavior) Logger {
-	return &jsonLogger{w, fieldBehavior, []Field{}}
-}
-
 type jsonLogger struct {
 	io.Writer
-	JSONFieldBehavior
+	key    string
 	fields []Field
 }
 
-func (l *jsonLogger) With(f Field) Logger {
+// NewJSONLogger returns a Logger that marshals each log line as a JSON
+// object. Because fields are keys in a JSON object, they must be unique, and
+// last-writer-wins. The actual log message is placed under the "msg" key. To
+// change that, use the NewJSONLoggerWithKey constructor.
+func NewJSONLogger(w io.Writer) Logger {
+	return NewJSONLoggerWithKey(w, "msg")
+}
+
+// NewJSONLoggerWithKey is the same as NewJSONLogger but allows the user to
+// specify the key under which the actual log message is placed in the JSON
+// object.
+func NewJSONLoggerWithKey(w io.Writer, messageKey string) Logger {
 	return &jsonLogger{
-		Writer:            l.Writer,
-		JSONFieldBehavior: l.JSONFieldBehavior,
-		fields:            append(l.fields, f),
+		Writer: w,
+		key:    messageKey,
 	}
 }
 
-func (l *jsonLogger) Logf(format string, args ...interface{}) error {
-	var buf bytes.Buffer
-	if _, err := fmt.Fprintf(&buf, format, args...); err != nil {
-		return err
+func (l *jsonLogger) With(fields ...Field) Logger {
+	return &jsonLogger{
+		Writer: l.Writer,
+		key:    l.key,
+		fields: append(l.fields, fields...),
 	}
+}
 
-	m := map[string]interface{}{}
-	if err := json.NewDecoder(&buf).Decode(&m); err != nil {
-		return err
+func (l *jsonLogger) Log(s string) error {
+	m := make(map[string]interface{}, len(l.fields)+1)
+	for _, f := range l.fields {
+		m[f.Key] = f.Value
 	}
-
-	buf.Reset()
-	switch l.JSONFieldBehavior {
-	case PrefixedFields:
-		if err := EncodeMany(&buf, JSON, l.fields); err != nil {
-			return err
-		}
-		if err := json.NewEncoder(&buf).Encode(m); err != nil {
-			return err
-		}
-
-	case MixedFields:
-		final := map[string]interface{}{}
-		for _, f := range l.fields {
-			final[f.Key] = f.Value // fields first, so that...
-		}
-		for k, v := range m {
-			final[k] = v // ...logged data takes precedence
-		}
-		if err := json.NewEncoder(&buf).Encode(final); err != nil {
-			return err
-		}
-	}
-
-	_, err := buf.WriteTo(l.Writer)
-	return err
+	m[l.key] = s
+	return json.NewEncoder(l.Writer).Encode(m)
 }

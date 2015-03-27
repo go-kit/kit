@@ -2,41 +2,37 @@ package log_test
 
 import (
 	"bytes"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/peterbourgon/gokit/log"
 )
 
-func TestJSONLoggerPrefixedFields(t *testing.T) {
+func TestJSONLogger(t *testing.T) {
 	buf := bytes.Buffer{}
-	logger := log.NewJSONLogger(&buf, log.PrefixedFields)
-	if err := logger.Logf(`{"alpha" : "beta"}`); err != nil {
-		t.Fatal(err)
-	}
-	if want, have := `{"alpha":"beta"}`+"\n", buf.String(); want != have {
-		t.Fatalf("want\n\t%s, have\n\t%s", want, have)
+	logger := log.NewJSONLogger(&buf)
+	logger.Log("a")
+	if want, have := `{"msg":"a"}`+"\n", buf.String(); want != have {
+		t.Errorf("want %#v, have %#v", want, have)
 	}
 
 	buf.Reset()
-
-	logger = logger.With(log.Field{Key: "foo", Value: "bar"})
-	if err := logger.Logf(`{ "delta": "gamma" }`); err != nil {
+	if err := logger.With(log.Field{Key: "level", Value: "INFO"}).Log("b"); err != nil {
 		t.Fatal(err)
 	}
-	if want, have := `{"foo":"bar"} {"delta":"gamma"}`, strings.TrimSpace(buf.String()); want != have {
-		t.Errorf("want\n\t%s, have\n\t%s", want, have)
+	if want, have := `{"level":"INFO","msg":"b"}`+"\n", buf.String(); want != have {
+		t.Errorf("want %#v, have %#v", want, have)
 	}
-}
 
-func TestJSONLoggerMixedFields(t *testing.T) {
-	buf := bytes.Buffer{}
-	logger := log.NewJSONLogger(&buf, log.MixedFields)
-	logger = logger.With(log.Field{Key: "m", Value: "n"})
-	if err := logger.Logf(`{"a":"b"}`); err != nil {
+	buf.Reset()
+	logger = logger.With(log.Field{Key: "request.size", Value: 1024})
+	logger = logger.With(log.Field{Key: "response.code", Value: 200})
+	logger = logger.With(log.Field{Key: "response.duration", Value: 42 * time.Millisecond})
+	logger = logger.With(log.Field{Key: "headers", Value: map[string][]string{"X-Foo": []string{"A", "B"}}})
+	if err := logger.Log("OK"); err != nil {
 		t.Fatal(err)
 	}
-	if want, have := `{"a":"b","m":"n"}`, strings.TrimSpace(buf.String()); want != have {
-		t.Fatalf("want\n\t%s, have\n\t%s", want, have)
+	if want, have := `{"headers":{"X-Foo":["A","B"]},"msg":"OK","request.size":1024,"response.code":200,"response.duration":42000000}`+"\n", buf.String(); want != have {
+		t.Errorf("want\n\t%#v, have\n\t%#v", want, have)
 	}
 }
