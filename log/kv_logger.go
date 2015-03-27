@@ -31,11 +31,11 @@ func (l *kvLogger) Log(s string) error {
 			return err
 		}
 	}
-	if _, err := fmt.Fprintf(l.Writer, s); err != nil {
+	if _, err := fmt.Fprint(l.Writer, s); err != nil {
 		return err
 	}
 	if s[len(s)-1] != '\n' {
-		if _, err := fmt.Fprintf(l.Writer, "\n"); err != nil {
+		if _, err := fmt.Fprint(l.Writer, "\n"); err != nil {
 			return err
 		}
 	}
