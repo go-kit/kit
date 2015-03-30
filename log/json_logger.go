@@ -2,14 +2,14 @@ package log
 
 import (
 	"encoding/json"
-
+	"fmt"
 	"io"
 )
 
 type jsonLogger struct {
 	io.Writer
-	key    string
-	fields []Field
+	key     string
+	keyvals []interface{}
 }
 
 // NewJSONLogger returns a Logger that marshals each log line as a JSON
@@ -30,19 +30,42 @@ func NewJSONLoggerWithKey(w io.Writer, messageKey string) Logger {
 	}
 }
 
-func (l *jsonLogger) With(fields ...Field) Logger {
+func (l *jsonLogger) With(keyvals ...interface{}) Logger {
+	if len(keyvals)%2 == 1 {
+		panic("odd number of keyvals")
+	}
 	return &jsonLogger{
-		Writer: l.Writer,
-		key:    l.key,
-		fields: append(l.fields, fields...),
+		Writer:  l.Writer,
+		key:     l.key,
+		keyvals: append(l.keyvals, keyvals...),
 	}
 }
 
-func (l *jsonLogger) Log(s string) error {
-	m := make(map[string]interface{}, len(l.fields)+1)
-	for _, f := range l.fields {
-		m[f.Key] = f.Value
+func (l *jsonLogger) Log(message string, keyvals ...interface{}) error {
+	if len(keyvals)%2 == 1 {
+		panic("odd number of keyvals")
 	}
-	m[l.key] = s
+	m := make(map[string]interface{}, len(l.keyvals)+len(keyvals)+1)
+	for i := 0; i < len(l.keyvals); i += 2 {
+		merge(m, l.keyvals[i], l.keyvals[i+1])
+	}
+	for i := 0; i < len(keyvals); i += 2 {
+		merge(m, keyvals[i], keyvals[i+1])
+	}
+	m[l.key] = message
 	return json.NewEncoder(l.Writer).Encode(m)
+}
+
+func merge(dst map[string]interface{}, k, v interface{}) map[string]interface{} {
+	var key string
+	switch x := k.(type) {
+	case string:
+		key = x
+	case fmt.Stringer:
+		key = x.String()
+	default:
+		key = fmt.Sprintf("%v", x)
+	}
+	dst[key] = v
+	return dst
 }

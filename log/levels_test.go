@@ -9,7 +9,7 @@ import (
 
 func TestBasicLevels(t *testing.T) {
 	buf := bytes.Buffer{}
-	levels := log.NewLevels(log.NewKVLogger(&buf))
+	levels := log.NewLevels(log.NewPrefixLogger(&buf))
 
 	levels.Debug.Log("👨") // of course you'd want to do this
 	if want, have := "level=DEBUG 👨\n", buf.String(); want != have {
@@ -39,8 +39,8 @@ func TestModifiedLevels(t *testing.T) {
 		log.ErrorLevelValue("🌊"),
 	)
 
-	levels.Debug.With(log.Field{Key: "what", Value: "🗿"}).Log("💃💃💃")
-	if want, have := `{"l":"⛄","msg":"💃💃💃","what":"🗿"}`+"\n", buf.String(); want != have {
+	levels.Debug.With("easter_island", "🗿").Log("💃💃💃")
+	if want, have := `{"easter_island":"🗿","l":"⛄","msg":"💃💃💃"}`+"\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 }
