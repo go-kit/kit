@@ -2,6 +2,7 @@ package log_test
 
 import (
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -35,6 +36,16 @@ func TestJSONLogger(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := `{"headers":{"X-Foo":["A","B"]},"msg":"OK","request.size":1024,"response.code":200,"response.duration":42000000}`+"\n", buf.String(); want != have {
+		t.Errorf("want\n\t%#v, have\n\t%#v", want, have)
+	}
+}
+
+func TestJSONLoggerErrorVal(t *testing.T) {
+	buf := &bytes.Buffer{}
+	if err := log.NewJSONLogger(buf).Log("-", "error", errors.New(":(")); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := `{"error":":(","msg":"-"}`+"\n", buf.String(); want != have {
 		t.Errorf("want\n\t%#v, have\n\t%#v", want, have)
 	}
 }

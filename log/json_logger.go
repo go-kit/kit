@@ -66,6 +66,9 @@ func merge(dst map[string]interface{}, k, v interface{}) map[string]interface{} 
 	default:
 		key = fmt.Sprintf("%v", x)
 	}
+	if x, ok := v.(error); ok {
+		v = x.Error()
+	}
 	dst[key] = v
 	return dst
 }
