@@ -13,34 +13,38 @@ func TestPrefixLogger(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := log.NewPrefixLogger(buf)
 
-	if err := logger.Log("hello"); err != nil {
+	if err := logger.Log("hello", "world"); err != nil {
 		t.Fatal(err)
 	}
-	if want, have := "hello\n", buf.String(); want != have {
+	if want, have := "hello=world\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 
 	buf.Reset()
-	if err := logger.Log("world", "k", "v"); err != nil {
+	if err := logger.Log("a", 1, "err", errors.New("error")); err != nil {
 		t.Fatal(err)
 	}
-	if want, have := "k=v world\n", buf.String(); want != have {
+	if want, have := "a=1 err=error\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 
 	buf.Reset()
-	if err := logger.With("z", 1, "a", 2).Log("🐰", "m", errors.New("n")); err != nil {
+	if err := logger.Log("std_map", map[int]int{1: 2}, "my_map", mymap{0: 0}); err != nil {
 		t.Fatal(err)
 	}
-	if want, have := "z=1 a=2 m=n 🐰\n", buf.String(); want != have {
+	if want, have := "std_map=map[1:2] my_map=special_behavior\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 }
 
+type mymap map[int]int
+
+func (m mymap) String() string { return "special_behavior" }
+
 func BenchmarkPrefixLoggerSimple(b *testing.B) {
-	benchmarkRunner(b, log.NewPrefixLogger(ioutil.Discard), simpleMessage)
+	benchmarkRunner(b, log.NewPrefixLogger(ioutil.Discard), baseMessage)
 }
 
 func BenchmarkPrefixLoggerContextual(b *testing.B) {
-	benchmarkRunner(b, log.NewPrefixLogger(ioutil.Discard), contextualMessage)
+	benchmarkRunner(b, log.NewPrefixLogger(ioutil.Discard), withMessage)
 }

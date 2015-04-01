@@ -53,8 +53,8 @@ func NewLevels(base Logger, options ...LevelOption) Levels {
 		option(opts)
 	}
 	return Levels{
-		Debug: base.With(opts.levelKey, opts.debugValue),
-		Info:  base.With(opts.levelKey, opts.infoValue),
-		Error: base.With(opts.levelKey, opts.errorValue),
+		Debug: With(base, opts.levelKey, opts.debugValue),
+		Info:  With(base, opts.levelKey, opts.infoValue),
+		Error: With(base, opts.levelKey, opts.errorValue),
 	}
 }
