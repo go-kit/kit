@@ -3,8 +3,38 @@ package log
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"testing"
+	"time"
 )
+
+func TestStdlibWriterUsage(t *testing.T) {
+	buf := &bytes.Buffer{}
+	logger := NewPrefixLogger(buf)
+	writer := NewStdlibWriter(logger)
+	log.SetOutput(writer)
+
+	now := time.Now()
+	date := now.Format("2006/01/02")
+	time := now.Format("15:04:05")
+
+	for flag, want := range map[int]string{
+		0:                                      "msg=hello\n",
+		log.Ldate:                              "ts=" + date + " msg=hello\n",
+		log.Ltime:                              "ts=" + time + " msg=hello\n",
+		log.Ldate | log.Ltime:                  "ts=" + date + " " + time + " msg=hello\n",
+		log.Lshortfile:                         "file=stdlib_writer_test.go:32 msg=hello\n",
+		log.Lshortfile | log.Ldate:             "ts=" + date + " file=stdlib_writer_test.go:32 msg=hello\n",
+		log.Lshortfile | log.Ldate | log.Ltime: "ts=" + date + " " + time + " file=stdlib_writer_test.go:32 msg=hello\n",
+	} {
+		buf.Reset()
+		log.SetFlags(flag)
+		log.Print("hello")
+		if have := buf.String(); want != have {
+			t.Errorf("flag=%d: want %#v, have %#v", flag, want, have)
+		}
+	}
+}
 
 func TestStdLibWriterExtraction(t *testing.T) {
 	buf := &bytes.Buffer{}
