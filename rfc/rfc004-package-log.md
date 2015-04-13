@@ -36,7 +36,7 @@ http://peter.bourgon.org/go-kit/#package-log
 *	Log MAY provide a set of defined severity levels that can be used (perhaps as a wrapper).
 *	Log SHALL include severity as a k/v pair and allow setting it through the same mechanism as any other k/v pair
 *	Log MAY provide wrapper types as a convenience for setting the severity level
-*	Log MUST NOT intrinsicly tie severity levels to program actions - e.g., a call to a specific log level should not call a panic.
+*	Log MUST NOT intrinsically tie severity levels to program actions - e.g., a call to a specific log level should not call a panic.
 *	Log MAY allow tying program actions such as panic to a log level.
 
 ## Implementation
