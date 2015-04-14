@@ -1,10 +1,9 @@
 package zipkin
 
 import (
-	"errors"
+	"math/rand"
 	"net/http"
-
-	"github.com/peterbourgon/gokit/server"
+	"strconv"
 
 	"golang.org/x/net/context"
 )
@@ -15,41 +14,49 @@ const (
 	spanIDHTTPHeader       = "X-B3-SpanId"
 	parentSpanIDHTTPHeader = "X-B3-ParentSpanId"
 
-	// TraceIDContextKey holds the Zipkin TraceId, if available.
+	// TraceIDContextKey holds the Zipkin TraceId.
 	TraceIDContextKey = "Zipkin-Trace-ID"
 
-	// SpanIDContextKey holds the Zipkin SpanId, if available.
+	// SpanIDContextKey holds the Zipkin SpanId.
 	SpanIDContextKey = "Zipkin-Span-ID"
 
 	// ParentSpanIDContextKey holds the Zipkin ParentSpanId, if available.
 	ParentSpanIDContextKey = "Zipkin-Parent-Span-ID"
 )
 
-// ErrMissingZipkinHeaders is returned when a context doesn't contain Zipkin
-// trace, span, or parent span IDs.
-var ErrMissingZipkinHeaders = errors.New("Zipkin headers missing from request context")
-
-// GetHeaders extracts Zipkin headers from the HTTP request, and populates
-// them into the context, if present.
-func GetHeaders(ctx context.Context, header http.Header) context.Context {
-	if val := header.Get(traceIDHTTPHeader); val != "" {
+// GetFromHTTP implements transport/http.BeforeFunc, populating Zipkin headers
+// into the context from the HTTP headers. It will generate new trace and span
+// IDs if none are found.
+func GetFromHTTP(ctx context.Context, r *http.Request) context.Context {
+	if val := r.Header.Get(traceIDHTTPHeader); val != "" {
 		ctx = context.WithValue(ctx, TraceIDContextKey, val)
+	} else {
+		ctx = context.WithValue(ctx, TraceIDContextKey, strconv.FormatInt(rand.Int63(), 16))
 	}
-	if val := header.Get(spanIDHTTPHeader); val != "" {
+	if val := r.Header.Get(spanIDHTTPHeader); val != "" {
 		ctx = context.WithValue(ctx, SpanIDContextKey, val)
+	} else {
+		ctx = context.WithValue(ctx, SpanIDContextKey, strconv.FormatInt(rand.Int63(), 16))
 	}
-	if val := header.Get(parentSpanIDHTTPHeader); val != "" {
+	if val := r.Header.Get(parentSpanIDHTTPHeader); val != "" {
 		ctx = context.WithValue(ctx, ParentSpanIDContextKey, val)
 	}
 	return ctx
 }
 
-// RequireInContext implements the server.Gate allow func by checking if the
-// context contains extracted Zipkin headers. Contexts without all headers
-// aren't allowed to proceed.
-func RequireInContext(ctx context.Context, _ server.Request) error {
-	if ctx.Value(TraceIDContextKey) == nil || ctx.Value(SpanIDContextKey) == nil || ctx.Value(ParentSpanIDContextKey) == nil {
-		return ErrMissingZipkinHeaders
+// SetHTTPHeaders copies Zipkin headers from the context into the HTTP header.
+func SetHTTPHeaders(ctx context.Context, h http.Header) {
+	for ctxKey, hdrKey := range map[string]string{
+		TraceIDContextKey:      traceIDHTTPHeader,
+		SpanIDContextKey:       spanIDHTTPHeader,
+		ParentSpanIDContextKey: parentSpanIDHTTPHeader,
+	} {
+		if val := ctx.Value(ctxKey); val != nil {
+			s, ok := val.(string)
+			if !ok {
+				panic("context value for " + ctxKey + " isn't string")
+			}
+			h.Set(hdrKey, s)
+		}
 	}
-	return nil
 }

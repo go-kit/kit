@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/justinas/alice"
 	"github.com/streadway/handy/cors"
 	"github.com/streadway/handy/encoding"
 	"golang.org/x/net/context"
@@ -24,12 +23,13 @@ import (
 	"github.com/peterbourgon/gokit/metrics/statsd"
 	"github.com/peterbourgon/gokit/server"
 	"github.com/peterbourgon/gokit/server/zipkin"
+	kithttp "github.com/peterbourgon/gokit/transport/http"
 )
 
 func main() {
 	var (
-		httpJSONAddr = flag.String("http.json.addr", ":8001", "Address for HTTP/JSON server")
-		grpcTCPAddr  = flag.String("grpc.tcp.addr", ":8002", "Address for gRPC (TCP) server")
+		httpAddr = flag.String("http.addr", ":8001", "Address for HTTP (JSON) server")
+		grpcAddr = flag.String("grpc.addr", ":8002", "Address for gRPC server")
 	)
 	flag.Parse()
 
@@ -41,7 +41,6 @@ func main() {
 	// `package server` domain
 	var e server.Endpoint
 	e = makeEndpoint(a)
-	e = server.Gate(zipkin.RequireInContext)(e) // must have Zipkin headers
 	// e = server.ChainableEnhancement(arg1, arg2, e)
 
 	// `package metrics` domain
@@ -64,7 +63,7 @@ func main() {
 
 	// Transport: gRPC
 	go func() {
-		ln, err := net.Listen("tcp", *grpcTCPAddr)
+		ln, err := net.Listen("tcp", *grpcAddr)
 		if err != nil {
 			errc <- err
 			return
@@ -75,30 +74,31 @@ func main() {
 		var addServer pb.AddServer
 		addServer = grpcBinding{e}
 		addServer = grpcInstrument(requests.With(field), duration.With(field))(addServer)
-		// Note that this will always fail, because the Endpoint is gated on
-		// Zipkin headers, and we don't extract them from the gRPC request.
 
 		pb.RegisterAddServer(s, addServer)
-		log.Printf("gRPC server on TCP %s", *grpcTCPAddr)
+		log.Printf("gRPC server on %s", *grpcAddr)
 		errc <- s.Serve(ln)
 	}()
 
-	// Transport: HTTP/JSON
+	// Transport: HTTP (JSON)
 	go func() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
-		mux := http.NewServeMux()
+
 		field := metrics.Field{Key: "transport", Value: "http"}
+		before := kithttp.Before(zipkin.GetFromHTTP)
+		after := kithttp.After(kithttp.SetContentType("application/json"))
 
-		handler := alice.New(
-			httpInstrument(requests.With(field), duration.With(field)),
-			encoding.Gzip,
-			cors.Middleware(cors.Config{}),
-		).Then(httpBinding{ctx, jsonCodec{}, "application/json", e})
+		var handler http.Handler
+		handler = kithttp.NewBinding(ctx, jsonCodec{}, e, before, after)
+		handler = encoding.Gzip(handler)
+		handler = httpInstrument(requests.With(field), duration.With(field))(handler)
+		handler = cors.Middleware(cors.Config{})(handler)
 
+		mux := http.NewServeMux()
 		mux.Handle("/add", handler)
-		log.Printf("HTTP/JSON server on %s", *httpJSONAddr)
-		errc <- http.ListenAndServe(*httpJSONAddr, mux)
+		log.Printf("HTTP server on %s", *httpAddr)
+		errc <- http.ListenAndServe(*httpAddr, mux)
 	}()
 
 	log.Fatal(<-errc)
