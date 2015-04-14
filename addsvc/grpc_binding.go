@@ -15,6 +15,10 @@ import (
 type grpcBinding struct{ server.Endpoint }
 
 // Add implements the proto3 AddServer by forwarding to the wrapped Endpoint.
+//
+// As far as I can tell, gRPC doesn't (currently) provide a user-accessible
+// way to manipulate the RPC context, like headers for HTTP. So we don't have
+// a way to transport e.g. Zipkin IDs with the request. TODO.
 func (b grpcBinding) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddReply, error) {
 	addReq := request{req.A, req.B}
 	r, err := b.Endpoint(ctx, addReq)

@@ -1,7 +1,8 @@
 package main
 
-// Add is the abstract definition of what this service does.
-// It could easily be an interface type with multiple methods.
+// Add is the abstract definition of what this service does. It could easily
+// be an interface type with multiple methods. Each method would be an
+// endpoint.
 type Add func(int64, int64) int64
 
 func pureAdd(a, b int64) int64 { return a + b }

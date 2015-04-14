@@ -22,7 +22,7 @@ import (
 	"github.com/peterbourgon/gokit/metrics/expvar"
 	"github.com/peterbourgon/gokit/metrics/statsd"
 	"github.com/peterbourgon/gokit/server"
-	"github.com/peterbourgon/gokit/server/zipkin"
+	"github.com/peterbourgon/gokit/tracing/zipkin"
 	kithttp "github.com/peterbourgon/gokit/transport/http"
 )
 
@@ -52,6 +52,8 @@ func main() {
 		expvar.NewHistogram("duration_ns", 0, 100000000, 3),
 		statsd.NewHistogram(ioutil.Discard, "duration_ns", time.Second),
 	)
+
+	// `package tracing` domain
 
 	// Mechanical stuff
 	root := context.Background()
@@ -92,8 +94,8 @@ func main() {
 		var handler http.Handler
 		handler = kithttp.NewBinding(ctx, jsonCodec{}, e, before, after)
 		handler = encoding.Gzip(handler)
-		handler = httpInstrument(requests.With(field), duration.With(field))(handler)
 		handler = cors.Middleware(cors.Config{})(handler)
+		handler = httpInstrument(requests.With(field), duration.With(field))(handler)
 
 		mux := http.NewServeMux()
 		mux.Handle("/add", handler)

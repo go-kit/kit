@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/peterbourgon/gokit/server/zipkin"
+	"github.com/peterbourgon/gokit/tracing/zipkin"
 	"golang.org/x/net/context"
 )
 
