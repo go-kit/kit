@@ -91,7 +91,7 @@ func main() {
 		defer cancel()
 
 		field := metrics.Field{Key: "transport", Value: "http"}
-		before := kithttp.Before(zipkin.ToContext(zipkin.ViaHTTP(zipkinSpanFunc)))
+		before := kithttp.Before(zipkin.ToContext(zipkin.FromHTTP(zipkinSpanFunc)))
 		after := kithttp.After(kithttp.SetContentType("application/json"))
 
 		var handler http.Handler

@@ -17,11 +17,11 @@ const (
 	parentSpanIDHTTPHeader = "X-B3-ParentSpanId"
 )
 
-// ViaHTTP is a helper method that allows NewSpanFunc's factory function to be
-// easily invoked by passing an HTTP request. The span name is the HTTP
-// method. The trace, span, and parent span IDs are taken from the request
+// FromHTTP is a helper method that allows NewSpanFunc's factory function to
+// be easily invoked by passing an HTTP request. The span name is the HTTP
+// method,  The trace, span, and parent span IDs are taken from the request
 // headers.
-func ViaHTTP(f func(string, int64, int64, int64) *Span) func(*http.Request) *Span {
+func FromHTTP(f func(string, int64, int64, int64) *Span) func(*http.Request) *Span {
 	return func(r *http.Request) *Span {
 		return f(
 			r.Method,

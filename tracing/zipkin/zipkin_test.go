@@ -23,7 +23,7 @@ func TestContextInjection(t *testing.T) {
 	r.Header.Set("X-B3-ParentSpanId", strconv.FormatInt(parentSpanID, 16))
 
 	sf := zipkin.NewSpanFunc("my-host", zipkin.NopCollector{})
-	hf := zipkin.ViaHTTP(sf)
+	hf := zipkin.FromHTTP(sf)
 	cf := zipkin.ToContext(hf)
 
 	ctx := cf(context.Background(), r)
