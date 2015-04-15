@@ -1,11 +1,21 @@
+// Package log provides basic interfaces for structured logging.
+//
+// The fundamental interface is Logger. Loggers create log events from
+// key/value data.
 package log
 
-// Logger is the least-common-denominator interface for all log operations.
+// Logger is the fundamental interface for all log operations.
+//
+// Log creates a log event from keyvals, a variadic sequence of alternating
+// keys and values.
 type Logger interface {
 	Log(keyvals ...interface{}) error
 }
 
-// With new, contextualized Logger with the passed keyvals already applied.
+// With returns a new Logger that incluces keyvals in all log events.
+//
+// If logger implements the Wither interface, the result of
+// logger.With(keyvals...) is returned.
 func With(logger Logger, keyvals ...interface{}) Logger {
 	if w, ok := logger.(Wither); ok {
 		return w.With(keyvals...)
@@ -25,9 +35,9 @@ func (f LoggerFunc) Log(keyvals ...interface{}) error {
 	return f(keyvals...)
 }
 
-// Wither describes an optimization that Logger implementations may make. If a
-// Logger implements Wither, the package-level With function will invoke it
-// when creating a new, contextual logger.
+// A Wither creates Loggers that include keyvals in all log events.
+//
+// The With function uses Wither if available.
 type Wither interface {
 	With(keyvals ...interface{}) Logger
 }
