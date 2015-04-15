@@ -8,6 +8,9 @@ package log
 //
 // Log creates a log event from keyvals, a variadic sequence of alternating
 // keys and values.
+//
+// Logger implementations must be safe for concurrent use by multiple
+// goroutines.
 type Logger interface {
 	Log(keyvals ...interface{}) error
 }

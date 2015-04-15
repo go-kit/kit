@@ -37,10 +37,6 @@ func TestPrefixLogger(t *testing.T) {
 	}
 }
 
-type mymap map[int]int
-
-func (m mymap) String() string { return "special_behavior" }
-
 func BenchmarkPrefixLoggerSimple(b *testing.B) {
 	benchmarkRunner(b, log.NewPrefixLogger(ioutil.Discard), baseMessage)
 }
@@ -48,3 +44,11 @@ func BenchmarkPrefixLoggerSimple(b *testing.B) {
 func BenchmarkPrefixLoggerContextual(b *testing.B) {
 	benchmarkRunner(b, log.NewPrefixLogger(ioutil.Discard), withMessage)
 }
+
+func TestPrefixLoggerConcurrency(t *testing.T) {
+	testConcurrency(t, log.NewPrefixLogger(ioutil.Discard))
+}
+
+type mymap map[int]int
+
+func (m mymap) String() string { return "special_behavior" }
