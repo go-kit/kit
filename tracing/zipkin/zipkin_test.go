@@ -1,70 +1,78 @@
 package zipkin_test
 
 import (
-	"math/rand"
 	"net/http"
+	"strconv"
 	"testing"
 
-	"github.com/peterbourgon/gokit/tracing/zipkin"
 	"golang.org/x/net/context"
+
+	"github.com/peterbourgon/gokit/tracing/zipkin"
 )
 
-func TestGeneration(t *testing.T) {
-	rand.Seed(123)
+func TestContextInjection(t *testing.T) {
+	const (
+		traceID      int64 = 12
+		spanID       int64 = 34
+		parentSpanID int64 = 56
+	)
 
-	r, _ := http.NewRequest("GET", "http://cool.horse", nil)
-	ctx := zipkin.GetFromHTTP(context.Background(), r)
+	r, _ := http.NewRequest("GET", "https://best.horse", nil)
+	r.Header.Set("X-B3-TraceId", strconv.FormatInt(traceID, 16))
+	r.Header.Set("X-B3-SpanId", strconv.FormatInt(spanID, 16))
+	r.Header.Set("X-B3-ParentSpanId", strconv.FormatInt(parentSpanID, 16))
 
-	for key, want := range map[string]string{
-		zipkin.TraceIDContextKey: "4a68998bed5c40f1",
-		zipkin.SpanIDContextKey:  "35b51599210f9ba",
-	} {
-		val := ctx.Value(key)
-		if val == nil {
-			t.Errorf("%s: no entry", key)
-			continue
-		}
-		have, ok := val.(string)
-		if !ok {
-			t.Errorf("%s: value not a string", key)
-			continue
-		}
-		if want != have {
-			t.Errorf("%s: want %q, have %q", key, want, have)
-			continue
-		}
+	sf := zipkin.NewSpanFunc("my-host", zipkin.NopCollector{})
+	hf := zipkin.ViaHTTP(sf)
+	cf := zipkin.ToContext(hf)
+
+	ctx := cf(context.Background(), r)
+	val := ctx.Value(zipkin.SpanContextKey)
+	if val == nil {
+		t.Fatalf("%s returned no value", zipkin.SpanContextKey)
+	}
+	span, ok := val.(*zipkin.Span)
+	if !ok {
+		t.Fatalf("%s was not a Span object", zipkin.SpanContextKey)
+	}
+
+	if want, have := traceID, span.TraceID(); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	if want, have := spanID, span.SpanID(); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	if want, have := parentSpanID, span.ParentSpanID(); want != have {
+		t.Errorf("want %d, have %d", want, have)
 	}
 }
 
-func TestHTTPHeaders(t *testing.T) {
-	ids := map[string]string{
-		zipkin.TraceIDContextKey:      "some_trace_id",
-		zipkin.SpanIDContextKey:       "some_span_id",
-		zipkin.ParentSpanIDContextKey: "some_parent_span_id",
+func TestSetRequestHeaders(t *testing.T) {
+	const (
+		host               = "my-host"
+		name               = "my-name"
+		traceID      int64 = 123
+		spanID       int64 = 456
+		parentSpanID int64 = 789
+	)
+
+	span := zipkin.NewSpan(host, zipkin.NopCollector{}, name, traceID, spanID, parentSpanID)
+	ctx := context.WithValue(context.Background(), zipkin.SpanContextKey, span)
+
+	r, _ := http.NewRequest("POST", "http://destroy.horse", nil)
+	if err := zipkin.SetRequestHeaders(ctx, r.Header); err != nil {
+		t.Fatal(err)
 	}
 
-	ctx0 := context.Background()
-	for key, val := range ids {
-		ctx0 = context.WithValue(ctx0, key, val)
-	}
-	r, _ := http.NewRequest("GET", "http://best.horse", nil)
-	zipkin.SetHTTPHeaders(ctx0, r.Header)
-	ctx1 := zipkin.GetFromHTTP(context.Background(), r)
-
-	for key, want := range ids {
-		val := ctx1.Value(key)
-		if val == nil {
-			t.Errorf("%s: no entry", key)
-			continue
-		}
-		have, ok := val.(string)
-		if !ok {
-			t.Errorf("%s: value not a string", key)
-			continue
-		}
-		if want != have {
-			t.Errorf("%s: want %q, have %q", key, want, have)
-			continue
+	for h, want := range map[string]string{
+		"X-B3-TraceId": strconv.FormatInt(traceID, 16),
+		// span ID is now random
+		"X-B3-ParentSpanId": strconv.FormatInt(spanID, 16),
+	} {
+		if have := r.Header.Get(h); want != have {
+			t.Errorf("%s: want %s, have %s", h, want, have)
 		}
 	}
 }

@@ -54,6 +54,9 @@ func main() {
 	)
 
 	// `package tracing` domain
+	zipkinHost := "some-host"                // TODO
+	zipkinCollector := zipkin.NopCollector{} // TODO
+	zipkinSpanFunc := zipkin.NewSpanFunc(zipkinHost, zipkinCollector)
 
 	// Mechanical stuff
 	root := context.Background()
@@ -88,7 +91,7 @@ func main() {
 		defer cancel()
 
 		field := metrics.Field{Key: "transport", Value: "http"}
-		before := kithttp.Before(zipkin.GetFromHTTP)
+		before := kithttp.Before(zipkin.ToContext(zipkin.ViaHTTP(zipkinSpanFunc)))
 		after := kithttp.After(kithttp.SetContentType("application/json"))
 
 		var handler http.Handler
