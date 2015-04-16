@@ -61,19 +61,20 @@ func TestWithConcurrent(t *testing.T) {
 	// can bucket the event counts.
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
+	const n = 10000
 	for i := 0; i < goroutines; i++ {
 		go func(idx int) {
 			defer wg.Done()
-			for j := 0; j < 10000; j++ {
+			for j := 0; j < n; j++ {
 				l.Log("goroutineIdx", idx)
 			}
 		}(i)
 	}
 	wg.Wait()
 
-	for _, count := range counts {
-		if count != 10000 {
-			t.Fatalf("Wrong number of messages in goroutine buckets: %+v", counts)
+	for bucket, have := range counts {
+		if want := n; want != have {
+			t.Errorf("bucket %d: want %d, have %d", bucket, want, have) // note Errorf
 		}
 	}
 }
