@@ -15,7 +15,7 @@ type Logger interface {
 	Log(keyvals ...interface{}) error
 }
 
-// With returns a new Logger that incluces keyvals in all log events.
+// With returns a new Logger that includes keyvals in all log events.
 //
 // If logger implements the Wither interface, the result of
 // logger.With(keyvals...) is returned.
