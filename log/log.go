@@ -24,7 +24,12 @@ func With(logger Logger, keyvals ...interface{}) Logger {
 		return w.With(keyvals...)
 	}
 	return LoggerFunc(func(kvs ...interface{}) error {
-		return logger.Log(append(keyvals, kvs...)...)
+		// Limiting the capacity of the first argument to append ensures that
+		// a new backing array is created if the slice must grow. Using the
+		// extra capacity without copying risks a data race that would violate
+		// the Logger interface contract.
+		n := len(keyvals)
+		return logger.Log(append(keyvals[:n:n], kvs...)...)
 	})
 }
 
