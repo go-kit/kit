@@ -2,6 +2,7 @@ package log_test
 
 import (
 	"bytes"
+	"sync"
 	"testing"
 
 	"github.com/peterbourgon/gokit/log"
@@ -33,3 +34,47 @@ type mylogger struct{ withs int }
 func (l *mylogger) Log(keyvals ...interface{}) error { return nil }
 
 func (l *mylogger) With(keyvals ...interface{}) log.Logger { l.withs++; return l }
+
+// Test that With returns a Logger safe for concurrent use. This test
+// validates that the stored logging context does not get corrupted when
+// multiple clients concurrently log additional keyvals.
+//
+// This test must be run with go test -cpu 2 (or more) to achieve its goal.
+func TestWithConcurrent(t *testing.T) {
+	// Create some buckets to count how many events each goroutine logs.
+	const goroutines = 8
+	counts := [goroutines]int{}
+
+	// This logger extracts a goroutine id from the last value field and
+	// increments the referenced bucket.
+	logger := log.LoggerFunc(func(kv ...interface{}) error {
+		goroutine := kv[len(kv)-1].(int)
+		counts[goroutine]++
+		return nil
+	})
+
+	// With must be careful about handling slices that can grow without
+	// copying the underlying array, so give it a challenge.
+	l := log.With(logger, make([]interface{}, 0, 2)...)
+
+	// Start logging concurrently. Each goroutine logs its id so the logger
+	// can bucket the event counts.
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	const n = 10000
+	for i := 0; i < goroutines; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			for j := 0; j < n; j++ {
+				l.Log("goroutineIdx", idx)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	for bucket, have := range counts {
+		if want := n; want != have {
+			t.Errorf("bucket %d: want %d, have %d", bucket, want, have) // note Errorf
+		}
+	}
+}
