@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/peterbourgon/gokit/tracing/zipkin/thrift/gen-go/zipkincore"
+	"github.com/peterbourgon/gokit/tracing/zipkin/_thrift/gen-go/zipkincore"
 )
 
 var (
