@@ -5,4 +5,4 @@
 # https://issues.apache.org/jira/browse/THRIFT-3021
 
 # https://thrift.apache.org/tutorial/go
-thrift -r --gen go:thrift_import=github.com/apache/thrift add.thrift
+thrift -r --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift add.thrift
