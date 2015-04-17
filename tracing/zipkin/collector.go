@@ -20,13 +20,21 @@ type Collector interface {
 }
 
 // ScribeCollector implements Collector by forwarding spans to a Scribe
-// service in batches.
+// service, in batches.
 type ScribeCollector struct {
-	spanc chan spanTuple
+	client        scribe.Scribe
+	factory       func() (scribe.Scribe, error)
+	spanc         chan *Span
+	sendc         chan struct{}
+	quitc         chan chan struct{}
+	batch         []*scribe.LogEntry
+	nextSend      time.Time
+	batchInterval time.Duration
+	batchSize     int
 }
 
 // NewScribeCollector returns a new Scribe-backed Collector, ready for use.
-func NewScribeCollector(addr string, timeout time.Duration, batchSize int, batchTime time.Duration) (Collector, error) {
+func NewScribeCollector(addr string, timeout time.Duration, batchSize int, batchInterval time.Duration) (Collector, error) {
 	factory := func() (scribe.Scribe, error) {
 		return newScribeClient(addr, timeout)
 	}
@@ -35,65 +43,79 @@ func NewScribeCollector(addr string, timeout time.Duration, batchSize int, batch
 		return nil, err
 	}
 	c := &ScribeCollector{
-		spanc: make(chan spanTuple),
+		client:        client,
+		factory:       factory,
+		spanc:         make(chan *Span),
+		sendc:         make(chan struct{}),
+		quitc:         make(chan chan struct{}),
+		batch:         []*scribe.LogEntry{},
+		nextSend:      time.Now().Add(batchInterval),
+		batchInterval: batchInterval,
+		batchSize:     batchSize,
 	}
-	go c.loop(client, factory, batchSize, batchTime)
+	go c.loop()
 	return c, nil
 }
 
 // Collect implements Collector.
 func (c *ScribeCollector) Collect(s *Span) error {
-	e := make(chan error)
-	c.spanc <- spanTuple{s, e}
-	return <-e
+	c.spanc <- s
+	return nil // accepted
 }
 
-func (c *ScribeCollector) loop(client scribe.Scribe, factory func() (scribe.Scribe, error), batchSize int, batchTime time.Duration) {
-	batch := make([]*scribe.LogEntry, 0, batchSize)
-	nextPublish := time.Now().Add(batchTime)
-	publish := func() error {
-		if client == nil {
-			var err error
-			if client, err = factory(); err != nil {
-				return fmt.Errorf("during reconnect: %v", err)
+func (c *ScribeCollector) loop() {
+	ticker := time.NewTicker(c.batchInterval / 10)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case span := <-c.spanc:
+			c.batch = append(c.batch, &scribe.LogEntry{
+				Category: "zipkin", // TODO parameterize?
+				Message:  serialize(span),
+			})
+			if len(c.batch) >= c.batchSize {
+				go c.sendNow()
 			}
-		}
-		if rc, err := client.Log(batch); err != nil {
-			client = nil
-			return fmt.Errorf("during Log: %v", err)
-		} else if rc != scribe.ResultCode_OK {
-			// probably transient error; don't reset client
-			return fmt.Errorf("remote returned %s", rc)
-		}
-		batch = batch[:0]
-		return nil
-	}
 
-	for t := range c.spanc {
-		message, err := encode(t.Span)
-		if err != nil {
-			t.errc <- err
-			continue
+		case <-ticker.C:
+			if time.Now().After(c.nextSend) {
+				go c.sendNow()
+			}
+
+		case <-c.sendc:
+			c.nextSend = time.Now().Add(c.batchInterval)
+			if err := c.send(c.batch); err != nil {
+				continue
+			}
+			c.batch = c.batch[:0]
+
+		case q := <-c.quitc:
+			close(q)
+			return
 		}
-
-		batch = append(batch, &scribe.LogEntry{
-			Category: "zipkin", // TODO parmeterize?
-			Message:  message,
-		})
-
-		if len(batch) >= batchSize || time.Now().After(nextPublish) {
-			t.errc <- publish()
-			nextPublish = time.Now().Add(batchTime)
-			continue
-		}
-
-		t.errc <- nil
 	}
 }
 
-type spanTuple struct {
-	*Span
-	errc chan error
+func (c *ScribeCollector) sendNow() {
+	c.sendc <- struct{}{}
+}
+
+func (c *ScribeCollector) send(batch []*scribe.LogEntry) error {
+	if c.client == nil {
+		var err error
+		if c.client, err = c.factory(); err != nil {
+			return fmt.Errorf("during reconnect: %v", err)
+		}
+	}
+	if rc, err := c.client.Log(c.batch); err != nil {
+		c.client = nil
+		return fmt.Errorf("during Log: %v", err)
+	} else if rc != scribe.ResultCode_OK {
+		// probably transient error; don't reset client
+		return fmt.Errorf("remote returned %s", rc)
+	}
+	return nil
 }
 
 func newScribeClient(addr string, timeout time.Duration) (scribe.Scribe, error) {
@@ -112,13 +134,13 @@ func newScribeClient(addr string, timeout time.Duration) (scribe.Scribe, error) 
 	return client, nil
 }
 
-func encode(s *Span) (string, error) {
+func serialize(s *Span) string {
 	t := thrift.NewTMemoryBuffer()
 	p := thrift.NewTBinaryProtocolTransport(t)
 	if err := s.Encode().Write(p); err != nil {
-		return "", err
+		panic(err)
 	}
-	return base64.StdEncoding.EncodeToString(t.Buffer.Bytes()), nil
+	return base64.StdEncoding.EncodeToString(t.Buffer.Bytes())
 }
 
 // NopCollector implements Collector but performs no work.

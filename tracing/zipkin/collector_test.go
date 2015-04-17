@@ -2,6 +2,8 @@ package zipkin_test
 
 import (
 	"encoding/base64"
+	"fmt"
+	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -15,10 +17,11 @@ import (
 )
 
 func TestScribeCollector(t *testing.T) {
-	s := newScribeServer(t)
-	defer s.close()
+	server := newScribeServer(t)
 
-	c, err := zipkin.NewScribeCollector(s.addr(), 100*time.Millisecond, 0, 10*time.Millisecond)
+	timeout := time.Second
+	batchInterval := time.Millisecond
+	c, err := zipkin.NewScribeCollector(server.addr(), timeout, 0, batchInterval)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,11 +41,23 @@ func TestScribeCollector(t *testing.T) {
 		t.Errorf("error during submit: %v", err)
 	}
 
-	if want, have := 1, len(s.spans()); want != have {
-		t.Fatalf("want %d, have %d", want, have)
+	// Need to yield to the select loop to accept the send request, and then
+	// yield again to the send operation to write to the socket. I think the
+	// best way to do that is just give it some time.
+
+	deadline := time.Now().Add(1 * time.Second)
+	for {
+		if time.Now().After(deadline) {
+			t.Fatalf("never received a span")
+		}
+		if want, have := 1, len(server.spans()); want != have {
+			time.Sleep(time.Millisecond)
+			continue
+		}
+		break
 	}
 
-	gotSpan := s.spans()[0]
+	gotSpan := server.spans()[0]
 	if want, have := name, gotSpan.GetName(); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
@@ -75,17 +90,29 @@ type scribeServer struct {
 	address   string
 	server    *thrift.TSimpleServer
 	handler   *scribeHandler
-	wg        sync.WaitGroup
 }
 
 func newScribeServer(t *testing.T) *scribeServer {
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
-	transport, err := thrift.NewTServerSocket(":0")
+
+	var port int
+	var transport *thrift.TServerSocket
+	var err error
+	for i := 0; i < 10; i++ {
+		port = 10000 + rand.Intn(10000)
+		transport, err = thrift.NewTServerSocket(fmt.Sprintf(":%d", port))
+		if err != nil {
+			t.Logf("port %d: %v", port, err)
+			continue
+		}
+		break
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler := &scribeHandler{}
+
+	handler := newScribeHandler(t)
 	server := thrift.NewTSimpleServer4(
 		scribe.NewScribeProcessor(handler),
 		transport,
@@ -93,25 +120,14 @@ func newScribeServer(t *testing.T) *scribeServer {
 		protocolFactory,
 	)
 
-	s := &scribeServer{t: t}
-	s.wg.Add(1)
-	go func() { defer s.wg.Done(); server.Serve() }()
-	tickc := time.Tick(10 * time.Millisecond)
-	donec := time.After(1 * time.Second)
-	for !transport.IsListening() {
-		select {
-		case <-tickc:
-			continue
-		case <-donec:
-			t.Fatal("server never started listening")
-		}
-	}
+	go server.Serve()
+	time.Sleep(time.Second)
 
-	s.transport = transport
-	s.address = transport.Addr().String()
-	s.server = server
-	s.handler = handler
-	return s
+	return &scribeServer{
+		transport: transport,
+		address:   fmt.Sprintf("127.0.0.1:%d", port),
+		handler:   handler,
+	}
 }
 
 func (s *scribeServer) addr() string {
@@ -119,115 +135,50 @@ func (s *scribeServer) addr() string {
 }
 
 func (s *scribeServer) spans() []*zipkincore.Span {
+	return s.handler.spans()
+}
+
+type scribeHandler struct {
+	t *testing.T
+	sync.RWMutex
+	entries []*scribe.LogEntry
+}
+
+func newScribeHandler(t *testing.T) *scribeHandler {
+	return &scribeHandler{t: t}
+}
+
+func (h *scribeHandler) Log(messages []*scribe.LogEntry) (scribe.ResultCode, error) {
+	h.Lock()
+	defer h.Unlock()
+	for _, m := range messages {
+		h.entries = append(h.entries, m)
+	}
+	return scribe.ResultCode_OK, nil
+}
+
+func (h *scribeHandler) spans() []*zipkincore.Span {
+	h.RLock()
+	defer h.RUnlock()
 	spans := []*zipkincore.Span{}
-	for _, m := range *s.handler {
+	for _, m := range h.entries {
 		decoded, err := base64.StdEncoding.DecodeString(m.GetMessage())
 		if err != nil {
-			s.t.Error(err)
+			h.t.Error(err)
 			continue
 		}
 		buffer := thrift.NewTMemoryBuffer()
 		if _, err := buffer.Write(decoded); err != nil {
-			s.t.Error(err)
+			h.t.Error(err)
 			continue
 		}
 		transport := thrift.NewTBinaryProtocolTransport(buffer)
 		zs := &zipkincore.Span{}
 		if err := zs.Read(transport); err != nil {
-			s.t.Error(err)
+			h.t.Error(err)
 			continue
 		}
 		spans = append(spans, zs)
 	}
 	return spans
 }
-
-func (s *scribeServer) reset() {
-	s.handler.reset()
-}
-
-func (s *scribeServer) close() {
-	s.transport.Close()
-	s.server.Stop()
-	s.wg.Wait()
-}
-
-type scribeHandler []*scribe.LogEntry
-
-func (h *scribeHandler) Log(messages []*scribe.LogEntry) (scribe.ResultCode, error) {
-	for _, m := range messages {
-		(*h) = append(*h, m)
-	}
-	return scribe.ResultCode_OK, nil
-}
-
-func (h *scribeHandler) reset() {
-	(*h) = (*h)[:0]
-}
-
-/*
-type server struct {
-	t        *testing.T
-	wg       sync.WaitGroup
-	listener net.Listener
-
-	mu     sync.Mutex
-	buffer bytes.Buffer
-}
-
-func newServer(t *testing.T) *server {
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
-	s := &server{
-		t:        t,
-		wg:       wg,
-		listener: listener,
-		buffer:   bytes.Buffer{},
-	}
-	go s.loop()
-	return s
-}
-
-func (s *server) loop() {
-	defer s.wg.Done()
-	for {
-		conn, err := s.listener.Accept()
-		s.t.Logf("Accept %v %v", conn.LocalAddr(), conn.RemoteAddr())
-		if err != nil {
-			s.t.Log(err) // closing the listener triggers an error
-			return
-		}
-		buf := make([]byte, 8192)
-		for {
-			n, err := conn.Read(buf)
-			if err != nil {
-				s.t.Log(err) // also OK
-				break
-			}
-			s.buffer.Write(buf[:n])
-		}
-		s.t.Logf("done")
-	}
-}
-
-func (s *server) addr() string {
-	return s.listener.Addr().String()
-}
-
-func (s *server) buf() []byte {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.buffer.Bytes() // better not mutate!
-}
-
-func (s *server) close() {
-	s.listener.Close()
-	//s.wg.Wait()
-}
-*/
