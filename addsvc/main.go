@@ -12,11 +12,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/streadway/handy/cors"
 	"github.com/streadway/handy/encoding"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	thriftadd "github.com/peterbourgon/gokit/addsvc/_thrift/gen-go/add"
 	"github.com/peterbourgon/gokit/addsvc/pb"
 	"github.com/peterbourgon/gokit/metrics"
 	"github.com/peterbourgon/gokit/metrics/expvar"
@@ -28,8 +30,12 @@ import (
 
 func main() {
 	var (
-		httpAddr = flag.String("http.addr", ":8001", "Address for HTTP (JSON) server")
-		grpcAddr = flag.String("grpc.addr", ":8002", "Address for gRPC server")
+		httpAddr         = flag.String("http.addr", ":8001", "Address for HTTP (JSON) server")
+		grpcAddr         = flag.String("grpc.addr", ":8002", "Address for gRPC server")
+		thriftAddr       = flag.String("thrift.addr", ":8003", "Address for Thrift server")
+		thriftProtocol   = flag.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
+		thriftBufferSize = flag.Int("thrift.buffer.size", 0, "0 for unbuffered")
+		thriftFramed     = flag.Bool("thrift.framed", false, "true to enable framing")
 	)
 	flag.Parse()
 
@@ -104,6 +110,58 @@ func main() {
 		mux.Handle("/add", handler)
 		log.Printf("HTTP server on %s", *httpAddr)
 		errc <- http.ListenAndServe(*httpAddr, mux)
+	}()
+
+	// Transport: Thrift
+	go func() {
+		ctx, cancel := context.WithCancel(root)
+		defer cancel()
+
+		var protocolFactory thrift.TProtocolFactory
+		switch *thriftProtocol {
+		case "binary":
+			protocolFactory = thrift.NewTBinaryProtocolFactoryDefault()
+		case "compact":
+			protocolFactory = thrift.NewTCompactProtocolFactory()
+		case "json":
+			protocolFactory = thrift.NewTJSONProtocolFactory()
+		case "simplejson":
+			protocolFactory = thrift.NewTSimpleJSONProtocolFactory()
+		default:
+			errc <- fmt.Errorf("invalid Thrift protocol %q", *thriftProtocol)
+			return
+		}
+
+		var transportFactory thrift.TTransportFactory
+		if *thriftBufferSize > 0 {
+			transportFactory = thrift.NewTBufferedTransportFactory(*thriftBufferSize)
+		} else {
+			transportFactory = thrift.NewTTransportFactory()
+		}
+
+		if *thriftFramed {
+			transportFactory = thrift.NewTFramedTransportFactory(transportFactory)
+		}
+
+		transport, err := thrift.NewTServerSocket(*thriftAddr)
+		if err != nil {
+			errc <- err
+			return
+		}
+
+		field := metrics.Field{Key: "transport", Value: "thrift"}
+
+		var service thriftadd.AddService
+		service = thriftBinding{ctx, e}
+		service = thriftInstrument(requests.With(field), duration.With(field))(service)
+
+		log.Printf("Thrift server on %s", *thriftAddr)
+		errc <- thrift.NewTSimpleServer4(
+			thriftadd.NewAddServiceProcessor(service),
+			transport,
+			transportFactory,
+			protocolFactory,
+		).Serve()
 	}()
 
 	log.Fatal(<-errc)
