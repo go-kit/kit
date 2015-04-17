@@ -3,6 +3,8 @@ package zipkin
 import (
 	"errors"
 	"time"
+
+	"github.com/peterbourgon/gokit/tracing/zipkin/thrift/gen-go/zipkincore"
 )
 
 var (
@@ -76,6 +78,37 @@ func (s *Span) AnnotateDuration(value string, duration time.Duration) {
 
 // Submit sends the span to the collector.
 func (s *Span) Submit() error { return s.collector.Collect(s) }
+
+// Encode creates a Thrift Span from the gokit Span.
+func (s *Span) Encode() *zipkincore.Span {
+	// TODO lots of garbage here. We can improve by preallocating e.g. the
+	// Thrift stuff into an encoder struct, owned by the ScribeCollector.
+	zs := zipkincore.Span{
+		TraceId:           s.traceID,
+		Name:              s.name,
+		Id:                s.spanID,
+		BinaryAnnotations: []*zipkincore.BinaryAnnotation{}, // TODO
+		Debug:             false,                            // TODO
+	}
+	if s.parentSpanID != 0 {
+		(*zs.ParentId) = s.parentSpanID
+	}
+	zs.Annotations = make([]*zipkincore.Annotation, len(s.annotations))
+	for i, a := range s.annotations {
+		zs.Annotations[i] = &zipkincore.Annotation{
+			Timestamp: a.timestamp.UnixNano() / 1e3,
+			Value:     a.value,
+		}
+		if a.host != "" {
+			// zs.Annotations[i].Host = TODO
+		}
+		if a.duration > 0 {
+			zs.Annotations[i].Duration = new(int32)
+			(*zs.Annotations[i].Duration) = int32(a.duration / time.Microsecond)
+		}
+	}
+	return &zs
+}
 
 type annotation struct {
 	timestamp time.Time
