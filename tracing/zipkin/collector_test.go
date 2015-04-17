@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
+	"net"
 	"sync"
 	"testing"
 	"time"
@@ -120,7 +121,14 @@ func newScribeServer(t *testing.T) *scribeServer {
 	)
 
 	go server.Serve()
-	time.Sleep(time.Second)
+
+	deadline := time.Now().Add(time.Second)
+	for !canConnect(port) {
+		if time.Now().After(deadline) {
+			t.Fatal("server never started")
+		}
+		time.Sleep(time.Millisecond)
+	}
 
 	return &scribeServer{
 		transport: transport,
@@ -180,4 +188,13 @@ func (h *scribeHandler) spans() []*zipkincore.Span {
 		spans = append(spans, zs)
 	}
 	return spans
+}
+
+func canConnect(port int) bool {
+	c, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return false
+	}
+	c.Close()
+	return true
 }

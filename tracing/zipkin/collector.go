@@ -35,9 +35,7 @@ type ScribeCollector struct {
 
 // NewScribeCollector returns a new Scribe-backed Collector, ready for use.
 func NewScribeCollector(addr string, timeout time.Duration, batchSize int, batchInterval time.Duration) (Collector, error) {
-	factory := func() (scribe.Scribe, error) {
-		return newScribeClient(addr, timeout)
-	}
+	factory := scribeClientFactory(addr, timeout)
 	client, err := factory()
 	if err != nil {
 		return nil, err
@@ -47,7 +45,6 @@ func NewScribeCollector(addr string, timeout time.Duration, batchSize int, batch
 		factory:       factory,
 		spanc:         make(chan *Span),
 		sendc:         make(chan struct{}),
-		quitc:         make(chan chan struct{}),
 		batch:         []*scribe.LogEntry{},
 		nextSend:      time.Now().Add(batchInterval),
 		batchInterval: batchInterval,
@@ -64,8 +61,7 @@ func (c *ScribeCollector) Collect(s *Span) error {
 }
 
 func (c *ScribeCollector) loop() {
-	ticker := time.NewTicker(c.batchInterval / 10)
-	defer ticker.Stop()
+	tickc := time.Tick(c.batchInterval / 10)
 
 	for {
 		select {
@@ -78,7 +74,7 @@ func (c *ScribeCollector) loop() {
 				go c.sendNow()
 			}
 
-		case <-ticker.C:
+		case <-tickc:
 			if time.Now().After(c.nextSend) {
 				go c.sendNow()
 			}
@@ -89,10 +85,6 @@ func (c *ScribeCollector) loop() {
 				continue
 			}
 			c.batch = c.batch[:0]
-
-		case q := <-c.quitc:
-			close(q)
-			return
 		}
 	}
 }
@@ -118,20 +110,22 @@ func (c *ScribeCollector) send(batch []*scribe.LogEntry) error {
 	return nil
 }
 
-func newScribeClient(addr string, timeout time.Duration) (scribe.Scribe, error) {
-	a, err := net.ResolveTCPAddr("tcp", addr)
-	if err != nil {
-		return nil, err
+func scribeClientFactory(addr string, timeout time.Duration) func() (scribe.Scribe, error) {
+	return func() (scribe.Scribe, error) {
+		a, err := net.ResolveTCPAddr("tcp", addr)
+		if err != nil {
+			return nil, err
+		}
+		socket := thrift.NewTSocketFromAddrTimeout(a, timeout)
+		transport := thrift.NewTFramedTransport(socket)
+		if err := transport.Open(); err != nil {
+			socket.Close()
+			return nil, err
+		}
+		proto := thrift.NewTBinaryProtocolTransport(transport)
+		client := scribe.NewScribeClientProtocol(transport, proto, proto)
+		return client, nil
 	}
-	socket := thrift.NewTSocketFromAddrTimeout(a, timeout)
-	transport := thrift.NewTFramedTransport(socket)
-	if err := transport.Open(); err != nil {
-		socket.Close()
-		return nil, err
-	}
-	proto := thrift.NewTBinaryProtocolTransport(transport)
-	client := scribe.NewScribeClientProtocol(transport, proto, proto)
-	return client, nil
 }
 
 func serialize(s *Span) string {
