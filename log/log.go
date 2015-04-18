@@ -23,14 +23,32 @@ func With(logger Logger, keyvals ...interface{}) Logger {
 	if w, ok := logger.(Wither); ok {
 		return w.With(keyvals...)
 	}
-	return LoggerFunc(func(kvs ...interface{}) error {
-		// Limiting the capacity of the first argument to append ensures that
-		// a new backing array is created if the slice must grow. Using the
-		// extra capacity without copying risks a data race that would violate
-		// the Logger interface contract.
-		n := len(keyvals)
-		return logger.Log(append(keyvals[:n:n], kvs...)...)
-	})
+	// Limiting the capacity of the stored keyvals ensures that a new
+	// backing array is created if the slice must grow in Log or With.
+	// Using the extra capacity without copying risks a data race that
+	// would violate the Logger interface contract.
+	n := len(keyvals)
+	return &withLogger{
+		logger:  logger,
+		keyvals: keyvals[:n:n],
+	}
+}
+
+type withLogger struct {
+	logger  Logger
+	keyvals []interface{}
+}
+
+func (l *withLogger) Log(kvs ...interface{}) error {
+	return l.logger.Log(append(l.keyvals, kvs...)...)
+}
+
+func (l *withLogger) With(keyvals ...interface{}) Logger {
+	n := len(l.keyvals) + len(keyvals)
+	return &withLogger{
+		logger:  l.logger,
+		keyvals: append(l.keyvals, keyvals...)[:n:n],
+	}
 }
 
 // LoggerFunc is an adapter to allow use of ordinary functions as Loggers. If
@@ -48,4 +66,11 @@ func (f LoggerFunc) Log(keyvals ...interface{}) error {
 // The With function uses Wither if available.
 type Wither interface {
 	With(keyvals ...interface{}) Logger
+}
+
+// NewDiscardLogger returns a logger that does not log anything.
+func NewDiscardLogger() Logger {
+	return LoggerFunc(func(...interface{}) error {
+		return nil
+	})
 }
