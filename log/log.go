@@ -19,6 +19,9 @@ type Logger interface {
 //
 // If logger implements the Wither interface, the result of
 // logger.With(keyvals...) is returned.
+//
+// When wrapping a basic Logger, With returns a logger that calls BindValues
+// on the stored keyvals when logging.
 func With(logger Logger, keyvals ...interface{}) Logger {
 	w, ok := logger.(Wither)
 	if !ok {
@@ -33,7 +36,7 @@ type withLogger struct {
 }
 
 func (l *withLogger) Log(keyvals ...interface{}) error {
-	return l.logger.Log(append(l.keyvals, keyvals...)...)
+	return l.logger.Log(append(BindValues(l.keyvals...), keyvals...)...)
 }
 
 func (l *withLogger) With(keyvals ...interface{}) Logger {
@@ -61,6 +64,9 @@ func (f LoggerFunc) Log(keyvals ...interface{}) error {
 // A Wither creates Loggers that include keyvals in all log events.
 //
 // The With function uses Wither if available.
+//
+// It is recommended that implementations of With call BindValues on stored
+// keyvals before each log event.
 type Wither interface {
 	With(keyvals ...interface{}) Logger
 }
