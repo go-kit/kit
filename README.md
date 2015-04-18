@@ -92,6 +92,7 @@ Projects with a ★ have had particular influence on gokit's design.
 - [spacemonkeygo/monitor](https://github.com/spacemonkeygo/monitor), data collection, monitoring, instrumentation, and Zipkin client library
 - [streadway/handy](https://github.com/streadway/handy), net/http handler filters
 - [vitess/rpcplus](https://godoc.org/code.google.com/p/vitess/go/rpcplus), package rpc + context.Context
+- [gdamore/mangos](https://github.com/gdamore/mangos), nanomsg implementation in pure Go
 
 ### Web frameworks
 
