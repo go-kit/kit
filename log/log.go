@@ -39,8 +39,8 @@ type withLogger struct {
 	keyvals []interface{}
 }
 
-func (l *withLogger) Log(kvs ...interface{}) error {
-	return l.logger.Log(append(l.keyvals, kvs...)...)
+func (l *withLogger) Log(keyvals ...interface{}) error {
+	return l.logger.Log(append(l.keyvals, keyvals...)...)
 }
 
 func (l *withLogger) With(keyvals ...interface{}) Logger {
