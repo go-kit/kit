@@ -10,14 +10,16 @@ import (
 
 func TestWith(t *testing.T) {
 	buf := &bytes.Buffer{}
+	kvs := []interface{}{"a", 123}
 	logger := log.NewJSONLogger(buf)
-	logger = log.With(logger, "a", 123)
+	logger = log.With(logger, kvs...)
+	kvs[1] = 0                          // With should copy its key values
 	logger = log.With(logger, "b", "c") // With should stack
 	if err := logger.Log("msg", "message"); err != nil {
 		t.Fatal(err)
 	}
 	if want, have := `{"a":123,"b":"c","msg":"message"}`+"\n", buf.String(); want != have {
-		t.Errorf("want\n\t%#v, have\n\t%#v", want, have)
+		t.Errorf("\nwant: %s\nhave: %s", want, have)
 	}
 }
 
