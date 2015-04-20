@@ -78,3 +78,46 @@ func TestWithConcurrent(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkDiscard(b *testing.B) {
+	logger := log.NewDiscardLogger()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		logger.Log("k", "v")
+	}
+}
+
+func BenchmarkOneWith(b *testing.B) {
+	logger := log.NewDiscardLogger()
+	logger = log.With(logger, "k", "v")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		logger.Log("k", "v")
+	}
+}
+
+func BenchmarkTwoWith(b *testing.B) {
+	logger := log.NewDiscardLogger()
+	for i := 0; i < 2; i++ {
+		logger = log.With(logger, "k", "v")
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		logger.Log("k", "v")
+	}
+}
+
+func BenchmarkTenWith(b *testing.B) {
+	logger := log.NewDiscardLogger()
+	for i := 0; i < 10; i++ {
+		logger = log.With(logger, "k", "v")
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		logger.Log("k", "v")
+	}
+}
