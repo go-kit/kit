@@ -20,18 +20,11 @@ type Logger interface {
 // If logger implements the Wither interface, the result of
 // logger.With(keyvals...) is returned.
 func With(logger Logger, keyvals ...interface{}) Logger {
-	if w, ok := logger.(Wither); ok {
-		return w.With(keyvals...)
+	w, ok := logger.(Wither)
+	if !ok {
+		w = &withLogger{logger: logger}
 	}
-	// Limiting the capacity of the stored keyvals ensures that a new
-	// backing array is created if the slice must grow in Log or With.
-	// Using the extra capacity without copying risks a data race that
-	// would violate the Logger interface contract.
-	n := len(keyvals)
-	return &withLogger{
-		logger:  logger,
-		keyvals: keyvals[:n:n],
-	}
+	return w.With(keyvals...)
 }
 
 type withLogger struct {
@@ -44,6 +37,10 @@ func (l *withLogger) Log(keyvals ...interface{}) error {
 }
 
 func (l *withLogger) With(keyvals ...interface{}) Logger {
+	// Limiting the capacity of the stored keyvals ensures that a new
+	// backing array is created if the slice must grow in Log or With.
+	// Using the extra capacity without copying risks a data race that
+	// would violate the Logger interface contract.
 	n := len(l.keyvals) + len(keyvals)
 	return &withLogger{
 		logger:  l.logger,
