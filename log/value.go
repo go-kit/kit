@@ -48,14 +48,14 @@ type Valuer interface {
 	Value() Value
 }
 
-type timeStamp struct{}
+type timestamp struct{}
 
-func (*timeStamp) Value() Value {
+func (timestamp) Value() Value {
 	return time.Now()
 }
 
 // Timestamp is a Valuer that returns the result of time.Now() from its Value method.
-var Timestamp = &timeStamp{}
+var Timestamp timestamp
 
 type caller struct{}
 
