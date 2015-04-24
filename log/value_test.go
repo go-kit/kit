@@ -15,7 +15,7 @@ func TestValueBinding(t *testing.T) {
 		output = keyvals
 		return nil
 	}))
-	logger = log.With(logger, "ts", log.Timestamp, "caller", log.Caller)
+	logger = log.With(logger, "ts", log.DefaultTimestamp, "caller", log.DefaultCaller)
 
 	before := time.Now()
 	logger.Log("foo", "bar")
@@ -39,7 +39,7 @@ func TestValueBinding(t *testing.T) {
 
 func BenchmarkValueBindingTimestamp(b *testing.B) {
 	logger := log.NewDiscardLogger()
-	logger = log.With(logger, "ts", log.Timestamp)
+	logger = log.With(logger, "ts", log.DefaultTimestamp)
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -49,7 +49,7 @@ func BenchmarkValueBindingTimestamp(b *testing.B) {
 
 func BenchmarkValueBindingCaller(b *testing.B) {
 	logger := log.NewDiscardLogger()
-	logger = log.With(logger, "caller", log.Caller)
+	logger = log.With(logger, "caller", log.DefaultCaller)
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
