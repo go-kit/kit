@@ -15,24 +15,38 @@ func TestValueBinding(t *testing.T) {
 		output = keyvals
 		return nil
 	}))
-	logger = log.With(logger, "ts", log.DefaultTimestamp, "caller", log.DefaultCaller)
 
-	before := time.Now()
+	start := time.Date(2015, time.April, 25, 0, 0, 0, 0, time.UTC)
+	now := start
+	mocktime := func() time.Time {
+		now = now.Add(time.Second)
+		return now
+	}
+
+	logger = log.With(logger, "ts", log.Timestamp(mocktime), "caller", log.DefaultCaller)
+
 	logger.Log("foo", "bar")
-	after := time.Now()
-
 	timestamp, ok := output[1].(time.Time)
 	if !ok {
 		t.Fatalf("want time.Time, have %T", output[1])
 	}
-	if before.After(timestamp) {
-		t.Errorf("before %v is after timestamp %v", before, timestamp)
+	if want, have := start.Add(time.Second), timestamp; want != have {
+		t.Errorf("output[1]: want %v, have %v", want, have)
 	}
-	if after.Before(timestamp) {
-		t.Errorf("after %v is before timestamp %v", after, timestamp)
+	if want, have := "value_test.go:28", fmt.Sprint(output[3]); want != have {
+		t.Fatalf("output[3]: want %s, have %s", want, have)
 	}
 
-	if want, have := "value_test.go:21", fmt.Sprint(output[3]); want != have {
+	// A second attempt to confirm the bindings are truly dynamic.
+	logger.Log("foo", "bar")
+	timestamp, ok = output[1].(time.Time)
+	if !ok {
+		t.Fatalf("want time.Time, have %T", output[1])
+	}
+	if want, have := start.Add(2*time.Second), timestamp; want != have {
+		t.Errorf("output[1]: want %v, have %v", want, have)
+	}
+	if want, have := "value_test.go:41", fmt.Sprint(output[3]); want != have {
 		t.Fatalf("output[3]: want %s, have %s", want, have)
 	}
 }
