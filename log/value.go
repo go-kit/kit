@@ -6,6 +6,18 @@ import (
 	"gopkg.in/stack.v1"
 )
 
+// Value is the return type of the Value method of the Valuer interface.
+type Value interface{}
+
+// A Valuer generates a log value. When passed to With, it represents a
+// dynamic value which is re-evaluated with each log event.
+type Valuer interface {
+	// Value returns a log Value instead of an interface{} to avoid
+	// inadvertently matching types from packages not intended for use with
+	// gokit/log.
+	Value() Value
+}
+
 // BindValues returns a slice with all value elements (odd indexes) that
 // implement Valuer replaced with the result of calling their Value method. If
 // no value elements implement Valuer, the original slice is returned.
@@ -34,35 +46,32 @@ func containsValuer(keyvals []interface{}) bool {
 	return false
 }
 
-// Value is the return type of the Value method of the Valuer interface.
-type Value interface{}
+// Timestamp is a Valuer that invokes the underlying function when bound,
+// returning a time.Time. Users will probably want to use DefaultTimestamp or
+// DefaultTimestampUTC.
+type Timestamp func() time.Time
 
-// A Valuer is able to convert itself into log Value.
-//
-// A Valuer passed to With stores a dynamic value which is reevaluated on each
-// log event.
-type Valuer interface {
-	// Value returns a log Value instead of an interface{} to avoid
-	// inadvertently matching types from packages not intended for use with
-	// the gokit/log package.
-	Value() Value
-}
+// Value implements Valuer.
+func (t Timestamp) Value() Value { return t() }
 
-type timeStamp struct{}
+// Caller is a Valuer that returns a file and line from a specified depth in
+// the callstack. Users will probably want to use DefaultCaller.
+type Caller int
 
-func (*timeStamp) Value() Value {
-	return time.Now()
-}
+// Value implements Valuer.
+func (c Caller) Value() Value { return stack.Caller(int(c)) }
 
-// Timestamp is a Valuer that returns the result of time.Now() from its Value method.
-var Timestamp = &timeStamp{}
+var (
+	// DefaultTimestamp is a Timestamp Valuer that returns the current wallclock
+	// time, respecting time zones, when bound.
+	DefaultTimestamp Timestamp = time.Now
 
-type caller struct{}
+	// DefaultTimestampUTC wraps DefaultTimestamp but ensures the returned
+	// time is always in UTC. Note that it invokes DefaultTimestamp, and so
+	// reflects any changes to the DefaultTimestamp package global.
+	DefaultTimestampUTC Timestamp = func() time.Time { return DefaultTimestamp().UTC() }
 
-func (*caller) Value() Value {
-	return stack.Caller(3)
-}
-
-// Caller is a Valuer that returns a "gopkg.in/stack.v1".Call from its Value
-// method.
-var Caller = &caller{}
+	// DefaultCaller is a Valuer that returns the file and line where the Log
+	// method was invoked.
+	DefaultCaller = Caller(4)
+)

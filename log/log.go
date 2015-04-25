@@ -4,24 +4,17 @@
 // key/value data.
 package log
 
-// Logger is the fundamental interface for all log operations.
-//
-// Log creates a log event from keyvals, a variadic sequence of alternating
-// keys and values.
-//
-// Logger implementations must be safe for concurrent use by multiple
-// goroutines.
+// Logger is the fundamental interface for all log operations. Implementations
+// must be safe for concurrent use by multiple goroutines. Log creates a log
+// event from keyvals, a variadic sequence of alternating keys and values.
 type Logger interface {
 	Log(keyvals ...interface{}) error
 }
 
-// With returns a new Logger that includes keyvals in all log events.
-//
-// If logger implements the Wither interface, the result of
-// logger.With(keyvals...) is returned.
-//
-// When wrapping a basic Logger, With returns a logger that calls BindValues
-// on the stored keyvals when logging.
+// With returns a new Logger that includes keyvals in all log events. If
+// logger implements Wither, With returns logger.With(keyvals...). Otherwise,
+// With returns a logger that calls BindValues on the stored keyvals when
+// logging.
 func With(logger Logger, keyvals ...interface{}) Logger {
 	w, ok := logger.(Wither)
 	if !ok {
@@ -61,19 +54,14 @@ func (f LoggerFunc) Log(keyvals ...interface{}) error {
 	return f(keyvals...)
 }
 
-// A Wither creates Loggers that include keyvals in all log events.
-//
-// The With function uses Wither if available.
-//
-// It is recommended that implementations of With call BindValues on stored
-// keyvals before each log event.
+// A Wither creates Loggers that include keyvals in all log events. The With
+// function uses Wither if available. Implementations of With should call
+// BindValues on stored keyvals before each log event.
 type Wither interface {
 	With(keyvals ...interface{}) Logger
 }
 
 // NewDiscardLogger returns a logger that does not log anything.
 func NewDiscardLogger() Logger {
-	return LoggerFunc(func(...interface{}) error {
-		return nil
-	})
+	return LoggerFunc(func(...interface{}) error { return nil })
 }
