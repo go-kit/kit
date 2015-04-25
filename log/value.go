@@ -6,15 +6,9 @@ import (
 	"gopkg.in/stack.v1"
 )
 
-// Value is the return type of the Value method of the Valuer interface.
-type Value interface{}
-
 // A Valuer generates a log value. When passed to With, it represents a
 // dynamic value which is re-evaluated with each log event.
-// It returns a log Value instead of an interface{} to avoid
-// inadvertently matching types from packages not intended for use with
-// gokit/log.
-type Valuer func() Value
+type Valuer func() interface{}
 
 // BindValues returns a slice with all value elements (odd indexes) that
 // implement Valuer replaced with the result of calling their Value method. If
@@ -49,7 +43,7 @@ var (
 	// returning a time.Time. Users will probably want to use DefaultTimestamp or
 	// DefaultTimestampUTC.
 	Timestamp = func(t func() time.Time) Valuer {
-		return func() Value { return t() }
+		return func() interface{} { return t() }
 	}
 	// DefaultTimestamp is a Timestamp Valuer that returns the current wallclock
 	// time, respecting time zones, when bound.
@@ -63,7 +57,7 @@ var (
 	// Caller is a Valuer that returns a file and line from a specified depth in
 	// the callstack. Users will probably want to use DefaultCaller.
 	Caller = func(depth int) Valuer {
-		return func() Value { return stack.Caller(depth) }
+		return func() interface{} { return stack.Caller(depth) }
 	}
 	// DefaultCaller is a Valuer that returns the file and line where the Log
 	// method was invoked.
