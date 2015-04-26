@@ -30,10 +30,11 @@ type withLogger struct {
 }
 
 func (l *withLogger) Log(keyvals ...interface{}) error {
+	kvs := append(l.keyvals, keyvals...)
 	if l.hasValuer {
-		return l.logger.Log(append(BindValues(l.keyvals...), keyvals...)...)
+		BindValues(kvs[:len(l.keyvals)])
 	}
-	return l.logger.Log(append(l.keyvals, keyvals...)...)
+	return l.logger.Log(kvs...)
 }
 
 func (l *withLogger) With(keyvals ...interface{}) Logger {
