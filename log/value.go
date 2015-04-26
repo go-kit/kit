@@ -38,14 +38,14 @@ func containsValuer(keyvals []interface{}) bool {
 	return false
 }
 
-var (
-	// Timestamp returns a Valuer that invokes the underlying function when
-	// bound, returning a time.Time. Users will probably want to use
-	// DefaultTimestamp or DefaultTimestampUTC.
-	Timestamp = func(t func() time.Time) Valuer {
-		return func() interface{} { return t() }
-	}
+// Timestamp returns a Valuer that invokes the underlying function when bound,
+// returning a time.Time. Users will probably want to use DefaultTimestamp or
+// DefaultTimestampUTC.
+func Timestamp(t func() time.Time) Valuer {
+	return func() interface{} { return t() }
+}
 
+var (
 	// DefaultTimestamp is a Timestamp Valuer that returns the current
 	// wallclock time, respecting time zones, when bound.
 	DefaultTimestamp = Timestamp(time.Now)
@@ -58,13 +58,13 @@ var (
 	})
 )
 
-var (
-	// Caller is a Valuer that returns a file and line from a specified depth
-	// in the callstack. Users will probably want to use DefaultCaller.
-	Caller = func(depth int) Valuer {
-		return func() interface{} { return stack.Caller(depth) }
-	}
+// Caller returns a Valuer that returns a file and line from a specified depth
+// in the callstack. Users will probably want to use DefaultCaller.
+func Caller(depth int) Valuer {
+	return func() interface{} { return stack.Caller(depth) }
+}
 
+var (
 	// DefaultCaller is a Valuer that returns the file and line where the Log
 	// method was invoked.
 	DefaultCaller = Caller(3)
