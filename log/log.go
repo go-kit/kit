@@ -11,16 +11,15 @@ type Logger interface {
 	Log(keyvals ...interface{}) error
 }
 
-// With returns a new Logger that includes keyvals in all log events. If
-// logger implements Wither, With returns logger.With(keyvals...). Otherwise,
-// With returns a logger that calls BindValues on the stored keyvals when
-// logging.
+// With returns a new Logger that includes keyvals in all log events. The
+// returned Logger replaces all value elements (odd indexes) containing a
+// Valuer with their generated value for each call to its Log method.
 func With(logger Logger, keyvals ...interface{}) Logger {
-	w, ok := logger.(Wither)
+	w, ok := logger.(*withLogger)
 	if !ok {
 		w = &withLogger{logger: logger}
 	}
-	return w.With(keyvals...)
+	return w.with(keyvals...)
 }
 
 type withLogger struct {
@@ -32,12 +31,12 @@ type withLogger struct {
 func (l *withLogger) Log(keyvals ...interface{}) error {
 	kvs := append(l.keyvals, keyvals...)
 	if l.hasValuer {
-		BindValues(kvs[:len(l.keyvals)])
+		bindValues(kvs[:len(l.keyvals)])
 	}
 	return l.logger.Log(kvs...)
 }
 
-func (l *withLogger) With(keyvals ...interface{}) Logger {
+func (l *withLogger) with(keyvals ...interface{}) Logger {
 	// Limiting the capacity of the stored keyvals ensures that a new
 	// backing array is created if the slice must grow in Log or With.
 	// Using the extra capacity without copying risks a data race that
@@ -46,7 +45,7 @@ func (l *withLogger) With(keyvals ...interface{}) Logger {
 	return &withLogger{
 		logger:    l.logger,
 		keyvals:   append(l.keyvals, keyvals...)[:n:n],
-		hasValuer: l.hasValuer || ContainsValuer(keyvals),
+		hasValuer: l.hasValuer || containsValuer(keyvals),
 	}
 }
 
@@ -58,16 +57,4 @@ type LoggerFunc func(...interface{}) error
 // Log implements Logger by calling f(keyvals...).
 func (f LoggerFunc) Log(keyvals ...interface{}) error {
 	return f(keyvals...)
-}
-
-// A Wither creates Loggers that include keyvals in all log events. The With
-// function uses Wither if available. Implementations of With should call
-// BindValues on stored keyvals before each log event.
-type Wither interface {
-	With(keyvals ...interface{}) Logger
-}
-
-// NewDiscardLogger returns a logger that does not log anything.
-func NewDiscardLogger() Logger {
-	return LoggerFunc(func(...interface{}) error { return nil })
 }

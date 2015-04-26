@@ -6,13 +6,14 @@ import (
 	"gopkg.in/stack.v1"
 )
 
-// A Valuer generates a log value. When passed to With, it represents a
-// dynamic value which is re-evaluated with each log event.
+// A Valuer generates a log value. When passed to With in a value element (odd
+// indexes), it represents a dynamic value which is re-evaluated with each log
+// event.
 type Valuer func() interface{}
 
-// BindValues replaces all value elements (odd indexes) containing a Valuer
+// bindValues replaces all value elements (odd indexes) containing a Valuer
 // with their generated value.
-func BindValues(keyvals []interface{}) {
+func bindValues(keyvals []interface{}) {
 	for i := 1; i < len(keyvals); i += 2 {
 		if v, ok := keyvals[i].(Valuer); ok {
 			keyvals[i] = v()
@@ -20,9 +21,9 @@ func BindValues(keyvals []interface{}) {
 	}
 }
 
-// ContainsValuer returns true if any of the value elements (odd indexes)
+// containsValuer returns true if any of the value elements (odd indexes)
 // contain a Valuer.
-func ContainsValuer(keyvals []interface{}) bool {
+func containsValuer(keyvals []interface{}) bool {
 	for i := 1; i < len(keyvals); i += 2 {
 		if _, ok := keyvals[i].(Valuer); ok {
 			return true

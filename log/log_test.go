@@ -8,6 +8,8 @@ import (
 	"github.com/peterbourgon/gokit/log"
 )
 
+var discard = log.Logger(log.LoggerFunc(func(...interface{}) error { return nil }))
+
 func TestWith(t *testing.T) {
 	buf := &bytes.Buffer{}
 	kvs := []interface{}{"a", 123}
@@ -22,20 +24,6 @@ func TestWith(t *testing.T) {
 		t.Errorf("\nwant: %s\nhave: %s", want, have)
 	}
 }
-
-func TestWither(t *testing.T) {
-	logger := &mylogger{}
-	log.With(logger, "a", "b").Log("c", "d")
-	if want, have := 1, logger.withs; want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-}
-
-type mylogger struct{ withs int }
-
-func (l *mylogger) Log(keyvals ...interface{}) error { return nil }
-
-func (l *mylogger) With(keyvals ...interface{}) log.Logger { l.withs++; return l }
 
 // Test that With returns a Logger safe for concurrent use. This test
 // validates that the stored logging context does not get corrupted when
@@ -82,7 +70,7 @@ func TestWithConcurrent(t *testing.T) {
 }
 
 func BenchmarkDiscard(b *testing.B) {
-	logger := log.NewDiscardLogger()
+	logger := discard
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -91,7 +79,7 @@ func BenchmarkDiscard(b *testing.B) {
 }
 
 func BenchmarkOneWith(b *testing.B) {
-	logger := log.NewDiscardLogger()
+	logger := discard
 	logger = log.With(logger, "k", "v")
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -101,7 +89,7 @@ func BenchmarkOneWith(b *testing.B) {
 }
 
 func BenchmarkTwoWith(b *testing.B) {
-	logger := log.NewDiscardLogger()
+	logger := discard
 	for i := 0; i < 2; i++ {
 		logger = log.With(logger, "k", "v")
 	}
@@ -113,7 +101,7 @@ func BenchmarkTwoWith(b *testing.B) {
 }
 
 func BenchmarkTenWith(b *testing.B) {
-	logger := log.NewDiscardLogger()
+	logger := discard
 	for i := 0; i < 10; i++ {
 		logger = log.With(logger, "k", "v")
 	}

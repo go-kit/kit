@@ -52,7 +52,7 @@ func TestValueBinding(t *testing.T) {
 }
 
 func BenchmarkValueBindingTimestamp(b *testing.B) {
-	logger := log.NewDiscardLogger()
+	logger := discard
 	logger = log.With(logger, "ts", log.DefaultTimestamp)
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -62,7 +62,7 @@ func BenchmarkValueBindingTimestamp(b *testing.B) {
 }
 
 func BenchmarkValueBindingCaller(b *testing.B) {
-	logger := log.NewDiscardLogger()
+	logger := discard
 	logger = log.With(logger, "caller", log.DefaultCaller)
 	b.ReportAllocs()
 	b.ResetTimer()
