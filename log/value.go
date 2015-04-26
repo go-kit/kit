@@ -11,13 +11,8 @@ import (
 type Valuer func() interface{}
 
 // BindValues returns a slice with all value elements (odd indexes) containing
-// a Valuer replaced by their generated value. If no Valuers are found, the
-// original slice is returned.
+// a Valuer replaced by their generated value.
 func BindValues(keyvals ...interface{}) []interface{} {
-	if !containsValuer(keyvals) {
-		return keyvals
-	}
-
 	bound := make([]interface{}, len(keyvals))
 	copy(bound, keyvals)
 	for i := 1; i < len(bound); i += 2 {
@@ -25,11 +20,12 @@ func BindValues(keyvals ...interface{}) []interface{} {
 			bound[i] = v()
 		}
 	}
-
 	return bound
 }
 
-func containsValuer(keyvals []interface{}) bool {
+// ContainsValuer returns true if any of the value elements (odd indexes)
+// contain a Valuer.
+func ContainsValuer(keyvals []interface{}) bool {
 	for i := 1; i < len(keyvals); i += 2 {
 		if _, ok := keyvals[i].(Valuer); ok {
 			return true

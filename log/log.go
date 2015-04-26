@@ -24,12 +24,16 @@ func With(logger Logger, keyvals ...interface{}) Logger {
 }
 
 type withLogger struct {
-	logger  Logger
-	keyvals []interface{}
+	logger    Logger
+	keyvals   []interface{}
+	hasValuer bool
 }
 
 func (l *withLogger) Log(keyvals ...interface{}) error {
-	return l.logger.Log(append(BindValues(l.keyvals...), keyvals...)...)
+	if l.hasValuer {
+		return l.logger.Log(append(BindValues(l.keyvals...), keyvals...)...)
+	}
+	return l.logger.Log(append(l.keyvals, keyvals...)...)
 }
 
 func (l *withLogger) With(keyvals ...interface{}) Logger {
@@ -39,8 +43,9 @@ func (l *withLogger) With(keyvals ...interface{}) Logger {
 	// would violate the Logger interface contract.
 	n := len(l.keyvals) + len(keyvals)
 	return &withLogger{
-		logger:  l.logger,
-		keyvals: append(l.keyvals, keyvals...)[:n:n],
+		logger:    l.logger,
+		keyvals:   append(l.keyvals, keyvals...)[:n:n],
+		hasValuer: l.hasValuer || ContainsValuer(keyvals),
 	}
 }
 
