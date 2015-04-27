@@ -86,6 +86,15 @@ func TestCallbackGauge(t *testing.T) {
 	ch <- time.Now()  // signal flush
 	runtime.Gosched() // yield to flush
 
+	// Travis is annoying
+	deadline := time.Now().Add(100 * time.Millisecond)
+	for buf.String() == "" {
+		if time.Now().After(deadline) {
+			t.Fatal("buffer never got write + flush")
+		}
+		time.Sleep(time.Millisecond)
+	}
+
 	if want, have := fmt.Sprintf("test_statsd_callback_gauge:%f|g\n", value), buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
