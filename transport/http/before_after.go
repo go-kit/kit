@@ -16,8 +16,8 @@ type BeforeFunc func(context.Context, *http.Request) context.Context
 // after invoking the endpoint but prior to writing a response.
 type AfterFunc func(context.Context, http.ResponseWriter)
 
-// SetContentType returns a AfterFunc that sets the HTTP Content-Type
-// header to the provided value.
+// SetContentType returns an AfterFunc that sets the HTTP Content-Type header
+// to the provided value.
 func SetContentType(value string) AfterFunc {
 	return func(_ context.Context, w http.ResponseWriter) {
 		w.Header().Set("Content-Type", value)
