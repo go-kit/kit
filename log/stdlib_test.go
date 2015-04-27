@@ -8,10 +8,21 @@ import (
 	"time"
 )
 
-func TestStdlibWriterUsage(t *testing.T) {
+func TestStdlibWriter(t *testing.T) {
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+	logger := NewPrefixLogger(StdlibWriter{})
+	logger.Log("key", "val")
+	timestamp := time.Now().Format("2006/01/02 15:04:05")
+	if want, have := timestamp+" key=val\n", buf.String(); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+}
+
+func TestStdlibAdapterUsage(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := NewPrefixLogger(buf)
-	writer := NewStdlibWriter(logger)
+	writer := NewStdlibAdapter(logger)
 	log.SetOutput(writer)
 
 	now := time.Now()
@@ -23,9 +34,9 @@ func TestStdlibWriterUsage(t *testing.T) {
 		log.Ldate:                              "ts=" + date + " msg=hello\n",
 		log.Ltime:                              "ts=" + time + " msg=hello\n",
 		log.Ldate | log.Ltime:                  "ts=" + date + " " + time + " msg=hello\n",
-		log.Lshortfile:                         "file=stdlib_writer_test.go:32 msg=hello\n",
-		log.Lshortfile | log.Ldate:             "ts=" + date + " file=stdlib_writer_test.go:32 msg=hello\n",
-		log.Lshortfile | log.Ldate | log.Ltime: "ts=" + date + " " + time + " file=stdlib_writer_test.go:32 msg=hello\n",
+		log.Lshortfile:                         "file=stdlib_test.go:43 msg=hello\n",
+		log.Lshortfile | log.Ldate:             "ts=" + date + " file=stdlib_test.go:43 msg=hello\n",
+		log.Lshortfile | log.Ldate | log.Ltime: "ts=" + date + " " + time + " file=stdlib_test.go:43 msg=hello\n",
 	} {
 		buf.Reset()
 		log.SetFlags(flag)
@@ -36,10 +47,10 @@ func TestStdlibWriterUsage(t *testing.T) {
 	}
 }
 
-func TestStdLibWriterExtraction(t *testing.T) {
+func TestStdLibAdapterExtraction(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := NewPrefixLogger(buf)
-	writer := NewStdlibWriter(logger)
+	writer := NewStdlibAdapter(logger)
 	for input, want := range map[string]string{
 		"hello":                                            "msg=hello\n",
 		"2009/01/23: hello":                                "ts=2009/01/23 msg=hello\n",
@@ -60,7 +71,7 @@ func TestStdLibWriterExtraction(t *testing.T) {
 	}
 }
 
-func TestStdlibWriterSubexps(t *testing.T) {
+func TestStdlibAdapterSubexps(t *testing.T) {
 	for input, wantMap := range map[string]map[string]string{
 		"hello world": map[string]string{
 			"date": "",

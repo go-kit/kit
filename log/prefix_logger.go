@@ -1,6 +1,7 @@
 package log
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 )
@@ -19,17 +20,18 @@ func (l prefixLogger) Log(keyvals ...interface{}) error {
 	if len(keyvals)%2 == 1 {
 		panic("odd number of keyvals")
 	}
+	buf := &bytes.Buffer{}
 	for i := 0; i < len(keyvals); i += 2 {
 		if i != 0 {
-			if _, err := fmt.Fprint(l.Writer, " "); err != nil {
+			if _, err := fmt.Fprint(buf, " "); err != nil {
 				return err
 			}
 		}
-		if _, err := fmt.Fprintf(l.Writer, "%s=%v", keyvals[i], keyvals[i+1]); err != nil {
+		if _, err := fmt.Fprintf(buf, "%s=%v", keyvals[i], keyvals[i+1]); err != nil {
 			return err
 		}
 	}
-	if _, err := fmt.Fprintln(l.Writer); err != nil {
+	if _, err := fmt.Fprintln(l.Writer, buf.String()); err != nil {
 		return err
 	}
 	return nil

@@ -2,53 +2,66 @@ package log
 
 import (
 	"io"
+	"log"
 	"regexp"
+	"strings"
 )
 
-// StdlibWriter wraps a Logger and allows it to be passed to the stdlib
+// StdlibWriter implements io.Writer by invoking the stdlib log.Printf. It's
+// designed to be passed to a gokit logger as the writer, for cases where it's
+// desirable to pipe all log output to the same, canonical destination.
+type StdlibWriter struct{}
+
+// Write implements io.Writer.
+func (w StdlibWriter) Write(p []byte) (int, error) {
+	log.Printf(strings.TrimSpace(string(p)))
+	return len(p), nil
+}
+
+// StdlibAdapter wraps a Logger and allows it to be passed to the stdlib
 // logger's SetOutput. It will extract date/timestamps, filenames, and
 // messages, and place them under relevant keys.
-type StdlibWriter struct {
+type StdlibAdapter struct {
 	Logger
 	timestampKey string
 	fileKey      string
 	messageKey   string
 }
 
-// StdlibWriterOption sets a parameter for the StdlibWriter.
-type StdlibWriterOption func(*StdlibWriter)
+// StdlibAdapterOption sets a parameter for the StdlibAdapter.
+type StdlibAdapterOption func(*StdlibAdapter)
 
 // TimestampKey sets the key for the timestamp field. By default, it's "ts".
-func TimestampKey(key string) StdlibWriterOption {
-	return func(w *StdlibWriter) { w.timestampKey = key }
+func TimestampKey(key string) StdlibAdapterOption {
+	return func(a *StdlibAdapter) { a.timestampKey = key }
 }
 
 // FileKey sets the key for the file and line field. By default, it's "file".
-func FileKey(key string) StdlibWriterOption {
-	return func(w *StdlibWriter) { w.fileKey = key }
+func FileKey(key string) StdlibAdapterOption {
+	return func(a *StdlibAdapter) { a.fileKey = key }
 }
 
 // MessageKey sets the key for the actual log message. By default, it's "msg".
-func MessageKey(key string) StdlibWriterOption {
-	return func(w *StdlibWriter) { w.messageKey = key }
+func MessageKey(key string) StdlibAdapterOption {
+	return func(a *StdlibAdapter) { a.messageKey = key }
 }
 
-// NewStdlibWriter returns a new StdlibWriter wrapper around the passed
+// NewStdlibAdapter returns a new StdlibAdapter wrapper around the passed
 // logger. It's designed to be passed to log.SetOutput.
-func NewStdlibWriter(logger Logger, options ...StdlibWriterOption) io.Writer {
-	w := StdlibWriter{
+func NewStdlibAdapter(logger Logger, options ...StdlibAdapterOption) io.Writer {
+	a := StdlibAdapter{
 		Logger:       logger,
 		timestampKey: "ts",
 		fileKey:      "file",
 		messageKey:   "msg",
 	}
 	for _, option := range options {
-		option(&w)
+		option(&a)
 	}
-	return w
+	return a
 }
 
-func (w StdlibWriter) Write(p []byte) (int, error) {
+func (a StdlibAdapter) Write(p []byte) (int, error) {
 	result := subexps(p)
 	keyvals := []interface{}{}
 	var timestamp string
@@ -62,15 +75,15 @@ func (w StdlibWriter) Write(p []byte) (int, error) {
 		timestamp += time
 	}
 	if timestamp != "" {
-		keyvals = append(keyvals, w.timestampKey, timestamp)
+		keyvals = append(keyvals, a.timestampKey, timestamp)
 	}
 	if file, ok := result["file"]; ok && file != "" {
-		keyvals = append(keyvals, w.fileKey, file)
+		keyvals = append(keyvals, a.fileKey, file)
 	}
 	if msg, ok := result["msg"]; ok {
-		keyvals = append(keyvals, w.messageKey, msg)
+		keyvals = append(keyvals, a.messageKey, msg)
 	}
-	if err := w.Logger.Log(keyvals...); err != nil {
+	if err := a.Logger.Log(keyvals...); err != nil {
 		return 0, err
 	}
 	return len(p), nil
