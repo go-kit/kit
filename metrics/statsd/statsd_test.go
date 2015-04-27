@@ -86,6 +86,11 @@ func TestCallbackGauge(t *testing.T) {
 	ch <- time.Now()  // signal flush
 	runtime.Gosched() // yield to flush
 
+	// Travis is annoying
+	check := func() bool { return buf.String() != "" }
+	execute := func() { ch <- time.Now(); runtime.Gosched(); time.Sleep(5 * time.Millisecond) }
+	by(t, time.Second, check, execute, "buffer never got write+flush")
+
 	if want, have := fmt.Sprintf("test_statsd_callback_gauge:%f|g\n", value), buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
@@ -106,5 +111,15 @@ func TestHistogram(t *testing.T) {
 	runtime.Gosched()
 	if want, have := "test_statsd_histogram:123|ms\n", buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
+	}
+}
+
+func by(t *testing.T, d time.Duration, check func() bool, execute func(), msg string) {
+	deadline := time.Now().Add(d)
+	for !check() {
+		if time.Now().After(deadline) {
+			t.Fatal(msg)
+		}
+		execute()
 	}
 }
