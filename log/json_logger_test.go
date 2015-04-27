@@ -27,3 +27,7 @@ func BenchmarkJSONLoggerSimple(b *testing.B) {
 func BenchmarkJSONLoggerContextual(b *testing.B) {
 	benchmarkRunner(b, log.NewJSONLogger(ioutil.Discard), withMessage)
 }
+
+func TestJSONLoggerConcurrency(t *testing.T) {
+	testConcurrency(t, log.NewJSONLogger(ioutil.Discard))
+}
