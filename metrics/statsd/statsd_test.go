@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -91,7 +92,7 @@ func TestCallbackGauge(t *testing.T) {
 	execute := func() { ch <- time.Now(); runtime.Gosched(); time.Sleep(5 * time.Millisecond) }
 	by(t, time.Second, check, execute, "buffer never got write+flush")
 
-	if want, have := fmt.Sprintf("test_statsd_callback_gauge:%f|g\n", value), buf.String(); want != have {
+	if want, have := fmt.Sprintf("test_statsd_callback_gauge:%f|g\n", value), buf.String(); !strings.HasPrefix(have, want) {
 		t.Errorf("want %q, have %q", want, have)
 	}
 }
