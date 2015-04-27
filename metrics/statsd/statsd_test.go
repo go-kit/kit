@@ -87,13 +87,11 @@ func TestCallbackGauge(t *testing.T) {
 	runtime.Gosched() // yield to flush
 
 	// Travis is annoying
-	deadline := time.Now().Add(100 * time.Millisecond)
-	for buf.String() == "" {
-		if time.Now().After(deadline) {
-			t.Fatal("buffer never got write + flush")
-		}
-		time.Sleep(time.Millisecond)
-	}
+	by(t, time.Second,
+		func() bool { return buf.String() != "" },
+		func() { runtime.Gosched(); time.Sleep(time.Millisecond) },
+		"buffer never got write+flush",
+	)
 
 	if want, have := fmt.Sprintf("test_statsd_callback_gauge:%f|g\n", value), buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
@@ -115,5 +113,15 @@ func TestHistogram(t *testing.T) {
 	runtime.Gosched()
 	if want, have := "test_statsd_histogram:123|ms\n", buf.String(); want != have {
 		t.Errorf("want %q, have %q", want, have)
+	}
+}
+
+func by(t *testing.T, d time.Duration, b func() bool, c func(), msg string) {
+	deadline := time.Now().Add(d)
+	for !b() {
+		if time.Now().After(deadline) {
+			t.Fatal(msg)
+		}
+		c()
 	}
 }
