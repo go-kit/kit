@@ -89,7 +89,7 @@ func TestCallbackGauge(t *testing.T) {
 	// Travis is annoying
 	by(t, time.Second,
 		func() bool { return buf.String() != "" },
-		func() { runtime.Gosched(); time.Sleep(time.Millisecond) },
+		func() { ch <- time.Now(); runtime.Gosched(); time.Sleep(5 * time.Millisecond) },
 		"buffer never got write+flush",
 	)
 
