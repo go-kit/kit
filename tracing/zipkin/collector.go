@@ -83,7 +83,7 @@ func (c *ScribeCollector) loop() {
 		case <-c.sendc:
 			c.nextSend = time.Now().Add(c.batchInterval)
 			if err := c.send(c.batch); err != nil {
-				log.DefaultLogger.Log("caller", log.DefaultCaller, "error", err.Error())
+				log.DefaultLogger.Log("caller", log.DefaultCaller, "err", err.Error())
 				continue
 			}
 			c.batch = c.batch[:0]
