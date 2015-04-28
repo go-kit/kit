@@ -85,9 +85,9 @@ func RegisterAddServer(s *grpc.Server, srv AddServer) {
 	s.RegisterService(&_Add_serviceDesc, srv)
 }
 
-func _Add_Add_Handler(srv interface{}, ctx context.Context, buf []byte) (interface{}, error) {
+func _Add_Add_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
 	in := new(AddRequest)
-	if err := proto.Unmarshal(buf, in); err != nil {
+	if err := codec.Unmarshal(buf, in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(AddServer).Add(ctx, in)
