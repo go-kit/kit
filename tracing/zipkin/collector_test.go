@@ -35,10 +35,10 @@ func TestScribeCollector(t *testing.T) {
 		duration     = 42 * time.Millisecond
 	)
 
-	span := zipkin.NewSpan("some-host", c, name, traceID, spanID, parentSpanID)
+	span := zipkin.NewSpan("some-host", name, traceID, spanID, parentSpanID)
 	span.AnnotateDuration("foo", 42*time.Millisecond)
-	if err := span.Submit(); err != nil {
-		t.Errorf("error during submit: %v", err)
+	if err := c.Collect(span); err != nil {
+		t.Errorf("error during collection: %v", err)
 	}
 
 	// Need to yield to the select loop to accept the send request, and then

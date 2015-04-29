@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
+	stdlog "log"
 	"net"
 	"net/http"
 	"os"
@@ -20,6 +20,7 @@ import (
 
 	thriftadd "github.com/peterbourgon/gokit/addsvc/_thrift/gen-go/add"
 	"github.com/peterbourgon/gokit/addsvc/pb"
+	kitlog "github.com/peterbourgon/gokit/log"
 	"github.com/peterbourgon/gokit/metrics"
 	"github.com/peterbourgon/gokit/metrics/expvar"
 	"github.com/peterbourgon/gokit/metrics/statsd"
@@ -39,16 +40,6 @@ func main() {
 	)
 	flag.Parse()
 
-	// Our business and operational domain
-	var a Add
-	a = pureAdd
-	a = logging(logWriter{}, a)
-
-	// `package server` domain
-	var e server.Endpoint
-	e = makeEndpoint(a)
-	// e = server.ChainableEnhancement(arg1, arg2, e)
-
 	// `package metrics` domain
 	requests := metrics.NewMultiCounter(
 		expvar.NewCounter("requests"),
@@ -62,7 +53,30 @@ func main() {
 	// `package tracing` domain
 	zipkinHost := "some-host"                // TODO
 	zipkinCollector := zipkin.NopCollector{} // TODO
-	zipkinSpanFunc := zipkin.NewSpanFunc(zipkinHost, zipkinCollector)
+	zipkinAddName := "ADD"                   // is that right?
+	zipkinAddSpanFunc := zipkin.NewSpanFunc(zipkinHost, zipkinAddName)
+
+	// `package log` domain
+	var logger kitlog.Logger
+	logger = kitlog.NewPrefixLogger(kitlog.StdlibWriter{})
+	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
+	kitlog.DefaultLogger = logger // for other gokit components
+	stdlog.SetOutput(os.Stderr)   //
+	stdlog.SetFlags(0)            // flags are handled in our logger
+	logf := func(format string, args ...interface{}) {
+		logger.Log("msg", fmt.Sprintf(format, args...))
+	}
+
+	// Our business and operational domain
+	var a Add
+	a = pureAdd
+	a = logging(logger, a)
+
+	// `package server` domain
+	var e server.Endpoint
+	e = makeEndpoint(a)
+	e = zipkin.AnnotateEndpoint(zipkinAddSpanFunc, zipkinCollector)(e)
+	// e = someother.Middleware(arg1, arg2)(e)
 
 	// Mechanical stuff
 	root := context.Background()
@@ -87,7 +101,7 @@ func main() {
 		addServer = grpcInstrument(requests.With(field), duration.With(field))(addServer)
 
 		pb.RegisterAddServer(s, addServer)
-		log.Printf("gRPC server on %s", *grpcAddr)
+		logf("gRPC server on %s", *grpcAddr)
 		errc <- s.Serve(ln)
 	}()
 
@@ -97,7 +111,7 @@ func main() {
 		defer cancel()
 
 		field := metrics.Field{Key: "transport", Value: "http"}
-		before := kithttp.Before(zipkin.ToContext(zipkin.FromHTTP(zipkinSpanFunc)))
+		before := kithttp.Before(zipkin.ToContext(zipkin.FromHTTP(zipkinAddSpanFunc)))
 		after := kithttp.After(kithttp.SetContentType("application/json"))
 
 		var handler http.Handler
@@ -108,7 +122,7 @@ func main() {
 
 		mux := http.NewServeMux()
 		mux.Handle("/add", handler)
-		log.Printf("HTTP server on %s", *httpAddr)
+		logf("HTTP server on %s", *httpAddr)
 		errc <- http.ListenAndServe(*httpAddr, mux)
 	}()
 
@@ -155,7 +169,7 @@ func main() {
 		service = thriftBinding{ctx, e}
 		service = thriftInstrument(requests.With(field), duration.With(field))(service)
 
-		log.Printf("Thrift server on %s", *thriftAddr)
+		logf("Thrift server on %s", *thriftAddr)
 		errc <- thrift.NewTSimpleServer4(
 			thriftadd.NewAddServiceProcessor(service),
 			transport,
@@ -164,14 +178,7 @@ func main() {
 		).Serve()
 	}()
 
-	log.Fatal(<-errc)
-}
-
-type logWriter struct{}
-
-func (logWriter) Write(p []byte) (int, error) {
-	log.Printf("%s", p)
-	return len(p), nil
+	logger.Log("fatal", <-errc)
 }
 
 func interrupt() error {

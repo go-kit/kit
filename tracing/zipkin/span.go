@@ -20,9 +20,7 @@ var (
 // service. Clients should annotate the span, and submit it when the request
 // that generated it is complete.
 type Span struct {
-	host      string
-	collector Collector
-
+	host         string
 	name         string
 	traceID      int64
 	spanID       int64
@@ -33,10 +31,9 @@ type Span struct {
 }
 
 // NewSpan returns a new Span object ready for use.
-func NewSpan(host string, collector Collector, name string, traceID, spanID, parentSpanID int64) *Span {
+func NewSpan(host string, name string, traceID, spanID, parentSpanID int64) *Span {
 	return &Span{
 		host:         host,
-		collector:    collector,
 		name:         name,
 		traceID:      traceID,
 		spanID:       spanID,
@@ -45,9 +42,9 @@ func NewSpan(host string, collector Collector, name string, traceID, spanID, par
 }
 
 // NewSpanFunc returns a function that generates a new Zipkin span.
-func NewSpanFunc(host string, collector Collector) func(string, int64, int64, int64) *Span {
-	return func(name string, traceID, spanID, parentSpanID int64) *Span {
-		return NewSpan(host, collector, name, traceID, spanID, parentSpanID)
+func NewSpanFunc(host, name string) func(int64, int64, int64) *Span {
+	return func(traceID, spanID, parentSpanID int64) *Span {
+		return NewSpan(host, name, traceID, spanID, parentSpanID)
 	}
 }
 
@@ -75,9 +72,6 @@ func (s *Span) AnnotateDuration(value string, duration time.Duration) {
 		host:      s.host,
 	})
 }
-
-// Submit sends the span to the collector.
-func (s *Span) Submit() error { return s.collector.Collect(s) }
 
 // Encode creates a Thrift Span from the gokit Span.
 func (s *Span) Encode() *zipkincore.Span {
