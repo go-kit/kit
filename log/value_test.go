@@ -34,7 +34,7 @@ func TestValueBinding(t *testing.T) {
 		t.Errorf("output[1]: want %v, have %v", want, have)
 	}
 	if want, have := "value_test.go:28", fmt.Sprint(output[3]); want != have {
-		t.Fatalf("output[3]: want %s, have %s", want, have)
+		t.Errorf("output[3]: want %s, have %s", want, have)
 	}
 
 	// A second attempt to confirm the bindings are truly dynamic.
@@ -47,7 +47,7 @@ func TestValueBinding(t *testing.T) {
 		t.Errorf("output[1]: want %v, have %v", want, have)
 	}
 	if want, have := "value_test.go:41", fmt.Sprint(output[3]); want != have {
-		t.Fatalf("output[3]: want %s, have %s", want, have)
+		t.Errorf("output[3]: want %s, have %s", want, have)
 	}
 }
 
