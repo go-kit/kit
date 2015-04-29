@@ -63,9 +63,6 @@ func main() {
 	kitlog.DefaultLogger = logger // for other gokit components
 	stdlog.SetOutput(os.Stderr)   //
 	stdlog.SetFlags(0)            // flags are handled in our logger
-	logf := func(format string, args ...interface{}) {
-		logger.Log("msg", fmt.Sprintf(format, args...))
-	}
 
 	// Our business and operational domain
 	var a Add
@@ -101,7 +98,7 @@ func main() {
 		addServer = grpcInstrument(requests.With(field), duration.With(field))(addServer)
 
 		pb.RegisterAddServer(s, addServer)
-		logf("gRPC server on %s", *grpcAddr)
+		logger.Log("msg", "gRPC server started", "addr", *grpcAddr)
 		errc <- s.Serve(ln)
 	}()
 
@@ -122,7 +119,7 @@ func main() {
 
 		mux := http.NewServeMux()
 		mux.Handle("/add", handler)
-		logf("HTTP server on %s", *httpAddr)
+		logger.Log("msg", "HTTP server started", "addr", *httpAddr)
 		errc <- http.ListenAndServe(*httpAddr, mux)
 	}()
 
@@ -169,7 +166,7 @@ func main() {
 		service = thriftBinding{ctx, e}
 		service = thriftInstrument(requests.With(field), duration.With(field))(service)
 
-		logf("Thrift server on %s", *thriftAddr)
+		logger.Log("msg", "Thrift server started", "addr", *thriftAddr)
 		errc <- thrift.NewTSimpleServer4(
 			thriftadd.NewAddServiceProcessor(service),
 			transport,
