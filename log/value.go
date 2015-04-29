@@ -56,7 +56,7 @@ func Caller(depth int) Valuer {
 }
 
 var (
-	// DefaultCaller is a Valuer that returns the file and line where the With
+	// DefaultCaller is a Valuer that returns the file and line where the Log
 	// method was invoked. It can only be used with log.With.
 	DefaultCaller = Caller(3)
 )
