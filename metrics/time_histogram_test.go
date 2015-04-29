@@ -13,7 +13,7 @@ func TestTimeHistogram(t *testing.T) {
 	const metricName string = "test_time_histogram"
 	quantiles := []int{50, 90, 99}
 	h0 := expvar.NewHistogram(metricName, 0, 200, 3, quantiles...)
-	h := metrics.NewTimeHistogram(h0, time.Millisecond)
+	h := metrics.NewTimeHistogram(time.Millisecond, h0)
 	const seed, mean, stdev int64 = 321, 100, 20
 
 	for i := 0; i < 4321; i++ {

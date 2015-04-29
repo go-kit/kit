@@ -9,16 +9,16 @@ type TimeHistogram interface {
 }
 
 type timeHistogram struct {
-	Histogram
 	unit time.Duration
+	Histogram
 }
 
 // NewTimeHistogram returns a TimeHistogram wrapper around the passed
 // Histogram, in units of unit.
-func NewTimeHistogram(h Histogram, unit time.Duration) TimeHistogram {
+func NewTimeHistogram(unit time.Duration, h Histogram) TimeHistogram {
 	return &timeHistogram{
-		Histogram: h,
 		unit:      unit,
+		Histogram: h,
 	}
 }
 

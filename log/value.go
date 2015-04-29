@@ -40,16 +40,13 @@ func Timestamp(t func() time.Time) Valuer {
 }
 
 var (
-	// DefaultTimestamp is a Timestamp Valuer that returns the current
-	// wallclock time, respecting time zones, when bound.
-	DefaultTimestamp = Timestamp(time.Now)
+	// DefaultTimestamp is a Valuer that returns the current wallclock time,
+	// respecting time zones, when bound.
+	DefaultTimestamp Valuer = func() interface{} { return time.Now().Format(time.RFC3339) }
 
-	// DefaultTimestampUTC wraps DefaultTimestamp but ensures the returned
-	// time is always in UTC. Note that it invokes DefaultTimestamp, and so
-	// reflects any changes to the DefaultTimestamp package global.
-	DefaultTimestampUTC = Timestamp(func() time.Time {
-		return DefaultTimestamp().(time.Time).UTC()
-	})
+	// DefaultTimestampUTC is a Valuer that returns the current time in UTC
+	// when bound.
+	DefaultTimestampUTC Valuer = func() interface{} { return time.Now().UTC().Format(time.RFC3339) }
 )
 
 // Caller returns a Valuer that returns a file and line from a specified depth
@@ -60,6 +57,6 @@ func Caller(depth int) Valuer {
 
 var (
 	// DefaultCaller is a Valuer that returns the file and line where the Log
-	// method was invoked.
+	// method was invoked. It can only be used with log.With.
 	DefaultCaller = Caller(3)
 )
