@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"reflect"
 	"syscall"
 	"time"
 
@@ -26,7 +27,8 @@ import (
 	"github.com/peterbourgon/gokit/metrics/statsd"
 	"github.com/peterbourgon/gokit/server"
 	"github.com/peterbourgon/gokit/tracing/zipkin"
-	kithttp "github.com/peterbourgon/gokit/transport/http"
+	jsoncodec "github.com/peterbourgon/gokit/transport/codec/json"
+	httptransport "github.com/peterbourgon/gokit/transport/http"
 )
 
 func main() {
@@ -51,9 +53,9 @@ func main() {
 	)
 
 	// `package tracing` domain
-	zipkinHost := "some-host"                // TODO
-	zipkinCollector := zipkin.NopCollector{} // TODO
-	zipkinAddName := "ADD"                   // is that right?
+	zipkinHost := "some-host"             // TODO
+	zipkinCollector := loggingCollector{} // TODO
+	zipkinAddName := "ADD"                // is that right?
 	zipkinAddSpanFunc := zipkin.NewSpanFunc(zipkinHost, zipkinAddName)
 
 	// `package log` domain
@@ -108,11 +110,11 @@ func main() {
 		defer cancel()
 
 		field := metrics.Field{Key: "transport", Value: "http"}
-		before := kithttp.Before(zipkin.ToContext(zipkin.FromHTTP(zipkinAddSpanFunc)))
-		after := kithttp.After(kithttp.SetContentType("application/json"))
+		before := httptransport.Before(zipkin.ToContext(zipkin.FromHTTP(zipkinAddSpanFunc)))
+		after := httptransport.After(httptransport.SetContentType("application/json"))
 
 		var handler http.Handler
-		handler = kithttp.NewBinding(ctx, jsonCodec{}, e, before, after)
+		handler = httptransport.NewBinding(ctx, reflect.TypeOf(request{}), jsoncodec.New(), e, before, after)
 		handler = encoding.Gzip(handler)
 		handler = cors.Middleware(cors.Config{})(handler)
 		handler = httpInstrument(requests.With(field), duration.With(field))(handler)
@@ -182,4 +184,15 @@ func interrupt() error {
 	c := make(chan os.Signal)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	return fmt.Errorf("%s", <-c)
+}
+
+type loggingCollector struct{}
+
+func (loggingCollector) Collect(s *zipkin.Span) error {
+	kitlog.With(kitlog.DefaultLogger, "caller", kitlog.DefaultCaller).Log(
+		"trace_id", s.TraceID(),
+		"span_id", s.SpanID(),
+		"parent_span_id", s.ParentSpanID(),
+	)
+	return nil
 }
