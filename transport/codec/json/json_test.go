@@ -2,7 +2,6 @@ package json_test
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
 
 	"golang.org/x/net/context"
@@ -25,7 +24,7 @@ func TestDecode(t *testing.T) {
 	if _, err := jsoncodec.New().Decode(context.Background(), buf, &req); err != nil {
 		t.Fatal(err)
 	}
-	if want, have := (request{A: 1, B: "2"}), req; !reflect.DeepEqual(want, have) {
+	if want, have := (request{A: 1, B: "2"}), req; want != have {
 		t.Errorf("want %v, have %v", want, have)
 	}
 }
