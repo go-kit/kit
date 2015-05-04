@@ -79,10 +79,19 @@ func TestPrometheusCallbackGauge(t *testing.T) {
 	}
 }
 
-func TestPrometheusHistogram(t *testing.T) {
-	h := prometheus.NewHistogram("test", "prometheus_histogram", "foobar", "Qwerty asdf.", []string{})
+func TestPrometheusSummary(t *testing.T) {
+	h := prometheus.NewSummary("test", "prometheus_summary_histogram", "foobar", "Qwerty asdf.", []string{})
 
 	const mean, stdev int64 = 50, 10
 	teststat.PopulateNormalHistogram(t, h, 34, mean, stdev)
-	teststat.AssertPrometheusNormalHistogram(t, "test_prometheus_histogram_foobar", mean, stdev)
+	teststat.AssertPrometheusNormalSummary(t, "test_prometheus_summary_histogram_foobar", mean, stdev)
+}
+
+func TestPrometheusHistogram(t *testing.T) {
+	buckets := []float64{20, 40, 60, 80, 100}
+	h := prometheus.NewHistogram("test", "prometheus_histogram_histogram", "quux", "Qwerty asdf.", []string{}, buckets)
+
+	const mean, stdev int64 = 50, 10
+	teststat.PopulateNormalHistogram(t, h, 34, mean, stdev)
+	teststat.AssertPrometheusBucketedHistogram(t, "test_prometheus_histogram_histogram_quux_bucket", mean, stdev, buckets)
 }
