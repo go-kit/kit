@@ -10,11 +10,13 @@ import (
 	"github.com/peterbourgon/gokit/metrics"
 )
 
+const population = 1234
+
 // PopulateNormalHistogram populates the Histogram with a normal distribution
 // of observations.
 func PopulateNormalHistogram(t *testing.T, h metrics.Histogram, seed int64, mean, stdev int64) {
 	rand.Seed(seed)
-	for i := 0; i < 1234; i++ {
+	for i := 0; i < population; i++ {
 		sample := int64(rand.NormFloat64()*float64(stdev) + float64(mean))
 		h.Observe(sample)
 	}
@@ -23,6 +25,12 @@ func PopulateNormalHistogram(t *testing.T, h metrics.Histogram, seed int64, mean
 // https://en.wikipedia.org/wiki/Normal_distribution#Quantile_function
 func normalValueAtQuantile(mean, stdev int64, quantile int) int64 {
 	return int64(float64(mean) + float64(stdev)*math.Sqrt2*erfinv(2*(float64(quantile)/100)-1))
+}
+
+// https://code.google.com/p/gostat/source/browse/stat/normal.go
+func observationsLessThan(mean, stdev int64, x float64, total int) int {
+	cdf := ((1.0 / 2.0) * (1 + math.Erf((x-float64(mean))/(float64(stdev)*math.Sqrt2))))
+	return int(cdf * float64(total))
 }
 
 // https://stackoverflow.com/questions/5971830/need-code-for-inverse-error-function

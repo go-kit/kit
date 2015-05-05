@@ -2,8 +2,6 @@
 package prometheus
 
 import (
-	"time"
-
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/peterbourgon/gokit/metrics"
@@ -134,49 +132,64 @@ func RegisterCallbackGaugeWithLabels(namespace, subsystem, name, help string, co
 	))
 }
 
-type prometheusHistogram struct {
+type prometheusSummary struct {
 	*prometheus.SummaryVec
 	Pairs map[string]string
 }
 
-// NewHistogram returns a new Histogram backed by a Prometheus summary. It
-// uses a 10-second max age for bucketing. The histogram is automatically
-// registered via prometheus.Register.
-func NewHistogram(namespace, subsystem, name, help string, fieldKeys []string) metrics.Histogram {
-	return NewHistogramWithLabels(namespace, subsystem, name, help, fieldKeys, prometheus.Labels{})
-}
-
-// NewHistogramWithLabels is the same as NewHistogram, but attaches a set of
-// const label pairs to the metric.
-func NewHistogramWithLabels(namespace, subsystem, name, help string, fieldKeys []string, constLabels prometheus.Labels) metrics.Histogram {
-	m := prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
-			Namespace:   namespace,
-			Subsystem:   subsystem,
-			Name:        name,
-			Help:        help,
-			ConstLabels: constLabels,
-			MaxAge:      10 * time.Second,
-		},
-		fieldKeys,
-	)
+// NewSummary returns a new Histogram backed by a Prometheus summary. The
+// histogram is automatically registered via prometheus.Register.
+//
+// For more information on Prometheus histograms and summaries, refer to
+// http://prometheus.io/docs/practices/histograms.
+func NewSummary(opts prometheus.SummaryOpts, fieldKeys []string) metrics.Histogram {
+	m := prometheus.NewSummaryVec(opts, fieldKeys)
 	prometheus.MustRegister(m)
-
-	return prometheusHistogram{
+	return prometheusSummary{
 		SummaryVec: m,
 		Pairs:      pairsFrom(fieldKeys),
 	}
 }
 
+func (s prometheusSummary) With(f metrics.Field) metrics.Histogram {
+	return prometheusSummary{
+		SummaryVec: s.SummaryVec,
+		Pairs:      merge(s.Pairs, f),
+	}
+}
+
+func (s prometheusSummary) Observe(value int64) {
+	s.SummaryVec.With(prometheus.Labels(s.Pairs)).Observe(float64(value))
+}
+
+type prometheusHistogram struct {
+	*prometheus.HistogramVec
+	Pairs map[string]string
+}
+
+// NewHistogram returns a new Histogram backed by a Prometheus Histogram. The
+// histogram is automatically registered via prometheus.Register.
+//
+// For more information on Prometheus histograms and summaries, refer to
+// http://prometheus.io/docs/practices/histograms.
+func NewHistogram(opts prometheus.HistogramOpts, fieldKeys []string) metrics.Histogram {
+	m := prometheus.NewHistogramVec(opts, fieldKeys)
+	prometheus.MustRegister(m)
+	return prometheusHistogram{
+		HistogramVec: m,
+		Pairs:        pairsFrom(fieldKeys),
+	}
+}
+
 func (h prometheusHistogram) With(f metrics.Field) metrics.Histogram {
 	return prometheusHistogram{
-		SummaryVec: h.SummaryVec,
-		Pairs:      merge(h.Pairs, f),
+		HistogramVec: h.HistogramVec,
+		Pairs:        merge(h.Pairs, f),
 	}
 }
 
 func (h prometheusHistogram) Observe(value int64) {
-	h.SummaryVec.With(prometheus.Labels(h.Pairs)).Observe(float64(value))
+	h.HistogramVec.With(prometheus.Labels(h.Pairs)).Observe(float64(value))
 }
 
 func pairsFrom(fieldKeys []string) map[string]string {

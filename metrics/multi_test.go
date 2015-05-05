@@ -96,7 +96,12 @@ func TestMultiHistogram(t *testing.T) {
 	quantiles := []int{50, 90, 99}
 	h := metrics.NewMultiHistogram(
 		expvar.NewHistogram("omicron", 0, 100, 3, quantiles...),
-		prometheus.NewHistogram("test", "multi_histogram", "nu", "Nu histogram.", []string{}),
+		prometheus.NewSummary(stdprometheus.SummaryOpts{
+			Namespace: "test",
+			Subsystem: "multi_histogram",
+			Name:      "nu",
+			Help:      "Nu histogram.",
+		}, []string{}),
 	)
 
 	const seed, mean, stdev int64 = 123, 50, 10

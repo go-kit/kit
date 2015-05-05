@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
+
 	"github.com/peterbourgon/gokit/metrics"
 	"github.com/peterbourgon/gokit/metrics/prometheus"
 	"github.com/peterbourgon/gokit/metrics/teststat"
@@ -79,10 +81,30 @@ func TestPrometheusCallbackGauge(t *testing.T) {
 	}
 }
 
-func TestPrometheusHistogram(t *testing.T) {
-	h := prometheus.NewHistogram("test", "prometheus_histogram", "foobar", "Qwerty asdf.", []string{})
+func TestPrometheusSummary(t *testing.T) {
+	h := prometheus.NewSummary(stdprometheus.SummaryOpts{
+		Namespace: "test",
+		Subsystem: "prometheus_summary_histogram",
+		Name:      "foobar",
+		Help:      "Qwerty asdf.",
+	}, []string{})
 
 	const mean, stdev int64 = 50, 10
 	teststat.PopulateNormalHistogram(t, h, 34, mean, stdev)
-	teststat.AssertPrometheusNormalHistogram(t, "test_prometheus_histogram_foobar", mean, stdev)
+	teststat.AssertPrometheusNormalSummary(t, "test_prometheus_summary_histogram_foobar", mean, stdev)
+}
+
+func TestPrometheusHistogram(t *testing.T) {
+	buckets := []float64{20, 40, 60, 80, 100}
+	h := prometheus.NewHistogram(stdprometheus.HistogramOpts{
+		Namespace: "test",
+		Subsystem: "prometheus_histogram_histogram",
+		Name:      "quux",
+		Help:      "Qwerty asdf.",
+		Buckets:   buckets,
+	}, []string{})
+
+	const mean, stdev int64 = 50, 10
+	teststat.PopulateNormalHistogram(t, h, 34, mean, stdev)
+	teststat.AssertPrometheusBucketedHistogram(t, "test_prometheus_histogram_histogram_quux_bucket", mean, stdev, buckets)
 }
