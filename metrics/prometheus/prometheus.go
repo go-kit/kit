@@ -2,8 +2,6 @@
 package prometheus
 
 import (
-	"time"
-
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/peterbourgon/gokit/metrics"
@@ -139,29 +137,14 @@ type prometheusSummary struct {
 	Pairs map[string]string
 }
 
-// NewSummary returns a new Histogram backed by a Prometheus summary. It uses
-// a 10-second max age for bucketing, emulating statsd. The histogram is
-// automatically registered via prometheus.Register.
-func NewSummary(namespace, subsystem, name, help string, fieldKeys []string) metrics.Histogram {
-	return NewSummaryWithLabels(namespace, subsystem, name, help, fieldKeys, prometheus.Labels{})
-}
-
-// NewSummaryWithLabels is the same as NewSummary, but attaches a set of const
-// label pairs to the metric.
-func NewSummaryWithLabels(namespace, subsystem, name, help string, fieldKeys []string, constLabels prometheus.Labels) metrics.Histogram {
-	m := prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
-			Namespace:   namespace,
-			Subsystem:   subsystem,
-			Name:        name,
-			Help:        help,
-			ConstLabels: constLabels,
-			MaxAge:      10 * time.Second,
-		},
-		fieldKeys,
-	)
+// NewSummary returns a new Histogram backed by a Prometheus summary. The
+// histogram is automatically registered via prometheus.Register.
+//
+// For more information on Prometheus histograms and summaries, refer to
+// http://prometheus.io/docs/practices/histograms.
+func NewSummary(opts prometheus.SummaryOpts, fieldKeys []string) metrics.Histogram {
+	m := prometheus.NewSummaryVec(opts, fieldKeys)
 	prometheus.MustRegister(m)
-
 	return prometheusSummary{
 		SummaryVec: m,
 		Pairs:      pairsFrom(fieldKeys),
@@ -184,29 +167,14 @@ type prometheusHistogram struct {
 	Pairs map[string]string
 }
 
-// NewHistogram returns a new Histogram backed by a Prometheus Histogram.
-// Observations are counted into buckets; see Prometheus documentation for
-// details. The histogram is automatically registered via prometheus.Register.
-func NewHistogram(namespace, subsystem, name, help string, fieldKeys []string, buckets []float64) metrics.Histogram {
-	return NewHistogramWithLabels(namespace, subsystem, name, help, fieldKeys, buckets, prometheus.Labels{})
-}
-
-// NewHistogramWithLabels is the same as NewHistogram, but attaches a set of const
-// label pairs to the metric.
-func NewHistogramWithLabels(namespace, subsystem, name, help string, fieldKeys []string, buckets []float64, constLabels prometheus.Labels) metrics.Histogram {
-	m := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Namespace:   namespace,
-			Subsystem:   subsystem,
-			Name:        name,
-			Help:        help,
-			ConstLabels: constLabels,
-			Buckets:     buckets,
-		},
-		fieldKeys,
-	)
+// NewHistogram returns a new Histogram backed by a Prometheus Histogram. The
+// histogram is automatically registered via prometheus.Register.
+//
+// For more information on Prometheus histograms and summaries, refer to
+// http://prometheus.io/docs/practices/histograms.
+func NewHistogram(opts prometheus.HistogramOpts, fieldKeys []string) metrics.Histogram {
+	m := prometheus.NewHistogramVec(opts, fieldKeys)
 	prometheus.MustRegister(m)
-
 	return prometheusHistogram{
 		HistogramVec: m,
 		Pairs:        pairsFrom(fieldKeys),

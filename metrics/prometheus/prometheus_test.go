@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
+
 	"github.com/peterbourgon/gokit/metrics"
 	"github.com/peterbourgon/gokit/metrics/prometheus"
 	"github.com/peterbourgon/gokit/metrics/teststat"
@@ -80,7 +82,12 @@ func TestPrometheusCallbackGauge(t *testing.T) {
 }
 
 func TestPrometheusSummary(t *testing.T) {
-	h := prometheus.NewSummary("test", "prometheus_summary_histogram", "foobar", "Qwerty asdf.", []string{})
+	h := prometheus.NewSummary(stdprometheus.SummaryOpts{
+		Namespace: "test",
+		Subsystem: "prometheus_summary_histogram",
+		Name:      "foobar",
+		Help:      "Qwerty asdf.",
+	}, []string{})
 
 	const mean, stdev int64 = 50, 10
 	teststat.PopulateNormalHistogram(t, h, 34, mean, stdev)
@@ -89,7 +96,13 @@ func TestPrometheusSummary(t *testing.T) {
 
 func TestPrometheusHistogram(t *testing.T) {
 	buckets := []float64{20, 40, 60, 80, 100}
-	h := prometheus.NewHistogram("test", "prometheus_histogram_histogram", "quux", "Qwerty asdf.", []string{}, buckets)
+	h := prometheus.NewHistogram(stdprometheus.HistogramOpts{
+		Namespace: "test",
+		Subsystem: "prometheus_histogram_histogram",
+		Name:      "quux",
+		Help:      "Qwerty asdf.",
+		Buckets:   buckets,
+	}, []string{})
 
 	const mean, stdev int64 = 50, 10
 	teststat.PopulateNormalHistogram(t, h, 34, mean, stdev)
