@@ -21,30 +21,13 @@ type prometheusCounter struct {
 
 // NewCounter returns a new Counter backed by a Prometheus metric. The counter
 // is automatically registered via prometheus.Register.
-func NewCounter(namespace, subsystem, name, help string, fieldKeys []string) metrics.Counter {
-	return NewCounterWithLabels(namespace, subsystem, name, help, fieldKeys, prometheus.Labels{})
-}
-
-// NewCounterWithLabels is the same as NewCounter, but attaches a set of const
-// label pairs to the metric.
-func NewCounterWithLabels(namespace, subsystem, name, help string, fieldKeys []string, constLabels prometheus.Labels) metrics.Counter {
-	m := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace:   namespace,
-			Subsystem:   subsystem,
-			Name:        name,
-			Help:        help,
-			ConstLabels: constLabels,
-		},
-		fieldKeys,
-	)
+func NewCounter(opts prometheus.CounterOpts, fieldKeys []string) metrics.Counter {
+	m := prometheus.NewCounterVec(opts, fieldKeys)
 	prometheus.MustRegister(m)
-
 	p := map[string]string{}
 	for _, fieldName := range fieldKeys {
 		p[fieldName] = PrometheusLabelValueUnknown
 	}
-
 	return prometheusCounter{
 		CounterVec: m,
 		Pairs:      p,
@@ -69,25 +52,9 @@ type prometheusGauge struct {
 
 // NewGauge returns a new Gauge backed by a Prometheus metric. The gauge is
 // automatically registered via prometheus.Register.
-func NewGauge(namespace, subsystem, name, help string, fieldKeys []string) metrics.Gauge {
-	return NewGaugeWithLabels(namespace, subsystem, name, help, fieldKeys, prometheus.Labels{})
-}
-
-// NewGaugeWithLabels is the same as NewGauge, but attaches a set of const
-// label pairs to the metric.
-func NewGaugeWithLabels(namespace, subsystem, name, help string, fieldKeys []string, constLabels prometheus.Labels) metrics.Gauge {
-	m := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace:   namespace,
-			Subsystem:   subsystem,
-			Name:        name,
-			Help:        help,
-			ConstLabels: constLabels,
-		},
-		fieldKeys,
-	)
+func NewGauge(opts prometheus.GaugeOpts, fieldKeys []string) metrics.Gauge {
+	m := prometheus.NewGaugeVec(opts, fieldKeys)
 	prometheus.MustRegister(m)
-
 	return prometheusGauge{
 		GaugeVec: m,
 		Pairs:    pairsFrom(fieldKeys),
@@ -113,23 +80,8 @@ func (g prometheusGauge) Add(delta float64) {
 // determined at collect time by the passed callback function. The callback
 // determines the value, and fields are ignored, so RegisterCallbackGauge
 // returns nothing.
-func RegisterCallbackGauge(namespace, subsystem, name, help string, callback func() float64) {
-	RegisterCallbackGaugeWithLabels(namespace, subsystem, name, help, prometheus.Labels{}, callback)
-}
-
-// RegisterCallbackGaugeWithLabels is the same as RegisterCallbackGauge, but
-// attaches a set of const label pairs to the metric.
-func RegisterCallbackGaugeWithLabels(namespace, subsystem, name, help string, constLabels prometheus.Labels, callback func() float64) {
-	prometheus.MustRegister(prometheus.NewGaugeFunc(
-		prometheus.GaugeOpts{
-			Namespace:   namespace,
-			Subsystem:   subsystem,
-			Name:        name,
-			Help:        help,
-			ConstLabels: constLabels,
-		},
-		callback,
-	))
+func RegisterCallbackGauge(opts prometheus.GaugeOpts, callback func() float64) {
+	prometheus.MustRegister(prometheus.NewGaugeFunc(opts, callback))
 }
 
 type prometheusSummary struct {

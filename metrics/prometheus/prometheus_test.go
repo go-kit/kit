@@ -12,7 +12,12 @@ import (
 )
 
 func TestPrometheusLabelBehavior(t *testing.T) {
-	c := prometheus.NewCounter("test", "prometheus_label_behavior", "foobar", "Abc def.", []string{"used_key", "unused_key"})
+	c := prometheus.NewCounter(stdprometheus.CounterOpts{
+		Namespace: "test",
+		Subsystem: "prometheus_label_behavior",
+		Name:      "foobar",
+		Help:      "Abc def.",
+	}, []string{"used_key", "unused_key"})
 	c.With(metrics.Field{Key: "used_key", Value: "declared"}).Add(1)
 	c.Add(1)
 
@@ -27,7 +32,12 @@ func TestPrometheusLabelBehavior(t *testing.T) {
 }
 
 func TestPrometheusCounter(t *testing.T) {
-	c := prometheus.NewCounter("test", "prometheus_counter", "foobar", "Lorem ipsum.", []string{})
+	c := prometheus.NewCounter(stdprometheus.CounterOpts{
+		Namespace: "test",
+		Subsystem: "prometheus_counter",
+		Name:      "foobar",
+		Help:      "Lorem ipsum.",
+	}, []string{})
 	c.Add(1)
 	c.Add(2)
 	if want, have := strings.Join([]string{
@@ -49,7 +59,12 @@ func TestPrometheusCounter(t *testing.T) {
 }
 
 func TestPrometheusGauge(t *testing.T) {
-	c := prometheus.NewGauge("test", "prometheus_gauge", "foobar", "Dolor sit.", []string{})
+	c := prometheus.NewGauge(stdprometheus.GaugeOpts{
+		Namespace: "test",
+		Subsystem: "prometheus_gauge",
+		Name:      "foobar",
+		Help:      "Dolor sit.",
+	}, []string{})
 	c.Set(42)
 	if want, have := strings.Join([]string{
 		`# HELP test_prometheus_gauge_foobar Dolor sit.`,
@@ -71,7 +86,12 @@ func TestPrometheusGauge(t *testing.T) {
 func TestPrometheusCallbackGauge(t *testing.T) {
 	value := 123.456
 	cb := func() float64 { return value }
-	prometheus.RegisterCallbackGauge("test", "prometheus_gauge", "bazbaz", "Help string.", cb)
+	prometheus.RegisterCallbackGauge(stdprometheus.GaugeOpts{
+		Namespace: "test",
+		Subsystem: "prometheus_gauge",
+		Name:      "bazbaz",
+		Help:      "Help string.",
+	}, cb)
 	if want, have := strings.Join([]string{
 		`# HELP test_prometheus_gauge_bazbaz Help string.`,
 		`# TYPE test_prometheus_gauge_bazbaz gauge`,

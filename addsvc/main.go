@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/streadway/handy/cors"
 	"github.com/streadway/handy/encoding"
 	"golang.org/x/net/context"
@@ -24,6 +25,7 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/expvar"
+	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/metrics/statsd"
 	"github.com/go-kit/kit/server"
 	"github.com/go-kit/kit/tracing/zipkin"
@@ -45,11 +47,23 @@ func main() {
 	// `package metrics` domain
 	requests := metrics.NewMultiCounter(
 		expvar.NewCounter("requests"),
-		statsd.NewCounter(ioutil.Discard, "requests", time.Second),
+		statsd.NewCounter(ioutil.Discard, "requests_total", time.Second),
+		prometheus.NewCounter(stdprometheus.CounterOpts{
+			Namespace: "addsvc",
+			Subsystem: "add",
+			Name:      "requests_total",
+			Help:      "Total number of received requests.",
+		}, []string{}),
 	)
 	duration := metrics.NewMultiHistogram(
-		expvar.NewHistogram("duration_ns", 0, 100000000, 3),
-		statsd.NewHistogram(ioutil.Discard, "duration_ns", time.Second),
+		expvar.NewHistogram("duration_nanoseconds_total", 0, 100000000, 3),
+		statsd.NewHistogram(ioutil.Discard, "duration_nanoseconds_total", time.Second),
+		prometheus.NewHistogram(stdprometheus.HistogramOpts{
+			Namespace: "addsvc",
+			Subsystem: "add",
+			Name:      "duration_nanoseconds_total",
+			Help:      "Total nanoseconds spend serving requests.",
+		}, []string{}),
 	)
 
 	// `package tracing` domain
@@ -60,11 +74,11 @@ func main() {
 
 	// `package log` domain
 	var logger kitlog.Logger
-	logger = kitlog.NewPrefixLogger(kitlog.StdlibWriter{})
+	logger = kitlog.NewPrefixLogger(os.Stderr)
 	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
-	kitlog.DefaultLogger = logger // for other gokit components
-	stdlog.SetOutput(os.Stderr)   //
-	stdlog.SetFlags(0)            // flags are handled in our logger
+	kitlog.DefaultLogger = logger                     // for other gokit components
+	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
+	stdlog.SetFlags(0)                                // flags are handled in our logger
 
 	// Our business and operational domain
 	var a Add

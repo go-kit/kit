@@ -23,7 +23,12 @@ import (
 func TestMultiWith(t *testing.T) {
 	c := metrics.NewMultiCounter(
 		expvar.NewCounter("foo"),
-		prometheus.NewCounter("test", "multi_with", "bar", "Bar counter.", []string{"a"}),
+		prometheus.NewCounter(stdprometheus.CounterOpts{
+			Namespace: "test",
+			Subsystem: "multi_with",
+			Name:      "bar",
+			Help:      "Bar counter.",
+		}, []string{"a"}),
 	)
 
 	c.Add(1)
@@ -43,7 +48,12 @@ func TestMultiWith(t *testing.T) {
 func TestMultiCounter(t *testing.T) {
 	metrics.NewMultiCounter(
 		expvar.NewCounter("alpha"),
-		prometheus.NewCounter("test", "multi_counter", "beta", "Beta counter.", []string{}),
+		prometheus.NewCounter(stdprometheus.CounterOpts{
+			Namespace: "test",
+			Subsystem: "multi_counter",
+			Name:      "beta",
+			Help:      "Beta counter.",
+		}, []string{}),
 	).Add(123)
 
 	if want, have := "123", stdexpvar.Get("alpha").String(); want != have {
@@ -62,7 +72,12 @@ func TestMultiCounter(t *testing.T) {
 func TestMultiGauge(t *testing.T) {
 	g := metrics.NewMultiGauge(
 		expvar.NewGauge("delta"),
-		prometheus.NewGauge("test", "multi_gauge", "kappa", "Kappa gauge.", []string{}),
+		prometheus.NewGauge(stdprometheus.GaugeOpts{
+			Namespace: "test",
+			Subsystem: "multi_gauge",
+			Name:      "kappa",
+			Help:      "Kappa gauge.",
+		}, []string{}),
 	)
 
 	g.Set(34)
