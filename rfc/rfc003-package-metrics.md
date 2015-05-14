@@ -15,7 +15,7 @@ http://peter.bourgon.org/go-kit/#package-metrics
 - Package metrics SHALL implement Gauges, Counters, and Histograms.
 
 - Each metric type SHALL allow observations with an unlimited number of key/value field pairs,
-  similar to [package log](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc004-package-log.md).
+  similar to [package log](https://github.com/go-kit/kit/blob/master/rfc/rfc004-package-log.md).
 
 - Counter SHALL be an increment-only counter of type uint64.
 
@@ -35,7 +35,7 @@ http://peter.bourgon.org/go-kit/#package-metrics
 
 ## Implementation
 
-https://github.com/peterbourgon/gokit/tree/master/metrics
+https://github.com/go-kit/kit/tree/master/metrics
 
 ### Gauge
 

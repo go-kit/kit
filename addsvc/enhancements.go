@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/peterbourgon/gokit/log"
+	"github.com/go-kit/kit/log"
 )
 
 func logging(logger log.Logger, add Add) Add {

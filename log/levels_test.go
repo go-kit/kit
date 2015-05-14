@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/peterbourgon/gokit/log"
+	"github.com/go-kit/kit/log"
 )
 
 func TestDefaultLevels(t *testing.T) {

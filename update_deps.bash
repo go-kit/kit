@@ -13,7 +13,7 @@ function not_stdlib {
 }
 
 function not_gokit {
-	grep -v 'peterbourgon/gokit'
+	grep -v 'go-kit/kit'
 }
 
 function go_get_update {

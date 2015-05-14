@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/peterbourgon/gokit/log"
+	"github.com/go-kit/kit/log"
 )
 
 // These test are designed to be run with the race detector.

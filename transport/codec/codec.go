@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/peterbourgon/gokit/server"
+	"github.com/go-kit/kit/server"
 )
 
 // Codec defines how to decode and encode requests and responses. Decode takes

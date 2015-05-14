@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/peterbourgon/gokit/log"
+	"github.com/go-kit/kit/log"
 )
 
 func TestJSONLogger(t *testing.T) {

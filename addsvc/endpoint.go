@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/peterbourgon/gokit/server"
 	"golang.org/x/net/context"
+
+	"github.com/go-kit/kit/server"
 )
 
 // makeEndpoint returns a server.Endpoint wrapping the passed Add. If Add were

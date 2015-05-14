@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/peterbourgon/gokit/server"
+	"github.com/go-kit/kit/server"
 )
 
 // http://www.slideshare.net/johanoskarsson/zipkin-runtime-open-house

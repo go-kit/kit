@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/peterbourgon/gokit/metrics"
+	"github.com/go-kit/kit/metrics"
 )
 
 // HTTP bindings require no service-specific declarations, and so are defined

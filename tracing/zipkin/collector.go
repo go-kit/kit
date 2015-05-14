@@ -10,8 +10,8 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 
-	"github.com/peterbourgon/gokit/log"
-	"github.com/peterbourgon/gokit/tracing/zipkin/_thrift/gen-go/scribe"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/scribe"
 )
 
 // Collector represents a Zipkin trace collector, which is probably a set of

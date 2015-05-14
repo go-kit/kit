@@ -19,7 +19,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/peterbourgon/gokit/metrics"
+	"github.com/go-kit/kit/metrics"
 )
 
 // statsd metrics take considerable influence from

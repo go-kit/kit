@@ -23,9 +23,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/peterbourgon/gokit/metrics"
-
 	"github.com/codahale/hdrhistogram"
+
+	"github.com/go-kit/kit/metrics"
 )
 
 type counter struct {

@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/peterbourgon/gokit/metrics"
+	"github.com/go-kit/kit/metrics"
 )
 
 const population = 1234

@@ -6,8 +6,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/peterbourgon/gokit/server"
-	"github.com/peterbourgon/gokit/transport/codec"
+	"github.com/go-kit/kit/server"
+	"github.com/go-kit/kit/transport/codec"
 )
 
 // BindingOption sets a parameter for the binding.

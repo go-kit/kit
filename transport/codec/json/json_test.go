@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	jsoncodec "github.com/peterbourgon/gokit/transport/codec/json"
+	jsoncodec "github.com/go-kit/kit/transport/codec/json"
 )
 
 type request struct {

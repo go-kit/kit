@@ -11,9 +11,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/peterbourgon/gokit/server"
-	jsoncodec "github.com/peterbourgon/gokit/transport/codec/json"
-	httptransport "github.com/peterbourgon/gokit/transport/http"
+	"github.com/go-kit/kit/server"
+	jsoncodec "github.com/go-kit/kit/transport/codec/json"
+	httptransport "github.com/go-kit/kit/transport/http"
 )
 
 func TestBinding(t *testing.T) {

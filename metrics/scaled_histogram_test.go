@@ -3,8 +3,8 @@ package metrics_test
 import (
 	"testing"
 
-	"github.com/peterbourgon/gokit/metrics"
-	"github.com/peterbourgon/gokit/metrics/expvar"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/expvar"
 )
 
 func TestScaledHistogram(t *testing.T) {

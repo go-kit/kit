@@ -15,9 +15,9 @@ import (
 
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 
-	"github.com/peterbourgon/gokit/metrics"
-	"github.com/peterbourgon/gokit/metrics/expvar"
-	"github.com/peterbourgon/gokit/metrics/prometheus"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/expvar"
+	"github.com/go-kit/kit/metrics/prometheus"
 )
 
 func TestMultiWith(t *testing.T) {

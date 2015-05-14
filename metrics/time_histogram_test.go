@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/peterbourgon/gokit/metrics"
-	"github.com/peterbourgon/gokit/metrics/expvar"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/expvar"
 )
 
 func TestTimeHistogram(t *testing.T) {

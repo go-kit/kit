@@ -5,9 +5,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	thriftadd "github.com/peterbourgon/gokit/addsvc/_thrift/gen-go/add"
-	"github.com/peterbourgon/gokit/metrics"
-	"github.com/peterbourgon/gokit/server"
+	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/server"
 )
 
 // A binding wraps an Endpoint so that it's usable by a transport.

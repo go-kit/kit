@@ -6,9 +6,9 @@ import (
 
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 
-	"github.com/peterbourgon/gokit/metrics"
-	"github.com/peterbourgon/gokit/metrics/prometheus"
-	"github.com/peterbourgon/gokit/metrics/teststat"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/go-kit/kit/metrics/teststat"
 )
 
 func TestPrometheusLabelBehavior(t *testing.T) {

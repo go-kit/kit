@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/peterbourgon/gokit/metrics/expvar"
-	"github.com/peterbourgon/gokit/metrics/teststat"
+	"github.com/go-kit/kit/metrics/expvar"
+	"github.com/go-kit/kit/metrics/teststat"
 )
 
 func TestHistogramQuantiles(t *testing.T) {

@@ -5,9 +5,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/peterbourgon/gokit/addsvc/pb"
-	"github.com/peterbourgon/gokit/metrics"
-	"github.com/peterbourgon/gokit/server"
+	"github.com/go-kit/kit/addsvc/pb"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/server"
 )
 
 // A binding wraps an Endpoint so that it's usable by a transport. grpcBinding

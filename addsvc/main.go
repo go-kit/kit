@@ -19,16 +19,16 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	thriftadd "github.com/peterbourgon/gokit/addsvc/_thrift/gen-go/add"
-	"github.com/peterbourgon/gokit/addsvc/pb"
-	kitlog "github.com/peterbourgon/gokit/log"
-	"github.com/peterbourgon/gokit/metrics"
-	"github.com/peterbourgon/gokit/metrics/expvar"
-	"github.com/peterbourgon/gokit/metrics/statsd"
-	"github.com/peterbourgon/gokit/server"
-	"github.com/peterbourgon/gokit/tracing/zipkin"
-	jsoncodec "github.com/peterbourgon/gokit/transport/codec/json"
-	httptransport "github.com/peterbourgon/gokit/transport/http"
+	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
+	"github.com/go-kit/kit/addsvc/pb"
+	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/expvar"
+	"github.com/go-kit/kit/metrics/statsd"
+	"github.com/go-kit/kit/server"
+	"github.com/go-kit/kit/tracing/zipkin"
+	jsoncodec "github.com/go-kit/kit/transport/codec/json"
+	httptransport "github.com/go-kit/kit/transport/http"
 )
 
 func main() {

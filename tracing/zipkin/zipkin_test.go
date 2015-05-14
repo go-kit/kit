@@ -7,11 +7,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/peterbourgon/gokit/server"
-
 	"golang.org/x/net/context"
 
-	"github.com/peterbourgon/gokit/tracing/zipkin"
+	"github.com/go-kit/kit/server"
+	"github.com/go-kit/kit/tracing/zipkin"
 )
 
 func TestAnnotateEndpoint(t *testing.T) {
