@@ -1,6 +1,6 @@
-# gokit [![Circle CI](https://circleci.com/gh/peterbourgon/gokit.svg?style=svg)](https://circleci.com/gh/peterbourgon/gokit) [![Drone.io](https://drone.io/github.com/peterbourgon/gokit/status.png)](https://drone.io/github.com/peterbourgon/gokit/latest) [![Travis CI](https://travis-ci.org/peterbourgon/gokit.svg?branch=master)](https://travis-ci.org/peterbourgon/gokit) [![GoDoc](https://godoc.org/github.com/peterbourgon/gokit?status.svg)](https://godoc.org/github.com/peterbourgon/gokit)
+# gokit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit)
 
-**gokit** is a **distributed programming toolkit** for microservices in the modern enterprise.
+**Gokit** is a **distributed programming toolkit** for microservices in the modern enterprise.
 
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
 - IRC: [Freenode](https://freenode.net) `#gokit`
@@ -24,24 +24,24 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 
 ## Component status
 
-- API stability — [RFC complete](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc007-api-stability.md), adopted
-- `package metrics` — [RFC complete](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc003-package-metrics.md), [first draft complete](https://github.com/peterbourgon/gokit/tree/master/metrics)
-- `package server` — [RFC complete](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc000-package-server.md), [prototyping](https://github.com/peterbourgon/gokit/pull/14)
-- `package transport` — [RFC pending](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc002-package-transport.md), [prototyping](https://github.com/peterbourgon/gokit/pull/14)
-- `package log` — [RFC complete](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc004-package-log.md), [prototyping](https://github.com/peterbourgon/gokit/pull/16)
-- `package client` — [RFC pending](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc001-package-client.md)
-- Service discovery — [RFC pending](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc005-service-discovery.md)
-- Request tracing — [RFC pending](https://github.com/peterbourgon/gokit/blob/master/rfc/rfc006-request-tracing.md)
+- API stability — adopted
+- `package metrics` — [implemented](https://github.com/go-kit/kit/tree/master/metrics)
+- `package server` — [implemented](https://github.com/go-kit/kit/tree/master/server)
+- `package transport` — [implemented](https://github.com/go-kit/kit/tree/master/transport)
+- `package log` — [implemented](https://github.com/go-kit/kit/tree/master/log)
+- `package tracing` — [prototyping](Https://github.com/go-kit/kit/tree/master/tracing)
+- `package client` — pending
+- Service discovery — pending
 
 ## Contributing
 
 At this stage, we're still developing the initial drafts of all of the packages, using an
-[RFC workflow](https://github.com/peterbourgon/gokit/tree/master/rfc).
+[RFC workflow](https://github.com/go-kit/kit/tree/master/rfc).
 Before submitting major changes, please write to
  [the mailing list](https://groups.google.com/forum/#!forum/go-kit)
 to register your interest, and check the
- [open issues](https://github.com/peterbourgon/gokit/issues) and
- [pull requests](https://github.com/peterbourgon/gokit/pulls)
+ [open issues](https://github.com/go-kit/kit/issues) and
+ [pull requests](https://github.com/go-kit/kit/pulls)
 for existing discussions.
 
 ### Dependency management
@@ -59,9 +59,9 @@ compatibility problems as soon as they occur.
 The gokit project depends on code maintained by others. This includes the Go
 standard library and sub-repositories and other external libraries.
 The Go language and standard library provide stability guarantees, but the other external libraries typically do not.
-[The API Stability RFC](https://github.com/peterbourgon/gokit/tree/master/rfc/rfc007-api-stability.md)
+[The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
 proposes a standard policy for package authors to advertise API stability.
-The gokit project prefers to depend on code that abides the API stability policy.
+The go-kit project prefers to depend on code that abides the API stability policy.
 
 ## Related projects
 
@@ -82,7 +82,7 @@ Projects with a ★ have had particular influence on gokit's design.
 - [eapache/go-resiliency](https://github.com/eapache/go-resiliency), resiliency patterns
 - [FogCreek/logging](https://github.com/FogCreek/logging), a tagged style of logging
 - [grpc/grpc-go](https://github.com/grpc/grpc-go), HTTP/2 based RPC
-- [inconshreveable/log15](https://github.com/inconshreveable/log15), simple, powerful logging for Go
+- [inconshreveable/log15](https://github.com/inconshreveable/log15), simple, powerful logging for Go ★
 - [mailgun/vulcand](https://github.com/mailgun/vulcand), prorammatic load balancer backed by etcd
 - [mattheath/phosphor](https://github.com/mattheath/phosphor), distributed system tracing
 - [pivotal-golang/lager](https://github.com/pivotal-golang/lager), an opinionated logging library
