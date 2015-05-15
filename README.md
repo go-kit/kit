@@ -102,7 +102,7 @@ Projects with a ★ have had particular influence on gokit's design.
 - [Gorilla](http://www.gorillatoolkit.org)
 - [Martini](https://github.com/go-martini/martini)
 - [Negroni](https://github.com/codegangsta/negroni)
-- [Revel](https://revel.github.io/)
+- [Revel](https://revel.github.io/) (considered harmful)
 
 ## Additional reading
 
