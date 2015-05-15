@@ -10,4 +10,4 @@ TODO
 # Usage
 
 As currently defined, you shouldn't need to use `package server` directly.
-Other go-kit components integrate on `package server` interfaces.
+Other gokit components integrate on `package server` interfaces.

@@ -6,7 +6,7 @@ It provides adapters to popular metrics packages, like **[expvar][]**, **[statsd
 
 [counters]: http://prometheus.io/docs/concepts/metric_types/#counter
 [gauges]: http://prometheus.io/docs/concepts/metric_types/#gauge
-[histogram]: http://prometheus.io/docs/concepts/metric_types/#histogram
+[histograms]: http://prometheus.io/docs/concepts/metric_types/#histogram
 [expvar]: https://golang.org/pkg/expvar
 [statsd]: https://github.com/etsy/statsd
 [Prometheus]: http://prometheus.io
