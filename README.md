@@ -24,12 +24,12 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 
 ## Component status
 
-- API stability — adopted
-- `package metrics` — [implemented](https://github.com/go-kit/kit/tree/master/metrics)
-- `package server` — [implemented](https://github.com/go-kit/kit/tree/master/server)
-- `package transport` — [implemented](https://github.com/go-kit/kit/tree/master/transport)
-- `package log` — [implemented](https://github.com/go-kit/kit/tree/master/log)
-- `package tracing` — [prototyping](Https://github.com/go-kit/kit/tree/master/tracing)
+- [API stability](https://github.com/go-kit/kit/blob/master/rfc/rfc007-api-stability.md) — **adopted**
+- [`package metrics`](https://github.com/go-kit/kit/tree/master/metrics) — **implemented**
+- [`package server`](https://github.com/go-kit/kit/tree/master/server) — **implemented**
+- [`package transport`](https://github.com/go-kit/kit/tree/master/transport) — **implemented**
+- [`package log`](https://github.com/go-kit/kit/tree/master/log) — **implemented**
+- [`package tracing`](https://github.com/go-kit/kit/tree/master/tracing) — prototyping
 - `package client` — pending
 - Service discovery — pending
 
