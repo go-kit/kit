@@ -12,15 +12,15 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 ## Goals
 
 - Operate in a heterogeneous SOA — expect to interact with mostly non-gokit services
-- RPC as the messaging pattern
+- RPC as the primary messaging pattern
 - Pluggable serialization and transport — not just JSON over HTTP
 - Zipkin-compatible request tracing
 
 ## Non-goals
 
-- Supporting messaging patterns other than RPC — pub/sub, CQRS, etc.
+- Supporting messaging patterns other than RPC (in the initial release) — pub/sub, CQRS, etc.
 - Having opinions on deployment, orchestration, process supervision, etc.
-- Having opinions on configuration passing, i.e. flags, env vars, files, etc.
+- Having opinions on configuration passing — flags, env vars, files, etc.
 
 ## Component status
 
