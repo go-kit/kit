@@ -2,7 +2,7 @@
 
 `package log` is an opinionated package for logging in your service.
 It provides a minimal interface for structured logging, which may be wrapped to encode conventions, enforce type-safety, etc.
-It can used for both typical application log events, and log-structured data streams.
+It can be used for both typical application log events, and log-structured data streams.
 
 ## Rationale
 
