@@ -3,7 +3,7 @@
 `package transport` defines interfaces for service transports and codecs.
 It also provides implementations for transports and codecs that aren't already well-defined by other packages.
 The most common use case for `package transport` is probably to bind a gokit [server.Endpoint][] with a stdlib [http.Handler][], via gokit's [http.Binding][].
-Refer to the [addsvc][] example service to see how to make [Thrift][] or [gRPC][] transport bindings.
+Refer to the [addsvc][] example service to see how to make e.g. [Thrift][] or [gRPC][] transport bindings.
 
 [server.Endpoint]: https://godoc.org/github.com/go-kit/kit/server/#Endpoint
 [http.Handler]: https://golang.org/pkg/net/http/#Handler

@@ -1,7 +1,7 @@
 # package server
 
 `package server` is a very small package that collects interfaces used by services.
-Most server-side functionality is actually implemented in surrounding packages.
+Most server-side functionality is actually implemented by surrounding packages.
 
 # Rationale
 

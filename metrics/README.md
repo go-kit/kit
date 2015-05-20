@@ -1,8 +1,8 @@
 # package metrics
 
-`package metrics` is an opinionated package for instrumenting your service.
-It provides a set of uniform interfaces for **[counters][]**, **[gauges][]**, and **[histograms][]**.
-It provides adapters to popular metrics packages, like **[expvar][]**, **[statsd][]**, and **[Prometheus][]**.
+`package metrics` provides a set of uniform interfaces for service instrumentation.
+It has **[counters][]**, **[gauges][]**, and **[histograms][]**,
+ and provides adapters to popular metrics packages, like **[expvar][]**, **[statsd][]**, and **[Prometheus][]**.
 
 [counters]: http://prometheus.io/docs/concepts/metric_types/#counter
 [gauges]: http://prometheus.io/docs/concepts/metric_types/#gauge

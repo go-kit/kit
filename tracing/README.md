@@ -1,7 +1,7 @@
 # package tracing
 
 `package tracing` provides [Dapper-style][dapper] request tracing to services.
-An implementations exists for [Zipkin][]; [Appdash][] support is planned.
+An implementation exists for [Zipkin][]; [Appdash][] support is planned.
 
 [dapper]: http://research.google.com/pubs/pub36356.html
 [Zipkin]: https://blog.twitter.com/2012/distributed-systems-tracing-with-zipkin
