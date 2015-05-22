@@ -3,7 +3,7 @@
 **Gokit** is a **distributed programming toolkit** for microservices in the modern enterprise.
 
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
-- Slack: [gophers.slack.com](https://gophers.slack.com) `#go-kit` ([invite](http://bit.ly/go-slack-signup))
+- Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](http://bit.ly/go-slack-signup))
 
 ## Motivation
 
