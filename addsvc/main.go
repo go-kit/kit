@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/streadway/handy/cors"
 	"github.com/streadway/handy/encoding"
@@ -92,11 +91,6 @@ func main() {
 	zipkinMethodName := "add"
 	zipkinSpanFunc := zipkin.MakeNewSpanFunc(zipkinHostPort, *zipkinServiceName, zipkinMethodName)
 
-	// Mechanical stuff
-	rand.Seed(time.Now().UnixNano())
-	root := context.Background()
-	errc := make(chan error)
-
 	// Our business and operational domain
 	var a Add = pureAdd
 	if *proxyHTTPAddr != "" {
@@ -115,6 +109,11 @@ func main() {
 	var e server.Endpoint
 	e = makeEndpoint(a)
 	e = zipkin.AnnotateServer(zipkinSpanFunc, zipkinCollector)(e)
+
+	// Mechanical stuff
+	rand.Seed(time.Now().UnixNano())
+	root := context.Background()
+	errc := make(chan error)
 
 	go func() {
 		errc <- interrupt()
@@ -231,19 +230,16 @@ func interrupt() error {
 type loggingCollector struct{}
 
 func (loggingCollector) Collect(s *zipkin.Span) error {
+	annotations := s.Encode().GetAnnotations()
+	values := make([]string, len(annotations))
+	for i, a := range annotations {
+		values[i] = a.Value
+	}
 	kitlog.DefaultLogger.Log(
 		"trace_id", strconv.FormatInt(s.TraceID(), 16),
 		"span_id", strconv.FormatInt(s.SpanID(), 16),
 		"parent_span_id", strconv.FormatInt(s.ParentSpanID(), 16),
-		"annotations", pretty(s.Encode().GetAnnotations()),
+		"annotations", strings.Join(values, " "),
 	)
 	return nil
-}
-
-func pretty(annotations []*zipkincore.Annotation) string {
-	values := make([]string, len(annotations))
-	for i, annotation := range annotations {
-		values[i] = annotation.Value
-	}
-	return strings.Join(values, " ")
 }
