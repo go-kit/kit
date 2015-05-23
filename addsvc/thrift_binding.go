@@ -19,12 +19,12 @@ type thriftBinding struct {
 
 // Add implements Thrift's AddService interface.
 func (tb thriftBinding) Add(a, b int64) (*thriftadd.AddReply, error) {
-	r, err := tb.Endpoint(tb.Context, request{a, b})
+	r, err := tb.Endpoint(tb.Context, addRequest{a, b})
 	if err != nil {
 		return nil, err
 	}
 
-	resp, ok := r.(*response)
+	resp, ok := r.(*addResponse)
 	if !ok {
 		return nil, server.ErrBadCast
 	}

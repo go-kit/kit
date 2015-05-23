@@ -11,7 +11,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/server"
 	jsoncodec "github.com/go-kit/kit/transport/codec/json"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
@@ -29,18 +28,18 @@ func TestBinding(t *testing.T) {
 		return 3 * i // doesn't matter, just do something
 	}
 
-	endpoint := func(_ context.Context, req server.Request) (server.Response, error) {
-		r, ok := req.(*myRequest)
+	endpoint := func(_ context.Context, request interface{}) (interface{}, error) {
+		r, ok := request.(*myRequest)
 		if !ok {
-			return nil, fmt.Errorf("not myRequest (%s)", reflect.TypeOf(req))
+			return nil, fmt.Errorf("not myRequest (%s)", reflect.TypeOf(request))
 		}
 		return myResponse{transform(r.In)}, nil
 	}
 
 	ctx := context.Background()
-	requestType := reflect.TypeOf(myRequest{})
+	makeRequest := func() interface{} { return &myRequest{} }
 	codec := jsoncodec.New()
-	binding := httptransport.NewBinding(ctx, requestType, codec, endpoint)
+	binding := httptransport.NewBinding(ctx, makeRequest, codec, endpoint)
 	server := httptest.NewServer(binding)
 	defer server.Close()
 

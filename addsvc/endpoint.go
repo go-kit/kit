@@ -12,22 +12,20 @@ import (
 //
 // This function is just boiler-plate; in theory, it could be generated.
 func makeEndpoint(a Add) server.Endpoint {
-	return func(ctx context.Context, req server.Request) (server.Response, error) {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		select {
 		case <-ctx.Done():
 			return nil, server.ErrContextCanceled
 		default:
 		}
 
-		addReq, ok := req.(*request)
+		addReq, ok := request.(*addRequest)
 		if !ok {
 			return nil, server.ErrBadCast
 		}
 
 		v := a(ctx, addReq.A, addReq.B)
 
-		return response{
-			V: v,
-		}, nil
+		return addResponse{V: v}, nil
 	}
 }

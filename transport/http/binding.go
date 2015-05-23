@@ -2,7 +2,6 @@ package http
 
 import (
 	"net/http"
-	"reflect"
 
 	"golang.org/x/net/context"
 
@@ -25,7 +24,7 @@ func After(funcs ...AfterFunc) BindingOption {
 
 type binding struct {
 	context.Context
-	requestType reflect.Type
+	makeRequest func() interface{}
 	codec.Codec
 	server.Endpoint
 	before []BeforeFunc
@@ -33,10 +32,10 @@ type binding struct {
 }
 
 // NewBinding returns an HTTP handler that wraps the given endpoint.
-func NewBinding(ctx context.Context, requestType reflect.Type, cdc codec.Codec, endpoint server.Endpoint, options ...BindingOption) http.Handler {
+func NewBinding(ctx context.Context, makeRequest func() interface{}, cdc codec.Codec, endpoint server.Endpoint, options ...BindingOption) http.Handler {
 	b := &binding{
 		Context:     ctx,
-		requestType: requestType,
+		makeRequest: makeRequest,
 		Codec:       cdc,
 		Endpoint:    endpoint,
 	}
@@ -57,7 +56,7 @@ func (b *binding) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Decode request.
-	req := reflect.New(b.requestType).Interface()
+	req := b.makeRequest()
 	ctx, err := b.Codec.Decode(ctx, r.Body, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

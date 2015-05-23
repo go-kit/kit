@@ -11,12 +11,13 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"reflect"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/streadway/handy/cors"
 	"github.com/streadway/handy/encoding"
@@ -25,6 +26,7 @@ import (
 
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
 	"github.com/go-kit/kit/addsvc/pb"
+	"github.com/go-kit/kit/client"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/expvar"
@@ -37,11 +39,11 @@ import (
 )
 
 func main() {
-	// gRPC transitively registers flags via its import of glog. Here we
-	// define a new flag set, to keep those domains distinct.
+	// Flag domain. Note that gRPC transitively registers flags via its import
+	// of glog. So, we define a new flag set, to keep those domains distinct.
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	var (
-		fwd               = fs.String("fwd.http", "", "if set, forward requests to this addsvc (HTTP)")
+		proxyHTTPAddr     = fs.String("proxy.http.addr", "", "if set, proxy requests over HTTP to this addsvc")
 		debugAddr         = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
 		httpAddr          = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
 		grpcAddr          = fs.String("grpc.addr", ":8002", "Address for gRPC server")
@@ -53,7 +55,6 @@ func main() {
 	)
 	flag.Usage = fs.Usage // only show our flags
 	fs.Parse(os.Args[1:])
-	rand.Seed(time.Now().UnixNano())
 
 	// `package log` domain
 	var logger kitlog.Logger
@@ -91,23 +92,29 @@ func main() {
 	zipkinMethodName := "add"
 	zipkinSpanFunc := zipkin.MakeNewSpanFunc(zipkinHostPort, *zipkinServiceName, zipkinMethodName)
 
+	// Mechanical stuff
+	rand.Seed(time.Now().UnixNano())
+	root := context.Background()
+	errc := make(chan error)
+
 	// Our business and operational domain
-	var a Add
-	if *fwd == "" {
-		a = pureAdd
-	} else {
-		a = addViaHTTP(*fwd, zipkinSpanFunc, zipkinCollector)
+	var a Add = pureAdd
+	if *proxyHTTPAddr != "" {
+		codec := jsoncodec.New()
+		makeResponse := func() interface{} { return &addResponse{} }
+
+		var e client.Endpoint
+		e = newHTTPClient(*proxyHTTPAddr, codec, makeResponse, before(zipkin.ToRequest(zipkinSpanFunc)))
+		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
+
+		a = proxyAdd(e)
 	}
 	a = logging(logger)(a)
 
 	// `package server` domain
 	var e server.Endpoint
 	e = makeEndpoint(a)
-	e = zipkin.AnnotateEndpoint(zipkinSpanFunc, zipkinCollector)(e)
-
-	// Mechanical stuff
-	root := context.Background()
-	errc := make(chan error)
+	e = zipkin.AnnotateServer(zipkinSpanFunc, zipkinCollector)(e)
 
 	go func() {
 		errc <- interrupt()
@@ -125,11 +132,12 @@ func main() {
 		defer cancel()
 
 		field := metrics.Field{Key: "transport", Value: "http"}
-		before := httptransport.Before(zipkin.ToContext(zipkin.FromHTTP(zipkinSpanFunc)))
+		before := httptransport.Before(zipkin.ToContext(zipkinSpanFunc))
 		after := httptransport.After(httptransport.SetContentType("application/json"))
+		makeRequest := func() interface{} { return &addRequest{} }
 
 		var handler http.Handler
-		handler = httptransport.NewBinding(ctx, reflect.TypeOf(request{}), jsoncodec.New(), e, before, after)
+		handler = httptransport.NewBinding(ctx, makeRequest, jsoncodec.New(), e, before, after)
 		handler = encoding.Gzip(handler)
 		handler = cors.Middleware(cors.Config{})(handler)
 		handler = httpInstrument(requests.With(field), duration.With(field))(handler)
@@ -227,6 +235,15 @@ func (loggingCollector) Collect(s *zipkin.Span) error {
 		"trace_id", strconv.FormatInt(s.TraceID(), 16),
 		"span_id", strconv.FormatInt(s.SpanID(), 16),
 		"parent_span_id", strconv.FormatInt(s.ParentSpanID(), 16),
+		"annotations", pretty(s.Encode().GetAnnotations()),
 	)
 	return nil
+}
+
+func pretty(annotations []*zipkincore.Annotation) string {
+	values := make([]string, len(annotations))
+	for i, annotation := range annotations {
+		values[i] = annotation.Value
+	}
+	return strings.Join(values, " ")
 }

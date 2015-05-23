@@ -20,13 +20,13 @@ type grpcBinding struct{ server.Endpoint }
 // way to manipulate the RPC context, like headers for HTTP. So we don't have
 // a way to transport e.g. Zipkin IDs with the request. TODO.
 func (b grpcBinding) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddReply, error) {
-	addReq := request{req.A, req.B}
+	addReq := addRequest{req.A, req.B}
 	r, err := b.Endpoint(ctx, addReq)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, ok := r.(*response)
+	resp, ok := r.(*addResponse)
 	if !ok {
 		return nil, server.ErrBadCast
 	}
