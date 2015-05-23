@@ -53,7 +53,7 @@ const (
 func AnnotateServer(newSpan NewSpanFunc, c Collector) server.Middleware {
 	return func(e server.Endpoint) server.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
-			span, ok := maybeFromContext(ctx)
+			span, ok := fromContext(ctx)
 			if !ok {
 				span = newSpan(newID(), newID(), 0)
 				ctx = context.WithValue(ctx, SpanContextKey, span)
@@ -74,7 +74,7 @@ func AnnotateClient(newSpan NewSpanFunc, c Collector) client.Middleware {
 	return func(e client.Endpoint) client.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			var clientSpan *Span
-			parentSpan, ok := maybeFromContext(ctx)
+			parentSpan, ok := fromContext(ctx)
 			if ok {
 				clientSpan = newSpan(parentSpan.TraceID(), newID(), parentSpan.SpanID())
 			} else {
@@ -106,11 +106,19 @@ func ToContext(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) c
 // a child/client span.
 func ToRequest(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) context.Context {
 	return func(ctx context.Context, r *http.Request) context.Context {
-		span, ok := maybeFromContext(ctx)
+		span, ok := fromContext(ctx)
 		if !ok {
 			span = newSpan(newID(), newID(), 0)
 		}
-		setRequestHeaders(r.Header, span)
+		if id := span.TraceID(); id > 0 {
+			r.Header.Set(traceIDHTTPHeader, strconv.FormatInt(id, 16))
+		}
+		if id := span.SpanID(); id > 0 {
+			r.Header.Set(spanIDHTTPHeader, strconv.FormatInt(id, 16))
+		}
+		if id := span.ParentSpanID(); id > 0 {
+			r.Header.Set(parentSpanIDHTTPHeader, strconv.FormatInt(id, 16))
+		}
 		return ctx
 	}
 }
@@ -148,43 +156,7 @@ func fromHTTP(newSpan NewSpanFunc, r *http.Request) *Span {
 	return newSpan(traceID, spanID, parentSpanID)
 }
 
-// func fromContext(newSpan NewSpanFunc) func(context.Context) *Span {
-// 	return func(ctx context.Context) *Span {
-// 		if span, ok := maybeFromContext(ctx); ok {
-// 			return span
-// 		}
-// 		return newSpan(newID(), newID(), 0)
-// 	}
-// }
-
-//// NewChildSpan creates a new child (client) span. If a span is already
-//// present in the context, it will be interpreted as the parent.
-//func NewChildSpan(ctx context.Context, newSpan NewSpanFunc) *Span {
-//	parentSpan, ok := maybeFromContext(ctx)
-//	if !ok {
-//		return newSpan(newID(), newID(), 0)
-//	}
-//	var (
-//		traceID      = parentSpan.TraceID()
-//		spanID       = newID()
-//		parentSpanID = parentSpan.SpanID()
-//	)
-//	return newSpan(traceID, spanID, parentSpanID)
-//}
-
-func setRequestHeaders(h http.Header, s *Span) {
-	if id := s.TraceID(); id > 0 {
-		h.Set(traceIDHTTPHeader, strconv.FormatInt(id, 16))
-	}
-	if id := s.SpanID(); id > 0 {
-		h.Set(spanIDHTTPHeader, strconv.FormatInt(id, 16))
-	}
-	if id := s.ParentSpanID(); id > 0 {
-		h.Set(parentSpanIDHTTPHeader, strconv.FormatInt(id, 16))
-	}
-}
-
-func maybeFromContext(ctx context.Context) (*Span, bool) {
+func fromContext(ctx context.Context) (*Span, bool) {
 	val := ctx.Value(SpanContextKey)
 	if val == nil {
 		return nil, false
@@ -195,19 +167,6 @@ func maybeFromContext(ctx context.Context) (*Span, bool) {
 	}
 	return span, true
 }
-
-//func mustGetServerSpan(ctx context.Context, newSpan NewSpanFunc) (*Span, context.Context) {
-//	val := ctx.Value(SpanContextKey)
-//	if val == nil {
-//		span := newSpan(newID(), newID(), 0)
-//		return span, context.WithValue(ctx, SpanContextKey, span)
-//	}
-//	span, ok := val.(*Span)
-//	if !ok {
-//		panic(SpanContextKey + " value isn't a span object")
-//	}
-//	return span, ctx
-//}
 
 func newID() int64 {
 	// https://github.com/wadey/go-zipkin/blob/46e5f01/trace.go#L183-188

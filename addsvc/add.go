@@ -102,6 +102,6 @@ func (c httpClient) endpoint(ctx context.Context, request interface{}) (interfac
 
 type httpClientOption func(*httpClient)
 
-func before(f httptransport.BeforeFunc) httpClientOption {
-	return func(c *httpClient) { c.before = append(c.before, f) }
+func before(funcs ...httptransport.BeforeFunc) httpClientOption {
+	return func(c *httpClient) { c.before = append(c.before, funcs...) }
 }

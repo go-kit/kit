@@ -2,22 +2,17 @@ package zipkin
 
 import (
 	"encoding/binary"
-	"errors"
 	"net"
 	"strconv"
 	"time"
 
 	"github.com/go-kit/kit/log"
-
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
 )
 
 var (
 	// SpanContextKey represents the Span in the request context.
 	SpanContextKey = "Zipkin-Span"
-
-	// ErrSpanNotFound is returned when a Span isn't found in a context.
-	ErrSpanNotFound = errors.New("span not found")
 )
 
 // A Span is a named collection of annotations. It represents meaningful
@@ -33,7 +28,7 @@ type Span struct {
 	parentSpanID int64
 
 	annotations []annotation
-	//binaryAnnotations []BinaryAnnotation
+	//binaryAnnotations []BinaryAnnotation // TODO
 }
 
 // NewSpan returns a new Span object ready for use.
