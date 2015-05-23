@@ -24,7 +24,7 @@ func makeEndpoint(a Add) server.Endpoint {
 			return nil, server.ErrBadCast
 		}
 
-		v := a(addReq.A, addReq.B)
+		v := a(ctx, addReq.A, addReq.B)
 
 		return response{
 			V: v,

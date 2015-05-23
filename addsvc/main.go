@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	stdlog "log"
+	"math/rand"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"reflect"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -35,21 +37,28 @@ import (
 )
 
 func main() {
+	// gRPC transitively registers flags via its import of glog. Here we
+	// define a new flag set, to keep those domains distinct.
+	fs := flag.NewFlagSet("", flag.ExitOnError)
 	var (
-		debugAddr        = flag.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
-		httpAddr         = flag.String("http.addr", ":8001", "Address for HTTP (JSON) server")
-		grpcAddr         = flag.String("grpc.addr", ":8002", "Address for gRPC server")
-		thriftAddr       = flag.String("thrift.addr", ":8003", "Address for Thrift server")
-		thriftProtocol   = flag.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
-		thriftBufferSize = flag.Int("thrift.buffer.size", 0, "0 for unbuffered")
-		thriftFramed     = flag.Bool("thrift.framed", false, "true to enable framing")
+		fwd               = fs.String("fwd.http", "", "if set, forward requests to this addsvc (HTTP)")
+		debugAddr         = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
+		httpAddr          = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
+		grpcAddr          = fs.String("grpc.addr", ":8002", "Address for gRPC server")
+		thriftAddr        = fs.String("thrift.addr", ":8003", "Address for Thrift server")
+		thriftProtocol    = fs.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
+		thriftBufferSize  = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
+		thriftFramed      = fs.Bool("thrift.framed", false, "true to enable framing")
+		zipkinServiceName = fs.String("zipkin.service.name", "addsvc", "Zipkin service name")
 	)
-	flag.Parse()
+	flag.Usage = fs.Usage // only show our flags
+	fs.Parse(os.Args[1:])
+	rand.Seed(time.Now().UnixNano())
 
 	// `package log` domain
 	var logger kitlog.Logger
 	logger = kitlog.NewPrefixLogger(os.Stderr)
-	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
+	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC, "caller", kitlog.DefaultCaller)
 	kitlog.DefaultLogger = logger                     // for other gokit components
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
 	stdlog.SetFlags(0)                                // flags are handled in our logger
@@ -77,21 +86,24 @@ func main() {
 	)
 
 	// `package tracing` domain
-	zipkinHost := "my-host"
+	zipkinHostPort := "localhost:1234" // TODO Zipkin makes overly simple assumptions about services
 	zipkinCollector := loggingCollector{}
-	zipkinAddName := "ADD" // is that right?
-	zipkinAddSpanFunc := zipkin.NewSpanFunc(zipkinHost, zipkinAddName)
+	zipkinMethodName := "add"
+	zipkinSpanFunc := zipkin.MakeNewSpanFunc(zipkinHostPort, *zipkinServiceName, zipkinMethodName)
 
 	// Our business and operational domain
 	var a Add
-	a = pureAdd
-	a = logging(logger, a)
+	if *fwd == "" {
+		a = pureAdd
+	} else {
+		a = addViaHTTP(*fwd, zipkinSpanFunc, zipkinCollector)
+	}
+	a = logging(logger)(a)
 
 	// `package server` domain
 	var e server.Endpoint
 	e = makeEndpoint(a)
-	e = zipkin.AnnotateEndpoint(zipkinAddSpanFunc, zipkinCollector)(e)
-	// e = someother.Middleware(arg1, arg2)(e)
+	e = zipkin.AnnotateEndpoint(zipkinSpanFunc, zipkinCollector)(e)
 
 	// Mechanical stuff
 	root := context.Background()
@@ -113,7 +125,7 @@ func main() {
 		defer cancel()
 
 		field := metrics.Field{Key: "transport", Value: "http"}
-		before := httptransport.Before(zipkin.ToContext(zipkin.FromHTTP(zipkinAddSpanFunc)))
+		before := httptransport.Before(zipkin.ToContext(zipkin.FromHTTP(zipkinSpanFunc)))
 		after := httptransport.After(httptransport.SetContentType("application/json"))
 
 		var handler http.Handler
@@ -211,10 +223,10 @@ func interrupt() error {
 type loggingCollector struct{}
 
 func (loggingCollector) Collect(s *zipkin.Span) error {
-	kitlog.With(kitlog.DefaultLogger, "caller", kitlog.DefaultCaller).Log(
-		"trace_id", s.TraceID(),
-		"span_id", s.SpanID(),
-		"parent_span_id", s.ParentSpanID(),
+	kitlog.DefaultLogger.Log(
+		"trace_id", strconv.FormatInt(s.TraceID(), 16),
+		"span_id", strconv.FormatInt(s.SpanID(), 16),
+		"parent_span_id", strconv.FormatInt(s.ParentSpanID(), 16),
 	)
 	return nil
 }

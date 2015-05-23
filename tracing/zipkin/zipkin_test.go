@@ -15,11 +15,12 @@ import (
 
 func TestAnnotateEndpoint(t *testing.T) {
 	const (
-		host = "some-host"
-		name = "some-name"
+		hostport    = "1.2.3.4:1234"
+		serviceName = "some-service"
+		methodName  = "some-method"
 	)
 
-	f := zipkin.NewSpanFunc(host, name)
+	f := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
 	c := &countingCollector{}
 
 	var e server.Endpoint
@@ -39,8 +40,9 @@ func TestAnnotateEndpoint(t *testing.T) {
 
 func TestFromHTTPToContext(t *testing.T) {
 	const (
-		host               = "foo-host"
-		name               = "foo-name"
+		hostport           = "5.5.5.5:5555"
+		serviceName        = "foo-service"
+		methodName         = "foo-method"
 		traceID      int64 = 12
 		spanID       int64 = 34
 		parentSpanID int64 = 56
@@ -51,7 +53,7 @@ func TestFromHTTPToContext(t *testing.T) {
 	r.Header.Set("X-B3-SpanId", strconv.FormatInt(spanID, 16))
 	r.Header.Set("X-B3-ParentSpanId", strconv.FormatInt(parentSpanID, 16))
 
-	sf := zipkin.NewSpanFunc(host, name)
+	sf := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
 	hf := zipkin.FromHTTP(sf)
 	cf := zipkin.ToContext(hf)
 
@@ -82,14 +84,15 @@ func TestNewChildSpan(t *testing.T) {
 	rand.Seed(123)
 
 	const (
-		host               = "my-host"
-		name               = "my-name"
+		hostport           = "1.2.1.2:1212"
+		serviceName        = "my-service"
+		methodName         = "my-method"
 		traceID      int64 = 123
 		spanID       int64 = 456
 		parentSpanID int64 = 789
 	)
 
-	f := zipkin.NewSpanFunc(host, name)
+	f := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
 	ctx := context.WithValue(context.Background(), zipkin.SpanContextKey, f(traceID, spanID, parentSpanID))
 	childSpan := zipkin.NewChildSpan(ctx, f)
 
@@ -106,15 +109,16 @@ func TestNewChildSpan(t *testing.T) {
 
 func TestSetRequestHeaders(t *testing.T) {
 	const (
-		host               = "bar-host"
-		name               = "bar-name"
+		hostport           = "4.2.4.2:4242"
+		serviceName        = "bar-service"
+		methodName         = "bar-method"
 		traceID      int64 = 123
 		spanID       int64 = 456
 		parentSpanID int64 = 789
 	)
 
 	r, _ := http.NewRequest("POST", "http://destroy.horse", nil)
-	zipkin.SetRequestHeaders(r.Header, zipkin.NewSpan(host, name, traceID, spanID, parentSpanID))
+	zipkin.SetRequestHeaders(r.Header, zipkin.NewSpan(hostport, serviceName, methodName, traceID, spanID, parentSpanID))
 
 	for h, want := range map[string]string{
 		"X-B3-TraceId":      strconv.FormatInt(traceID, 16),
