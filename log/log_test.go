@@ -111,3 +111,31 @@ func BenchmarkTenWith(b *testing.B) {
 		logger.Log("k", "v")
 	}
 }
+
+func TestSwapLogger(t *testing.T) {
+	buf := &bytes.Buffer{}
+	json := log.NewJSONLogger(buf)
+	logger := log.NewSwapLogger(json)
+
+	if err := logger.Log("k", "v"); err != nil {
+		t.Error(err)
+	}
+	if got, want := buf.String(), `{"k":"v"}`+"\n"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
+	buf.Reset()
+	prefix := log.NewPrefixLogger(buf)
+	logger.Swap(prefix)
+
+	if err := logger.Log("k", "v"); err != nil {
+		t.Error(err)
+	}
+	if got, want := buf.String(), "k=v\n"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestSwapLoggerConcurrency(t *testing.T) {
+	testConcurrency(t, log.NewSwapLogger(discard))
+}
