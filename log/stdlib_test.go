@@ -64,7 +64,7 @@ func TestStdLibAdapterExtraction(t *testing.T) {
 		"/a/b/c/d.go:23: hello":                            "file=/a/b/c/d.go:23 msg=hello\n",
 	} {
 		buf.Reset()
-		fmt.Fprintf(writer, input)
+		fmt.Fprint(writer, input)
 		if have := buf.String(); want != have {
 			t.Errorf("%q: want %#v, have %#v", input, want, have)
 		}
