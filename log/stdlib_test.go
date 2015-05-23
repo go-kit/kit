@@ -11,6 +11,7 @@ import (
 func TestStdlibWriter(t *testing.T) {
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
+	log.SetFlags(log.LstdFlags)
 	logger := NewPrefixLogger(StdlibWriter{})
 	logger.Log("key", "val")
 	timestamp := time.Now().Format("2006/01/02 15:04:05")
@@ -34,9 +35,9 @@ func TestStdlibAdapterUsage(t *testing.T) {
 		log.Ldate:                              "ts=" + date + " msg=hello\n",
 		log.Ltime:                              "ts=" + time + " msg=hello\n",
 		log.Ldate | log.Ltime:                  "ts=" + date + " " + time + " msg=hello\n",
-		log.Lshortfile:                         "file=stdlib_test.go:43 msg=hello\n",
-		log.Lshortfile | log.Ldate:             "ts=" + date + " file=stdlib_test.go:43 msg=hello\n",
-		log.Lshortfile | log.Ldate | log.Ltime: "ts=" + date + " " + time + " file=stdlib_test.go:43 msg=hello\n",
+		log.Lshortfile:                         "file=stdlib_test.go:44 msg=hello\n",
+		log.Lshortfile | log.Ldate:             "ts=" + date + " file=stdlib_test.go:44 msg=hello\n",
+		log.Lshortfile | log.Ldate | log.Ltime: "ts=" + date + " " + time + " file=stdlib_test.go:44 msg=hello\n",
 	} {
 		buf.Reset()
 		stdlog.SetFlags(flag)
