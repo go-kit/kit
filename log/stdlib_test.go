@@ -23,7 +23,7 @@ func TestStdlibAdapterUsage(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := NewPrefixLogger(buf)
 	writer := NewStdlibAdapter(logger)
-	log.SetOutput(writer)
+	stdlog := log.New(writer, "", 0)
 
 	now := time.Now()
 	date := now.Format("2006/01/02")
@@ -39,8 +39,8 @@ func TestStdlibAdapterUsage(t *testing.T) {
 		log.Lshortfile | log.Ldate | log.Ltime: "ts=" + date + " " + time + " file=stdlib_test.go:43 msg=hello\n",
 	} {
 		buf.Reset()
-		log.SetFlags(flag)
-		log.Print("hello")
+		stdlog.SetFlags(flag)
+		stdlog.Print("hello")
 		if have := buf.String(); want != have {
 			t.Errorf("flag=%d: want %#v, have %#v", flag, want, have)
 		}
