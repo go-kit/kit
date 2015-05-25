@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/server"
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/transport/codec"
 )
 
@@ -13,18 +13,18 @@ type binding struct {
 	context.Context
 	makeRequest func() interface{}
 	codec.Codec
-	server.Endpoint
+	endpoint.Endpoint
 	before []BeforeFunc
 	after  []AfterFunc
 }
 
 // NewBinding returns an HTTP handler that wraps the given endpoint.
-func NewBinding(ctx context.Context, makeRequest func() interface{}, cdc codec.Codec, endpoint server.Endpoint, options ...BindingOption) http.Handler {
+func NewBinding(ctx context.Context, makeRequest func() interface{}, cdc codec.Codec, e endpoint.Endpoint, options ...BindingOption) http.Handler {
 	b := &binding{
 		Context:     ctx,
 		makeRequest: makeRequest,
 		Codec:       cdc,
-		Endpoint:    endpoint,
+		Endpoint:    e,
 	}
 	for _, option := range options {
 		option(b)

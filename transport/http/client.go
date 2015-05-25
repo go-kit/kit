@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/client"
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/transport/codec"
 )
 
@@ -22,7 +22,7 @@ type httpClient struct {
 
 // NewClient returns a client endpoint for a remote service. addr must be a
 // valid, parseable URL, including the scheme and path.
-func NewClient(addr string, cdc codec.Codec, makeResponse func() interface{}, options ...ClientOption) client.Endpoint {
+func NewClient(addr string, cdc codec.Codec, makeResponse func() interface{}, options ...ClientOption) endpoint.Endpoint {
 	u, err := url.Parse(addr)
 	if err != nil {
 		panic(err)

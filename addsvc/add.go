@@ -3,7 +3,7 @@ package main
 import (
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/client"
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 )
 
@@ -16,7 +16,7 @@ type Add func(context.Context, int64, int64) int64
 func pureAdd(_ context.Context, a, b int64) int64 { return a + b }
 
 // proxyAdd implements Add by invoking a remote Add service.
-func proxyAdd(e client.Endpoint) Add {
+func proxyAdd(e endpoint.Endpoint) Add {
 	return func(ctx context.Context, a, b int64) int64 {
 		resp, err := e(ctx, &addRequest{a, b})
 		if err != nil {
@@ -25,7 +25,7 @@ func proxyAdd(e client.Endpoint) Add {
 		}
 		addResp, ok := resp.(*addResponse)
 		if !ok {
-			log.DefaultLogger.Log("err", client.ErrBadCast)
+			log.DefaultLogger.Log("err", endpoint.ErrBadCast)
 			return 0
 		}
 		return addResp.V

@@ -1,18 +1,17 @@
 package zipkin_test
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"testing"
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/client"
-	"github.com/go-kit/kit/server"
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/tracing/zipkin"
 )
 
@@ -87,55 +86,52 @@ func TestToRequest(t *testing.T) {
 }
 
 func TestAnnotateServer(t *testing.T) {
+	if err := testAnnotate(zipkin.AnnotateServer, zipkin.ServerReceive, zipkin.ServerSend); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAnnotateClient(t *testing.T) {
+	if err := testAnnotate(zipkin.AnnotateClient, zipkin.ClientSend, zipkin.ClientReceive); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testAnnotate(
+	annotate func(newSpan zipkin.NewSpanFunc, c zipkin.Collector) endpoint.Middleware,
+	wantAnnotations ...string,
+) error {
 	const (
 		hostport    = "1.2.3.4:1234"
 		serviceName = "some-service"
 		methodName  = "some-method"
 	)
 
-	f := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
-	c := &countingCollector{}
+	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
+	collector := &countingCollector{}
 
-	var e server.Endpoint
+	var e endpoint.Endpoint
 	e = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-	e = zipkin.AnnotateServer(f, c)(e)
+	e = annotate(newSpan, collector)(e)
 
-	if want, have := int32(0), atomic.LoadInt32(&(c.int32)); want != have {
-		t.Errorf("want %d, have %d", want, have)
+	if want, have := 0, len(collector.annotations); want != have {
+		return fmt.Errorf("pre-invocation: want %d, have %d", want, have)
 	}
 	if _, err := e(context.Background(), struct{}{}); err != nil {
-		t.Fatal(err)
+		return fmt.Errorf("during invocation: %v", err)
 	}
-	if want, have := int32(1), atomic.LoadInt32(&(c.int32)); want != have {
-		t.Errorf("want %d, have %d", want, have)
+	if want, have := wantAnnotations, collector.annotations; !reflect.DeepEqual(want, have) {
+		return fmt.Errorf("after invocation: want %v, have %v", want, have)
 	}
+
+	return nil
 }
 
-func TestAnnotateClient(t *testing.T) {
-	const (
-		hostport    = "192.168.1.100:53"
-		serviceName = "client-service"
-		methodName  = "client-method"
-	)
+type countingCollector struct{ annotations []string }
 
-	f := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
-	c := &countingCollector{}
-
-	var e client.Endpoint
-	e = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-	e = zipkin.AnnotateClient(f, c)(e)
-
-	if want, have := int32(0), atomic.LoadInt32(&(c.int32)); want != have {
-		t.Errorf("want %d, have %d", want, have)
+func (c *countingCollector) Collect(s *zipkin.Span) error {
+	for _, annotation := range s.Encode().GetAnnotations() {
+		c.annotations = append(c.annotations, annotation.GetValue())
 	}
-	if _, err := e(context.Background(), struct{}{}); err != nil {
-		t.Fatal(err)
-	}
-	if want, have := int32(1), atomic.LoadInt32(&(c.int32)); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
+	return nil
 }
-
-type countingCollector struct{ int32 }
-
-func (c *countingCollector) Collect(*zipkin.Span) error { atomic.AddInt32(&(c.int32), 1); return nil }

@@ -25,13 +25,12 @@ import (
 
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
 	"github.com/go-kit/kit/addsvc/pb"
-	"github.com/go-kit/kit/client"
+	"github.com/go-kit/kit/endpoint"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/expvar"
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/metrics/statsd"
-	"github.com/go-kit/kit/server"
 	"github.com/go-kit/kit/tracing/zipkin"
 	jsoncodec "github.com/go-kit/kit/transport/codec/json"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -97,7 +96,7 @@ func main() {
 		codec := jsoncodec.New()
 		makeResponse := func() interface{} { return &addResponse{} }
 
-		var e client.Endpoint
+		var e endpoint.Endpoint
 		e = httptransport.NewClient(*proxyHTTPAddr, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
 		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
 
@@ -105,8 +104,8 @@ func main() {
 	}
 	a = logging(logger)(a)
 
-	// `package server` domain
-	var e server.Endpoint
+	// Server domain
+	var e endpoint.Endpoint
 	e = makeEndpoint(a)
 	e = zipkin.AnnotateServer(zipkinSpanFunc, zipkinCollector)(e)
 

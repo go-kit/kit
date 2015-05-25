@@ -5,9 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-kit/kit/client"
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/server"
 
 	"golang.org/x/net/context"
 )
@@ -50,8 +49,8 @@ const (
 // context, adds server-receive and server-send annotations at the boundaries,
 // and submits the span to the collector. If no span is found in the context,
 // a new span is generated and inserted.
-func AnnotateServer(newSpan NewSpanFunc, c Collector) server.Middleware {
-	return func(e server.Endpoint) server.Endpoint {
+func AnnotateServer(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
+	return func(e endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			span, ok := fromContext(ctx)
 			if !ok {
@@ -65,13 +64,13 @@ func AnnotateServer(newSpan NewSpanFunc, c Collector) server.Middleware {
 	}
 }
 
-// AnnotateClient returns a client.Middleware that extracts a parent span from
-// the context, produces a client (child) span from it, adds client-send and
+// AnnotateClient returns a middleware that extracts a parent span from the
+// context, produces a client (child) span from it, adds client-send and
 // client-receive annotations at the boundaries, and submits the span to the
 // collector. If no span is found in the context, a new span is generated and
 // inserted.
-func AnnotateClient(newSpan NewSpanFunc, c Collector) client.Middleware {
-	return func(e client.Endpoint) client.Endpoint {
+func AnnotateClient(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
+	return func(e endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			var clientSpan *Span
 			parentSpan, ok := fromContext(ctx)
