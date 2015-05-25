@@ -134,6 +134,16 @@ func TestSwapLogger(t *testing.T) {
 	if got, want := buf.String(), "k=v\n"; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
+
+	buf.Reset()
+	logger.Swap(nil)
+
+	if err := logger.Log("k", "v"); err != nil {
+		t.Error(err)
+	}
+	if got, want := buf.String(), ""; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func TestSwapLoggerConcurrency(t *testing.T) {
