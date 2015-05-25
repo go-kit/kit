@@ -11,7 +11,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -58,7 +57,6 @@ func main() {
 	var logger kitlog.Logger
 	logger = kitlog.NewPrefixLogger(os.Stderr)
 	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC, "caller", kitlog.DefaultCaller)
-	kitlog.DefaultLogger = logger                     // for other gokit components
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
 	stdlog.SetFlags(0)                                // flags are handled in our logger
 
@@ -86,7 +84,7 @@ func main() {
 
 	// `package tracing` domain
 	zipkinHostPort := "localhost:1234" // TODO Zipkin makes overly simple assumptions about services
-	zipkinCollector := loggingCollector{}
+	zipkinCollector := loggingCollector{logger}
 	zipkinMethodName := "add"
 	zipkinSpanFunc := zipkin.MakeNewSpanFunc(zipkinHostPort, *zipkinServiceName, zipkinMethodName)
 
@@ -226,18 +224,18 @@ func interrupt() error {
 	return fmt.Errorf("%s", <-c)
 }
 
-type loggingCollector struct{}
+type loggingCollector struct{ kitlog.Logger }
 
-func (loggingCollector) Collect(s *zipkin.Span) error {
+func (c loggingCollector) Collect(s *zipkin.Span) error {
 	annotations := s.Encode().GetAnnotations()
 	values := make([]string, len(annotations))
 	for i, a := range annotations {
 		values[i] = a.Value
 	}
-	kitlog.DefaultLogger.Log(
-		"trace_id", strconv.FormatInt(s.TraceID(), 16),
-		"span_id", strconv.FormatInt(s.SpanID(), 16),
-		"parent_span_id", strconv.FormatInt(s.ParentSpanID(), 16),
+	kitlog.With(c.Logger, "caller", kitlog.DefaultCaller).Log(
+		"trace_id", s.TraceID(),
+		"span_id", s.SpanID(),
+		"parent_span_id", s.ParentSpanID(),
 		"annotations", strings.Join(values, " "),
 	)
 	return nil
