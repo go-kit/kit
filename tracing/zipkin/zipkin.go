@@ -11,8 +11,8 @@ import (
 	"github.com/go-kit/kit/server"
 )
 
-// Log is the logger used to report diagnostic information. To enable it, swap
-// in your application's logger.
+// Log is used to report diagnostic information. To enable it, swap in your
+// application's logger.
 var Log log.SwapLogger
 
 // http://www.slideshare.net/johanoskarsson/zipkin-runtime-open-house
