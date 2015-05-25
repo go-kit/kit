@@ -1,13 +1,13 @@
 package log
 
 import (
-	"bytes"
-	"fmt"
 	"io"
+
+	"gopkg.in/logfmt.v0"
 )
 
 type logfmtLogger struct {
-	io.Writer
+	w io.Writer
 }
 
 // NewLogfmtLogger returns a basic logger that encodes keyvals as simple "k=v"
@@ -17,21 +17,12 @@ func NewLogfmtLogger(w io.Writer) Logger {
 }
 
 func (l logfmtLogger) Log(keyvals ...interface{}) error {
-	if len(keyvals)%2 == 1 {
-		panic("odd number of keyvals")
+	b, err := logfmt.MarshalKeyvals(keyvals...)
+	if err != nil {
+		return err
 	}
-	buf := &bytes.Buffer{}
-	for i := 0; i < len(keyvals); i += 2 {
-		if i != 0 {
-			if _, err := fmt.Fprint(buf, " "); err != nil {
-				return err
-			}
-		}
-		if _, err := fmt.Fprintf(buf, "%s=%v", keyvals[i], keyvals[i+1]); err != nil {
-			return err
-		}
-	}
-	if _, err := fmt.Fprintln(l.Writer, buf.String()); err != nil {
+	b = append(b, '\n')
+	if _, err := l.w.Write(b); err != nil {
 		return err
 	}
 	return nil
