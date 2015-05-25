@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
 )
 
@@ -47,21 +46,21 @@ func NewSpan(hostport, serviceName, methodName string, traceID, spanID, parentSp
 func makeEndpoint(hostport, serviceName string) *zipkincore.Endpoint {
 	host, port, err := net.SplitHostPort(hostport)
 	if err != nil {
-		log.DefaultLogger.Log("hostport", hostport, "err", err)
+		Log.Log("hostport", hostport, "err", err)
 		return nil
 	}
 	addrs, err := net.LookupIP(host)
 	if err != nil {
-		log.DefaultLogger.Log("host", host, "err", err)
+		Log.Log("host", host, "err", err)
 		return nil
 	}
 	if len(addrs) <= 0 {
-		log.DefaultLogger.Log("host", host, "err", "no IPs")
+		Log.Log("host", host, "err", "no IPs")
 		return nil
 	}
 	portInt, err := strconv.ParseInt(port, 10, 16)
 	if err != nil {
-		log.DefaultLogger.Log("port", port, "err", err)
+		Log.Log("port", port, "err", err)
 		return nil
 	}
 	endpoint := zipkincore.NewEndpoint()

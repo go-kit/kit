@@ -98,7 +98,7 @@ func main() {
 		e = httptransport.NewClient(*proxyHTTPAddr, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
 		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
 
-		a = proxyAdd(e)
+		a = proxyAdd(e, logger)
 	}
 	a = logging(logger)(a)
 
