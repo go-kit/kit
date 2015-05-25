@@ -62,8 +62,11 @@ func (f LoggerFunc) Log(keyvals ...interface{}) error {
 }
 
 // SwapLogger wraps another logger that may be safely replaced while other
-// goroutines use the SwapLogger concurrently. An uninitialized SwapLogger
+// goroutines use the SwapLogger concurrently. The zero value for a SwapLogger
 // will discard all log events without error.
+//
+// SwapLogger serves well as a package global logger that can be changed by
+// importers.
 type SwapLogger struct {
 	logger atomic.Value
 }
@@ -72,18 +75,11 @@ type loggerStruct struct {
 	Logger
 }
 
-// NewSwapLogger returns a pointer to a new SwapLogger that wraps logger.
-func NewSwapLogger(logger Logger) *SwapLogger {
-	l := &SwapLogger{}
-	l.Swap(logger)
-	return l
-}
-
-// Log implements the Logger interface by calling Log on the currently wrapped
-// logger. It does not log anything if the wrapped logger is nil.
+// Log implements the Logger interface by forwarding keyvals to the currently
+// wrapped logger. It does not log anything if the wrapped logger is nil.
 func (l *SwapLogger) Log(keyvals ...interface{}) error {
-	s := l.logger.Load().(loggerStruct)
-	if s.Logger == nil {
+	s, ok := l.logger.Load().(loggerStruct)
+	if !ok || s.Logger == nil {
 		return nil
 	}
 	return s.Log(keyvals...)

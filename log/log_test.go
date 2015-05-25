@@ -113,9 +113,17 @@ func BenchmarkTenWith(b *testing.B) {
 }
 
 func TestSwapLogger(t *testing.T) {
+	var logger log.SwapLogger
+
+	// Zero value does not panic or error.
+	err := logger.Log("k", "v")
+	if got, want := err, error(nil); got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
 	buf := &bytes.Buffer{}
 	json := log.NewJSONLogger(buf)
-	logger := log.NewSwapLogger(json)
+	logger.Swap(json)
 
 	if err := logger.Log("k", "v"); err != nil {
 		t.Error(err)
@@ -147,5 +155,5 @@ func TestSwapLogger(t *testing.T) {
 }
 
 func TestSwapLoggerConcurrency(t *testing.T) {
-	testConcurrency(t, log.NewSwapLogger(discard))
+	testConcurrency(t, &log.SwapLogger{})
 }
