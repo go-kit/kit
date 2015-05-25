@@ -9,7 +9,7 @@ import (
 
 func TestDefaultLevels(t *testing.T) {
 	buf := bytes.Buffer{}
-	levels := log.NewLevels(log.NewPrefixLogger(&buf))
+	levels := log.NewLevels(log.NewLogfmtLogger(&buf))
 
 	levels.Debug.Log("msg", "👨") // of course you'd want to do this
 	if want, have := "level=DEBUG msg=👨\n", buf.String(); want != have {

@@ -133,7 +133,7 @@ func TestSwapLogger(t *testing.T) {
 	}
 
 	buf.Reset()
-	prefix := log.NewPrefixLogger(buf)
+	prefix := log.NewLogfmtLogger(buf)
 	logger.Swap(prefix)
 
 	if err := logger.Log("k", "v"); err != nil {

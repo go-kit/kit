@@ -12,7 +12,7 @@ func TestStdlibWriter(t *testing.T) {
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
 	log.SetFlags(log.LstdFlags)
-	logger := NewPrefixLogger(StdlibWriter{})
+	logger := NewLogfmtLogger(StdlibWriter{})
 	logger.Log("key", "val")
 	timestamp := time.Now().Format("2006/01/02 15:04:05")
 	if want, have := timestamp+" key=val\n", buf.String(); want != have {
@@ -22,7 +22,7 @@ func TestStdlibWriter(t *testing.T) {
 
 func TestStdlibAdapterUsage(t *testing.T) {
 	buf := &bytes.Buffer{}
-	logger := NewPrefixLogger(buf)
+	logger := NewLogfmtLogger(buf)
 	writer := NewStdlibAdapter(logger)
 	stdlog := log.New(writer, "", 0)
 
@@ -50,7 +50,7 @@ func TestStdlibAdapterUsage(t *testing.T) {
 
 func TestStdLibAdapterExtraction(t *testing.T) {
 	buf := &bytes.Buffer{}
-	logger := NewPrefixLogger(buf)
+	logger := NewLogfmtLogger(buf)
 	writer := NewStdlibAdapter(logger)
 	for input, want := range map[string]string{
 		"hello":                                            "msg=hello\n",

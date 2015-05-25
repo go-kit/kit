@@ -9,9 +9,9 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func TestPrefixLogger(t *testing.T) {
+func TestLogfmtLogger(t *testing.T) {
 	buf := &bytes.Buffer{}
-	logger := log.NewPrefixLogger(buf)
+	logger := log.NewLogfmtLogger(buf)
 
 	if err := logger.Log("hello", "world"); err != nil {
 		t.Fatal(err)
@@ -37,16 +37,16 @@ func TestPrefixLogger(t *testing.T) {
 	}
 }
 
-func BenchmarkPrefixLoggerSimple(b *testing.B) {
-	benchmarkRunner(b, log.NewPrefixLogger(ioutil.Discard), baseMessage)
+func BenchmarkLogfmtLoggerSimple(b *testing.B) {
+	benchmarkRunner(b, log.NewLogfmtLogger(ioutil.Discard), baseMessage)
 }
 
-func BenchmarkPrefixLoggerContextual(b *testing.B) {
-	benchmarkRunner(b, log.NewPrefixLogger(ioutil.Discard), withMessage)
+func BenchmarkLogfmtLoggerContextual(b *testing.B) {
+	benchmarkRunner(b, log.NewLogfmtLogger(ioutil.Discard), withMessage)
 }
 
-func TestPrefixLoggerConcurrency(t *testing.T) {
-	testConcurrency(t, log.NewPrefixLogger(ioutil.Discard))
+func TestLogfmtLoggerConcurrency(t *testing.T) {
+	testConcurrency(t, log.NewLogfmtLogger(ioutil.Discard))
 }
 
 type mymap map[int]int

@@ -6,17 +6,17 @@ import (
 	"io"
 )
 
-type prefixLogger struct {
+type logfmtLogger struct {
 	io.Writer
 }
 
-// NewPrefixLogger returns a basic logger that encodes keyvals as simple "k=v"
+// NewLogfmtLogger returns a basic logger that encodes keyvals as simple "k=v"
 // pairs to the Writer.
-func NewPrefixLogger(w io.Writer) Logger {
-	return &prefixLogger{w}
+func NewLogfmtLogger(w io.Writer) Logger {
+	return &logfmtLogger{w}
 }
 
-func (l prefixLogger) Log(keyvals ...interface{}) error {
+func (l logfmtLogger) Log(keyvals ...interface{}) error {
 	if len(keyvals)%2 == 1 {
 		panic("odd number of keyvals")
 	}
