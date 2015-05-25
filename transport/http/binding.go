@@ -9,19 +9,6 @@ import (
 	"github.com/go-kit/kit/transport/codec"
 )
 
-// BindingOption sets a parameter for the binding.
-type BindingOption func(*binding)
-
-// Before adds pre-RPC BeforeFuncs to the binding.
-func Before(funcs ...BeforeFunc) BindingOption {
-	return func(b *binding) { b.before = append(b.before, funcs...) }
-}
-
-// After adds post-RPC AfterFuncs to the binding.
-func After(funcs ...AfterFunc) BindingOption {
-	return func(b *binding) { b.after = append(b.after, funcs...) }
-}
-
 type binding struct {
 	context.Context
 	makeRequest func() interface{}
@@ -80,4 +67,17 @@ func (b *binding) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+// BindingOption sets a parameter for the HTTP binding.
+type BindingOption func(*binding)
+
+// BindingBefore adds pre-RPC BeforeFuncs to the HTTP binding.
+func BindingBefore(funcs ...BeforeFunc) BindingOption {
+	return func(b *binding) { b.before = append(b.before, funcs...) }
+}
+
+// BindingAfter adds post-RPC AfterFuncs to the HTTP binding.
+func BindingAfter(funcs ...AfterFunc) BindingOption {
+	return func(b *binding) { b.after = append(b.after, funcs...) }
 }

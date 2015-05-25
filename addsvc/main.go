@@ -98,7 +98,7 @@ func main() {
 		makeResponse := func() interface{} { return &addResponse{} }
 
 		var e client.Endpoint
-		e = newHTTPClient(*proxyHTTPAddr, codec, makeResponse, before(zipkin.ToRequest(zipkinSpanFunc)))
+		e = httptransport.NewClient(*proxyHTTPAddr, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
 		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
 
 		a = proxyAdd(e)
@@ -131,8 +131,8 @@ func main() {
 		defer cancel()
 
 		field := metrics.Field{Key: "transport", Value: "http"}
-		before := httptransport.Before(zipkin.ToContext(zipkinSpanFunc))
-		after := httptransport.After(httptransport.SetContentType("application/json"))
+		before := httptransport.BindingBefore(zipkin.ToContext(zipkinSpanFunc))
+		after := httptransport.BindingAfter(httptransport.SetContentType("application/json"))
 		makeRequest := func() interface{} { return &addRequest{} }
 
 		var handler http.Handler

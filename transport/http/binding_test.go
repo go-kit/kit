@@ -56,7 +56,7 @@ func TestBinding(t *testing.T) {
 	defer resp.Body.Close()
 
 	var r myResponse
-	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+	if _, err := codec.Decode(ctx, resp.Body, &r); err != nil {
 		t.Fatal(err)
 	}
 
