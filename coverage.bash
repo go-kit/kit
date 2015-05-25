@@ -17,8 +17,10 @@ function directories {
 
 function unique_directories { directories | sort | uniq ; }
 
+PATHS=${1:-$(unique_directories)}
+
 function package_names {
-	unique_directories | while read d
+	for d in $PATHS
 	do
 		echo github.com/go-kit/kit/$d
 	done
