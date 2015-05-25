@@ -10,7 +10,6 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/scribe"
 )
 
@@ -83,7 +82,7 @@ func (c *ScribeCollector) loop() {
 		case <-c.sendc:
 			c.nextSend = time.Now().Add(c.batchInterval)
 			if err := c.send(c.batch); err != nil {
-				log.DefaultLogger.Log("err", err.Error())
+				Log.Log("err", err.Error())
 				continue
 			}
 			c.batch = c.batch[:0]

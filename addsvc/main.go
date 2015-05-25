@@ -50,7 +50,6 @@ func main() {
 	var logger kitlog.Logger
 	logger = kitlog.NewPrefixLogger(os.Stderr)
 	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
-	kitlog.DefaultLogger = logger                     // for other gokit components
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
 	stdlog.SetFlags(0)                                // flags are handled in our logger
 
@@ -78,7 +77,7 @@ func main() {
 
 	// `package tracing` domain
 	zipkinHost := "my-host"
-	zipkinCollector := loggingCollector{}
+	zipkinCollector := loggingCollector{logger}
 	zipkinAddName := "ADD" // is that right?
 	zipkinAddSpanFunc := zipkin.NewSpanFunc(zipkinHost, zipkinAddName)
 
@@ -208,10 +207,10 @@ func interrupt() error {
 	return fmt.Errorf("%s", <-c)
 }
 
-type loggingCollector struct{}
+type loggingCollector struct{ kitlog.Logger }
 
-func (loggingCollector) Collect(s *zipkin.Span) error {
-	kitlog.With(kitlog.DefaultLogger, "caller", kitlog.DefaultCaller).Log(
+func (c loggingCollector) Collect(s *zipkin.Span) error {
+	kitlog.With(c.Logger, "caller", kitlog.DefaultCaller).Log(
 		"trace_id", s.TraceID(),
 		"span_id", s.SpanID(),
 		"parent_span_id", s.ParentSpanID(),
