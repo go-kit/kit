@@ -40,15 +40,21 @@ func main() {
 	// of glog. So, we define a new flag set, to keep those domains distinct.
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	var (
-		proxyHTTPAddr     = fs.String("proxy.http.addr", "", "if set, proxy requests over HTTP to this addsvc")
-		debugAddr         = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
-		httpAddr          = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
-		grpcAddr          = fs.String("grpc.addr", ":8002", "Address for gRPC server")
-		thriftAddr        = fs.String("thrift.addr", ":8003", "Address for Thrift server")
-		thriftProtocol    = fs.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
-		thriftBufferSize  = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
-		thriftFramed      = fs.Bool("thrift.framed", false, "true to enable framing")
-		zipkinServiceName = fs.String("zipkin.service.name", "addsvc", "Zipkin service name")
+		debugAddr        = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
+		httpAddr         = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
+		grpcAddr         = fs.String("grpc.addr", ":8002", "Address for gRPC server")
+		thriftAddr       = fs.String("thrift.addr", ":8003", "Address for Thrift server")
+		thriftProtocol   = fs.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
+		thriftBufferSize = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
+		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
+
+		proxyHTTPAddr = fs.String("proxy.http.url", "", "if set, proxy requests over HTTP to this addsvc")
+
+		zipkinServiceName            = fs.String("zipkin.service.name", "addsvc", "Zipkin service name")
+		zipkinCollectorAddr          = fs.String("zipkin.collector.addr", "", "Zipkin Scribe collector address (empty will log spans)")
+		zipkinCollectorTimeout       = fs.Duration("zipkin.collector.timeout", time.Second, "Zipkin collector timeout")
+		zipkinCollectorBatchSize     = fs.Int("zipkin.collector.batch.size", 100, "Zipkin collector batch size")
+		zipkinCollectorBatchInterval = fs.Duration("zipkin.collector.batch.interval", time.Second, "Zipkin collector batch interval")
 	)
 	flag.Usage = fs.Usage // only show our flags
 	fs.Parse(os.Args[1:])
@@ -84,9 +90,22 @@ func main() {
 
 	// `package tracing` domain
 	zipkinHostPort := "localhost:1234" // TODO Zipkin makes overly simple assumptions about services
-	zipkinCollector := loggingCollector{logger}
+	var zipkinCollector zipkin.Collector = loggingCollector{logger}
+	if *zipkinCollectorAddr != "" {
+		var err error
+		if zipkinCollector, err = zipkin.NewScribeCollector(
+			*zipkinCollectorAddr,
+			*zipkinCollectorTimeout,
+			*zipkinCollectorBatchSize,
+			*zipkinCollectorBatchInterval,
+		); err != nil {
+			logger.Log("err", err)
+			os.Exit(1)
+		}
+	}
 	zipkinMethodName := "add"
 	zipkinSpanFunc := zipkin.MakeNewSpanFunc(zipkinHostPort, *zipkinServiceName, zipkinMethodName)
+	zipkin.Log.Swap(logger) // log diagnostic/error details
 
 	// Our business and operational domain
 	var a Add = pureAdd
@@ -232,7 +251,7 @@ func (c loggingCollector) Collect(s *zipkin.Span) error {
 	for i, a := range annotations {
 		values[i] = a.Value
 	}
-	kitlog.With(c.Logger, "caller", kitlog.DefaultCaller).Log(
+	c.Logger.Log(
 		"trace_id", s.TraceID(),
 		"span_id", s.SpanID(),
 		"parent_span_id", s.ParentSpanID(),
