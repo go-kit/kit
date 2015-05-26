@@ -6,27 +6,27 @@ import (
 	"golang.org/x/net/context"
 
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/server"
 )
 
 // A binding wraps an Endpoint so that it's usable by a transport.
 // thriftBinding makes an Endpoint usable over Thrift.
 type thriftBinding struct {
 	context.Context
-	server.Endpoint
+	endpoint.Endpoint
 }
 
 // Add implements Thrift's AddService interface.
 func (tb thriftBinding) Add(a, b int64) (*thriftadd.AddReply, error) {
-	r, err := tb.Endpoint(tb.Context, request{a, b})
+	r, err := tb.Endpoint(tb.Context, addRequest{a, b})
 	if err != nil {
 		return nil, err
 	}
 
-	resp, ok := r.(*response)
+	resp, ok := r.(*addResponse)
 	if !ok {
-		return nil, server.ErrBadCast
+		return nil, endpoint.ErrBadCast
 	}
 
 	return &thriftadd.AddReply{Value: resp.V}, nil

@@ -2,43 +2,29 @@ package http
 
 import (
 	"net/http"
-	"reflect"
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/server"
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/transport/codec"
 )
 
-// BindingOption sets a parameter for the binding.
-type BindingOption func(*binding)
-
-// Before adds pre-RPC BeforeFuncs to the binding.
-func Before(funcs ...BeforeFunc) BindingOption {
-	return func(b *binding) { b.before = append(b.before, funcs...) }
-}
-
-// After adds post-RPC AfterFuncs to the binding.
-func After(funcs ...AfterFunc) BindingOption {
-	return func(b *binding) { b.after = append(b.after, funcs...) }
-}
-
 type binding struct {
 	context.Context
-	requestType reflect.Type
+	makeRequest func() interface{}
 	codec.Codec
-	server.Endpoint
+	endpoint.Endpoint
 	before []BeforeFunc
 	after  []AfterFunc
 }
 
 // NewBinding returns an HTTP handler that wraps the given endpoint.
-func NewBinding(ctx context.Context, requestType reflect.Type, cdc codec.Codec, endpoint server.Endpoint, options ...BindingOption) http.Handler {
+func NewBinding(ctx context.Context, makeRequest func() interface{}, cdc codec.Codec, e endpoint.Endpoint, options ...BindingOption) http.Handler {
 	b := &binding{
 		Context:     ctx,
-		requestType: requestType,
+		makeRequest: makeRequest,
 		Codec:       cdc,
-		Endpoint:    endpoint,
+		Endpoint:    e,
 	}
 	for _, option := range options {
 		option(b)
@@ -57,7 +43,7 @@ func (b *binding) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Decode request.
-	req := reflect.New(b.requestType).Interface()
+	req := b.makeRequest()
 	ctx, err := b.Codec.Decode(ctx, r.Body, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -81,4 +67,17 @@ func (b *binding) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+// BindingOption sets a parameter for the HTTP binding.
+type BindingOption func(*binding)
+
+// BindingBefore adds pre-RPC BeforeFuncs to the HTTP binding.
+func BindingBefore(funcs ...BeforeFunc) BindingOption {
+	return func(b *binding) { b.before = append(b.before, funcs...) }
+}
+
+// BindingAfter adds post-RPC AfterFuncs to the HTTP binding.
+func BindingAfter(funcs ...AfterFunc) BindingOption {
+	return func(b *binding) { b.after = append(b.after, funcs...) }
 }

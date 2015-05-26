@@ -1,7 +1,9 @@
 package zipkin
 
 import (
-	"errors"
+	"encoding/binary"
+	"net"
+	"strconv"
 	"time"
 
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
@@ -10,9 +12,6 @@ import (
 var (
 	// SpanContextKey represents the Span in the request context.
 	SpanContextKey = "Zipkin-Span"
-
-	// ErrSpanNotFound is returned when a Span isn't found in a context.
-	ErrSpanNotFound = errors.New("span not found")
 )
 
 // A Span is a named collection of annotations. It represents meaningful
@@ -20,33 +19,66 @@ var (
 // service. Clients should annotate the span, and submit it when the request
 // that generated it is complete.
 type Span struct {
-	host         string
-	name         string
+	host       *zipkincore.Endpoint
+	methodName string
+
 	traceID      int64
 	spanID       int64
 	parentSpanID int64
 
 	annotations []annotation
-	//binaryAnnotations []BinaryAnnotation
+	//binaryAnnotations []BinaryAnnotation // TODO
 }
 
 // NewSpan returns a new Span object ready for use.
-func NewSpan(host string, name string, traceID, spanID, parentSpanID int64) *Span {
+func NewSpan(hostport, serviceName, methodName string, traceID, spanID, parentSpanID int64) *Span {
 	return &Span{
-		host:         host,
-		name:         name,
+		host:         makeEndpoint(hostport, serviceName),
+		methodName:   methodName,
 		traceID:      traceID,
 		spanID:       spanID,
 		parentSpanID: parentSpanID,
 	}
 }
 
-// NewSpanFunc returns a function that generates a new Zipkin span.
-func NewSpanFunc(host, name string) func(int64, int64, int64) *Span {
+// makeEndpoint will return a nil Endpoint if the input parameters are
+// malformed.
+func makeEndpoint(hostport, serviceName string) *zipkincore.Endpoint {
+	host, port, err := net.SplitHostPort(hostport)
+	if err != nil {
+		Log.Log("hostport", hostport, "err", err)
+		return nil
+	}
+	addrs, err := net.LookupIP(host)
+	if err != nil {
+		Log.Log("host", host, "err", err)
+		return nil
+	}
+	if len(addrs) <= 0 {
+		Log.Log("host", host, "err", "no IPs")
+		return nil
+	}
+	portInt, err := strconv.ParseInt(port, 10, 16)
+	if err != nil {
+		Log.Log("port", port, "err", err)
+		return nil
+	}
+	endpoint := zipkincore.NewEndpoint()
+	binary.LittleEndian.PutUint32(addrs[0], (uint32)(endpoint.Ipv4))
+	endpoint.Port = int16(portInt)
+	endpoint.ServiceName = serviceName
+	return endpoint
+}
+
+// MakeNewSpanFunc returns a function that generates a new Zipkin span.
+func MakeNewSpanFunc(hostport, serviceName, methodName string) NewSpanFunc {
 	return func(traceID, spanID, parentSpanID int64) *Span {
-		return NewSpan(host, name, traceID, spanID, parentSpanID)
+		return NewSpan(hostport, serviceName, methodName, traceID, spanID, parentSpanID)
 	}
 }
+
+// NewSpanFunc takes trace, span, & parent span IDs to produce a Span object.
+type NewSpanFunc func(traceID, spanID, parentSpanID int64) *Span
 
 // TraceID returns the ID of the trace that this span is a member of.
 func (s *Span) TraceID() int64 { return s.traceID }
@@ -79,12 +111,13 @@ func (s *Span) Encode() *zipkincore.Span {
 	// Thrift stuff into an encoder struct, owned by the ScribeCollector.
 	zs := zipkincore.Span{
 		TraceId:           s.traceID,
-		Name:              s.name,
+		Name:              s.methodName,
 		Id:                s.spanID,
 		BinaryAnnotations: []*zipkincore.BinaryAnnotation{}, // TODO
-		Debug:             false,                            // TODO
+		Debug:             true,                             // TODO
 	}
 	if s.parentSpanID != 0 {
+		zs.ParentId = new(int64)
 		(*zs.ParentId) = s.parentSpanID
 	}
 	zs.Annotations = make([]*zipkincore.Annotation, len(s.annotations))
@@ -92,13 +125,11 @@ func (s *Span) Encode() *zipkincore.Span {
 		zs.Annotations[i] = &zipkincore.Annotation{
 			Timestamp: a.timestamp.UnixNano() / 1e3,
 			Value:     a.value,
-		}
-		if a.host != "" {
-			// zs.Annotations[i].Host = TODO
+			Host:      a.host,
 		}
 		if a.duration > 0 {
 			zs.Annotations[i].Duration = new(int32)
-			(*zs.Annotations[i].Duration) = int32(a.duration / time.Microsecond)
+			*(zs.Annotations[i].Duration) = int32(a.duration / time.Microsecond)
 		}
 	}
 	return &zs
@@ -108,5 +139,5 @@ type annotation struct {
 	timestamp time.Time
 	value     string
 	duration  time.Duration // optional
-	host      string
+	host      *zipkincore.Endpoint
 }

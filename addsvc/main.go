@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	stdlog "log"
+	"math/rand"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"reflect"
+	"strings"
 	"syscall"
 	"time"
 
@@ -23,33 +24,45 @@ import (
 
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
 	"github.com/go-kit/kit/addsvc/pb"
+	"github.com/go-kit/kit/endpoint"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/expvar"
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/metrics/statsd"
-	"github.com/go-kit/kit/server"
 	"github.com/go-kit/kit/tracing/zipkin"
 	jsoncodec "github.com/go-kit/kit/transport/codec/json"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
 func main() {
+	// Flag domain. Note that gRPC transitively registers flags via its import
+	// of glog. So, we define a new flag set, to keep those domains distinct.
+	fs := flag.NewFlagSet("", flag.ExitOnError)
 	var (
-		debugAddr        = flag.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
-		httpAddr         = flag.String("http.addr", ":8001", "Address for HTTP (JSON) server")
-		grpcAddr         = flag.String("grpc.addr", ":8002", "Address for gRPC server")
-		thriftAddr       = flag.String("thrift.addr", ":8003", "Address for Thrift server")
-		thriftProtocol   = flag.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
-		thriftBufferSize = flag.Int("thrift.buffer.size", 0, "0 for unbuffered")
-		thriftFramed     = flag.Bool("thrift.framed", false, "true to enable framing")
+		debugAddr        = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
+		httpAddr         = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
+		grpcAddr         = fs.String("grpc.addr", ":8002", "Address for gRPC server")
+		thriftAddr       = fs.String("thrift.addr", ":8003", "Address for Thrift server")
+		thriftProtocol   = fs.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
+		thriftBufferSize = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
+		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
+
+		proxyHTTPAddr = fs.String("proxy.http.url", "", "if set, proxy requests over HTTP to this addsvc")
+
+		zipkinServiceName            = fs.String("zipkin.service.name", "addsvc", "Zipkin service name")
+		zipkinCollectorAddr          = fs.String("zipkin.collector.addr", "", "Zipkin Scribe collector address (empty will log spans)")
+		zipkinCollectorTimeout       = fs.Duration("zipkin.collector.timeout", time.Second, "Zipkin collector timeout")
+		zipkinCollectorBatchSize     = fs.Int("zipkin.collector.batch.size", 100, "Zipkin collector batch size")
+		zipkinCollectorBatchInterval = fs.Duration("zipkin.collector.batch.interval", time.Second, "Zipkin collector batch interval")
 	)
-	flag.Parse()
+	flag.Usage = fs.Usage // only show our flags
+	fs.Parse(os.Args[1:])
 
 	// `package log` domain
 	var logger kitlog.Logger
 	logger = kitlog.NewPrefixLogger(os.Stderr)
-	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
+	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC, "caller", kitlog.DefaultCaller)
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
 	stdlog.SetFlags(0)                                // flags are handled in our logger
 
@@ -76,23 +89,45 @@ func main() {
 	)
 
 	// `package tracing` domain
-	zipkinHost := "my-host"
-	zipkinCollector := loggingCollector{logger}
-	zipkinAddName := "ADD" // is that right?
-	zipkinAddSpanFunc := zipkin.NewSpanFunc(zipkinHost, zipkinAddName)
+	zipkinHostPort := "localhost:1234" // TODO Zipkin makes overly simple assumptions about services
+	var zipkinCollector zipkin.Collector = loggingCollector{logger}
+	if *zipkinCollectorAddr != "" {
+		var err error
+		if zipkinCollector, err = zipkin.NewScribeCollector(
+			*zipkinCollectorAddr,
+			*zipkinCollectorTimeout,
+			*zipkinCollectorBatchSize,
+			*zipkinCollectorBatchInterval,
+		); err != nil {
+			logger.Log("err", err)
+			os.Exit(1)
+		}
+	}
+	zipkinMethodName := "add"
+	zipkinSpanFunc := zipkin.MakeNewSpanFunc(zipkinHostPort, *zipkinServiceName, zipkinMethodName)
+	zipkin.Log.Swap(logger) // log diagnostic/error details
 
 	// Our business and operational domain
-	var a Add
-	a = pureAdd
-	a = logging(logger, a)
+	var a Add = pureAdd
+	if *proxyHTTPAddr != "" {
+		codec := jsoncodec.New()
+		makeResponse := func() interface{} { return &addResponse{} }
 
-	// `package server` domain
-	var e server.Endpoint
+		var e endpoint.Endpoint
+		e = httptransport.NewClient(*proxyHTTPAddr, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
+		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
+
+		a = proxyAdd(e, logger)
+	}
+	a = logging(logger)(a)
+
+	// Server domain
+	var e endpoint.Endpoint
 	e = makeEndpoint(a)
-	e = zipkin.AnnotateEndpoint(zipkinAddSpanFunc, zipkinCollector)(e)
-	// e = someother.Middleware(arg1, arg2)(e)
+	e = zipkin.AnnotateServer(zipkinSpanFunc, zipkinCollector)(e)
 
 	// Mechanical stuff
+	rand.Seed(time.Now().UnixNano())
 	root := context.Background()
 	errc := make(chan error)
 
@@ -112,11 +147,12 @@ func main() {
 		defer cancel()
 
 		field := metrics.Field{Key: "transport", Value: "http"}
-		before := httptransport.Before(zipkin.ToContext(zipkin.FromHTTP(zipkinAddSpanFunc)))
-		after := httptransport.After(httptransport.SetContentType("application/json"))
+		before := httptransport.BindingBefore(zipkin.ToContext(zipkinSpanFunc))
+		after := httptransport.BindingAfter(httptransport.SetContentType("application/json"))
+		makeRequest := func() interface{} { return &addRequest{} }
 
 		var handler http.Handler
-		handler = httptransport.NewBinding(ctx, reflect.TypeOf(request{}), jsoncodec.New(), e, before, after)
+		handler = httptransport.NewBinding(ctx, makeRequest, jsoncodec.New(), e, before, after)
 		handler = encoding.Gzip(handler)
 		handler = cors.Middleware(cors.Config{})(handler)
 		handler = httpInstrument(requests.With(field), duration.With(field))(handler)
@@ -210,10 +246,16 @@ func interrupt() error {
 type loggingCollector struct{ kitlog.Logger }
 
 func (c loggingCollector) Collect(s *zipkin.Span) error {
-	kitlog.With(c.Logger, "caller", kitlog.DefaultCaller).Log(
+	annotations := s.Encode().GetAnnotations()
+	values := make([]string, len(annotations))
+	for i, a := range annotations {
+		values[i] = a.Value
+	}
+	c.Logger.Log(
 		"trace_id", s.TraceID(),
 		"span_id", s.SpanID(),
 		"parent_span_id", s.ParentSpanID(),
+		"annotations", strings.Join(values, " "),
 	)
 	return nil
 }
