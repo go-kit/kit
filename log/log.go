@@ -4,6 +4,8 @@
 // key/value data.
 package log
 
+import "sync/atomic"
+
 // Logger is the fundamental interface for all log operations. Implementations
 // must be safe for concurrent use by multiple goroutines. Log creates a log
 // event from keyvals, a variadic sequence of alternating keys and values.
@@ -57,4 +59,34 @@ type LoggerFunc func(...interface{}) error
 // Log implements Logger by calling f(keyvals...).
 func (f LoggerFunc) Log(keyvals ...interface{}) error {
 	return f(keyvals...)
+}
+
+// SwapLogger wraps another logger that may be safely replaced while other
+// goroutines use the SwapLogger concurrently. The zero value for a SwapLogger
+// will discard all log events without error.
+//
+// SwapLogger serves well as a package global logger that can be changed by
+// importers.
+type SwapLogger struct {
+	logger atomic.Value
+}
+
+type loggerStruct struct {
+	Logger
+}
+
+// Log implements the Logger interface by forwarding keyvals to the currently
+// wrapped logger. It does not log anything if the wrapped logger is nil.
+func (l *SwapLogger) Log(keyvals ...interface{}) error {
+	s, ok := l.logger.Load().(loggerStruct)
+	if !ok || s.Logger == nil {
+		return nil
+	}
+	return s.Log(keyvals...)
+}
+
+// Swap replaces the currently wrapped logger with logger. Swap may be called
+// concurrently with calls to Log from other goroutines.
+func (l *SwapLogger) Swap(logger Logger) {
+	l.logger.Store(loggerStruct{logger})
 }

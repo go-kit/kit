@@ -7,6 +7,7 @@ import (
 	stdlog "log"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"reflect"
@@ -35,6 +36,7 @@ import (
 
 func main() {
 	var (
+		debugAddr        = flag.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
 		httpAddr         = flag.String("http.addr", ":8001", "Address for HTTP (JSON) server")
 		grpcAddr         = flag.String("grpc.addr", ":8002", "Address for gRPC server")
 		thriftAddr       = flag.String("thrift.addr", ":8003", "Address for Thrift server")
@@ -43,6 +45,13 @@ func main() {
 		thriftFramed     = flag.Bool("thrift.framed", false, "true to enable framing")
 	)
 	flag.Parse()
+
+	// `package log` domain
+	var logger kitlog.Logger
+	logger = kitlog.NewPrefixLogger(os.Stderr)
+	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
+	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
+	stdlog.SetFlags(0)                                // flags are handled in our logger
 
 	// `package metrics` domain
 	requests := metrics.NewMultiCounter(
@@ -58,7 +67,7 @@ func main() {
 	duration := metrics.NewMultiHistogram(
 		expvar.NewHistogram("duration_nanoseconds_total", 0, 100000000, 3),
 		statsd.NewHistogram(ioutil.Discard, "duration_nanoseconds_total", time.Second),
-		prometheus.NewHistogram(stdprometheus.HistogramOpts{
+		prometheus.NewSummary(stdprometheus.SummaryOpts{
 			Namespace: "addsvc",
 			Subsystem: "add",
 			Name:      "duration_nanoseconds_total",
@@ -67,18 +76,10 @@ func main() {
 	)
 
 	// `package tracing` domain
-	zipkinHost := "some-host"             // TODO
-	zipkinCollector := loggingCollector{} // TODO
-	zipkinAddName := "ADD"                // is that right?
+	zipkinHost := "my-host"
+	zipkinCollector := loggingCollector{logger}
+	zipkinAddName := "ADD" // is that right?
 	zipkinAddSpanFunc := zipkin.NewSpanFunc(zipkinHost, zipkinAddName)
-
-	// `package log` domain
-	var logger kitlog.Logger
-	logger = kitlog.NewPrefixLogger(os.Stderr)
-	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
-	kitlog.DefaultLogger = logger                     // for other gokit components
-	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
-	stdlog.SetFlags(0)                                // flags are handled in our logger
 
 	// Our business and operational domain
 	var a Add
@@ -99,23 +100,10 @@ func main() {
 		errc <- interrupt()
 	}()
 
-	// Transport: gRPC
+	// Transport: HTTP (debug/instrumentation)
 	go func() {
-		ln, err := net.Listen("tcp", *grpcAddr)
-		if err != nil {
-			errc <- err
-			return
-		}
-		s := grpc.NewServer() // uses its own context?
-		field := metrics.Field{Key: "transport", Value: "grpc"}
-
-		var addServer pb.AddServer
-		addServer = grpcBinding{e}
-		addServer = grpcInstrument(requests.With(field), duration.With(field))(addServer)
-
-		pb.RegisterAddServer(s, addServer)
-		logger.Log("msg", "gRPC server started", "addr", *grpcAddr)
-		errc <- s.Serve(ln)
+		logger.Log("addr", *debugAddr, "transport", "debug")
+		errc <- http.ListenAndServe(*debugAddr, nil)
 	}()
 
 	// Transport: HTTP (JSON)
@@ -135,8 +123,27 @@ func main() {
 
 		mux := http.NewServeMux()
 		mux.Handle("/add", handler)
-		logger.Log("msg", "HTTP server started", "addr", *httpAddr)
+		logger.Log("addr", *httpAddr, "transport", "HTTP")
 		errc <- http.ListenAndServe(*httpAddr, mux)
+	}()
+
+	// Transport: gRPC
+	go func() {
+		ln, err := net.Listen("tcp", *grpcAddr)
+		if err != nil {
+			errc <- err
+			return
+		}
+		s := grpc.NewServer() // uses its own context?
+		field := metrics.Field{Key: "transport", Value: "grpc"}
+
+		var addServer pb.AddServer
+		addServer = grpcBinding{e}
+		addServer = grpcInstrument(requests.With(field), duration.With(field))(addServer)
+
+		pb.RegisterAddServer(s, addServer)
+		logger.Log("addr", *grpcAddr, "transport", "gRPC")
+		errc <- s.Serve(ln)
 	}()
 
 	// Transport: Thrift
@@ -182,7 +189,7 @@ func main() {
 		service = thriftBinding{ctx, e}
 		service = thriftInstrument(requests.With(field), duration.With(field))(service)
 
-		logger.Log("msg", "Thrift server started", "addr", *thriftAddr)
+		logger.Log("addr", *thriftAddr, "transport", "Thrift")
 		errc <- thrift.NewTSimpleServer4(
 			thriftadd.NewAddServiceProcessor(service),
 			transport,
@@ -200,10 +207,10 @@ func interrupt() error {
 	return fmt.Errorf("%s", <-c)
 }
 
-type loggingCollector struct{}
+type loggingCollector struct{ kitlog.Logger }
 
-func (loggingCollector) Collect(s *zipkin.Span) error {
-	kitlog.With(kitlog.DefaultLogger, "caller", kitlog.DefaultCaller).Log(
+func (c loggingCollector) Collect(s *zipkin.Span) error {
+	kitlog.With(c.Logger, "caller", kitlog.DefaultCaller).Log(
 		"trace_id", s.TraceID(),
 		"span_id", s.SpanID(),
 		"parent_span_id", s.ParentSpanID(),

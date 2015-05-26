@@ -11,6 +11,7 @@ import (
 func TestStdlibWriter(t *testing.T) {
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
+	log.SetFlags(log.LstdFlags)
 	logger := NewPrefixLogger(StdlibWriter{})
 	logger.Log("key", "val")
 	timestamp := time.Now().Format("2006/01/02 15:04:05")
@@ -23,7 +24,7 @@ func TestStdlibAdapterUsage(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := NewPrefixLogger(buf)
 	writer := NewStdlibAdapter(logger)
-	log.SetOutput(writer)
+	stdlog := log.New(writer, "", 0)
 
 	now := time.Now()
 	date := now.Format("2006/01/02")
@@ -34,13 +35,13 @@ func TestStdlibAdapterUsage(t *testing.T) {
 		log.Ldate:                              "ts=" + date + " msg=hello\n",
 		log.Ltime:                              "ts=" + time + " msg=hello\n",
 		log.Ldate | log.Ltime:                  "ts=" + date + " " + time + " msg=hello\n",
-		log.Lshortfile:                         "file=stdlib_test.go:43 msg=hello\n",
-		log.Lshortfile | log.Ldate:             "ts=" + date + " file=stdlib_test.go:43 msg=hello\n",
-		log.Lshortfile | log.Ldate | log.Ltime: "ts=" + date + " " + time + " file=stdlib_test.go:43 msg=hello\n",
+		log.Lshortfile:                         "file=stdlib_test.go:44 msg=hello\n",
+		log.Lshortfile | log.Ldate:             "ts=" + date + " file=stdlib_test.go:44 msg=hello\n",
+		log.Lshortfile | log.Ldate | log.Ltime: "ts=" + date + " " + time + " file=stdlib_test.go:44 msg=hello\n",
 	} {
 		buf.Reset()
-		log.SetFlags(flag)
-		log.Print("hello")
+		stdlog.SetFlags(flag)
+		stdlog.Print("hello")
 		if have := buf.String(); want != have {
 			t.Errorf("flag=%d: want %#v, have %#v", flag, want, have)
 		}
@@ -64,7 +65,7 @@ func TestStdLibAdapterExtraction(t *testing.T) {
 		"/a/b/c/d.go:23: hello":                            "file=/a/b/c/d.go:23 msg=hello\n",
 	} {
 		buf.Reset()
-		fmt.Fprintf(writer, input)
+		fmt.Fprint(writer, input)
 		if have := buf.String(); want != have {
 			t.Errorf("%q: want %#v, have %#v", input, want, have)
 		}

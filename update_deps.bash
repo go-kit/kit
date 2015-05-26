@@ -17,7 +17,8 @@ function not_gokit {
 }
 
 function go_get_update {
-	while read d ; do
+	while read d
+	do
 		echo $d
 		go get -u $d
 	done

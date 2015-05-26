@@ -7,8 +7,13 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/server"
 )
+
+// Log is used to report diagnostic information. To enable it, swap in your
+// application's logger.
+var Log log.SwapLogger
 
 // http://www.slideshare.net/johanoskarsson/zipkin-runtime-open-house
 // https://groups.google.com/forum/#!topic/zipkin-user/KilwtSA0g1k

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// StdlibWriter implements io.Writer by invoking the stdlib log.Printf. It's
+// StdlibWriter implements io.Writer by invoking the stdlib log.Print. It's
 // designed to be passed to a gokit logger as the writer, for cases where it's
 // necessary to redirect all gokit log output to the stdlib logger.
 //
@@ -17,7 +17,7 @@ type StdlibWriter struct{}
 
 // Write implements io.Writer.
 func (w StdlibWriter) Write(p []byte) (int, error) {
-	log.Printf(strings.TrimSpace(string(p)))
+	log.Print(strings.TrimSpace(string(p)))
 	return len(p), nil
 }
 
