@@ -52,3 +52,10 @@ func main() {
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger))
 }
 ```
+
+## Contributing
+
+Please see [CONTRIBUTING.md]. Thank you, [contributors]!
+
+[CONTRIBUTING.md]: /CONTRIBUTING.md
+[contributors]: https://github.com/go-kit/kit/graphs/contributors
