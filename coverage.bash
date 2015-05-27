@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# This script runs the cover tool on all packages with test files. If you set
-# an "HTML" environment variable, it will additionally open the web-based
-# coverage visualizer for each package.
+# This script runs the cover tool on all packages with test files. If you set a
+# WEB environment variable, it will additionally open the web-based coverage
+# visualizer for each package.
 
 function go_files { find . -name '*_test.go' ; }
 function filter { grep -v '/_' ; }
@@ -30,7 +30,7 @@ function report {
 	package_names | while read pkg
 	do
 		go test -coverprofile=cover.out $pkg
-		if [ -n "${HTML+x}" ]
+		if [ -n "${WEB+x}" ]
 		then
 			go tool cover -html=cover.out
 		fi
