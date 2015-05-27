@@ -10,8 +10,8 @@ type logfmtLogger struct {
 	w io.Writer
 }
 
-// NewLogfmtLogger returns a basic logger that encodes keyvals as simple "k=v"
-// pairs to the Writer.
+// NewLogfmtLogger returns a logger that encodes keyvals to the Writer in
+// logfmt format.
 func NewLogfmtLogger(w io.Writer) Logger {
 	return &logfmtLogger{w}
 }
