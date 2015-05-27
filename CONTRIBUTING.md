@@ -2,8 +2,12 @@
 
 First, thank you for contributing! We love and encourge pull requests from everyone.
 
-Here are a few guidelines to follow:
+At this stage, we're still developing the initial drafts of all of the packages, using an
+[RFC workflow](https://github.com/go-kit/kit/tree/master/rfc).
 
+Before submitting major changes, here are a few guidelines to follow:
+
+1. Check the [open issues][issues] and [pull requests][prs] for existing discussions.
 1. Open an [issue][issues] to discuss a new feature.
 1. Write tests.
 1. Make sure the entire test suite passes locally and on Travis CI.
@@ -12,5 +16,7 @@ Here are a few guidelines to follow:
 1. Have fun!
 
 [issues]: https://github.com/go-kit/kit/issues
+[prs]: https://github.com/go-kit/kit/pulls
 [squash]: http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html
 [message]: https://github.com/go-kit/kit/issues
+

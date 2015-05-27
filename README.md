@@ -35,14 +35,10 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 
 ## Contributing
 
-At this stage, we're still developing the initial drafts of all of the packages, using an
-[RFC workflow](https://github.com/go-kit/kit/tree/master/rfc).
-Before submitting major changes, please write to
- [the mailing list](https://groups.google.com/forum/#!forum/go-kit)
-to register your interest, and check the
- [open issues](https://github.com/go-kit/kit/issues) and
- [pull requests](https://github.com/go-kit/kit/pulls)
-for existing discussions.
+Please see [CONTRIBUTING.md]. Thank you, [contributors]!
+
+[CONTRIBUTING.md]: /CONTRIBUTING.md
+[contributors]: https://github.com/go-kit/kit/graphs/contributors
 
 ### Dependency management
 
