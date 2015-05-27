@@ -7,17 +7,24 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/server"
 )
+
+// In Zipkin, "spans are considered to start and stop with the client." The
+// client is responsible for creating a new span ID for each outgoing request,
+// copying its span ID to the parent span ID, and maintaining the same trace
+// ID. The server-receive and server-send annotations can be considered value
+// added information and aren't strictly necessary.
+//
+// Further reading:
+// • http://www.slideshare.net/johanoskarsson/zipkin-runtime-open-house
+// • https://groups.google.com/forum/#!topic/zipkin-user/KilwtSA0g1k
+// • https://gist.github.com/yoavaa/3478d3a0df666f21a98c
 
 // Log is used to report diagnostic information. To enable it, swap in your
 // application's logger.
 var Log log.SwapLogger
-
-// http://www.slideshare.net/johanoskarsson/zipkin-runtime-open-house
-// https://groups.google.com/forum/#!topic/zipkin-user/KilwtSA0g1k
-// https://gist.github.com/yoavaa/3478d3a0df666f21a98c
 
 const (
 	// https://github.com/racker/tryfer#headers
@@ -25,106 +32,143 @@ const (
 	spanIDHTTPHeader       = "X-B3-SpanId"
 	parentSpanIDHTTPHeader = "X-B3-ParentSpanId"
 
-	clientSend    = "cs"
-	serverReceive = "sr"
-	serverSend    = "ss"
-	clientReceive = "cr"
+	// ClientSend is the annotation value used to mark a client sending a
+	// request to a server.
+	ClientSend = "cs"
+
+	// ServerReceive is the annotation value used to mark a server's receipt
+	// of a request from a client.
+	ServerReceive = "sr"
+
+	// ServerSend is the annotation value used to mark a server's completion
+	// of a request and response to a client.
+	ServerSend = "ss"
+
+	// ClientReceive is the annotation value used to mark a client's receipt
+	// of a completed request from a server.
+	ClientReceive = "cr"
 )
 
-// AnnotateEndpoint extracts a span from the context, adds server-receive and
-// server-send annotations at the boundaries, and submits the span to the
-// collector. If no span is present, a new span is generated and put in the
-// context.
-func AnnotateEndpoint(f func(int64, int64, int64) *Span, c Collector) func(server.Endpoint) server.Endpoint {
-	return func(e server.Endpoint) server.Endpoint {
-		return func(ctx context.Context, req server.Request) (server.Response, error) {
-			span, ctx := mustGetServerSpan(ctx, f)
-			span.Annotate(serverReceive)
-			defer func() { span.Annotate(serverSend); c.Collect(span) }()
-			return e(ctx, req)
+// AnnotateServer returns a server.Middleware that extracts a span from the
+// context, adds server-receive and server-send annotations at the boundaries,
+// and submits the span to the collector. If no span is found in the context,
+// a new span is generated and inserted.
+func AnnotateServer(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
+	return func(e endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, request interface{}) (interface{}, error) {
+			span, ok := fromContext(ctx)
+			if !ok {
+				span = newSpan(newID(), newID(), 0)
+				ctx = context.WithValue(ctx, SpanContextKey, span)
+			}
+			span.Annotate(ServerReceive)
+			defer func() { span.Annotate(ServerSend); c.Collect(span) }()
+			return e(ctx, request)
 		}
 	}
 }
 
-// FromHTTP is a helper method that allows NewSpanFunc's factory function to
-// be easily invoked by passing an HTTP request. The span name is the HTTP
-// method. The trace, span, and parent span IDs are taken from the request
-// headers.
-func FromHTTP(f func(int64, int64, int64) *Span) func(*http.Request) *Span {
-	return func(r *http.Request) *Span {
-		return f(
-			getID(r.Header, traceIDHTTPHeader),
-			getID(r.Header, spanIDHTTPHeader),
-			getID(r.Header, parentSpanIDHTTPHeader),
-		)
+// AnnotateClient returns a middleware that extracts a parent span from the
+// context, produces a client (child) span from it, adds client-send and
+// client-receive annotations at the boundaries, and submits the span to the
+// collector. If no span is found in the context, a new span is generated and
+// inserted.
+func AnnotateClient(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
+	return func(e endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, request interface{}) (interface{}, error) {
+			var clientSpan *Span
+			parentSpan, ok := fromContext(ctx)
+			if ok {
+				clientSpan = newSpan(parentSpan.TraceID(), newID(), parentSpan.SpanID())
+			} else {
+				clientSpan = newSpan(newID(), newID(), 0)
+			}
+			ctx = context.WithValue(ctx, SpanContextKey, clientSpan)                    // set
+			defer func() { ctx = context.WithValue(ctx, SpanContextKey, parentSpan) }() // reset
+			clientSpan.Annotate(ClientSend)
+			defer func() { clientSpan.Annotate(ClientReceive); c.Collect(clientSpan) }()
+			return e(ctx, request)
+		}
 	}
 }
 
-// ToContext returns a function that satisfies transport/http.BeforeFunc. When
-// invoked, it generates a Zipkin span from the incoming HTTP request, and
-// saves it in the request context under the SpanContextKey.
-func ToContext(f func(*http.Request) *Span) func(context.Context, *http.Request) context.Context {
+// ToContext returns a function that satisfies transport/http.BeforeFunc. It
+// takes a Zipkin span from the incoming HTTP request, and saves it in the
+// request context. It's designed to be wired into a server's HTTP transport
+// Before stack.
+func ToContext(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) context.Context {
 	return func(ctx context.Context, r *http.Request) context.Context {
-		return context.WithValue(ctx, SpanContextKey, f(r))
+		return context.WithValue(ctx, SpanContextKey, fromHTTP(newSpan, r))
 	}
 }
 
-// NewChildSpan creates a new child (client) span. If a span is present in the
-// context, it will be interpreted as the parent.
-func NewChildSpan(ctx context.Context, f func(int64, int64, int64) *Span) *Span {
+// ToRequest returns a function that satisfies transport/http.BeforeFunc. It
+// takes a Zipkin span from the context, and injects it into the HTTP request.
+// It's designed to be wired into a client's HTTP transport Before stack. It's
+// expected that AnnotateClient has already ensured the span in the context is
+// a child/client span.
+func ToRequest(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) context.Context {
+	return func(ctx context.Context, r *http.Request) context.Context {
+		span, ok := fromContext(ctx)
+		if !ok {
+			span = newSpan(newID(), newID(), 0)
+		}
+		if id := span.TraceID(); id > 0 {
+			r.Header.Set(traceIDHTTPHeader, strconv.FormatInt(id, 16))
+		}
+		if id := span.SpanID(); id > 0 {
+			r.Header.Set(spanIDHTTPHeader, strconv.FormatInt(id, 16))
+		}
+		if id := span.ParentSpanID(); id > 0 {
+			r.Header.Set(parentSpanIDHTTPHeader, strconv.FormatInt(id, 16))
+		}
+		return ctx
+	}
+}
+
+func fromHTTP(newSpan NewSpanFunc, r *http.Request) *Span {
+	traceIDStr := r.Header.Get(traceIDHTTPHeader)
+	if traceIDStr == "" {
+		Log.Log("debug", "make new span")
+		return newSpan(newID(), newID(), 0) // normal; just make a new one
+	}
+	traceID, err := strconv.ParseInt(traceIDStr, 16, 64)
+	if err != nil {
+		Log.Log(traceIDHTTPHeader, traceIDStr, "err", err)
+		return newSpan(newID(), newID(), 0)
+	}
+	spanIDStr := r.Header.Get(spanIDHTTPHeader)
+	if spanIDStr == "" {
+		Log.Log("msg", "trace ID without span ID") // abnormal
+		spanIDStr = strconv.FormatInt(newID(), 64) // deal with it
+	}
+	spanID, err := strconv.ParseInt(spanIDStr, 16, 64)
+	if err != nil {
+		Log.Log(spanIDHTTPHeader, spanIDStr, "err", err) // abnormal
+		spanID = newID()                                 // deal with it
+	}
+	parentSpanIDStr := r.Header.Get(parentSpanIDHTTPHeader)
+	if parentSpanIDStr == "" {
+		parentSpanIDStr = "0" // normal
+	}
+	parentSpanID, err := strconv.ParseInt(parentSpanIDStr, 16, 64)
+	if err != nil {
+		Log.Log(parentSpanIDHTTPHeader, parentSpanIDStr, "err", err) // abnormal
+		parentSpanID = 0                                             // the only way to deal with it
+	}
+	return newSpan(traceID, spanID, parentSpanID)
+}
+
+func fromContext(ctx context.Context) (*Span, bool) {
 	val := ctx.Value(SpanContextKey)
 	if val == nil {
-		return f(newID(), newID(), 0)
-	}
-	parentSpan, ok := val.(*Span)
-	if !ok {
-		panic(SpanContextKey + " value isn't a span object")
-	}
-	var (
-		traceID      = parentSpan.TraceID()
-		spanID       = newID()
-		parentSpanID = parentSpan.SpanID()
-	)
-	return f(traceID, spanID, parentSpanID)
-}
-
-// SetRequestHeaders sets up HTTP headers for a new outbound request based on
-// the (client) span. All IDs are encoded as hex strings.
-func SetRequestHeaders(h http.Header, s *Span) {
-	if id := s.TraceID(); id > 0 {
-		h.Set(traceIDHTTPHeader, strconv.FormatInt(id, 16))
-	}
-	if id := s.SpanID(); id > 0 {
-		h.Set(spanIDHTTPHeader, strconv.FormatInt(id, 16))
-	}
-	if id := s.ParentSpanID(); id > 0 {
-		h.Set(parentSpanIDHTTPHeader, strconv.FormatInt(id, 16))
-	}
-}
-
-func mustGetServerSpan(ctx context.Context, f func(int64, int64, int64) *Span) (*Span, context.Context) {
-	val := ctx.Value(SpanContextKey)
-	if val == nil {
-		span := f(newID(), newID(), 0)
-		return span, context.WithValue(ctx, SpanContextKey, span)
+		return nil, false
 	}
 	span, ok := val.(*Span)
 	if !ok {
 		panic(SpanContextKey + " value isn't a span object")
 	}
-	return span, ctx
-}
-
-func getID(h http.Header, key string) int64 {
-	val := h.Get(key)
-	if val == "" {
-		return 0
-	}
-	i, err := strconv.ParseInt(val, 16, 64)
-	if err != nil {
-		panic("invalid Zipkin ID in HTTP header: " + val)
-	}
-	return i
+	return span, true
 }
 
 func newID() int64 {

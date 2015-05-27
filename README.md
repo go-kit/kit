@@ -12,24 +12,24 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 ## Goals
 
 - Operate in a heterogeneous SOA — expect to interact with mostly non-gokit services
-- RPC as the messaging pattern
+- RPC as the primary messaging pattern
 - Pluggable serialization and transport — not just JSON over HTTP
 - Zipkin-compatible request tracing
 
 ## Non-goals
 
-- Supporting messaging patterns other than RPC — pub/sub, CQRS, etc.
+- Supporting messaging patterns other than RPC (in the initial release) — pub/sub, CQRS, etc.
 - Having opinions on deployment, orchestration, process supervision, etc.
-- Having opinions on configuration passing, i.e. flags, env vars, files, etc.
+- Having opinions on configuration passing — flags, env vars, files, etc.
 
 ## Component status
 
-- API stability — adopted
-- `package metrics` — [implemented](https://github.com/go-kit/kit/tree/master/metrics)
-- `package server` — [implemented](https://github.com/go-kit/kit/tree/master/server)
-- `package transport` — [implemented](https://github.com/go-kit/kit/tree/master/transport)
-- `package log` — [implemented](https://github.com/go-kit/kit/tree/master/log)
-- `package tracing` — [prototyping](Https://github.com/go-kit/kit/tree/master/tracing)
+- [API stability](https://github.com/go-kit/kit/blob/master/rfc/rfc007-api-stability.md) — **adopted**
+- [`package metrics`](https://github.com/go-kit/kit/tree/master/metrics) — **implemented**
+- [`package server`](https://github.com/go-kit/kit/tree/master/server) — **implemented**
+- [`package transport`](https://github.com/go-kit/kit/tree/master/transport) — **implemented**
+- [`package log`](https://github.com/go-kit/kit/tree/master/log) — **implemented**
+- [`package tracing`](https://github.com/go-kit/kit/tree/master/tracing) — prototyping
 - `package client` — pending
 - Service discovery — pending
 
@@ -102,7 +102,7 @@ Projects with a ★ have had particular influence on gokit's design.
 - [Gorilla](http://www.gorillatoolkit.org)
 - [Martini](https://github.com/go-martini/martini)
 - [Negroni](https://github.com/codegangsta/negroni)
-- [Revel](https://revel.github.io/)
+- [Revel](https://revel.github.io/) (considered harmful)
 
 ## Additional reading
 

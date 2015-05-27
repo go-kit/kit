@@ -6,7 +6,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/server"
 	"github.com/go-kit/kit/transport/codec"
 )
 
@@ -16,10 +15,10 @@ type jsonCodec struct{}
 // properly-tagged fields.
 func New() codec.Codec { return jsonCodec{} }
 
-func (jsonCodec) Decode(ctx context.Context, r io.Reader, req server.Request) (context.Context, error) {
-	return ctx, json.NewDecoder(r).Decode(req)
+func (jsonCodec) Decode(ctx context.Context, r io.Reader, v interface{}) (context.Context, error) {
+	return ctx, json.NewDecoder(r).Decode(v)
 }
 
-func (jsonCodec) Encode(w io.Writer, resp server.Response) error {
-	return json.NewEncoder(w).Encode(resp)
+func (jsonCodec) Encode(w io.Writer, v interface{}) error {
+	return json.NewEncoder(w).Encode(v)
 }

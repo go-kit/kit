@@ -1,46 +1,25 @@
 package zipkin_test
 
 import (
-	"math/rand"
+	"fmt"
 	"net/http"
+	"reflect"
+	"runtime"
 	"strconv"
-	"sync/atomic"
+	"strings"
 	"testing"
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/server"
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/tracing/zipkin"
 )
 
-func TestAnnotateEndpoint(t *testing.T) {
+func TestToContext(t *testing.T) {
 	const (
-		host = "some-host"
-		name = "some-name"
-	)
-
-	f := zipkin.NewSpanFunc(host, name)
-	c := &countingCollector{}
-
-	var e server.Endpoint
-	e = func(context.Context, server.Request) (server.Response, error) { return struct{}{}, nil }
-	e = zipkin.AnnotateEndpoint(f, c)(e)
-
-	if want, have := int32(0), int32(c.int32); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-	if _, err := e(context.Background(), struct{}{}); err != nil {
-		t.Fatal(err)
-	}
-	if want, have := int32(1), int32(c.int32); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-}
-
-func TestFromHTTPToContext(t *testing.T) {
-	const (
-		host               = "foo-host"
-		name               = "foo-name"
+		hostport           = "5.5.5.5:5555"
+		serviceName        = "foo-service"
+		methodName         = "foo-method"
 		traceID      int64 = 12
 		spanID       int64 = 34
 		parentSpanID int64 = 56
@@ -51,11 +30,10 @@ func TestFromHTTPToContext(t *testing.T) {
 	r.Header.Set("X-B3-SpanId", strconv.FormatInt(spanID, 16))
 	r.Header.Set("X-B3-ParentSpanId", strconv.FormatInt(parentSpanID, 16))
 
-	sf := zipkin.NewSpanFunc(host, name)
-	hf := zipkin.FromHTTP(sf)
-	cf := zipkin.ToContext(hf)
+	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
+	toContext := zipkin.ToContext(newSpan)
 
-	ctx := cf(context.Background(), r)
+	ctx := toContext(context.Background(), r)
 	val := ctx.Value(zipkin.SpanContextKey)
 	if val == nil {
 		t.Fatalf("%s returned no value", zipkin.SpanContextKey)
@@ -65,68 +43,95 @@ func TestFromHTTPToContext(t *testing.T) {
 		t.Fatalf("%s was not a Span object", zipkin.SpanContextKey)
 	}
 
-	if want, have := traceID, span.TraceID(); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-
-	if want, have := spanID, span.SpanID(); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-
-	if want, have := parentSpanID, span.ParentSpanID(); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-}
-
-func TestNewChildSpan(t *testing.T) {
-	rand.Seed(123)
-
-	const (
-		host               = "my-host"
-		name               = "my-name"
-		traceID      int64 = 123
-		spanID       int64 = 456
-		parentSpanID int64 = 789
-	)
-
-	f := zipkin.NewSpanFunc(host, name)
-	ctx := context.WithValue(context.Background(), zipkin.SpanContextKey, f(traceID, spanID, parentSpanID))
-	childSpan := zipkin.NewChildSpan(ctx, f)
-
-	if want, have := traceID, childSpan.TraceID(); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-	if have := childSpan.SpanID(); have == spanID {
-		t.Errorf("span ID should be random, but we have %d", have)
-	}
-	if want, have := spanID, childSpan.ParentSpanID(); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-}
-
-func TestSetRequestHeaders(t *testing.T) {
-	const (
-		host               = "bar-host"
-		name               = "bar-name"
-		traceID      int64 = 123
-		spanID       int64 = 456
-		parentSpanID int64 = 789
-	)
-
-	r, _ := http.NewRequest("POST", "http://destroy.horse", nil)
-	zipkin.SetRequestHeaders(r.Header, zipkin.NewSpan(host, name, traceID, spanID, parentSpanID))
-
-	for h, want := range map[string]string{
-		"X-B3-TraceId":      strconv.FormatInt(traceID, 16),
-		"X-B3-SpanId":       strconv.FormatInt(spanID, 16),
-		"X-B3-ParentSpanId": strconv.FormatInt(parentSpanID, 16),
+	for want, haveFunc := range map[int64]func() int64{
+		traceID:      span.TraceID,
+		spanID:       span.SpanID,
+		parentSpanID: span.ParentSpanID,
 	} {
-		if have := r.Header.Get(h); want != have {
-			t.Errorf("%s: want %s, have %s", h, want, have)
+		if have := haveFunc(); want != have {
+			name := runtime.FuncForPC(reflect.ValueOf(haveFunc).Pointer()).Name()
+			name = strings.Split(name, "·")[0]
+			toks := strings.Split(name, ".")
+			name = toks[len(toks)-1]
+			t.Errorf("%s: want %d, have %d", name, want, have)
 		}
 	}
 }
 
-type countingCollector struct{ int32 }
+func TestToRequest(t *testing.T) {
+	const (
+		hostport           = "5.5.5.5:5555"
+		serviceName        = "foo-service"
+		methodName         = "foo-method"
+		traceID      int64 = 20
+		spanID       int64 = 40
+		parentSpanID int64 = 90
+	)
 
-func (c *countingCollector) Collect(*zipkin.Span) error { atomic.AddInt32(&(c.int32), 1); return nil }
+	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
+	span := newSpan(traceID, spanID, parentSpanID)
+	ctx := context.WithValue(context.Background(), zipkin.SpanContextKey, span)
+	r, _ := http.NewRequest("GET", "https://best.horse", nil)
+	ctx = zipkin.ToRequest(newSpan)(ctx, r)
+
+	for header, wantInt := range map[string]int64{
+		"X-B3-TraceId":      traceID,
+		"X-B3-SpanId":       spanID,
+		"X-B3-ParentSpanId": parentSpanID,
+	} {
+		if want, have := strconv.FormatInt(wantInt, 16), r.Header.Get(header); want != have {
+			t.Errorf("%s: want %q, have %q", header, want, have)
+		}
+	}
+}
+
+func TestAnnotateServer(t *testing.T) {
+	if err := testAnnotate(zipkin.AnnotateServer, zipkin.ServerReceive, zipkin.ServerSend); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAnnotateClient(t *testing.T) {
+	if err := testAnnotate(zipkin.AnnotateClient, zipkin.ClientSend, zipkin.ClientReceive); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testAnnotate(
+	annotate func(newSpan zipkin.NewSpanFunc, c zipkin.Collector) endpoint.Middleware,
+	wantAnnotations ...string,
+) error {
+	const (
+		hostport    = "1.2.3.4:1234"
+		serviceName = "some-service"
+		methodName  = "some-method"
+	)
+
+	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
+	collector := &countingCollector{}
+
+	var e endpoint.Endpoint
+	e = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
+	e = annotate(newSpan, collector)(e)
+
+	if want, have := 0, len(collector.annotations); want != have {
+		return fmt.Errorf("pre-invocation: want %d, have %d", want, have)
+	}
+	if _, err := e(context.Background(), struct{}{}); err != nil {
+		return fmt.Errorf("during invocation: %v", err)
+	}
+	if want, have := wantAnnotations, collector.annotations; !reflect.DeepEqual(want, have) {
+		return fmt.Errorf("after invocation: want %v, have %v", want, have)
+	}
+
+	return nil
+}
+
+type countingCollector struct{ annotations []string }
+
+func (c *countingCollector) Collect(s *zipkin.Span) error {
+	for _, annotation := range s.Encode().GetAnnotations() {
+		c.annotations = append(c.annotations, annotation.GetValue())
+	}
+	return nil
+}

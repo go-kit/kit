@@ -3,31 +3,28 @@ package main
 import (
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/server"
+	"github.com/go-kit/kit/endpoint"
 )
 
-// makeEndpoint returns a server.Endpoint wrapping the passed Add. If Add were
-// an interface with multiple methods, we'd need individual endpoints for
-// each.
+// makeEndpoint returns an endpoint wrapping the passed Add. If Add were an
+// interface with multiple methods, we'd need individual endpoints for each.
 //
 // This function is just boiler-plate; in theory, it could be generated.
-func makeEndpoint(a Add) server.Endpoint {
-	return func(ctx context.Context, req server.Request) (server.Response, error) {
+func makeEndpoint(a Add) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		select {
-		case <-ctx.Done():
-			return nil, server.ErrContextCanceled
 		default:
+		case <-ctx.Done():
+			return nil, endpoint.ErrContextCanceled
 		}
 
-		addReq, ok := req.(*request)
+		addReq, ok := request.(*addRequest)
 		if !ok {
-			return nil, server.ErrBadCast
+			return nil, endpoint.ErrBadCast
 		}
 
-		v := a(addReq.A, addReq.B)
+		v := a(ctx, addReq.A, addReq.B)
 
-		return response{
-			V: v,
-		}, nil
+		return addResponse{V: v}, nil
 	}
 }
