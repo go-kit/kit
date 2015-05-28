@@ -4,9 +4,11 @@
 
     import "{{.ImportPath}}"
 
+{{comment_md .Doc}}
+
 ## Rationale
 
-{{comment_md .Doc}}
+TODO
 
 ## Usage
 {{if $.Examples}}

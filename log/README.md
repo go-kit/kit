@@ -4,14 +4,16 @@
 
     import "/Users/harlow/code/go/src/github.com/go-kit/kit/log"
 
-## Rationale
-
 Package log provides basic interfaces for structured logging.
 
 The fundamental interface is Logger. Loggers create log events from
 key/value data.
 
 
+
+## Rationale
+
+TODO
 
 ## Usage
 
@@ -20,7 +22,7 @@ key/value data.
 
 Code:
 ```go
-&{17004 [0xc2080dd060 0xc2080df5c0 0xc2080dd120 0xc2080dd160] 17224}
+&{17004 [0xc2080dce20 0xc2080d94c0 0xc2080dcee0 0xc2080dcf20] 17224}
 ```
 
 Output:
@@ -33,7 +35,7 @@ Output:
 
 Code:
 ```go
-&{17357 [0xc2080dd280 0xc2080df880 0xc2080dd340 0xc2080dd380] 17571}
+&{17357 [0xc2080dd040 0xc2080d9780 0xc2080dd100 0xc2080dd140] 17571}
 ```
 
 Output:
