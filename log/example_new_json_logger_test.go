@@ -9,12 +9,7 @@ import (
 
 // JSONLogger Example
 func ExampleNewJSONLogger() {
-	var buf bytes.Buffer
-
-	logger := log.NewJSONLogger(&buf)
-	logger.Log("question", "what is the meaning of life?", "answer", 42)
-
-	fmt.Print(&buf)
+	log.NewJSONLogger(os.Stderr).Log("meaning of life", 42)
 	// Output:
-	// {"answer":42,"question":"what is the meaning of life?"}
+	// {"meaning_of_life":42}
 }

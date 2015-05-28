@@ -9,12 +9,7 @@ import (
 
 // PrefixLogger Example
 func ExampleNewPrefixLogger() {
-	var buf bytes.Buffer
-
-	logger := log.NewPrefixLogger(&buf)
-	logger.Log("question", "what is the meaning of life?", "answer", 42)
-
-	fmt.Print(&buf)
+	log.NewPrefixLogger(os.Stderr).Log("question", "What is the meaning of life?", "answer", 42)
 	// Output:
 	// question=what is the meaning of life? answer=42
 }

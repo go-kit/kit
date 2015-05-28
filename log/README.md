@@ -22,12 +22,12 @@ TODO
 
 Code:
 ```go
-&{17004 [0xc2080dce20 0xc2080d94c0 0xc2080dcee0 0xc2080dcf20] 17224}
+&{17004 [0xc2080dce50] 17102}
 ```
 
 Output:
 ```
-{"answer":42,"question":"what is the meaning of life?"}
+{"meaning_of_life":42}
 ```
 
 
@@ -35,7 +35,7 @@ Output:
 
 Code:
 ```go
-&{17357 [0xc2080dd040 0xc2080d9780 0xc2080dd100 0xc2080dd140] 17571}
+&{17235 [0xc2080dcfd0] 17395}
 ```
 
 Output:
