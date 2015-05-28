@@ -1,0 +1,25 @@
+{{with .PDoc}}
+
+# package {{.Name}}
+
+    import "{{.ImportPath}}"
+
+## Rationale
+
+{{comment_md .Doc}}
+
+## Usage
+{{if $.Examples}}
+{{range $.Examples}}
+#### {{.Doc}}
+Code:
+```go
+{{.Code}}
+```
+{{with .Output}}
+Output:
+```
+{{.}}```
+{{end}}
+{{end}}
+{{end}}{{end}}
