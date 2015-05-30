@@ -28,15 +28,13 @@ func TestLogfmtLogger(t *testing.T) {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 
-	// Logfmt does not have a handle compound types at this time.
-
-	// buf.Reset()
-	// if err := logger.Log("std_map", map[int]int{1: 2}, "my_map", mymap{0: 0}); err != nil {
-	// 	t.Fatal(err)
-	// }
-	// if want, have := "std_map=map[1:2] my_map=special_behavior\n", buf.String(); want != have {
-	// 	t.Errorf("want %#v, have %#v", want, have)
-	// }
+	buf.Reset()
+	if err := logger.Log("std_map", map[int]int{1: 2}, "my_map", mymap{0: 0}); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := "std_map=\"unsupported value type\" my_map=special_behavior\n", buf.String(); want != have {
+		t.Errorf("want %#v, have %#v", want, have)
+	}
 }
 
 func BenchmarkLogfmtLoggerSimple(b *testing.B) {
