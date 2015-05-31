@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
+	"gopkg.in/logfmt.v0"
 )
 
 func TestLogfmtLogger(t *testing.T) {
@@ -32,7 +33,7 @@ func TestLogfmtLogger(t *testing.T) {
 	if err := logger.Log("std_map", map[int]int{1: 2}, "my_map", mymap{0: 0}); err != nil {
 		t.Fatal(err)
 	}
-	if want, have := "std_map=\"unsupported value type\" my_map=special_behavior\n", buf.String(); want != have {
+	if want, have := "std_map=\""+logfmt.ErrUnsupportedValueType.Error()+"\" my_map=special_behavior\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 }
