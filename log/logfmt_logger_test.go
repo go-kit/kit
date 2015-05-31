@@ -7,11 +7,12 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
+	"gopkg.in/logfmt.v0"
 )
 
-func TestPrefixLogger(t *testing.T) {
+func TestLogfmtLogger(t *testing.T) {
 	buf := &bytes.Buffer{}
-	logger := log.NewPrefixLogger(buf)
+	logger := log.NewLogfmtLogger(buf)
 
 	if err := logger.Log("hello", "world"); err != nil {
 		t.Fatal(err)
@@ -32,21 +33,21 @@ func TestPrefixLogger(t *testing.T) {
 	if err := logger.Log("std_map", map[int]int{1: 2}, "my_map", mymap{0: 0}); err != nil {
 		t.Fatal(err)
 	}
-	if want, have := "std_map=map[1:2] my_map=special_behavior\n", buf.String(); want != have {
+	if want, have := "std_map=\""+logfmt.ErrUnsupportedValueType.Error()+"\" my_map=special_behavior\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 }
 
-func BenchmarkPrefixLoggerSimple(b *testing.B) {
-	benchmarkRunner(b, log.NewPrefixLogger(ioutil.Discard), baseMessage)
+func BenchmarkLogfmtLoggerSimple(b *testing.B) {
+	benchmarkRunner(b, log.NewLogfmtLogger(ioutil.Discard), baseMessage)
 }
 
-func BenchmarkPrefixLoggerContextual(b *testing.B) {
-	benchmarkRunner(b, log.NewPrefixLogger(ioutil.Discard), withMessage)
+func BenchmarkLogfmtLoggerContextual(b *testing.B) {
+	benchmarkRunner(b, log.NewLogfmtLogger(ioutil.Discard), withMessage)
 }
 
-func TestPrefixLoggerConcurrency(t *testing.T) {
-	testConcurrency(t, log.NewPrefixLogger(ioutil.Discard))
+func TestLogfmtLoggerConcurrency(t *testing.T) {
+	testConcurrency(t, log.NewLogfmtLogger(ioutil.Discard))
 }
 
 type mymap map[int]int

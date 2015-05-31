@@ -61,7 +61,7 @@ func main() {
 
 	// `package log` domain
 	var logger kitlog.Logger
-	logger = kitlog.NewPrefixLogger(os.Stderr)
+	logger = kitlog.NewLogfmtLogger(os.Stderr)
 	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC, "caller", kitlog.DefaultCaller)
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
 	stdlog.SetFlags(0)                                // flags are handled in our logger

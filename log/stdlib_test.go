@@ -12,7 +12,7 @@ func TestStdlibWriter(t *testing.T) {
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
 	log.SetFlags(log.LstdFlags)
-	logger := NewPrefixLogger(StdlibWriter{})
+	logger := NewLogfmtLogger(StdlibWriter{})
 	logger.Log("key", "val")
 	timestamp := time.Now().Format("2006/01/02 15:04:05")
 	if want, have := timestamp+" key=val\n", buf.String(); want != have {
@@ -22,7 +22,7 @@ func TestStdlibWriter(t *testing.T) {
 
 func TestStdlibAdapterUsage(t *testing.T) {
 	buf := &bytes.Buffer{}
-	logger := NewPrefixLogger(buf)
+	logger := NewLogfmtLogger(buf)
 	writer := NewStdlibAdapter(logger)
 	stdlog := log.New(writer, "", 0)
 
@@ -34,10 +34,10 @@ func TestStdlibAdapterUsage(t *testing.T) {
 		0:                                      "msg=hello\n",
 		log.Ldate:                              "ts=" + date + " msg=hello\n",
 		log.Ltime:                              "ts=" + time + " msg=hello\n",
-		log.Ldate | log.Ltime:                  "ts=" + date + " " + time + " msg=hello\n",
+		log.Ldate | log.Ltime:                  "ts=\"" + date + " " + time + "\" msg=hello\n",
 		log.Lshortfile:                         "file=stdlib_test.go:44 msg=hello\n",
 		log.Lshortfile | log.Ldate:             "ts=" + date + " file=stdlib_test.go:44 msg=hello\n",
-		log.Lshortfile | log.Ldate | log.Ltime: "ts=" + date + " " + time + " file=stdlib_test.go:44 msg=hello\n",
+		log.Lshortfile | log.Ldate | log.Ltime: "ts=\"" + date + " " + time + "\" file=stdlib_test.go:44 msg=hello\n",
 	} {
 		buf.Reset()
 		stdlog.SetFlags(flag)
@@ -50,17 +50,17 @@ func TestStdlibAdapterUsage(t *testing.T) {
 
 func TestStdLibAdapterExtraction(t *testing.T) {
 	buf := &bytes.Buffer{}
-	logger := NewPrefixLogger(buf)
+	logger := NewLogfmtLogger(buf)
 	writer := NewStdlibAdapter(logger)
 	for input, want := range map[string]string{
 		"hello":                                            "msg=hello\n",
 		"2009/01/23: hello":                                "ts=2009/01/23 msg=hello\n",
-		"2009/01/23 01:23:23: hello":                       "ts=2009/01/23 01:23:23 msg=hello\n",
+		"2009/01/23 01:23:23: hello":                       "ts=\"2009/01/23 01:23:23\" msg=hello\n",
 		"01:23:23: hello":                                  "ts=01:23:23 msg=hello\n",
-		"2009/01/23 01:23:23.123123: hello":                "ts=2009/01/23 01:23:23.123123 msg=hello\n",
-		"2009/01/23 01:23:23.123123 /a/b/c/d.go:23: hello": "ts=2009/01/23 01:23:23.123123 file=/a/b/c/d.go:23 msg=hello\n",
+		"2009/01/23 01:23:23.123123: hello":                "ts=\"2009/01/23 01:23:23.123123\" msg=hello\n",
+		"2009/01/23 01:23:23.123123 /a/b/c/d.go:23: hello": "ts=\"2009/01/23 01:23:23.123123\" file=/a/b/c/d.go:23 msg=hello\n",
 		"01:23:23.123123 /a/b/c/d.go:23: hello":            "ts=01:23:23.123123 file=/a/b/c/d.go:23 msg=hello\n",
-		"2009/01/23 01:23:23 /a/b/c/d.go:23: hello":        "ts=2009/01/23 01:23:23 file=/a/b/c/d.go:23 msg=hello\n",
+		"2009/01/23 01:23:23 /a/b/c/d.go:23: hello":        "ts=\"2009/01/23 01:23:23\" file=/a/b/c/d.go:23 msg=hello\n",
 		"2009/01/23 /a/b/c/d.go:23: hello":                 "ts=2009/01/23 file=/a/b/c/d.go:23 msg=hello\n",
 		"/a/b/c/d.go:23: hello":                            "file=/a/b/c/d.go:23 msg=hello\n",
 	} {
