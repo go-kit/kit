@@ -1,8 +1,15 @@
+
+
 # package log
 
-`package log` provides a minimal interface for structured logging in services.
-It may be wrapped to encode conventions, enforce type-safety, etc.
-It can be used for both typical application log events, and log-structured data streams.
+    import "/Users/harlow/code/go/src/github.com/go-kit/kit/log"
+
+Package log provides basic interfaces for structured logging.
+
+The fundamental interface is Logger. Loggers create log events from
+key/value data.
+
+
 
 ## Rationale
 
@@ -10,45 +17,31 @@ TODO
 
 ## Usage
 
-Typical application logging.
 
+#### JSONLogger Example
+
+Code:
 ```go
-import "github.com/go-kit/kit/log"
-
-func main() {
-	logger := log.NewPrefixLogger(os.Stderr)
-	logger.Log("question", "what is the meaning of life?", "answer", 42)
-}
+&{17004 [0xc2080dce50] 17102}
 ```
 
-Contextual logging.
-
-```go
-func handle(logger log.Logger, req *Request) {
-	logger = log.With(logger, "txid", req.TransactionID, "query", req.Query)
-	logger.Log()
-
-	answer, err := process(logger, req.Query)
-	if err != nil {
-		logger.Log("err", err)
-		return
-	}
-
-	logger.Log("answer", answer)
-}
+Output:
+```
+{"meaning_of_life":42}
 ```
 
-Redirect stdlib log to gokit logger.
 
+#### PrefixLogger Example
+
+Code:
 ```go
-import (
-	"os"
-	stdlog "log"
-	kitlog "github.com/go-kit/kit/log"
-)
-
-func main() {
-	logger := kitlog.NewJSONLogger(os.Stdout)
-	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger))
-}
+&{17235 [0xc2080dcfd0] 17395}
 ```
+
+Output:
+```
+question=what is the meaning of life? answer=42
+```
+
+
+
