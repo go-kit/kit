@@ -12,7 +12,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-func TestSonyCircuitBreaker(t *testing.T) {
+func TestGobreaker(t *testing.T) {
 	var (
 		thru        int
 		last        gobreaker.State
@@ -23,7 +23,7 @@ func TestSonyCircuitBreaker(t *testing.T) {
 
 	var e endpoint.Endpoint
 	e = func(context.Context, interface{}) (interface{}, error) { thru++; return struct{}{}, myError }
-	e = circuitbreaker.NewSonyCircuitBreaker(gobreaker.Settings{
+	e = circuitbreaker.Gobreaker(gobreaker.Settings{
 		Timeout:       timeout,
 		OnStateChange: stateChange,
 	})(e)
