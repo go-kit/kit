@@ -17,7 +17,9 @@ To reach its next level of success, Go needs more than simple primitives and
 idioms. It needs a comprehensive toolkit, for coherent distributed programming
 in the large. Go kit is a set of packages and best practices, leveraging years
 of production experience, and providing a comprehensive, robust, and trustable
-platform for organizations who want to invest in Go.
+platform for organizations of any size.
+
+In short, Go kit brings Go to the modern enterprise.
 
 For more details, see
  [the motivating blog post](http://peter.bourgon.org/go-kit) and
