@@ -1,4 +1,4 @@
-# gokit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit)
+# Go kit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit)
 
 **Go kit** is a **distributed programming toolkit** designed for microservices.
 
@@ -51,9 +51,9 @@ For more details, see
 
 ### Dependency management
 
-Users who import gokit into their `package main` are responsible to organize
+Users who import Go kit into their `package main` are responsible to organize
 and maintain all of their dependencies to ensure code compatibility and build
-reproducibility. Gokit makes no direct use of dependency management tools like
+reproducibility. Go kit makes no direct use of dependency management tools like
 [Godep](https://github.com/tools/godep).
 
 We will use a variety of continuous integration providers to find and fix
@@ -68,16 +68,17 @@ Please see [CONTRIBUTING.md]. Thank you, [contributors]!
 
 ### API stability policy
 
-The gokit project depends on code maintained by others. This includes the Go
-standard library and sub-repositories and other external libraries.
-The Go language and standard library provide stability guarantees, but the other external libraries typically do not.
-[The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
-proposes a standard policy for package authors to advertise API stability.
-The go-kit project prefers to depend on code that abides the API stability policy.
+The Go kit project depends on code maintained by others. This includes the Go
+standard library and sub-repositories and other external libraries. The Go
+language and standard library provide stability guarantees, but the other
+external libraries typically do not.
+ [The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
+proposes a standard policy for package authors to advertise API stability. The
+Go kit project prefers to depend on code that abides the API stability policy.
 
 ## Related projects
 
-Projects with a ★ have had particular influence on gokit's design.
+Projects with a ★ have had particular influence on Go kit's design.
 
 ### Service frameworks
 
