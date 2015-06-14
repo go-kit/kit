@@ -17,9 +17,9 @@ func pureAdd(_ context.Context, a, b int64) int64 { return a + b }
 
 // proxyAdd returns an implementation of Add that invokes a remote Add
 // service.
-func proxyAdd(e endpoint.Endpoint, logger log.Logger) Add {
+func proxyAdd(remote endpoint.Endpoint, logger log.Logger) Add {
 	return func(ctx context.Context, a, b int64) int64 {
-		resp, err := e(ctx, &addRequest{a, b})
+		resp, err := remote(ctx, &addRequest{a, b})
 		if err != nil {
 			logger.Log("err", err)
 			return 0

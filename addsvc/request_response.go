@@ -1,6 +1,7 @@
 package main
 
-// The request and response types should be annotated sufficiently for all
+// The concrete request and response types are defined for each method our
+// service implements. Request types should be annotated sufficiently for all
 // transports we intend to use.
 
 type addRequest struct {

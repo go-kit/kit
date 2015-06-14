@@ -48,7 +48,7 @@ func main() {
 		thriftBufferSize = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
 		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
 
-		proxyHTTPAddr = fs.String("proxy.http.url", "", "if set, proxy requests over HTTP to this addsvc")
+		proxyHTTPURL = fs.String("proxy.http.url", "", "if set, proxy requests over HTTP to this addsvc")
 
 		zipkinServiceName            = fs.String("zipkin.service.name", "addsvc", "Zipkin service name")
 		zipkinCollectorAddr          = fs.String("zipkin.collector.addr", "", "Zipkin Scribe collector address (empty will log spans)")
@@ -109,12 +109,12 @@ func main() {
 
 	// Our business and operational domain
 	var a Add = pureAdd
-	if *proxyHTTPAddr != "" {
+	if *proxyHTTPURL != "" {
 		codec := jsoncodec.New()
 		makeResponse := func() interface{} { return &addResponse{} }
 
 		var e endpoint.Endpoint
-		e = httptransport.NewClient(*proxyHTTPAddr, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
+		e = httptransport.NewClient(*proxyHTTPURL, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
 		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
 
 		a = proxyAdd(e, logger)

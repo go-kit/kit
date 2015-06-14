@@ -1,21 +1,26 @@
 # package tracing
 
-`package tracing` provides [Dapper-style][dapper] request tracing to services.
+`package tracing` provides [Dapper][]-style request tracing to services.
 An implementation exists for [Zipkin][]; [Appdash][] support is planned.
 
-[dapper]: http://research.google.com/pubs/pub36356.html
+[Dapper]: http://research.google.com/pubs/pub36356.html
 [Zipkin]: https://blog.twitter.com/2012/distributed-systems-tracing-with-zipkin
 [Appdash]: https://sourcegraph.com/blog/117580140734
 
 ## Rationale
 
-TODO
+Request tracing is a fundamental building block for large distributed
+applications. It's instrumental in understanding request flows, identifying
+hot spots, and diagnosing errors. All microservice infrastructures will
+benefit from request tracing; sufficiently large infrastructures will require
+it.
 
 ## Usage
 
-Wrap a [server.Endpoint][] so that it emits traces to a Zipkin collector.
+Wrap a server- or client-side [endpoint][] so that it emits traces to a Zipkin
+collector.
 
-[server.Endpoint]: http://godoc.org/github.com/go-kit/kit/server#Endpoint
+[endpoint]: http://godoc.org/github.com/go-kit/kit/endpoint#Endpoint
 
 ```go
 func main() {
@@ -25,16 +30,21 @@ func main() {
 		scribeHost    = "scribe.internal.net"
 		timeout       = 50 * time.Millisecond
 		batchSize     = 100
-		batchInterval = 3 * time.Second
+		batchInterval = 5 * time.Second
 	)
-
 	spanFunc := zipkin.NewSpanFunc(myHost, myMethod)
 	collector, _ := zipkin.NewScribeCollector(scribeHost, timeout, batchSize, batchInterval)
 
-	var e server.Endpoint
-	e = makeEndpoint() // for your service
-	e = zipkin.AnnotateEndpoint(spanFunc, collector)
+	// Server-side
+	var server endpoint.Endpoint
+	server = makeEndpoint() // for your service
+	server = zipkin.AnnotateServer(spanFunc, collector)(server)
+	go serveViaHTTP(server)
 
-	serve(e)
+	// Client-side
+	before := httptransport.ClientBefore(zipkin.ToRequest(spanFunc))
+	var client endpoint.Endpoint
+	client = httptransport.NewClient(addr, codec, factory, before)
+	client = zipkin.AnnotateClient(spanFunc, collector)(client)
 }
 ```
