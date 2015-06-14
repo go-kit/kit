@@ -7,18 +7,33 @@
 
 ## Motivation
 
-See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video of the talk](https://www.youtube.com/watch?v=iFR_7AKkJFU).
+Go has emerged as the language of the server, but it remains underrepresented
+in large, consumer-focused tech companies like Facebook, Twitter, Netflix, and
+SoundCloud. These organizations have largely adopted JVM-based stacks for
+their business logic, owing in large part to libraries and ecosystems that
+directly support their microservice architectures.
+
+To reach its next level of success, Go needs more than simple primitives and
+idioms. It needs a comprehensive toolkit, for coherent distributed programming
+in the large. Go kit is a set of packages and best practices, leveraging years
+of production experience, and providing a comprehensive, robust, and trustable
+platform for organizations who want to invest in Go.
+
+For more details, see
+ [the motivating blog post](http://peter.bourgon.org/go-kit) and
+ [the video of the talk](https://www.youtube.com/watch?v=iFR_7AKkJFU).
 
 ## Goals
 
 - Operate in a heterogeneous SOA — expect to interact with mostly non-Go-kit services
 - RPC as the primary messaging pattern
 - Pluggable serialization and transport — not just JSON over HTTP
-- Zipkin-compatible request tracing
+- Operate within existing infrastructures — no mandates for specific tools or technologies
 
 ## Non-goals
 
-- Supporting messaging patterns other than RPC (in the initial release) — pub/sub, CQRS, etc.
+- Supporting messaging patterns other than RPC (in the initial release) — MPI, pub/sub, CQRS, etc.
+- Re-implementing functionality that can be provided by wrapping existing packages
 - Having opinions on deployment, orchestration, process supervision, etc.
 - Having opinions on configuration passing — flags, env vars, files, etc.
 
@@ -29,20 +44,18 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 - [`package metrics`](https://github.com/go-kit/kit/tree/master/metrics) — **implemented**
 - [`package endpoint`](https://github.com/go-kit/kit/tree/master/endpoint) — **implemented**
 - [`package transport`](https://github.com/go-kit/kit/tree/master/transport) — **implemented**
+<<<<<<< HEAD
 - [`package circuitbreaker`](https://github.com/go-kit/kit/tree/master/circuitbreaker) — **implemented**
 - [`package loadbalancer`](https://github.com/go-kit/kit/tree/master/loadbalancer) — **implemented**
 - [`package ratelimit`](https://github.com/go-kit/kit/tree/master/ratelimit) — **implemented**
 - [`package tracing`](https://github.com/go-kit/kit/tree/master/tracing) — prototyping
 - Client patterns — prototyping
+=======
+- [`package log`](https://github.com/go-kit/kit/tree/master/log) — **implemented**
+- [`package tracing`](https://github.com/go-kit/kit/tree/master/tracing) — Zipkin supported, Appdash coming
+>>>>>>> README: updates and rationales
 - Service discovery — pending
 - Example [addsvc](https://github.com/go-kit/kit/tree/master/addsvc) — **implemented**
-
-## Contributing
-
-Please see [CONTRIBUTING.md]. Thank you, [contributors]!
-
-[CONTRIBUTING.md]: /CONTRIBUTING.md
-[contributors]: https://github.com/go-kit/kit/graphs/contributors
 
 ### Dependency management
 
@@ -53,6 +66,13 @@ reproducibility. Gokit makes no direct use of dependency management tools like
 
 We will use a variety of continuous integration providers to find and fix
 compatibility problems as soon as they occur.
+
+## Contributing
+
+Please see [CONTRIBUTING.md]. Thank you, [contributors]!
+
+[CONTRIBUTING.md]: /CONTRIBUTING.md
+[contributors]: https://github.com/go-kit/kit/graphs/contributors
 
 ### API stability policy
 

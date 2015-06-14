@@ -21,10 +21,10 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
-	httpclient "github.com/go-kit/kit/addsvc/client/http"
-	"github.com/go-kit/kit/addsvc/pb"
 	"github.com/go-kit/kit/endpoint"
+	thriftadd "github.com/go-kit/kit/examples/addsvc/_thrift/gen-go/add"
+	httpclient "github.com/go-kit/kit/examples/addsvc/client/http"
+	"github.com/go-kit/kit/examples/addsvc/pb"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/expvar"
@@ -48,7 +48,7 @@ func main() {
 		thriftBufferSize = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
 		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
 
-		proxyHTTPAddr = fs.String("proxy.http.url", "", "if set, proxy requests over HTTP to this addsvc")
+		proxyHTTPURL = fs.String("proxy.http.url", "", "if set, proxy requests over HTTP to this addsvc")
 
 		zipkinServiceName            = fs.String("zipkin.service.name", "addsvc", "Zipkin service name")
 		zipkinCollectorAddr          = fs.String("zipkin.collector.addr", "", "Zipkin Scribe collector address (empty will log spans)")
@@ -62,7 +62,7 @@ func main() {
 	// `package log` domain
 	var logger kitlog.Logger
 	logger = kitlog.NewLogfmtLogger(os.Stderr)
-	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
+	logger = kitlog.NewContext(logger).With("ts", kitlog.DefaultTimestampUTC)
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
 	stdlog.SetFlags(0)                                // flags are handled in our logger
 
@@ -96,8 +96,9 @@ func main() {
 		if zipkinCollector, err = zipkin.NewScribeCollector(
 			*zipkinCollectorAddr,
 			*zipkinCollectorTimeout,
-			*zipkinCollectorBatchSize,
-			*zipkinCollectorBatchInterval,
+			zipkin.ScribeBatchSize(*zipkinCollectorBatchSize),
+			zipkin.ScribeBatchInterval(*zipkinCollectorBatchInterval),
+			zipkin.ScribeLogger(logger),
 		); err != nil {
 			logger.Log("err", err)
 			os.Exit(1)
@@ -105,13 +106,12 @@ func main() {
 	}
 	zipkinMethodName := "add"
 	zipkinSpanFunc := zipkin.MakeNewSpanFunc(zipkinHostPort, *zipkinServiceName, zipkinMethodName)
-	zipkin.Log.Swap(logger) // log diagnostic/error details
 
 	// Our business and operational domain
 	var a Add = pureAdd
-	if *proxyHTTPAddr != "" {
+	if *proxyHTTPURL != "" {
 		var e endpoint.Endpoint
-		e = httpclient.NewClient("GET", *proxyHTTPAddr, zipkin.ToRequest(zipkinSpanFunc))
+		e = httpclient.NewClient("GET", *proxyHTTPURL, zipkin.ToRequest(zipkinSpanFunc))
 		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
 		a = proxyAdd(e, logger)
 	}
@@ -142,8 +142,8 @@ func main() {
 	go func() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
-		before := []httptransport.BeforeFunc{zipkin.ToContext(zipkinSpanFunc)}
-		after := []httptransport.AfterFunc{}
+		before := []httptransport.RequestFunc{zipkin.ToContext(zipkinSpanFunc, logger)}
+		after := []httptransport.ResponseFunc{}
 		handler := makeHTTPBinding(ctx, e, before, after)
 		logger.Log("addr", *httpAddr, "transport", "HTTP/JSON")
 		errc <- http.ListenAndServe(*httpAddr, handler)
@@ -159,10 +159,6 @@ func main() {
 		s := grpc.NewServer() // uses its own context?
 		pb.RegisterAddServer(s, grpcBinding{e})
 		logger.Log("addr", *grpcAddr, "transport", "gRPC")
-		go func() {
-			<-root.Done()
-			s.Stop()
-		}()
 		errc <- s.Serve(ln)
 	}()
 
