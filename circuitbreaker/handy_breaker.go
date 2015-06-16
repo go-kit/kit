@@ -1,7 +1,6 @@
 package circuitbreaker
 
 import (
-	"errors"
 	"time"
 
 	"github.com/streadway/handy/breaker"
@@ -9,10 +8,6 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 )
-
-// ErrCircuitBreakerOpen is returned when the HandyBreaker's circuit is open
-// and the request is stopped from proceeding.
-var ErrCircuitBreakerOpen = errors.New("circuit breaker open")
 
 // HandyBreaker returns an endpoint.Middleware that implements the circuit
 // breaker pattern using the streadway/handy/breaker package. Only errors
@@ -26,7 +21,7 @@ func HandyBreaker(failureRatio float64) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			if !b.Allow() {
-				return nil, ErrCircuitBreakerOpen
+				return nil, breaker.ErrCircuitOpen
 			}
 
 			defer func(begin time.Time) {
