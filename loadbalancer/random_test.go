@@ -12,14 +12,13 @@ import (
 
 func TestRandomStrategy(t *testing.T) {
 	var (
-		n         = 3
-		counts    = make([]int, n)
-		endpoints = make([]endpoint.Endpoint, n)
+		counts    = []int{0, 0, 0}
+		endpoints = []endpoint.Endpoint{
+			func(context.Context, interface{}) (interface{}, error) { counts[0]++; return struct{}{}, nil },
+			func(context.Context, interface{}) (interface{}, error) { counts[1]++; return struct{}{}, nil },
+			func(context.Context, interface{}) (interface{}, error) { counts[2]++; return struct{}{}, nil },
+		}
 	)
-	for i := 0; i < n; i++ {
-		i0 := i
-		endpoints[i] = func(context.Context, interface{}) (interface{}, error) { counts[i0]++; return struct{}{}, nil }
-	}
 
 	p := newMockPublisher([]endpoint.Endpoint{})
 	s := loadbalancer.Random(p)
@@ -31,17 +30,17 @@ func TestRandomStrategy(t *testing.T) {
 	}
 
 	p.replace([]endpoint.Endpoint{endpoints[0]})
-	for i := 0; i < n; i++ {
+	for i := 0; i < len(counts); i++ {
 		e, _ := s.Next()
 		e(context.Background(), struct{}{})
 	}
-	if want, have := n, counts[0]; want != have {
+	if want, have := len(counts), counts[0]; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	counts[0] = 0
 	p.replace(endpoints)
-	n = 10000
+	n := 10000
 	for i := 0; i < n; i++ {
 		e, _ := s.Next()
 		e(context.Background(), struct{}{})
