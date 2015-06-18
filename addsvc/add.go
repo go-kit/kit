@@ -3,6 +3,7 @@ package main
 import (
 	"golang.org/x/net/context"
 
+	"github.com/go-kit/kit/addsvc/reqrep"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 )
@@ -19,12 +20,12 @@ func pureAdd(_ context.Context, a, b int64) int64 { return a + b }
 // service.
 func proxyAdd(e endpoint.Endpoint, logger log.Logger) Add {
 	return func(ctx context.Context, a, b int64) int64 {
-		resp, err := e(ctx, &addRequest{a, b})
+		resp, err := e(ctx, &reqrep.AddRequest{A: a, B: b})
 		if err != nil {
 			logger.Log("err", err)
 			return 0
 		}
-		addResp, ok := resp.(*addResponse)
+		addResp, ok := resp.(*reqrep.AddResponse)
 		if !ok {
 			logger.Log("err", endpoint.ErrBadCast)
 			return 0

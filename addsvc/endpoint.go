@@ -3,6 +3,7 @@ package main
 import (
 	"golang.org/x/net/context"
 
+	"github.com/go-kit/kit/addsvc/reqrep"
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -18,13 +19,13 @@ func makeEndpoint(a Add) endpoint.Endpoint {
 			return nil, endpoint.ErrContextCanceled
 		}
 
-		addReq, ok := request.(*addRequest)
+		addReq, ok := request.(*reqrep.AddRequest)
 		if !ok {
 			return nil, endpoint.ErrBadCast
 		}
 
 		v := a(ctx, addReq.A, addReq.B)
 
-		return addResponse{V: v}, nil
+		return &reqrep.AddResponse{V: v}, nil
 	}
 }

@@ -24,6 +24,7 @@ import (
 
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
 	"github.com/go-kit/kit/addsvc/pb"
+	"github.com/go-kit/kit/addsvc/reqrep"
 	"github.com/go-kit/kit/endpoint"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -111,7 +112,7 @@ func main() {
 	var a Add = pureAdd
 	if *proxyHTTPAddr != "" {
 		codec := jsoncodec.New()
-		makeResponse := func() interface{} { return &addResponse{} }
+		makeResponse := func() interface{} { return &reqrep.AddResponse{} }
 
 		var e endpoint.Endpoint
 		e = httptransport.NewClient(*proxyHTTPAddr, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
@@ -149,7 +150,7 @@ func main() {
 		field := metrics.Field{Key: "transport", Value: "http"}
 		before := httptransport.BindingBefore(zipkin.ToContext(zipkinSpanFunc))
 		after := httptransport.BindingAfter(httptransport.SetContentType("application/json"))
-		makeRequest := func() interface{} { return &addRequest{} }
+		makeRequest := func() interface{} { return &reqrep.AddRequest{} }
 
 		var handler http.Handler
 		handler = httptransport.NewBinding(ctx, makeRequest, jsoncodec.New(), e, before, after)

@@ -6,6 +6,7 @@ import (
 	"golang.org/x/net/context"
 
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
+	"github.com/go-kit/kit/addsvc/reqrep"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/metrics"
 )
@@ -19,12 +20,12 @@ type thriftBinding struct {
 
 // Add implements Thrift's AddService interface.
 func (tb thriftBinding) Add(a, b int64) (*thriftadd.AddReply, error) {
-	r, err := tb.Endpoint(tb.Context, addRequest{a, b})
+	r, err := tb.Endpoint(tb.Context, reqrep.AddRequest{A: a, B: b})
 	if err != nil {
 		return nil, err
 	}
 
-	resp, ok := r.(*addResponse)
+	resp, ok := r.(*reqrep.AddResponse)
 	if !ok {
 		return nil, endpoint.ErrBadCast
 	}
