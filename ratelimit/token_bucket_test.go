@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	jujuratelimit "github.com/juju/ratelimit"
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
@@ -14,10 +15,8 @@ import (
 func TestTokenBucketLimiter(t *testing.T) {
 	e := func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
 	for _, n := range []int{1, 2, 100} {
-		testLimiter(t, ratelimit.NewTokenBucketLimiter(
-			ratelimit.TokenBucketLimiterRate(float64(n)),
-			ratelimit.TokenBucketLimiterCapacity(int64(n)),
-		)(e), int(n))
+		tb := jujuratelimit.NewBucketWithRate(float64(n), int64(n))
+		testLimiter(t, ratelimit.NewTokenBucketLimiter(tb)(e), n)
 	}
 }
 
@@ -26,11 +25,7 @@ func TestTokenBucketThrottler(t *testing.T) {
 	s := func(d0 time.Duration) { d = d0 }
 
 	e := func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-	e = ratelimit.NewTokenBucketThrottler(
-		ratelimit.TokenBucketThrottlerRate(1),
-		ratelimit.TokenBucketThrottlerCapacity(1),
-		ratelimit.TokenBucketThrottlerSleep(s),
-	)(e)
+	e = ratelimit.NewTokenBucketThrottler(jujuratelimit.NewBucketWithRate(1, 1), s)(e)
 
 	// First request should go through with no delay.
 	e(context.Background(), struct{}{})
