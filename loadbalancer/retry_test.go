@@ -18,12 +18,8 @@ func TestRetry(t *testing.T) {
 		lb        = loadbalancer.RoundRobin(p)
 	)
 
-	{
-		max := 999
-		e := loadbalancer.Retry(max, lb)
-		if _, err := e(context.Background(), struct{}{}); err == nil {
-			t.Errorf("expected error, got none")
-		}
+	if _, err := loadbalancer.Retry(999, lb)(context.Background(), struct{}{}); err == nil {
+		t.Errorf("expected error, got none")
 	}
 
 	endpoints = []endpoint.Endpoint{
@@ -34,19 +30,11 @@ func TestRetry(t *testing.T) {
 	p.Replace(endpoints)
 	runtime.Gosched()
 
-	{
-		max := len(endpoints) - 1
-		e := loadbalancer.Retry(max, lb)
-		if _, err := e(context.Background(), struct{}{}); err == nil {
-			t.Errorf("expected error, got none")
-		}
+	if _, err := loadbalancer.Retry(len(endpoints)-1, lb)(context.Background(), struct{}{}); err == nil {
+		t.Errorf("expected error, got none")
 	}
 
-	{
-		max := len(endpoints)
-		e := loadbalancer.Retry(max, lb)
-		if _, err := e(context.Background(), struct{}{}); err != nil {
-			t.Error(err)
-		}
+	if _, err := loadbalancer.Retry(len(endpoints), lb)(context.Background(), struct{}{}); err != nil {
+		t.Error(err)
 	}
 }
