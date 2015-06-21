@@ -3,32 +3,50 @@ package loadbalancer
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 )
 
-// Retry yields an endpoint that invokes the load balancer up to max times.
-func Retry(max int, lb LoadBalancer) endpoint.Endpoint {
+// Retry yields an endpoint that takes endpoints from the load balancer.
+// Invocations that return errors will be retried until they succeed, up to
+// max times, or until the timeout is elapsed, whichever comes first.
+func Retry(max int, timeout time.Duration, lb LoadBalancer) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		errs := []string{}
+		var (
+			newctx, cancel = context.WithTimeout(ctx, timeout)
+			responses      = make(chan interface{}, 1)
+			errs           = make(chan error, 1)
+			a              = []string{}
+		)
+		defer cancel()
 		for i := 1; i <= max; i++ {
-			e, err := lb.Get()
-			if err != nil {
-				errs = append(errs, err.Error())
-				return nil, fmt.Errorf("%s", strings.Join(errs, "; ")) // fatal
+			go func() {
+				e, err := lb.Get()
+				if err != nil {
+					errs <- err
+					return
+				}
+				response, err := e(newctx, request)
+				if err != nil {
+					errs <- err
+					return
+				}
+				responses <- response
+			}()
+
+			select {
+			case <-newctx.Done():
+				return nil, newctx.Err()
+			case response := <-responses:
+				return response, nil
+			case err := <-errs:
+				a = append(a, err.Error())
+				continue
 			}
-			response, err := e(ctx, request)
-			if err != nil {
-				errs = append(errs, err.Error())
-				continue // try again
-			}
-			return response, err
 		}
-		if len(errs) <= 0 {
-			panic("impossible state in retry load balancer")
-		}
-		return nil, fmt.Errorf("%s", strings.Join(errs, "; "))
+		return nil, fmt.Errorf("retry attempts exceeded (%s)", strings.Join(a, "; "))
 	}
 }
