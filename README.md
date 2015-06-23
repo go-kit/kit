@@ -11,7 +11,7 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 
 ## Goals
 
-- Operate in a heterogeneous SOA — expect to interact with mostly non-gokit services
+- Operate in a heterogeneous SOA — expect to interact with mostly non-Go-kit services
 - RPC as the primary messaging pattern
 - Pluggable serialization and transport — not just JSON over HTTP
 - Zipkin-compatible request tracing
@@ -46,7 +46,7 @@ Please see [CONTRIBUTING.md]. Thank you, [contributors]!
 
 ### Dependency management
 
-Users who import gokit into their `package main` are responsible to organize
+Users who import Go kit into their `package main` are responsible to organize
 and maintain all of their dependencies to ensure code compatibility and build
 reproducibility. Gokit makes no direct use of dependency management tools like
 [Godep](https://github.com/tools/godep).
@@ -56,7 +56,7 @@ compatibility problems as soon as they occur.
 
 ### API stability policy
 
-The gokit project depends on code maintained by others.
+The Go kit project depends on code maintained by others.
 This includes the Go standard library and sub-repositories and other external libraries.
 The Go language and standard library provide stability guarantees, but the other external libraries typically do not.
  [The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
@@ -65,7 +65,7 @@ The go-kit project prefers to depend on code that abides the API stability polic
 
 ## Related projects
 
-Projects with a ★ have had particular influence on gokit's design.
+Projects with a ★ have had particular influence on Go kit's design.
 
 ### Service frameworks
 
