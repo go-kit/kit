@@ -61,7 +61,7 @@ This includes the Go standard library and sub-repositories and other external li
 The Go language and standard library provide stability guarantees, but the other external libraries typically do not.
  [The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
 proposes a standard policy for package authors to advertise API stability.
-The go-kit project prefers to depend on code that abides the API stability policy.
+The Go kit project prefers to depend on code that abides the API stability policy.
 
 ## Related projects
 
