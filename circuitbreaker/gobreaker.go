@@ -12,8 +12,7 @@ import (
 // the wrapped endpoint count against the circuit breaker's error count.
 //
 // See http://godoc.org/github.com/sony/gobreaker for more information.
-func Gobreaker(settings gobreaker.Settings) endpoint.Middleware {
-	cb := gobreaker.NewCircuitBreaker(settings)
+func Gobreaker(cb *gobreaker.CircuitBreaker) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			return cb.Execute(func() (interface{}, error) { return next(ctx, request) })

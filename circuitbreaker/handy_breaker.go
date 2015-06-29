@@ -16,19 +16,18 @@ import (
 //
 // See http://godoc.org/github.com/streadway/handy/breaker for more
 // information.
-func HandyBreaker(failureRatio float64) endpoint.Middleware {
-	b := breaker.NewBreaker(failureRatio)
+func HandyBreaker(cb breaker.Breaker) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			if !b.Allow() {
+			if !cb.Allow() {
 				return nil, breaker.ErrCircuitOpen
 			}
 
 			defer func(begin time.Time) {
 				if err == nil {
-					b.Success(time.Since(begin))
+					cb.Success(time.Since(begin))
 				} else {
-					b.Failure(time.Since(begin))
+					cb.Failure(time.Since(begin))
 				}
 			}(time.Now())
 
