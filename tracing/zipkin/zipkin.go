@@ -54,7 +54,7 @@ const (
 // and submits the span to the collector. If no span is found in the context,
 // a new span is generated and inserted.
 func AnnotateServer(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
-	return func(e endpoint.Endpoint) endpoint.Endpoint {
+	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			span, ok := fromContext(ctx)
 			if !ok {
@@ -63,7 +63,7 @@ func AnnotateServer(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
 			}
 			span.Annotate(ServerReceive)
 			defer func() { span.Annotate(ServerSend); c.Collect(span) }()
-			return e(ctx, request)
+			return next(ctx, request)
 		}
 	}
 }
@@ -74,7 +74,7 @@ func AnnotateServer(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
 // collector. If no span is found in the context, a new span is generated and
 // inserted.
 func AnnotateClient(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
-	return func(e endpoint.Endpoint) endpoint.Endpoint {
+	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			var clientSpan *Span
 			parentSpan, ok := fromContext(ctx)
@@ -87,7 +87,7 @@ func AnnotateClient(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
 			defer func() { ctx = context.WithValue(ctx, SpanContextKey, parentSpan) }() // reset
 			clientSpan.Annotate(ClientSend)
 			defer func() { clientSpan.Annotate(ClientReceive); c.Collect(clientSpan) }()
-			return e(ctx, request)
+			return next(ctx, request)
 		}
 	}
 }
