@@ -1,14 +1,11 @@
 package main
 
 import (
-	"time"
-
 	"golang.org/x/net/context"
 
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
 	"github.com/go-kit/kit/addsvc/reqrep"
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/metrics"
 )
 
 // A binding wraps an Endpoint so that it's usable by a transport.
@@ -20,33 +17,29 @@ type thriftBinding struct {
 
 // Add implements Thrift's AddService interface.
 func (tb thriftBinding) Add(a, b int64) (*thriftadd.AddReply, error) {
-	r, err := tb.Endpoint(tb.Context, reqrep.AddRequest{A: a, B: b})
-	if err != nil {
+	var (
+		errs    = make(chan error, 1)
+		replies = make(chan *thriftadd.AddReply, 1)
+	)
+	go func() {
+		r, err := tb.Endpoint(tb.Context, reqrep.AddRequest{A: a, B: b})
+		if err != nil {
+			errs <- err
+			return
+		}
+		resp, ok := r.(*reqrep.AddResponse)
+		if !ok {
+			errs <- endpoint.ErrBadCast
+			return
+		}
+		replies <- &thriftadd.AddReply{Value: resp.V}
+	}()
+	select {
+	case <-tb.Context.Done():
+		return nil, context.DeadlineExceeded
+	case err := <-errs:
 		return nil, err
+	case reply := <-replies:
+		return reply, nil
 	}
-
-	resp, ok := r.(*reqrep.AddResponse)
-	if !ok {
-		return nil, endpoint.ErrBadCast
-	}
-
-	return &thriftadd.AddReply{Value: resp.V}, nil
-}
-
-func thriftInstrument(requests metrics.Counter, duration metrics.Histogram) func(thriftadd.AddService) thriftadd.AddService {
-	return func(next thriftadd.AddService) thriftadd.AddService {
-		return thriftInstrumented{requests, duration, next}
-	}
-}
-
-type thriftInstrumented struct {
-	requests metrics.Counter
-	duration metrics.Histogram
-	next     thriftadd.AddService
-}
-
-func (i thriftInstrumented) Add(a, b int64) (*thriftadd.AddReply, error) {
-	i.requests.Add(1)
-	defer func(begin time.Time) { i.duration.Observe(time.Since(begin).Nanoseconds()) }(time.Now())
-	return i.next.Add(a, b)
 }

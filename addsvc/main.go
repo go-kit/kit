@@ -174,13 +174,7 @@ func main() {
 			return
 		}
 		s := grpc.NewServer() // uses its own context?
-		field := metrics.Field{Key: "transport", Value: "grpc"}
-
-		var addServer pb.AddServer
-		addServer = grpcBinding{e}
-		addServer = grpcInstrument(requests.With(field), duration.With(field))(addServer)
-
-		pb.RegisterAddServer(s, addServer)
+		pb.RegisterAddServer(s, grpcBinding{e})
 		logger.Log("addr", *grpcAddr, "transport", "gRPC")
 		errc <- s.Serve(ln)
 	}()
@@ -233,15 +227,9 @@ func main() {
 			return
 		}
 
-		field := metrics.Field{Key: "transport", Value: "thrift"}
-
-		var service thriftadd.AddService
-		service = thriftBinding{ctx, e}
-		service = thriftInstrument(requests.With(field), duration.With(field))(service)
-
 		logger.Log("addr", *thriftAddr, "transport", "Thrift")
 		errc <- thrift.NewTSimpleServer4(
-			thriftadd.NewAddServiceProcessor(service),
+			thriftadd.NewAddServiceProcessor(thriftBinding{ctx, e}),
 			transport,
 			transportFactory,
 			protocolFactory,
