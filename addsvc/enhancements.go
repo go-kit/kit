@@ -3,6 +3,8 @@ package main
 import (
 	"time"
 
+	"github.com/go-kit/kit/metrics"
+
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/log"
@@ -16,6 +18,18 @@ func logging(logger log.Logger) func(Add) Add {
 			}(time.Now())
 			v = next(ctx, a, b)
 			return
+		}
+	}
+}
+
+func instrument(requests metrics.Counter, duration metrics.Histogram) func(Add) Add {
+	return func(next Add) Add {
+		return func(ctx context.Context, a, b int64) int64 {
+			defer func(begin time.Time) {
+				requests.Add(1)
+				duration.Observe(time.Since(begin).Nanoseconds())
+			}(time.Now())
+			return next(ctx, a, b)
 		}
 	}
 }

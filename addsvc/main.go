@@ -18,14 +18,11 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
-	"github.com/streadway/handy/cors"
-	"github.com/streadway/handy/encoding"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
 	"github.com/go-kit/kit/addsvc/pb"
-	"github.com/go-kit/kit/addsvc/reqrep"
 	"github.com/go-kit/kit/endpoint"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -33,8 +30,6 @@ import (
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/metrics/statsd"
 	"github.com/go-kit/kit/tracing/zipkin"
-	jsoncodec "github.com/go-kit/kit/transport/codec/json"
-	httptransport "github.com/go-kit/kit/transport/http"
 )
 
 func main() {
@@ -113,16 +108,14 @@ func main() {
 	// Our business and operational domain
 	var a Add = pureAdd
 	if *proxyHTTPAddr != "" {
-		codec := jsoncodec.New()
-		makeResponse := func() interface{} { return &reqrep.AddResponse{} }
-
-		var e endpoint.Endpoint
-		e = httptransport.NewClient(*proxyHTTPAddr, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
-		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
-
-		a = proxyAdd(e, logger)
+		// TODO
+		//var e endpoint.Endpoint
+		//e = httptransport.NewClient(*proxyHTTPAddr, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
+		//e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
+		//a = proxyAdd(e, logger)
 	}
 	a = logging(logger)(a)
+	a = instrument(requests, duration)(a)
 
 	// Server domain
 	var e endpoint.Endpoint
@@ -146,24 +139,7 @@ func main() {
 
 	// Transport: HTTP (JSON)
 	go func() {
-		ctx, cancel := context.WithCancel(root)
-		defer cancel()
-
-		field := metrics.Field{Key: "transport", Value: "http"}
-		before := httptransport.BindingBefore(zipkin.ToContext(zipkinSpanFunc))
-		after := httptransport.BindingAfter(httptransport.SetContentType("application/json"))
-		makeRequest := func() interface{} { return &reqrep.AddRequest{} }
-
-		var handler http.Handler
-		handler = httptransport.NewBinding(ctx, makeRequest, jsoncodec.New(), e, before, after)
-		handler = encoding.Gzip(handler)
-		handler = cors.Middleware(cors.Config{})(handler)
-		handler = httpInstrument(requests.With(field), duration.With(field))(handler)
-
-		mux := http.NewServeMux()
-		mux.Handle("/add", handler)
-		logger.Log("addr", *httpAddr, "transport", "HTTP")
-		errc <- http.ListenAndServe(*httpAddr, mux)
+		logger.Log("addr", *httpAddr, "transport", "HTTP/JSON", "msg", "temporarily disabled")
 	}()
 
 	// Transport: gRPC
