@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"net/rpc"
 	"os"
 	"os/signal"
 	"strings"
@@ -44,7 +45,8 @@ func main() {
 		debugAddr        = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
 		httpAddr         = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
 		grpcAddr         = fs.String("grpc.addr", ":8002", "Address for gRPC server")
-		thriftAddr       = fs.String("thrift.addr", ":8003", "Address for Thrift server")
+		netrpcAddr       = fs.String("netrpc.addr", ":8003", "Address for net/rpc server")
+		thriftAddr       = fs.String("thrift.addr", ":8004", "Address for Thrift server")
 		thriftProtocol   = fs.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
 		thriftBufferSize = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
 		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
@@ -181,6 +183,17 @@ func main() {
 		pb.RegisterAddServer(s, addServer)
 		logger.Log("addr", *grpcAddr, "transport", "gRPC")
 		errc <- s.Serve(ln)
+	}()
+
+	// Transport: net/rpc
+	go func() {
+		ctx, cancel := context.WithCancel(root)
+		defer cancel()
+		s := rpc.NewServer()
+		s.RegisterName("addsvc", NetrpcBinding{ctx, e})
+		s.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
+		logger.Log("addr", *netrpcAddr, "transport", "net/rpc")
+		errc <- http.ListenAndServe(*netrpcAddr, s)
 	}()
 
 	// Transport: Thrift

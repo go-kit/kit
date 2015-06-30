@@ -14,14 +14,30 @@ import (
 func NewClient(cc *grpc.ClientConn) endpoint.Endpoint {
 	client := pb.NewAddClient(cc)
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		addReq, ok := request.(reqrep.AddRequest)
-		if !ok {
-			return nil, endpoint.ErrBadCast
-		}
-		reply, err := client.Add(ctx, &pb.AddRequest{A: addReq.A, B: addReq.B})
-		if err != nil {
+		var (
+			errs      = make(chan error, 1)
+			responses = make(chan interface{}, 1)
+		)
+		go func() {
+			addReq, ok := request.(reqrep.AddRequest)
+			if !ok {
+				errs <- endpoint.ErrBadCast
+				return
+			}
+			reply, err := client.Add(ctx, &pb.AddRequest{A: addReq.A, B: addReq.B})
+			if err != nil {
+				errs <- err
+				return
+			}
+			responses <- reqrep.AddResponse{V: reply.V}
+		}()
+		select {
+		case <-ctx.Done():
+			return nil, context.DeadlineExceeded
+		case err := <-errs:
 			return nil, err
+		case response := <-responses:
+			return response, nil
 		}
-		return reqrep.AddResponse{V: reply.V}, nil
 	}
 }
