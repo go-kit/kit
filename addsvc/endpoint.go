@@ -19,13 +19,14 @@ func makeEndpoint(a Add) endpoint.Endpoint {
 			return nil, endpoint.ErrContextCanceled
 		}
 
-		addReq, ok := request.(*reqrep.AddRequest)
+		addReq, ok := request.(reqrep.AddRequest)
 		if !ok {
+			println("### 1")
 			return nil, endpoint.ErrBadCast
 		}
 
 		v := a(ctx, addReq.A, addReq.B)
 
-		return &reqrep.AddResponse{V: v}, nil
+		return reqrep.AddResponse{V: v}, nil
 	}
 }

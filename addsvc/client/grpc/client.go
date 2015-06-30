@@ -14,7 +14,7 @@ import (
 func NewClient(cc *grpc.ClientConn) endpoint.Endpoint {
 	client := pb.NewAddClient(cc)
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		addReq, ok := request.(*reqrep.AddRequest)
+		addReq, ok := request.(reqrep.AddRequest)
 		if !ok {
 			return nil, endpoint.ErrBadCast
 		}
@@ -22,6 +22,6 @@ func NewClient(cc *grpc.ClientConn) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		return &reqrep.AddResponse{V: reply.V}, nil
+		return reqrep.AddResponse{V: reply.V}, nil
 	}
 }
