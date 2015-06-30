@@ -21,12 +21,10 @@ func makeEndpoint(a Add) endpoint.Endpoint {
 
 		addReq, ok := request.(reqrep.AddRequest)
 		if !ok {
-			println("### 1")
 			return nil, endpoint.ErrBadCast
 		}
 
 		v := a(ctx, addReq.A, addReq.B)
-
 		return reqrep.AddResponse{V: v}, nil
 	}
 }
