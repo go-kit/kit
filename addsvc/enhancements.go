@@ -3,11 +3,10 @@ package main
 import (
 	"time"
 
-	"github.com/go-kit/kit/metrics"
-
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics"
 )
 
 func logging(logger log.Logger) func(Add) Add {
