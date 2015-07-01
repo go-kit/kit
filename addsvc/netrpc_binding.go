@@ -17,11 +17,13 @@ type NetrpcBinding struct {
 // Add implements the net/rpc method definition.
 func (b NetrpcBinding) Add(request reqrep.AddRequest, response *reqrep.AddResponse) error {
 	var (
-		errs      = make(chan error, 1)
-		responses = make(chan reqrep.AddResponse, 1)
+		ctx, cancel = context.WithCancel(b.ctx)
+		errs        = make(chan error, 1)
+		responses   = make(chan reqrep.AddResponse, 1)
 	)
+	defer cancel()
 	go func() {
-		resp, err := b.Endpoint(b.ctx, request)
+		resp, err := b.Endpoint(ctx, request)
 		if err != nil {
 			errs <- err
 			return
@@ -34,7 +36,7 @@ func (b NetrpcBinding) Add(request reqrep.AddRequest, response *reqrep.AddRespon
 		responses <- addResp
 	}()
 	select {
-	case <-b.ctx.Done():
+	case <-ctx.Done():
 		return context.DeadlineExceeded
 	case err := <-errs:
 		return err

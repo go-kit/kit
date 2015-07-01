@@ -18,11 +18,13 @@ type thriftBinding struct {
 // Add implements Thrift's AddService interface.
 func (tb thriftBinding) Add(a, b int64) (*thriftadd.AddReply, error) {
 	var (
-		errs    = make(chan error, 1)
-		replies = make(chan *thriftadd.AddReply, 1)
+		ctx, cancel = context.WithCancel(tb.Context)
+		errs        = make(chan error, 1)
+		replies     = make(chan *thriftadd.AddReply, 1)
 	)
+	defer cancel()
 	go func() {
-		r, err := tb.Endpoint(tb.Context, reqrep.AddRequest{A: a, B: b})
+		r, err := tb.Endpoint(ctx, reqrep.AddRequest{A: a, B: b})
 		if err != nil {
 			errs <- err
 			return
@@ -35,7 +37,7 @@ func (tb thriftBinding) Add(a, b int64) (*thriftadd.AddReply, error) {
 		replies <- &thriftadd.AddReply{Value: resp.V}
 	}()
 	select {
-	case <-tb.Context.Done():
+	case <-ctx.Done():
 		return nil, context.DeadlineExceeded
 	case err := <-errs:
 		return nil, err

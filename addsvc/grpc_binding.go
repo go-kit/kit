@@ -17,11 +17,13 @@ type grpcBinding struct{ endpoint.Endpoint }
 // As far as I can tell, gRPC doesn't (currently) provide a user-accessible
 // way to manipulate the RPC context, like headers for HTTP. So we don't have
 // a way to transport e.g. Zipkin IDs with the request. TODO.
-func (b grpcBinding) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddReply, error) {
+func (b grpcBinding) Add(ctx0 context.Context, req *pb.AddRequest) (*pb.AddReply, error) {
 	var (
-		errs    = make(chan error, 1)
-		replies = make(chan *pb.AddReply, 1)
+		ctx, cancel = context.WithCancel(ctx0)
+		errs        = make(chan error, 1)
+		replies     = make(chan *pb.AddReply, 1)
 	)
+	defer cancel()
 	go func() {
 		r, err := b.Endpoint(ctx, reqrep.AddRequest{A: req.A, B: req.B})
 		if err != nil {
