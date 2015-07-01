@@ -27,7 +27,7 @@ func (tb thriftBinding) Add(a, b int64) (*thriftadd.AddReply, error) {
 			errs <- err
 			return
 		}
-		resp, ok := r.(*reqrep.AddResponse)
+		resp, ok := r.(reqrep.AddResponse)
 		if !ok {
 			errs <- endpoint.ErrBadCast
 			return
