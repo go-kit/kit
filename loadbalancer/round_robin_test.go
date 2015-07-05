@@ -2,34 +2,31 @@ package loadbalancer_test
 
 import (
 	"reflect"
+	"runtime"
 	"testing"
-
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
+	"golang.org/x/net/context"
 )
 
 func TestRoundRobin(t *testing.T) {
-	var (
-		counts    = []int{0, 0, 0}
-		endpoints = []endpoint.Endpoint{
-			func(context.Context, interface{}) (interface{}, error) { counts[0]++; return struct{}{}, nil },
-			func(context.Context, interface{}) (interface{}, error) { counts[1]++; return struct{}{}, nil },
-			func(context.Context, interface{}) (interface{}, error) { counts[2]++; return struct{}{}, nil },
-		}
-	)
+	p := loadbalancer.NewStaticPublisher([]endpoint.Endpoint{})
+	defer p.Stop()
 
-	p := newMockPublisher([]endpoint.Endpoint{})
-	s := loadbalancer.RoundRobin(p)
-	defer s.Stop()
-
-	_, have := s.Next()
-	if want := loadbalancer.ErrNoEndpoints; want != have {
-		t.Errorf("want %v, have %v", want, have)
+	lb := loadbalancer.RoundRobin(p)
+	if _, err := lb.Get(); err == nil {
+		t.Error("want error, got none")
 	}
 
-	p.replace(endpoints)
+	counts := []int{0, 0, 0}
+	p.Replace([]endpoint.Endpoint{
+		func(context.Context, interface{}) (interface{}, error) { counts[0]++; return struct{}{}, nil },
+		func(context.Context, interface{}) (interface{}, error) { counts[1]++; return struct{}{}, nil },
+		func(context.Context, interface{}) (interface{}, error) { counts[2]++; return struct{}{}, nil },
+	})
+	runtime.Gosched()
+
 	for i, want := range [][]int{
 		{1, 0, 0},
 		{1, 1, 0},
@@ -39,7 +36,7 @@ func TestRoundRobin(t *testing.T) {
 		{2, 2, 2},
 		{3, 2, 2},
 	} {
-		e, _ := s.Next()
+		e, _ := lb.Get()
 		e(context.Background(), struct{}{})
 		if have := counts; !reflect.DeepEqual(want, have) {
 			t.Errorf("%d: want %v, have %v", i+1, want, have)
