@@ -58,6 +58,7 @@ func TestRetryTimeout(t *testing.T) {
 
 	go invoke()                                         // invoke the endpoint
 	time.Sleep(2 * timeout)                             // wait
+	time.Sleep(2 * timeout)                             // wait again (CI servers!!)
 	step <- struct{}{}                                  // tell the endpoint to return
 	if err := <-errs; err != context.DeadlineExceeded { // that should not succeed
 		t.Errorf("wanted error, got none")
