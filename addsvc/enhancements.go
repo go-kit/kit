@@ -21,12 +21,12 @@ func logging(logger log.Logger) func(Add) Add {
 	}
 }
 
-func instrument(requests metrics.Counter, duration metrics.Histogram) func(Add) Add {
+func instrument(requests metrics.Counter, duration metrics.TimeHistogram) func(Add) Add {
 	return func(next Add) Add {
 		return func(ctx context.Context, a, b int64) int64 {
 			defer func(begin time.Time) {
 				requests.Add(1)
-				duration.Observe(time.Since(begin).Nanoseconds())
+				duration.Observe(time.Since(begin))
 			}(time.Now())
 			return next(ctx, a, b)
 		}

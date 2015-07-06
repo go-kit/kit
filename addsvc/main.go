@@ -75,8 +75,8 @@ func main() {
 			Help:      "Total number of received requests.",
 		}, []string{}),
 	)
-	duration := metrics.NewMultiHistogram(
-		expvar.NewHistogram("duration_nanoseconds_total", 0, 100000000, 3),
+	duration := metrics.NewTimeHistogram(time.Nanosecond, metrics.NewMultiHistogram(
+		expvar.NewHistogram("duration_nanoseconds_total", 0, 1e9, 3, 50, 95, 99),
 		statsd.NewHistogram(ioutil.Discard, "duration_nanoseconds_total", time.Second),
 		prometheus.NewSummary(stdprometheus.SummaryOpts{
 			Namespace: "addsvc",
@@ -84,7 +84,7 @@ func main() {
 			Name:      "duration_nanoseconds_total",
 			Help:      "Total nanoseconds spend serving requests.",
 		}, []string{}),
-	)
+	))
 
 	// `package tracing` domain
 	zipkinHostPort := "localhost:1234" // TODO Zipkin makes overly simple assumptions about services
