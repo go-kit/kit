@@ -6,21 +6,17 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// Random returns a random endpoint from the most current set of endpoints.
-func Random(p Publisher) Strategy {
-	return &randomStrategy{newEndpointCache(p)}
+// Random returns a load balancer that yields random endpoints.
+func Random(p Publisher) LoadBalancer {
+	return random{newCache(p)}
 }
 
-type randomStrategy struct{ *endpointCache }
+type random struct{ *cache }
 
-func (s randomStrategy) Next() (endpoint.Endpoint, error) {
-	endpoints := s.endpointCache.get()
+func (r random) Get() (endpoint.Endpoint, error) {
+	endpoints := r.cache.get()
 	if len(endpoints) <= 0 {
-		return nil, ErrNoEndpoints
+		return nil, ErrNoEndpointsAvailable
 	}
 	return endpoints[rand.Intn(len(endpoints))], nil
-}
-
-func (s randomStrategy) Stop() {
-	s.endpointCache.stop()
 }

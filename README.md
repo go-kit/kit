@@ -11,7 +11,7 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 
 ## Goals
 
-- Operate in a heterogeneous SOA — expect to interact with mostly non-gokit services
+- Operate in a heterogeneous SOA — expect to interact with mostly non-Go-kit services
 - RPC as the primary messaging pattern
 - Pluggable serialization and transport — not just JSON over HTTP
 - Zipkin-compatible request tracing
@@ -25,13 +25,17 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 ## Component status
 
 - [API stability](https://github.com/go-kit/kit/blob/master/rfc/rfc007-api-stability.md) — **adopted**
-- [`package metrics`](https://github.com/go-kit/kit/tree/master/metrics) — **implemented**
-- [`package server`](https://github.com/go-kit/kit/tree/master/server) — **implemented**
-- [`package transport`](https://github.com/go-kit/kit/tree/master/transport) — **implemented**
 - [`package log`](https://github.com/go-kit/kit/tree/master/log) — **implemented**
+- [`package metrics`](https://github.com/go-kit/kit/tree/master/metrics) — **implemented**
+- [`package endpoint`](https://github.com/go-kit/kit/tree/master/endpoint) — **implemented**
+- [`package transport`](https://github.com/go-kit/kit/tree/master/transport) — **implemented**
+- [`package circuitbreaker`](https://github.com/go-kit/kit/tree/master/circuitbreaker) — **implemented**
+- [`package loadbalancer`](https://github.com/go-kit/kit/tree/master/loadbalancer) — **implemented**
+- [`package ratelimit`](https://github.com/go-kit/kit/tree/master/ratelimit) — **implemented**
 - [`package tracing`](https://github.com/go-kit/kit/tree/master/tracing) — prototyping
-- `package client` — pending
+- Client patterns — prototyping
 - Service discovery — pending
+- Example [addsvc](https://github.com/go-kit/kit/tree/master/addsvc) — **implemented**
 
 ## Contributing
 
@@ -42,7 +46,7 @@ Please see [CONTRIBUTING.md]. Thank you, [contributors]!
 
 ### Dependency management
 
-Users who import gokit into their `package main` are responsible to organize
+Users who import Go kit into their `package main` are responsible to organize
 and maintain all of their dependencies to ensure code compatibility and build
 reproducibility. Gokit makes no direct use of dependency management tools like
 [Godep](https://github.com/tools/godep).
@@ -52,16 +56,16 @@ compatibility problems as soon as they occur.
 
 ### API stability policy
 
-The gokit project depends on code maintained by others. This includes the Go
-standard library and sub-repositories and other external libraries.
+The Go kit project depends on code maintained by others.
+This includes the Go standard library and sub-repositories and other external libraries.
 The Go language and standard library provide stability guarantees, but the other external libraries typically do not.
-[The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
+ [The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
 proposes a standard policy for package authors to advertise API stability.
-The go-kit project prefers to depend on code that abides the API stability policy.
+The Go kit project prefers to depend on code that abides the API stability policy.
 
 ## Related projects
 
-Projects with a ★ have had particular influence on gokit's design.
+Projects with a ★ have had particular influence on Go kit's design.
 
 ### Service frameworks
 

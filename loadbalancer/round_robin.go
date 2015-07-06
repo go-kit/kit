@@ -6,32 +6,27 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// RoundRobin returns a each endpoint from the most current set of endpoints
-// in sequence.
-func RoundRobin(p Publisher) Strategy {
-	return &roundRobinStrategy{newEndpointCache(p), 0}
+// RoundRobin returns a load balancer that yields endpoints in sequence.
+func RoundRobin(p Publisher) LoadBalancer {
+	return &roundRobin{newCache(p), 0}
 }
 
-type roundRobinStrategy struct {
-	cache  *endpointCache
-	cursor uint64
+type roundRobin struct {
+	*cache
+	uint64
 }
 
-func (s *roundRobinStrategy) Next() (endpoint.Endpoint, error) {
-	endpoints := s.cache.get()
+func (r *roundRobin) Get() (endpoint.Endpoint, error) {
+	endpoints := r.cache.get()
 	if len(endpoints) <= 0 {
-		return nil, ErrNoEndpoints
+		return nil, ErrNoEndpointsAvailable
 	}
-	var cursor uint64
+	var old uint64
 	for {
-		cursor = atomic.LoadUint64(&s.cursor)
-		if atomic.CompareAndSwapUint64(&s.cursor, cursor, cursor+1) {
+		old = atomic.LoadUint64(&r.uint64)
+		if atomic.CompareAndSwapUint64(&r.uint64, old, old+1) {
 			break
 		}
 	}
-	return endpoints[cursor%uint64(len(endpoints))], nil
-}
-
-func (s *roundRobinStrategy) Stop() {
-	s.cache.stop()
+	return endpoints[old%uint64(len(endpoints))], nil
 }

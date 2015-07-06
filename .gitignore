@@ -1,4 +1,5 @@
 addsvc/addsvc
+addsvc/client/addcli/addcli
 cover.out
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
