@@ -4,7 +4,9 @@ import (
 	"flag"
 	"log"
 	"net/rpc"
+	"net/url"
 	"os"
+	"strings"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -12,6 +14,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
 	grpcclient "github.com/go-kit/kit/addsvc/client/grpc"
+	httpclient "github.com/go-kit/kit/addsvc/client/http"
 	netrpcclient "github.com/go-kit/kit/addsvc/client/netrpc"
 	thriftclient "github.com/go-kit/kit/addsvc/client/thrift"
 	"github.com/go-kit/kit/addsvc/reqrep"
@@ -23,7 +26,8 @@ func main() {
 	// of glog. So, we define a new flag set, to keep those domains distinct.
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	var (
-		transport        = fs.String("transport", "grpc", "grpc, netrpc, thrift")
+		transport        = fs.String("transport", "grpc", "http, grpc, netrpc, thrift")
+		httpAddr         = fs.String("http.addr", "localhost:8001", "HTTP (JSON) address")
 		grpcAddr         = fs.String("grpc.addr", "localhost:8002", "gRPC address")
 		netrpcAddr       = fs.String("netrpc.addr", "localhost:8003", "net/rpc address")
 		thriftAddr       = fs.String("thrift.addr", "localhost:8004", "Thrift address")
@@ -40,6 +44,19 @@ func main() {
 
 	var e endpoint.Endpoint
 	switch *transport {
+	case "http":
+		if !strings.HasPrefix(*httpAddr, "http") {
+			*httpAddr = "http://" + *httpAddr
+		}
+		u, err := url.Parse(*httpAddr)
+		if err != nil {
+			log.Fatalf("url.Parse: %v", err)
+		}
+		if u.Path == "" {
+			u.Path = "/add"
+		}
+		e = httpclient.NewClient("GET", u.String())
+
 	case "grpc":
 		cc, err := grpc.Dial(*grpcAddr)
 		if err != nil {

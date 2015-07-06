@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc"
 
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
+	httpclient "github.com/go-kit/kit/addsvc/client/http"
 	"github.com/go-kit/kit/addsvc/pb"
 	"github.com/go-kit/kit/endpoint"
 	kitlog "github.com/go-kit/kit/log"
@@ -30,6 +31,7 @@ import (
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/metrics/statsd"
 	"github.com/go-kit/kit/tracing/zipkin"
+	httptransport "github.com/go-kit/kit/transport/http"
 )
 
 func main() {
@@ -108,11 +110,10 @@ func main() {
 	// Our business and operational domain
 	var a Add = pureAdd
 	if *proxyHTTPAddr != "" {
-		// TODO
-		//var e endpoint.Endpoint
-		//e = httptransport.NewClient(*proxyHTTPAddr, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
-		//e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
-		//a = proxyAdd(e, logger)
+		var e endpoint.Endpoint
+		e = httpclient.NewClient("GET", *proxyHTTPAddr, zipkin.ToRequest(zipkinSpanFunc))
+		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
+		a = proxyAdd(e, logger)
 	}
 	a = logging(logger)(a)
 	a = instrument(requests, duration)(a)
@@ -139,7 +140,13 @@ func main() {
 
 	// Transport: HTTP (JSON)
 	go func() {
-		logger.Log("addr", *httpAddr, "transport", "HTTP/JSON", "msg", "temporarily disabled")
+		ctx, cancel := context.WithCancel(root)
+		defer cancel()
+		before := []httptransport.BeforeFunc{zipkin.ToContext(zipkinSpanFunc)}
+		after := []httptransport.AfterFunc{httptransport.SetContentType("application/json")}
+		handler := httpBinding{ctx, e, before, after}
+		logger.Log("addr", *httpAddr, "transport", "HTTP/JSON")
+		errc <- http.ListenAndServe(*httpAddr, handler)
 	}()
 
 	// Transport: gRPC
