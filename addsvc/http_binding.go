@@ -11,59 +11,23 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
-type httpBinding struct {
-	context.Context
-	endpoint.Endpoint
-	Before []httptransport.BeforeFunc
-	After  []httptransport.AfterFunc
-}
-
-func (b httpBinding) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	type errcode struct {
-		error
-		int
-	}
-	var (
-		ctx, cancel = context.WithCancel(b.Context)
-		errcodes    = make(chan errcode, 1)
-		done        = make(chan struct{}, 1)
-	)
-	defer cancel()
-	go func() {
-		for _, f := range b.Before {
-			ctx = f(ctx, r)
-		}
+func makeHTTPBinding(ctx context.Context, e endpoint.Endpoint, before []httptransport.BeforeFunc, after []httptransport.AfterFunc) http.Handler {
+	decode := func(r *http.Request) (interface{}, error) {
 		var request reqrep.AddRequest
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			errcodes <- errcode{err, http.StatusBadRequest}
-			return
+			return nil, err
 		}
-		r.Body.Close()
-		r, err := b.Endpoint(ctx, request)
-		if err != nil {
-			errcodes <- errcode{err, http.StatusInternalServerError}
-			return
-		}
-		response, ok := r.(reqrep.AddResponse)
-		if !ok {
-			errcodes <- errcode{endpoint.ErrBadCast, http.StatusInternalServerError}
-			return
-		}
-		for _, f := range b.After {
-			f(ctx, w)
-		}
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			errcodes <- errcode{err, http.StatusInternalServerError}
-			return
-		}
-		close(done)
-	}()
-	select {
-	case <-ctx.Done():
-		http.Error(w, context.DeadlineExceeded.Error(), http.StatusInternalServerError)
-	case errcode := <-errcodes:
-		http.Error(w, errcode.error.Error(), errcode.int)
-	case <-done:
-		return
+		return request, nil
+	}
+	encode := func(w http.ResponseWriter, response interface{}) error {
+		return json.NewEncoder(w).Encode(response)
+	}
+	return httptransport.Server{
+		Context:  ctx,
+		Endpoint: e,
+		Before:   before,
+		After:    append([]httptransport.AfterFunc{httptransport.SetContentType("application/json; charset=utf-8")}, after...),
+		Decode:   decode,
+		Encode:   encode,
 	}
 }

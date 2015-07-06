@@ -143,8 +143,8 @@ func main() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
 		before := []httptransport.BeforeFunc{zipkin.ToContext(zipkinSpanFunc)}
-		after := []httptransport.AfterFunc{httptransport.SetContentType("application/json")}
-		handler := httpBinding{ctx, e, before, after}
+		after := []httptransport.AfterFunc{}
+		handler := makeHTTPBinding(ctx, e, before, after)
 		logger.Log("addr", *httpAddr, "transport", "HTTP/JSON")
 		errc <- http.ListenAndServe(*httpAddr, handler)
 	}()
