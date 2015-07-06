@@ -17,17 +17,18 @@ func makeHTTPBinding(ctx context.Context, e endpoint.Endpoint, before []httptran
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 			return nil, err
 		}
+		r.Body.Close()
 		return request, nil
 	}
 	encode := func(w http.ResponseWriter, response interface{}) error {
 		return json.NewEncoder(w).Encode(response)
 	}
 	return httptransport.Server{
-		Context:  ctx,
-		Endpoint: e,
-		Before:   before,
-		After:    append([]httptransport.AfterFunc{httptransport.SetContentType("application/json; charset=utf-8")}, after...),
-		Decode:   decode,
-		Encode:   encode,
+		Context:    ctx,
+		Endpoint:   e,
+		DecodeFunc: decode,
+		EncodeFunc: encode,
+		Before:     before,
+		After:      append([]httptransport.AfterFunc{httptransport.SetContentType("application/json; charset=utf-8")}, after...),
 	}
 }
