@@ -16,6 +16,8 @@ type roundRobin struct {
 	uint64
 }
 
+func (r *roundRobin) Count() int { return r.cache.count() }
+
 func (r *roundRobin) Get() (endpoint.Endpoint, error) {
 	endpoints := r.cache.get()
 	if len(endpoints) <= 0 {

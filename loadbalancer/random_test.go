@@ -2,7 +2,6 @@ package loadbalancer_test
 
 import (
 	"math"
-	"runtime"
 	"testing"
 
 	"github.com/go-kit/kit/endpoint"
@@ -25,7 +24,7 @@ func TestRandom(t *testing.T) {
 		func(context.Context, interface{}) (interface{}, error) { counts[1]++; return struct{}{}, nil },
 		func(context.Context, interface{}) (interface{}, error) { counts[2]++; return struct{}{}, nil },
 	})
-	runtime.Gosched()
+	assertLoadBalancerNotEmpty(t, lb)
 
 	n := 10000
 	for i := 0; i < n; i++ {
@@ -34,7 +33,7 @@ func TestRandom(t *testing.T) {
 	}
 
 	want := float64(n) / float64(len(counts))
-	tolerance := want / 100.0 // 1%
+	tolerance := (want / 100.0) * 5 // 5%
 	for _, have := range counts {
 		if math.Abs(want-float64(have)) > tolerance {
 			t.Errorf("want %.0f, have %d", want, have)

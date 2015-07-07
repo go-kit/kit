@@ -2,7 +2,6 @@ package loadbalancer_test
 
 import (
 	"errors"
-	"runtime"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
@@ -29,7 +28,7 @@ func TestRetryMax(t *testing.T) {
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil /* OK */ },
 	}
 	p.Replace(endpoints)
-	runtime.Gosched()
+	assertLoadBalancerNotEmpty(t, lb)
 
 	if _, err := loadbalancer.Retry(len(endpoints)-1, time.Second, lb)(context.Background(), struct{}{}); err == nil {
 		t.Errorf("expected error, got none")

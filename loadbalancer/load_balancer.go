@@ -8,6 +8,7 @@ import (
 
 // LoadBalancer yields endpoints one-by-one.
 type LoadBalancer interface {
+	Count() int
 	Get() (endpoint.Endpoint, error)
 }
 

@@ -4,12 +4,14 @@ import "github.com/go-kit/kit/endpoint"
 
 type cache struct {
 	req  chan []endpoint.Endpoint
+	cnt  chan int
 	quit chan struct{}
 }
 
 func newCache(p Publisher) *cache {
 	c := &cache{
 		req:  make(chan []endpoint.Endpoint),
+		cnt:  make(chan int),
 		quit: make(chan struct{}),
 	}
 	go c.loop(p)
@@ -24,11 +26,16 @@ func (c *cache) loop(p Publisher) {
 	for {
 		select {
 		case endpoints = <-e:
+		case c.cnt <- len(endpoints):
 		case c.req <- endpoints:
 		case <-c.quit:
 			return
 		}
 	}
+}
+
+func (c *cache) count() int {
+	return <-c.cnt
 }
 
 func (c *cache) get() []endpoint.Endpoint {

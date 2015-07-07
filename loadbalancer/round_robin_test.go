@@ -2,7 +2,6 @@ package loadbalancer_test
 
 import (
 	"reflect"
-	"runtime"
 	"testing"
 
 	"github.com/go-kit/kit/endpoint"
@@ -25,7 +24,7 @@ func TestRoundRobin(t *testing.T) {
 		func(context.Context, interface{}) (interface{}, error) { counts[1]++; return struct{}{}, nil },
 		func(context.Context, interface{}) (interface{}, error) { counts[2]++; return struct{}{}, nil },
 	})
-	runtime.Gosched()
+	assertLoadBalancerNotEmpty(t, lb)
 
 	for i, want := range [][]int{
 		{1, 0, 0},
