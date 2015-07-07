@@ -1,6 +1,6 @@
 # gokit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit)
 
-**Gokit** is a **distributed programming toolkit** for microservices in the modern enterprise.
+**Go kit** is a **distributed programming toolkit** for microservices in the modern enterprise. We want to make Go a viable choice for application (business-logic) software in large organizations.
 
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
 - Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](http://bit.ly/go-slack-signup))
