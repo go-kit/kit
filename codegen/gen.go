@@ -18,7 +18,7 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/sasha-s/gin/goinline"
+	"github.com/sasha-s/go-inline/goinline"
 
 	"golang.org/x/tools/go/types"
 
