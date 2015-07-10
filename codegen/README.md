@@ -1,8 +1,5 @@
 Things that do not work:
 
-multiple functions in an interface (goinline generates multiple NetrpcBinding structs).
-Possible solutions: use different names or different pakages.
-
 Commments, test...
 
 No generation for

@@ -211,6 +211,7 @@ func (g *generator) processFunc(f *types.Func) error {
 	if len(errs) != 0 {
 		return errs.ToErr()
 	}
+	// not needed?
 	imports := map[types.Object]*ast.SelectorExpr{}
 	for _, p := range toList(sig.Params()) {
 		updateDeps(g.rev[p.Type()], g.info, imports)
@@ -220,11 +221,14 @@ func (g *generator) processFunc(f *types.Func) error {
 	}
 	imp := cleanImports(imports)
 	_ = imp
+	// end of not needed?
+
 	im := map[string]goinline.Target{
 		"FunT":            goinline.Target{Ident: f.Name(), Imports: nil},
 		"RequestT":        goinline.Target{Ident: req, Imports: nil},
 		"ResponseT":       goinline.Target{Ident: resp, Imports: nil},
 		"makeHTTPBinding": goinline.Target{Ident: fmt.Sprintf("make%s%sHTTPBinding", g.typ, f.Name()), Imports: nil},
+		"NetrpcBinding":   goinline.Target{Ident: fmt.Sprintf("%s%sNetrpcBinding", g.typ, f.Name()), Imports: nil, NoFiltering: true},
 	}
 
 	for _, pkg := range g.bindings {

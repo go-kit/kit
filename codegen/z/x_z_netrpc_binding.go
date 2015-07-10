@@ -9,17 +9,17 @@ import (
 
 // NetrpcBinding makes an endpoint usable over net/rpc. It needs to be
 // exported to be picked up by net/rpc.
-type XYNetrpcBinding struct {
+type XZNetrpcBinding struct {
 	ctx	context.Context	// has methods which should not be made available
 	endpoint.Endpoint
 }
 
 // Fun implements the net/rpc method definition.
-func (b XYNetrpcBinding,) Y(request XYRequest, response *XYResponse,) error {
+func (b XZNetrpcBinding,) Z(request XZRequest, response *XZResponse,) error {
 	var (
 		ctx, cancel	= context.WithCancel(b.ctx)
 		errs		= make(chan error, 1)
-		responses	= make(chan XYResponse, 1)
+		responses	= make(chan XZResponse, 1)
 	)
 	defer cancel()
 	go func() {
@@ -28,7 +28,7 @@ func (b XYNetrpcBinding,) Y(request XYRequest, response *XYResponse,) error {
 			errs <- err
 			return
 		}
-		resp, ok := rawResp.(XYResponse)
+		resp, ok := rawResp.(XZResponse)
 		if !ok {
 			errs <- endpoint.ErrBadCast
 			return
