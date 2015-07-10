@@ -17,23 +17,23 @@ func NewStaticPublisher(endpoints []endpoint.Endpoint) *StaticPublisher {
 
 // StaticPublisher holds a static set of endpoints.
 type StaticPublisher struct {
-	sync.Mutex
+	mu          sync.Mutex
 	current     []endpoint.Endpoint
 	subscribers map[chan<- []endpoint.Endpoint]struct{}
 }
 
 // Subscribe implements Publisher.
 func (p *StaticPublisher) Subscribe(c chan<- []endpoint.Endpoint) {
-	p.Lock()
-	defer p.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.subscribers[c] = struct{}{}
 	c <- p.current
 }
 
 // Unsubscribe implements Publisher.
 func (p *StaticPublisher) Unsubscribe(c chan<- []endpoint.Endpoint) {
-	p.Lock()
-	defer p.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	delete(p.subscribers, c)
 }
 
@@ -42,8 +42,8 @@ func (p *StaticPublisher) Stop() {}
 
 // Replace replaces the endpoints and notifies all subscribers.
 func (p *StaticPublisher) Replace(endpoints []endpoint.Endpoint) {
-	p.Lock()
-	defer p.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.current = endpoints
 	for c := range p.subscribers {
 		c <- p.current
