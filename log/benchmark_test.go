@@ -7,11 +7,11 @@ import (
 )
 
 func benchmarkRunner(b *testing.B, logger log.Logger, f func(log.Logger)) {
-	logger = log.With(logger, "common_key", "common_value")
+	lc := log.With(logger, "common_key", "common_value")
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		f(logger)
+		f(lc)
 	}
 }
 

@@ -2,9 +2,9 @@ package log
 
 // Levels provides a default set of leveled loggers.
 type Levels struct {
-	Debug Logger
-	Info  Logger
-	Error Logger
+	Debug *Context
+	Info  *Context
+	Error *Context
 }
 
 type levelOptions struct {

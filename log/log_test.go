@@ -13,11 +13,10 @@ var discard = log.Logger(log.LoggerFunc(func(...interface{}) error { return nil 
 func TestWith(t *testing.T) {
 	buf := &bytes.Buffer{}
 	kvs := []interface{}{"a", 123}
-	logger := log.NewJSONLogger(buf)
-	logger = log.With(logger, kvs...)
-	kvs[1] = 0                          // With should copy its key values
-	logger = log.With(logger, "b", "c") // With should stack
-	if err := logger.Log("msg", "message"); err != nil {
+	lc := log.With(log.NewJSONLogger(buf), kvs...)
+	kvs[1] = 0             // With should copy its key values
+	lc = lc.With("b", "c") // With should stack
+	if err := lc.Log("msg", "message"); err != nil {
 		t.Fatal(err)
 	}
 	if want, have := `{"a":123,"b":"c","msg":"message"}`+"\n", buf.String(); want != have {
@@ -80,35 +79,37 @@ func BenchmarkDiscard(b *testing.B) {
 
 func BenchmarkOneWith(b *testing.B) {
 	logger := discard
-	logger = log.With(logger, "k", "v")
+	lc := log.With(logger, "k", "v")
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Log("k", "v")
+		lc.Log("k", "v")
 	}
 }
 
 func BenchmarkTwoWith(b *testing.B) {
 	logger := discard
-	for i := 0; i < 2; i++ {
-		logger = log.With(logger, "k", "v")
+	lc := log.With(logger, "k", "v")
+	for i := 1; i < 2; i++ {
+		lc = lc.With("k", "v")
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Log("k", "v")
+		lc.Log("k", "v")
 	}
 }
 
 func BenchmarkTenWith(b *testing.B) {
 	logger := discard
-	for i := 0; i < 10; i++ {
-		logger = log.With(logger, "k", "v")
+	lc := log.With(logger, "k", "v")
+	for i := 1; i < 10; i++ {
+		lc = lc.With("k", "v")
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Log("k", "v")
+		lc.Log("k", "v")
 	}
 }
 
