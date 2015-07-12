@@ -6,45 +6,67 @@ package log
 
 import "sync/atomic"
 
-// Logger is the fundamental interface for all log operations. Implementations
-// must be safe for concurrent use by multiple goroutines. Log creates a log
-// event from keyvals, a variadic sequence of alternating keys and values.
+// Logger is the fundamental interface for all log operations. Log creates a
+// log event from keyvals, a variadic sequence of alternating keys and values.
+// Implementations must be safe for concurrent use by multiple goroutines. In
+// particular, any implementation of Logger that modifies elements of keyvals
+// must make a copy and modify the copy.
 type Logger interface {
 	Log(keyvals ...interface{}) error
 }
 
-// With returns a new Logger that includes keyvals in all log events. The
-// returned Logger replaces all value elements (odd indexes) containing a
+// With returns a new Context that includes keyvals in all log events. The
+// returned Context replaces all value elements (odd indexes) containing a
 // Valuer with their generated value for each call to its Log method.
-func With(logger Logger, keyvals ...interface{}) Logger {
-	w, ok := logger.(*withLogger)
-	if !ok {
-		w = &withLogger{logger: logger}
+func With(logger Logger, keyvals ...interface{}) *Context {
+	if len(keyvals)%2 != 0 {
+		panic("bad keyvals")
 	}
-	return w.with(keyvals...)
+	w, ok := logger.(*Context)
+	if !ok {
+		w = &Context{logger: logger}
+	}
+	return w.With(keyvals...)
 }
 
-type withLogger struct {
+// A Context wraps a Logger and holds keyvals that it includes in all log
+// events.
+type Context struct {
 	logger    Logger
 	keyvals   []interface{}
 	hasValuer bool
 }
 
-func (l *withLogger) Log(keyvals ...interface{}) error {
+// Log replaces all value elements (odd indexes) containing a Valuer in the
+// stored context with their generated value, appends keyvals, and passes the
+// result to the wrapped Logger.
+func (l *Context) Log(keyvals ...interface{}) error {
+	if len(keyvals)%2 != 0 {
+		panic("bad keyvals")
+	}
 	kvs := append(l.keyvals, keyvals...)
 	if l.hasValuer {
+		// If no keyvals were appended above then we must copy l.keyvals so
+		// that future log events will reevaluate the stored Valuers.
+		if len(keyvals) == 0 {
+			kvs = append([]interface{}{}, l.keyvals...)
+		}
 		bindValues(kvs[:len(l.keyvals)])
 	}
 	return l.logger.Log(kvs...)
 }
 
-func (l *withLogger) with(keyvals ...interface{}) Logger {
+// With returns a new Context with keyvals appeneded to those of the receiver.
+func (l *Context) With(keyvals ...interface{}) *Context {
+	if len(keyvals)%2 != 0 {
+		panic("bad keyvals")
+	}
 	// Limiting the capacity of the stored keyvals ensures that a new
 	// backing array is created if the slice must grow in Log or With.
 	// Using the extra capacity without copying risks a data race that
 	// would violate the Logger interface contract.
 	n := len(l.keyvals) + len(keyvals)
-	return &withLogger{
+	return &Context{
 		logger:    l.logger,
 		keyvals:   append(l.keyvals, keyvals...)[:n:n],
 		hasValuer: l.hasValuer || containsValuer(keyvals),
