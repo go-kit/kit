@@ -37,6 +37,7 @@ func main() {
 
 	// TODO remove relative path
 	mergeTemplate(vs, "definition", "../gen-cmd/endpoint_definition.tmpl")
+	mergeTemplate(vs, "http_binding", "../gen-cmd/http_binding.tmpl")
 }
 
 func buildAst(pck string) *ast.File {
