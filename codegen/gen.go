@@ -119,8 +119,8 @@ func (g *generator) generate() error {
 		Name: g.typ,
 		Pkg:  g.pkg.Name(),
 		Imports: []string{
-			"golang.org/x/net/context",
 			"github.com/go-kit/kit/endpoint",
+			"golang.org/x/net/context",
 		}}
 	for i := 0; i < g.iface.NumMethods(); i++ {
 		errs.Add(g.processFunc(g.iface.Method(i), &iface))
@@ -145,27 +145,41 @@ import (
 {{range .Imports}}	"{{.}}"
 {{end}})
 
-func Make{{.Name}}Endpoints(x {{.Name}}) map[string]endpoint.Endpoint{
-	m :=  map[string]endpoint.Endpoint{}
-{{range .M}}
-	m["{{.Name}}"] = func (ctx context.Context, request interface{}) (interface{}, error) {
-		select {
-		default:
-		case <-ctx.Done():
-			return nil, endpoint.ErrContextCanceled
-		}
-		req, ok := request.({{.Req.StructDef.Name}})
-		if !ok {
-			return nil, endpoint.ErrBadCast
-		}
-		var err error
-		var resp {{.Resp.StructDef.Name}}
-		{{range $i,$v:=.Resp.Args}}{{if ne $i 0}}, {{end}}{{call . "resp"}}{{end}} = x.{{.Name}}({{range $i,$v:=.Req.Args}}{{if ne $i 0}}, {{end}}{{call . "req"}}{{end}})
-		return resp, err
-	}
-{{end}}
-	return m
+{{$endpoints := print .Name "Endpoints"}}
+type {{$endpoints}} struct {
+	x {{.Name}}
 }
+
+func Make{{$endpoints}} (x {{.Name}}) {{$endpoints}} {
+	return {{$endpoints}}{x}
+}
+
+{{$client := print .Name "Client"}}
+type {{$client}} struct {
+	e endpoint.Endpoint
+}
+
+func Make{{$client}} (e endpoint.Endpoint) {{$client}} {
+	return {{$client}}{e}
+}
+{{range .M}}
+func (x {{$endpoints}}) {{.Name}} (ctx context.Context, request interface{}) (interface{}, error) {
+	select {
+	default:
+	case <-ctx.Done():
+		return nil, endpoint.ErrContextCanceled
+	}
+	req, ok := request.({{.Req.StructDef.Name}})
+	if !ok {
+		return nil, endpoint.ErrBadCast
+	}
+	var err error
+	var resp {{.Resp.StructDef.Name}}
+	{{range $i,$v:=.Resp.Args}}{{if ne $i 0}}, {{end}}{{call . "resp"}}{{end}} = x.x.{{.Name}}({{range $i,$v:=.Req.Args}}{{if ne $i 0}}, {{end}}{{call . "req"}}{{end}})
+	return resp, err
+}
+{{end}}
+// TODO: implement {{.Name}} methods on {{$client}}.
 `))
 
 type structT struct {
@@ -583,7 +597,7 @@ func cleanImports(imports map[types.Object]*ast.SelectorExpr) []string {
 }
 
 var knownBindings map[string]string = map[string]string{
-	"rpc":  "github.com/go-git/kit/codegen/blueprints/rpc",
+	"rpc":  "github.com/go-kit/kit/codegen/blueprints/rpc",
 	"http": "github.com/go-kit/kit/codegen/blueprints/http",
 }
 
