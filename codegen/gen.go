@@ -168,12 +168,6 @@ func Make{{.Name}}Endpoints(x {{.Name}}) map[string]endpoint.Endpoint{
 }
 `))
 
-// {{call t}} := pure{{.Name}}(ctx, {{call $args "req" .Args}})
-// if err != nil {
-// 	return nil, err
-// }
-// return {{.Name}}Response{ {{call $compo .Ret}} }, nil
-
 type structT struct {
 	imports []string
 	name    string
