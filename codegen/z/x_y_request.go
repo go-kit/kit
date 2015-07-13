@@ -10,4 +10,5 @@ type XYRequest struct {
     P struct{F fmt.Stringer; G uint32} // `json:"p"`
     Int int // `json:"int"`
     Int1 int // `json:"int1"`
+    Int64 int64 // `json:"int64"`
 }

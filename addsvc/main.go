@@ -159,6 +159,10 @@ func main() {
 		s := grpc.NewServer() // uses its own context?
 		pb.RegisterAddServer(s, grpcBinding{e})
 		logger.Log("addr", *grpcAddr, "transport", "gRPC")
+		go func() {
+			<-root.Done()
+			s.Stop()
+		}()
 		errc <- s.Serve(ln)
 	}()
 

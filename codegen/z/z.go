@@ -10,6 +10,10 @@ type X interface {
 	Y(context.Context, struct {
 		F fmt.Stringer
 		G uint32
-	}, int, int) int64
+	}, int, int, int64) int64
 	Z(ctx context.Context, a, b int) (r int, err error)
+}
+
+type Adder interface {
+	Add(a, b int) int
 }
