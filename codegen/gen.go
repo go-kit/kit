@@ -30,7 +30,7 @@ func main() {
 
 	flag.StringVar(&gen.pkgName, "package", "", "")
 	flag.BoolVar(&gen.w, "w", false, "will (over)write files if set. Prints to stdout otherwise.")
-	flag.StringVar(&gen.typ, "type", "", "type names; must be set")
+	flag.StringVar(&gen.typ, "type", "", "type name; must be set")
 	var binding string
 	flag.StringVar(&binding, "binding", "", "comma-separated list of bindings to generate. Bindings to choose from: http,rpc")
 
@@ -324,6 +324,8 @@ func (g *generator) processFunc(f *types.Func, iface *Interface) error {
 		"ResponseT":       goinline.Target{Ident: resp, Imports: nil},
 		"makeHTTPBinding": goinline.Target{Ident: fmt.Sprintf("make%s%sHTTPBinding", g.typ, f.Name()), Imports: nil},
 		"NetrpcBinding":   goinline.Target{Ident: fmt.Sprintf("%s%sNetrpcBinding", g.typ, f.Name()), Imports: nil, NoFiltering: true},
+		"NewHTTPClient":   goinline.Target{Ident: fmt.Sprintf("New%s%sHTTPClient", g.typ, f.Name()), Imports: nil},
+		"NewRPCClient":    goinline.Target{Ident: fmt.Sprintf("New%s%sRPCClient", g.typ, f.Name()), Imports: nil},
 	}
 
 	for _, pkg := range g.bindings {
@@ -466,7 +468,7 @@ func find(pkg *types.Package, iface string) (*types.Interface, error) {
 		}
 		return i, nil
 	}
-	return nil, errors.New("not found")
+	return nil, fmt.Errorf("%s not found in %s", iface, pkg.Name())
 }
 
 func capitalize(s string) string {

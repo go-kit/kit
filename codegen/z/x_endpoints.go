@@ -21,7 +21,6 @@ func MakeXEndpoints(x X) map[string]endpoint.Endpoint{
 			return nil, endpoint.ErrBadCast
 		}
 		var err error
-		_ = err
 		var resp XYResponse
 		resp.Int64 = x.Y(ctx, req.P, req.Int, req.Int1, req.Int64)
 		return resp, err
@@ -39,7 +38,6 @@ func MakeXEndpoints(x X) map[string]endpoint.Endpoint{
 			return nil, endpoint.ErrBadCast
 		}
 		var err error
-		_ = err
 		var resp XZResponse
 		resp.R, err = x.Z(ctx, req.A, req.B)
 		return resp, err
