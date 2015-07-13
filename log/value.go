@@ -6,9 +6,9 @@ import (
 	"gopkg.in/stack.v1"
 )
 
-// A Valuer generates a log value. When passed to With in a value element (odd
-// indexes), it represents a dynamic value which is re-evaluated with each log
-// event.
+// A Valuer generates a log value. When passed to Context.With in a value
+// element (odd indexes), it represents a dynamic value which is re-evaluated
+// with each log event.
 type Valuer func() interface{}
 
 // bindValues replaces all value elements (odd indexes) containing a Valuer

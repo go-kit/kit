@@ -2,9 +2,9 @@ package log
 
 // Levels provides a default set of leveled loggers.
 type Levels struct {
-	Debug *Context
-	Info  *Context
-	Error *Context
+	Debug Context
+	Info  Context
+	Error Context
 }
 
 type levelOptions struct {
@@ -53,8 +53,8 @@ func NewLevels(base Logger, options ...LevelOption) Levels {
 		option(opts)
 	}
 	return Levels{
-		Debug: With(base, opts.levelKey, opts.debugValue),
-		Info:  With(base, opts.levelKey, opts.infoValue),
-		Error: With(base, opts.levelKey, opts.errorValue),
+		Debug: NewContext(base).With(opts.levelKey, opts.debugValue),
+		Info:  NewContext(base).With(opts.levelKey, opts.infoValue),
+		Error: NewContext(base).With(opts.levelKey, opts.errorValue),
 	}
 }

@@ -9,7 +9,7 @@ import (
 func ExampleContext() {
 	logger := log.NewLogfmtLogger(os.Stdout)
 	logger.Log("foo", 123)
-	ctx := log.With(logger, "level", "info")
+	ctx := log.NewContext(logger).With("level", "info")
 	ctx.Log()
 	ctx = ctx.With("msg", "hello")
 	ctx.Log()

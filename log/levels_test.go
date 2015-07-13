@@ -38,7 +38,7 @@ func TestModifiedLevels(t *testing.T) {
 		log.InfoLevelValue("🌜"),
 		log.ErrorLevelValue("🌊"),
 	)
-	log.With(levels.Debug, "easter_island", "🗿").Log("msg", "💃💃💃")
+	log.NewContext(levels.Debug).With("easter_island", "🗿").Log("msg", "💃💃💃")
 	if want, have := `{"easter_island":"🗿","l":"⛄","msg":"💃💃💃"}`+"\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
