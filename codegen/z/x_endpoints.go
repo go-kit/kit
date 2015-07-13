@@ -3,14 +3,14 @@
 package z
 
 import (
-	"golang.org/x/net/context"
 	"github.com/go-kit/kit/endpoint"
+	"golang.org/x/net/context"
 )
 
-func MakeXEndpoints(x X) map[string]endpoint.Endpoint{
-	m :=  map[string]endpoint.Endpoint{}
+func MakeXEndpoints(x X) map[string]endpoint.Endpoint {
+	m := map[string]endpoint.Endpoint{}
 
-	m["Y"] = func (ctx context.Context, request interface{}) (interface{}, error) {
+	m["Y"] = func(ctx context.Context, request interface{}) (interface{}, error) {
 		select {
 		default:
 		case <-ctx.Done():
@@ -25,9 +25,8 @@ func MakeXEndpoints(x X) map[string]endpoint.Endpoint{
 		resp.Int64 = x.Y(ctx, req.P, req.Int, req.Int1, req.Int64)
 		return resp, err
 	}
-	return m
 
-	m["Z"] = func (ctx context.Context, request interface{}) (interface{}, error) {
+	m["Z"] = func(ctx context.Context, request interface{}) (interface{}, error) {
 		select {
 		default:
 		case <-ctx.Done():
@@ -42,6 +41,6 @@ func MakeXEndpoints(x X) map[string]endpoint.Endpoint{
 		resp.R, err = x.Z(ctx, req.A, req.B)
 		return resp, err
 	}
-	return m
 
+	return m
 }

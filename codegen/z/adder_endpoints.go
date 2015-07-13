@@ -25,6 +25,6 @@ func MakeAdderEndpoints(x Adder) map[string]endpoint.Endpoint{
 		resp.Int = x.Add(req.A, req.B)
 		return resp, err
 	}
-	return m
 
+	return m
 }

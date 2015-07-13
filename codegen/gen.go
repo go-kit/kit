@@ -163,8 +163,8 @@ func Make{{.Name}}Endpoints(x {{.Name}}) map[string]endpoint.Endpoint{
 		{{range $i,$v:=.Resp.Args}}{{if ne $i 0}}, {{end}}{{call . "resp"}}{{end}} = x.{{.Name}}({{range $i,$v:=.Req.Args}}{{if ne $i 0}}, {{end}}{{call . "req"}}{{end}})
 		return resp, err
 	}
-	return m
 {{end}}
+	return m
 }
 `))
 
