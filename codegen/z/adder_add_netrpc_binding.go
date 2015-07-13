@@ -10,14 +10,22 @@ import (
 // NetrpcBinding makes an endpoint usable over net/rpc. It needs to be
 // exported to be picked up by net/rpc.
 type AdderAddNetrpcBinding struct {
+<<<<<<< HEAD
 	Ctx	context.Context	// has methods which should not be made available
+=======
+	ctx	context.Context	// has methods which should not be made available
+>>>>>>> endpoints
 	endpoint.Endpoint
 }
 
 // Fun implements the net/rpc method definition.
 func (b AdderAddNetrpcBinding,) Add(request AdderAddRequest, response *AdderAddResponse,) error {
 	var (
+<<<<<<< HEAD
 		ctx, cancel	= context.WithCancel(b.Ctx)
+=======
+		ctx, cancel	= context.WithCancel(b.ctx)
+>>>>>>> endpoints
 		errs		= make(chan error, 1)
 		responses	= make(chan AdderAddResponse, 1)
 	)

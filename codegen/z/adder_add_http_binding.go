@@ -11,7 +11,11 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
+<<<<<<< HEAD
 func MakeAdderAddHTTPBinding(ctx context.Context, e endpoint.Endpoint, before []httptransport.BeforeFunc, after []httptransport.AfterFunc) http.Handler {
+=======
+func makeAdderAddHTTPBinding(ctx context.Context, e endpoint.Endpoint, before []httptransport.BeforeFunc, after []httptransport.AfterFunc) http.Handler {
+>>>>>>> endpoints
 	decode := func(r *http.Request) (interface{}, error) {
 		defer r.Body.Close()
 		var request AdderAddRequest
