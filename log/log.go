@@ -52,7 +52,7 @@ func (l Context) Log(keyvals ...interface{}) error {
 	return l.logger.Log(kvs...)
 }
 
-// With returns a new Context with keyvals appeneded to those of the receiver.
+// With returns a new Context with keyvals appended to those of the receiver.
 func (l Context) With(keyvals ...interface{}) Context {
 	if len(keyvals)%2 != 0 {
 		panic("bad keyvals")
