@@ -9,28 +9,24 @@ import "sync/atomic"
 // Logger is the fundamental interface for all log operations. Log creates a
 // log event from keyvals, a variadic sequence of alternating keys and values.
 // Implementations must be safe for concurrent use by multiple goroutines. In
-// particular, any implementation of Logger that modifies elements of keyvals
-// must make a copy and modify the copy.
+// particular, any implementation of Logger that appends to keyvals or
+// modifies any of its elements must make a copy first.
 type Logger interface {
 	Log(keyvals ...interface{}) error
 }
 
-// With returns a new Context that includes keyvals in all log events. The
-// returned Context replaces all value elements (odd indexes) containing a
-// Valuer with their generated value for each call to its Log method.
-func With(logger Logger, keyvals ...interface{}) *Context {
-	if len(keyvals)%2 != 0 {
-		panic("bad keyvals")
+// NewContext returns a new Context that logs to logger.
+func NewContext(logger Logger) Context {
+	if c, ok := logger.(Context); ok {
+		return c
 	}
-	w, ok := logger.(*Context)
-	if !ok {
-		w = &Context{logger: logger}
-	}
-	return w.With(keyvals...)
+	return Context{logger: logger}
 }
 
 // A Context wraps a Logger and holds keyvals that it includes in all log
-// events.
+// events. When logging, a Context replaces all value elements (odd indexes)
+// containing a Valuer with their generated value for each call to its Log
+// method.
 type Context struct {
 	logger    Logger
 	keyvals   []interface{}
@@ -40,7 +36,7 @@ type Context struct {
 // Log replaces all value elements (odd indexes) containing a Valuer in the
 // stored context with their generated value, appends keyvals, and passes the
 // result to the wrapped Logger.
-func (l *Context) Log(keyvals ...interface{}) error {
+func (l Context) Log(keyvals ...interface{}) error {
 	if len(keyvals)%2 != 0 {
 		panic("bad keyvals")
 	}
@@ -57,7 +53,7 @@ func (l *Context) Log(keyvals ...interface{}) error {
 }
 
 // With returns a new Context with keyvals appeneded to those of the receiver.
-func (l *Context) With(keyvals ...interface{}) *Context {
+func (l Context) With(keyvals ...interface{}) Context {
 	if len(keyvals)%2 != 0 {
 		panic("bad keyvals")
 	}
@@ -66,7 +62,7 @@ func (l *Context) With(keyvals ...interface{}) *Context {
 	// Using the extra capacity without copying risks a data race that
 	// would violate the Logger interface contract.
 	n := len(l.keyvals) + len(keyvals)
-	return &Context{
+	return Context{
 		logger:    l.logger,
 		keyvals:   append(l.keyvals, keyvals...)[:n:n],
 		hasValuer: l.hasValuer || containsValuer(keyvals),
