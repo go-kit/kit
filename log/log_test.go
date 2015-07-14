@@ -10,12 +10,39 @@ import (
 
 var discard = log.Logger(log.LoggerFunc(func(...interface{}) error { return nil }))
 
-func TestWith(t *testing.T) {
+func TestContext(t *testing.T) {
+	buf := &bytes.Buffer{}
+	logger := log.NewLogfmtLogger(buf)
+
+	kvs := []interface{}{"a", 123}
+	lc := log.NewContext(logger).With(kvs...)
+	kvs[1] = 0 // With should copy its key values
+
+	lc = lc.With("b", "c") // With should stack
+	if err := lc.Log("msg", "message"); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := "a=123 b=c msg=message\n", buf.String(); want != have {
+		t.Errorf("\nwant: %shave: %s", want, have)
+	}
+
+	buf.Reset()
+	lc = lc.WithPrefix("p", "first")
+	if err := lc.Log("msg", "message"); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := "p=first a=123 b=c msg=message\n", buf.String(); want != have {
+		t.Errorf("\nwant: %shave: %s", want, have)
+	}
+}
+
+func TestContextWithPrefix(t *testing.T) {
 	buf := &bytes.Buffer{}
 	kvs := []interface{}{"a", 123}
-	lc := log.NewContext(log.NewJSONLogger(buf)).With(kvs...)
-	kvs[1] = 0             // With should copy its key values
-	lc = lc.With("b", "c") // With should stack
+	logger := log.NewJSONLogger(buf)
+	lc := log.NewContext(logger).With(kvs...)
+	kvs[1] = 0             // WithPrefix should copy its key values
+	lc = lc.With("b", "c") // WithPrefix should stack
 	if err := lc.Log("msg", "message"); err != nil {
 		t.Fatal(err)
 	}

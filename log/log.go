@@ -54,6 +54,9 @@ func (l Context) Log(keyvals ...interface{}) error {
 
 // With returns a new Context with keyvals appended to those of the receiver.
 func (l Context) With(keyvals ...interface{}) Context {
+	if len(keyvals) == 0 {
+		return l
+	}
 	if len(keyvals)%2 != 0 {
 		panic("bad keyvals")
 	}
@@ -65,6 +68,30 @@ func (l Context) With(keyvals ...interface{}) Context {
 	return Context{
 		logger:    l.logger,
 		keyvals:   append(l.keyvals, keyvals...)[:n:n],
+		hasValuer: l.hasValuer || containsValuer(keyvals),
+	}
+}
+
+// WithPrefix returns a new Context with keyvals prepended to those of the
+// receiver.
+func (l Context) WithPrefix(keyvals ...interface{}) Context {
+	if len(keyvals) == 0 {
+		return l
+	}
+	if len(keyvals)%2 != 0 {
+		panic("bad keyvals")
+	}
+	// Limiting the capacity of the stored keyvals ensures that a new
+	// backing array is created if the slice must grow in Log or With.
+	// Using the extra capacity without copying risks a data race that
+	// would violate the Logger interface contract.
+	n := len(l.keyvals) + len(keyvals)
+	kvs := make([]interface{}, 0, n)
+	kvs = append(kvs, keyvals...)
+	kvs = append(kvs, l.keyvals...)
+	return Context{
+		logger:    l.logger,
+		keyvals:   kvs,
 		hasValuer: l.hasValuer || containsValuer(keyvals),
 	}
 }
