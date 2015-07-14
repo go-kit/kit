@@ -122,12 +122,15 @@ func (g *generator) generate() error {
 			"github.com/go-kit/kit/endpoint",
 			"golang.org/x/net/context",
 		}}
+	iface.Receiver = receiver(iface)
 	for i := 0; i < g.iface.NumMethods(); i++ {
 		errs.Add(g.processFunc(g.iface.Method(i), &iface))
 	}
 	if len(errs) != 0 {
 		return errs.ToErr()
 	}
+
+	iface.Imports = uniq(iface.Imports)
 
 	w, close, err := g.open(filepath.Join(g.dir, toSnake(g.typ)+"_endpoints.go"))
 	if err != nil {
@@ -153,17 +156,17 @@ type {{$endpoints}} struct {
 func Make{{$endpoints}} (x {{.Name}}) {{$endpoints}} {
 	return {{$endpoints}}{x}
 }
-
 {{$client := print .Name "Client"}}
 type {{$client}} struct {
-	e endpoint.Endpoint
+	f func(string) endpoint.Endpoint
 }
 
-func Make{{$client}} (e endpoint.Endpoint) {{$client}} {
-	return {{$client}}{e}
+func Make{{$client}} (f func(string) endpoint.Endpoint) {{$client}} {
+	return {{$client}}{f}
 }
+{{$rec := .Receiver}}
 {{range .M}}
-func (x {{$endpoints}}) {{.Name}} (ctx context.Context, request interface{}) (interface{}, error) {
+func ({{$rec}} {{$endpoints}}) {{.Name}} (ctx context.Context, request interface{}) (interface{}, error) {
 	select {
 	default:
 	case <-ctx.Done():
@@ -175,11 +178,31 @@ func (x {{$endpoints}}) {{.Name}} (ctx context.Context, request interface{}) (in
 	}
 	var err error
 	var resp {{.Resp.StructDef.Name}}
-	{{range $i,$v:=.Resp.Args}}{{if ne $i 0}}, {{end}}{{call . "resp"}}{{end}} = x.x.{{.Name}}({{range $i,$v:=.Req.Args}}{{if ne $i 0}}, {{end}}{{call . "req"}}{{end}})
+	{{range $i,$v:=.Resp.Args}}{{if ne $i 0}}, {{end}}{{call . "resp"}}{{end}} = {{$rec}}.x.{{.Name}}({{range $i,$v:=.Req.Args}}{{if ne $i 0}}, {{end}}{{call . "req"}}{{end}})
 	return resp, err
 }
+
+func ({{$rec}} {{$client}}) {{.Name}} ({{range $i,$v:=.Req.Args2}}{{if ne $i 0}}, {{end}}{{.Name}} {{.Type}}{{end}}) ({{range $i,$v:=.Resp.Args2}}{{if ne $i 0}}, {{end}}{{.Name}} {{.Type}}{{end}}) {
+	{{if not .Req.HasCtx}}{{.Req.CtxName}} := context.TODO(){{end}}
+	{{if not .Resp.HasErr}}var {{.Resp.ErrName}} error{{end}}
+	var req {{.Req.StructDef.Name}}
+	{{range $i,$v:=.Req.Args}}{{if ne $i 0}}, {{end}}{{call . "req"}}{{end}} = {{range $i,$v:=.Req.Args2}}{{if ne $i 0}}, {{end}}{{.Name}}{{end}}
+	var raw interface{}
+	raw, {{.Resp.ErrName}} = {{$rec}}.f("{{.Name}}")({{.Req.CtxName}} , req)
+	if err != nil {
+		{{if not .Resp.HasErr}}panic(err){{else}}return{{end}}
+	}
+	resp, ok := raw.({{.Resp.StructDef.Name}})
+	if !ok {
+		{{.Resp.ErrName}}  = endpoint.ErrBadCast
+		{{if not .Resp.HasErr}}panic(err){{else}}return{{end}}
+	}
+
+	{{range $i,$v:=.Resp.Args2}}{{if ne $i 0}}, {{end}}{{.Name}}{{end}} = {{range $i,$v:=.Resp.Args}}{{if ne $i 0}}, {{end}}{{call . "resp"}}{{end}}
+	return
+}
+
 {{end}}
-// TODO: implement {{.Name}} methods on {{$client}}.
 `))
 
 type structT struct {
@@ -205,8 +228,11 @@ func (a argName) String() string {
 }
 
 type args struct {
-	Args      []argName
-	StructDef structDef
+	Args             []argName // For referencing as a field name.
+	Args2            []struct{ Name, Type string }
+	StructDef        structDef
+	ErrName, CtxName string
+	HasCtx, HasErr   bool
 }
 
 type method struct {
@@ -216,10 +242,11 @@ type method struct {
 }
 
 type Interface struct {
-	Pkg     string
-	Imports []string
-	Name    string
-	M       []method
+	Pkg      string
+	Imports  []string
+	Name     string
+	M        []method
+	Receiver string
 }
 
 // t is a tuple for representing parameters or return values of  function.
@@ -231,15 +258,6 @@ func (g *generator) parse(name string, t *types.Tuple) *args {
 	un := uniqueNames{}
 	m := &args{}
 	for _, p := range ps {
-		// Filter out context and error.
-		switch p.Type().String() {
-		case "golang.org/x/net/context.Context":
-			m.Args = append(m.Args, func(string) string { return "ctx" })
-			continue
-		case "error":
-			m.Args = append(m.Args, func(string) string { return "err" })
-			continue
-		}
 		n := p.Name()
 		if n == "" {
 			n = p.Type().String()
@@ -247,13 +265,37 @@ func (g *generator) parse(name string, t *types.Tuple) *args {
 				n = "p"
 			}
 		}
+		n = un.get(capitalize(n))
+		t := types.NewField(0, g.pkg, n, p.Type(), false)
+		// Filter out context and error.
+		switch p.Type().String() {
+		case "golang.org/x/net/context.Context":
+			ctxName := un.get("ctx")
+			m.Args = append(m.Args, func(string) string { return ctxName })
+			m.CtxName = ctxName
+			m.HasCtx = true
+			m.Args2 = append(m.Args2, struct{ Name, Type string }{ctxName, types.TypeString(t.Type(), relativeTo(g.pkg))})
+			continue
+		case "error":
+			errName := un.get("err")
+			m.Args = append(m.Args, func(string) string { return errName })
+			m.ErrName = errName
+			m.HasErr = true
+			m.Args2 = append(m.Args2, struct{ Name, Type string }{errName, types.TypeString(t.Type(), relativeTo(g.pkg))})
+			continue
+		}
+		m.Args2 = append(m.Args2, struct{ Name, Type string }{uncapitalize(n), types.TypeString(t.Type(), relativeTo(g.pkg))})
 		updateDeps(g.rev[p.Type()], g.info, imports)
 		// Make sure all the names are unique.
-		n = un.get(capitalize(n))
-		name := n
-		m.Args = append(m.Args, func(s string) string { return fmt.Sprintf("%s.%s", s, name) })
-		fields = append(fields, types.NewField(0, g.pkg, n, p.Type(), false))
+		m.Args = append(m.Args, func(s string) string { return fmt.Sprintf("%s.%s", s, n) })
+		fields = append(fields, t)
 		tags = append(tags, fmt.Sprintf(`json:"%s"`, toSnake(n)))
+	}
+	if !m.HasCtx {
+		m.CtxName = un.get("ctx")
+	}
+	if !m.HasErr {
+		m.ErrName = un.get("err")
 	}
 	imps := cleanImports(imports)
 	m.StructDef = structDef{
@@ -313,8 +355,19 @@ func (g *generator) processFunc(f *types.Func, iface *Interface) error {
 		return err
 	}
 	iface.M = append(iface.M, method{Name: f.Name(), Req: *reqS, Resp: *respS})
+	// Make sure the reciever, the params and return values do not overlap.
+	un := uniqueNames{}
+	// TODO: add imported packages.
+	for _, x := range []string{iface.Receiver, "req", "resp", "raw", "ok", `break`, `default`, `func`, `interface`, `select`, `case`, `defer`, `go`, `map`, `struct`, `chan`, `else`, `goto`, `package`, `switch`, `const`, `fallthrough`, `if`, `range`, `type`, `continue`, `for`, `import`, `return`, `varbool`, `true`, `false`, `uint8`, `uint16`, `uint32`, `uint64`, `int8`, `int16`, `int32`, `int64`, `float32`, `float64`, `complex64`, `complex`, `128`, `string`, `int`, `uint`, `uintptr`, `byte`, `rune`, `iota`, `nil`, `appnd`, `copy`, `delete`, `len`, `cap`, `make`, `new`, `complex`, `real`, `imag`, `close`, `panic`, `recover`, `print`, `println`, `error`} {
+		un.get(x)
+	}
+	for i, a := range reqS.Args2 {
+		reqS.Args2[i].Name = un.get(a.Name)
+	}
+	for i, a := range respS.Args2 {
+		respS.Args2[i].Name = un.get(a.Name)
+	}
 
-	// not needed?
 	imports := map[types.Object]*ast.SelectorExpr{}
 	for _, p := range toList(sig.Params()) {
 		updateDeps(g.rev[p.Type()], g.info, imports)
@@ -323,8 +376,7 @@ func (g *generator) processFunc(f *types.Func, iface *Interface) error {
 		updateDeps(g.rev[p.Type()], g.info, imports)
 	}
 	imp := cleanImports(imports)
-	_ = imp
-	// end of not needed?
+	iface.Imports = append(iface.Imports, imp...)
 
 	im := map[string]goinline.Target{
 		"FunT":            goinline.Target{Ident: f.Name(), Imports: nil},
@@ -479,12 +531,28 @@ func find(pkg *types.Package, iface string) (*types.Interface, error) {
 	return nil, fmt.Errorf("%s not found in %s", iface, pkg.Name())
 }
 
+func receiver(iface Interface) string {
+	if len(iface.Name) == 0 {
+		return "x"
+	}
+	return string([]rune{unicode.ToLower(([]rune(iface.Name))[0])})
+}
+
 func capitalize(s string) string {
 	if s == "" {
 		return s
 	}
 	rs := []rune(s)
 	rs[0] = unicode.ToUpper(rs[0])
+	return string(rs)
+}
+
+func uncapitalize(s string) string {
+	if s == "" {
+		return s
+	}
+	rs := []rune(s)
+	rs[0] = unicode.ToLower(rs[0])
 	return string(rs)
 }
 
@@ -581,6 +649,10 @@ func cleanImports(imports map[types.Object]*ast.SelectorExpr) []string {
 	for k, _ := range imports {
 		imps = append(imps, k.Pkg().Path())
 	}
+	return uniq(imps)
+}
+
+func uniq(imps []string) []string {
 	sort.Strings(imps)
 	// Remove dups.
 	to := 0
@@ -597,8 +669,8 @@ func cleanImports(imports map[types.Object]*ast.SelectorExpr) []string {
 }
 
 var knownBindings map[string]string = map[string]string{
-	"rpc":  "github.com/go-kit/kit/codegen/blueprints/rpc",
-	"http": "github.com/go-kit/kit/codegen/blueprints/http",
+	"rpc":  "github.com/sasha-s/kit/codegen/blueprints/rpc",
+	"http": "github.com/sasha-s/kit/codegen/blueprints/http",
 }
 
 const preamble = `// Do not edit! Generated by gokit-generate`
