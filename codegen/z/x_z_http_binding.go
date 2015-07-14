@@ -11,7 +11,7 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
-func makeXZHTTPBinding(ctx context.Context, e endpoint.Endpoint, before []httptransport.BeforeFunc, after []httptransport.AfterFunc) http.Handler {
+func MakeXZHTTPBinding(ctx context.Context, e endpoint.Endpoint, before []httptransport.BeforeFunc, after []httptransport.AfterFunc) http.Handler {
 	decode := func(r *http.Request) (interface{}, error) {
 		defer r.Body.Close()
 		var request XZRequest

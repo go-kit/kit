@@ -9,29 +9,30 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// NewRPCClient takes a net/rpc Client that should point to an instance of an
-// addsvc. It returns an endpoint that wraps and invokes that Client.
-func NewAdderAddRPCClient(c *rpc.Client) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		var (
-			errs		= make(chan error, 1)
-			responses	= make(chan interface{}, 1)
-		)
-		go func() {
-			var response AdderAddResponse
-			if err := c.Call("addsvc.Add", request, &response); err != nil {
-				errs <- err
-				return
+// NewRPCClient takes a net/rpc Client that should point to an instance...
+func NewAdderAddRPCClient(c *rpc.Client) func(method string) endpoint.Endpoint {
+	return func(method string) endpoint.Endpoint {
+		return func(ctx context.Context, request interface{}) (interface{}, error) {
+			var (
+				errs		= make(chan error, 1)
+				responses	= make(chan interface{}, 1)
+			)
+			go func() {
+				var response AdderAddResponse
+				if err := c.Call(method, request, &response); err != nil {
+					errs <- err
+					return
+				}
+				responses <- response
+			}()
+			select {
+			case <-ctx.Done():
+				return nil, context.DeadlineExceeded
+			case err := <-errs:
+				return nil, err
+			case response := <-responses:
+				return response, nil
 			}
-			responses <- response
-		}()
-		select {
-		case <-ctx.Done():
-			return nil, context.DeadlineExceeded
-		case err := <-errs:
-			return nil, err
-		case response := <-responses:
-			return response, nil
 		}
 	}
 }

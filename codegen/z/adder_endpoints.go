@@ -7,11 +7,12 @@ import (
 	"golang.org/x/net/context"
 )
 
+
 type AdderEndpoints struct {
 	x Adder
 }
 
-func MakeAdderEndpoints(x Adder) AdderEndpoints {
+func MakeAdderEndpoints (x Adder) AdderEndpoints {
 	return AdderEndpoints{x}
 }
 
@@ -19,11 +20,12 @@ type AdderClient struct {
 	f func(string) endpoint.Endpoint
 }
 
-func MakeAdderClient(f func(string) endpoint.Endpoint) AdderClient {
+func MakeAdderClient (f func(string) endpoint.Endpoint) AdderClient {
 	return AdderClient{f}
 }
 
-func (a AdderEndpoints) Add(ctx context.Context, request interface{}) (interface{}, error) {
+
+func (a AdderEndpoints) Add (ctx context.Context, request interface{}) (interface{}, error) {
 	select {
 	default:
 	case <-ctx.Done():
@@ -39,23 +41,24 @@ func (a AdderEndpoints) Add(ctx context.Context, request interface{}) (interface
 	return resp, err
 }
 
-func (a AdderClient) Add(a1 int, b int) (int1 int) {
+func (a AdderClient) Add (a1 int, b int) (int1 int) {
 	ctx := context.TODO()
 	var err error
 	var req AdderAddRequest
 	req.A, req.B = a1, b
 	var raw interface{}
-	raw, err = a.f("Add")(ctx, req)
+	raw, err = a.f("Add")(ctx , req)
 	if err != nil {
 		panic(err)
 	}
 	resp, ok := raw.(AdderAddResponse)
 	if !ok {
-		err = endpoint.ErrBadCast
+		err  = endpoint.ErrBadCast
 		panic(err)
 	}
 
 	int1 = resp.Int
 	return
-
 }
+
+

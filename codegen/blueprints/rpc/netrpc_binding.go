@@ -9,7 +9,7 @@ import (
 // NetrpcBinding makes an endpoint usable over net/rpc. It needs to be
 // exported to be picked up by net/rpc.
 type NetrpcBinding struct {
-	ctx context.Context // has methods which should not be made available
+	Ctx context.Context // has methods which should not be made available
 	endpoint.Endpoint
 }
 
@@ -19,7 +19,7 @@ type ResponseT struct{}
 // Fun implements the net/rpc method definition.
 func (b NetrpcBinding) FunT(request RequestT, response *ResponseT) error {
 	var (
-		ctx, cancel = context.WithCancel(b.ctx)
+		ctx, cancel = context.WithCancel(b.Ctx)
 		errs        = make(chan error, 1)
 		responses   = make(chan ResponseT, 1)
 	)
