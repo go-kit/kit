@@ -10,14 +10,40 @@ import (
 
 var discard = log.Logger(log.LoggerFunc(func(...interface{}) error { return nil }))
 
-func TestWith(t *testing.T) {
+func TestContext(t *testing.T) {
+	buf := &bytes.Buffer{}
+	logger := log.NewLogfmtLogger(buf)
+
+	kvs := []interface{}{"a", 123}
+	lc := log.NewContext(logger).With(kvs...)
+	kvs[1] = 0 // With should copy its key values
+
+	lc = lc.With("b", "c") // With should stack
+	if err := lc.Log("msg", "message"); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := "a=123 b=c msg=message\n", buf.String(); want != have {
+		t.Errorf("\nwant: %shave: %s", want, have)
+	}
+
+	buf.Reset()
+	lc = lc.WithPrefix("p", "first")
+	if err := lc.Log("msg", "message"); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := "p=first a=123 b=c msg=message\n", buf.String(); want != have {
+		t.Errorf("\nwant: %shave: %s", want, have)
+	}
+}
+
+func TestContextWithPrefix(t *testing.T) {
 	buf := &bytes.Buffer{}
 	kvs := []interface{}{"a", 123}
 	logger := log.NewJSONLogger(buf)
-	logger = log.With(logger, kvs...)
-	kvs[1] = 0                          // With should copy its key values
-	logger = log.With(logger, "b", "c") // With should stack
-	if err := logger.Log("msg", "message"); err != nil {
+	lc := log.NewContext(logger).With(kvs...)
+	kvs[1] = 0             // WithPrefix should copy its key values
+	lc = lc.With("b", "c") // WithPrefix should stack
+	if err := lc.Log("msg", "message"); err != nil {
 		t.Fatal(err)
 	}
 	if want, have := `{"a":123,"b":"c","msg":"message"}`+"\n", buf.String(); want != have {
@@ -45,7 +71,7 @@ func TestWithConcurrent(t *testing.T) {
 
 	// With must be careful about handling slices that can grow without
 	// copying the underlying array, so give it a challenge.
-	l := log.With(logger, make([]interface{}, 0, 2)...)
+	l := log.NewContext(logger).With(make([]interface{}, 0, 2)...)
 
 	// Start logging concurrently. Each goroutine logs its id so the logger
 	// can bucket the event counts.
@@ -80,35 +106,37 @@ func BenchmarkDiscard(b *testing.B) {
 
 func BenchmarkOneWith(b *testing.B) {
 	logger := discard
-	logger = log.With(logger, "k", "v")
+	lc := log.NewContext(logger).With("k", "v")
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Log("k", "v")
+		lc.Log("k", "v")
 	}
 }
 
 func BenchmarkTwoWith(b *testing.B) {
 	logger := discard
-	for i := 0; i < 2; i++ {
-		logger = log.With(logger, "k", "v")
+	lc := log.NewContext(logger).With("k", "v")
+	for i := 1; i < 2; i++ {
+		lc = lc.With("k", "v")
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Log("k", "v")
+		lc.Log("k", "v")
 	}
 }
 
 func BenchmarkTenWith(b *testing.B) {
 	logger := discard
-	for i := 0; i < 10; i++ {
-		logger = log.With(logger, "k", "v")
+	lc := log.NewContext(logger).With("k", "v")
+	for i := 1; i < 10; i++ {
+		lc = lc.With("k", "v")
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Log("k", "v")
+		lc.Log("k", "v")
 	}
 }
 
