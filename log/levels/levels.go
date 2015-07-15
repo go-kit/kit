@@ -10,6 +10,20 @@ type Levels struct {
 	ctx      log.Context
 	levelKey string
 
+	// We have a choice between storing level values in string fields or
+	// making a separate context for each level. When using string fields the
+	// Log method must combine the base context, the level data, and the
+	// logged keyvals; but the With method only requires updating one context.
+	// If we instead keep a separate context for each level the Log method
+	// must only append the new keyvals; but the With method would have to
+	// update all five contexts.
+
+	// Roughly speaking, storing multiple contexts breaks even if the ratio of
+	// Log/With calls is more than the number of levels. We have chosen to
+	// make the With method cheap and the Log method a bit more costly because
+	// we do not expect most applications to Log more than five times for each
+	// call to With.
+
 	debugValue string
 	infoValue  string
 	warnValue  string
