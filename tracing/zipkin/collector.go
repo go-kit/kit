@@ -10,6 +10,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/scribe"
 )
 
@@ -31,10 +32,16 @@ type ScribeCollector struct {
 	nextSend      time.Time
 	batchInterval time.Duration
 	batchSize     int
+	logger        log.Logger
 }
 
-// NewScribeCollector returns a new Scribe-backed Collector, ready for use.
-func NewScribeCollector(addr string, timeout time.Duration, batchSize int, batchInterval time.Duration) (Collector, error) {
+// NewScribeCollector returns a new Scribe-backed Collector. addr should be a
+// TCP endpoint of the form "host:port". timeout is passed to the Thrift dial
+// function NewTSocketFromAddrTimeout. batchSize and batchInterval control the
+// maximum size and interval of a batch of spans; as soon as either limit is
+// reached, the batch is sent. The logger is used to log errors, such as batch
+// send failures; users should provide an appropriate context, if desired.
+func NewScribeCollector(addr string, timeout time.Duration, batchSize int, batchInterval time.Duration, logger log.Logger) (Collector, error) {
 	factory := scribeClientFactory(addr, timeout)
 	client, err := factory()
 	if err != nil {
@@ -49,6 +56,7 @@ func NewScribeCollector(addr string, timeout time.Duration, batchSize int, batch
 		nextSend:      time.Now().Add(batchInterval),
 		batchInterval: batchInterval,
 		batchSize:     batchSize,
+		logger:        logger,
 	}
 	go c.loop()
 	return c, nil
@@ -82,7 +90,7 @@ func (c *ScribeCollector) loop() {
 		case <-c.sendc:
 			c.nextSend = time.Now().Add(c.batchInterval)
 			if err := c.send(c.batch); err != nil {
-				Log.Log("err", err.Error())
+				c.logger.Log("err", err.Error())
 				continue
 			}
 			c.batch = c.batch[:0]

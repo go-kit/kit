@@ -21,10 +21,10 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
+	httpclient "github.com/go-kit/kit/addsvc/client/http"
+	"github.com/go-kit/kit/addsvc/pb"
 	"github.com/go-kit/kit/endpoint"
-	thriftadd "github.com/go-kit/kit/examples/addsvc/_thrift/gen-go/add"
-	httpclient "github.com/go-kit/kit/examples/addsvc/client/http"
-	"github.com/go-kit/kit/examples/addsvc/pb"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/expvar"
@@ -48,7 +48,7 @@ func main() {
 		thriftBufferSize = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
 		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
 
-		proxyHTTPURL = fs.String("proxy.http.url", "", "if set, proxy requests over HTTP to this addsvc")
+		proxyHTTPAddr = fs.String("proxy.http.url", "", "if set, proxy requests over HTTP to this addsvc")
 
 		zipkinServiceName            = fs.String("zipkin.service.name", "addsvc", "Zipkin service name")
 		zipkinCollectorAddr          = fs.String("zipkin.collector.addr", "", "Zipkin Scribe collector address (empty will log spans)")
@@ -96,9 +96,9 @@ func main() {
 		if zipkinCollector, err = zipkin.NewScribeCollector(
 			*zipkinCollectorAddr,
 			*zipkinCollectorTimeout,
-			zipkin.ScribeBatchSize(*zipkinCollectorBatchSize),
-			zipkin.ScribeBatchInterval(*zipkinCollectorBatchInterval),
-			zipkin.ScribeLogger(logger),
+			*zipkinCollectorBatchSize,
+			*zipkinCollectorBatchInterval,
+			logger,
 		); err != nil {
 			logger.Log("err", err)
 			os.Exit(1)
@@ -109,9 +109,9 @@ func main() {
 
 	// Our business and operational domain
 	var a Add = pureAdd
-	if *proxyHTTPURL != "" {
+	if *proxyHTTPAddr != "" {
 		var e endpoint.Endpoint
-		e = httpclient.NewClient("GET", *proxyHTTPURL, zipkin.ToRequest(zipkinSpanFunc))
+		e = httpclient.NewClient("GET", *proxyHTTPAddr, zipkin.ToRequest(zipkinSpanFunc))
 		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
 		a = proxyAdd(e, logger)
 	}
@@ -142,8 +142,8 @@ func main() {
 	go func() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
-		before := []httptransport.RequestFunc{zipkin.ToContext(zipkinSpanFunc, logger)}
-		after := []httptransport.ResponseFunc{}
+		before := []httptransport.BeforeFunc{zipkin.ToContext(zipkinSpanFunc, logger)}
+		after := []httptransport.AfterFunc{}
 		handler := makeHTTPBinding(ctx, e, before, after)
 		logger.Log("addr", *httpAddr, "transport", "HTTP/JSON")
 		errc <- http.ListenAndServe(*httpAddr, handler)

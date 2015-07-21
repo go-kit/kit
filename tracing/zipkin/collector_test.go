@@ -3,6 +3,7 @@ package zipkin_test
 import (
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"sync"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/zipkin"
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/scribe"
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
@@ -21,7 +23,7 @@ func TestScribeCollector(t *testing.T) {
 
 	timeout := time.Second
 	batchInterval := time.Millisecond
-	c, err := zipkin.NewScribeCollector(server.addr(), timeout, 0, batchInterval)
+	c, err := zipkin.NewScribeCollector(server.addr(), timeout, 0, batchInterval, log.NewLogfmtLogger(ioutil.Discard))
 	if err != nil {
 		t.Fatal(err)
 	}
