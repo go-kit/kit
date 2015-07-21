@@ -61,4 +61,13 @@ addsvc
 
 ## Client
 
-TODO
+addsvc comes with an example client, [addcli][].
+
+[addcli]: https://github.com/go-kit/kit/blob/master/addsvc/client/addcli/main.go
+
+```
+$ cd client/addcli
+$ go install
+$ addcli
+```
+

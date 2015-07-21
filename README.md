@@ -1,6 +1,6 @@
 # Go kit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit)
 
-**Go kit** is a **distributed programming toolkit** designed for microservices.
+**Go kit** is a **distributed programming toolkit** for microservices in the modern enterprise. We want to make Go a viable choice for application (business-logic) software in large organizations.
 
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
 - Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](http://bit.ly/go-slack-signup))
@@ -42,12 +42,17 @@ For more details, see
 ## Component status
 
 - [API stability](https://github.com/go-kit/kit/blob/master/rfc/rfc007-api-stability.md) — **adopted**
-- [`package metrics`](https://github.com/go-kit/kit/tree/master/metrics) — **implemented**
-- [`package server`](https://github.com/go-kit/kit/tree/master/server) — **implemented**
-- [`package transport`](https://github.com/go-kit/kit/tree/master/transport) — **implemented**
 - [`package log`](https://github.com/go-kit/kit/tree/master/log) — **implemented**
-- [`package tracing`](https://github.com/go-kit/kit/tree/master/tracing) — Zipkin supported, Appdash coming
+- [`package metrics`](https://github.com/go-kit/kit/tree/master/metrics) — **implemented**
+- [`package endpoint`](https://github.com/go-kit/kit/tree/master/endpoint) — **implemented**
+- [`package transport`](https://github.com/go-kit/kit/tree/master/transport) — **implemented**
+- [`package circuitbreaker`](https://github.com/go-kit/kit/tree/master/circuitbreaker) — **implemented**
+- [`package loadbalancer`](https://github.com/go-kit/kit/tree/master/loadbalancer) — **implemented**
+- [`package ratelimit`](https://github.com/go-kit/kit/tree/master/ratelimit) — **implemented**
+- [`package tracing`](https://github.com/go-kit/kit/tree/master/tracing) — prototyping
+- Client patterns — prototyping
 - Service discovery — pending
+- Example [addsvc](https://github.com/go-kit/kit/tree/master/addsvc) — **implemented**
 
 ### Dependency management
 
@@ -68,13 +73,12 @@ Please see [CONTRIBUTING.md]. Thank you, [contributors]!
 
 ### API stability policy
 
-The Go kit project depends on code maintained by others. This includes the Go
-standard library and sub-repositories and other external libraries. The Go
-language and standard library provide stability guarantees, but the other
-external libraries typically do not.
+The Go kit project depends on code maintained by others.
+This includes the Go standard library and sub-repositories and other external libraries.
+The Go language and standard library provide stability guarantees, but the other external libraries typically do not.
  [The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
-proposes a standard policy for package authors to advertise API stability. The
-Go kit project prefers to depend on code that abides the API stability policy.
+proposes a standard policy for package authors to advertise API stability.
+The Go kit project prefers to depend on code that abides the API stability policy.
 
 ## Related projects
 

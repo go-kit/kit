@@ -9,11 +9,23 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
+func TestSetHeader(t *testing.T) {
+	const (
+		key = "X-Foo"
+		val = "12345"
+	)
+	r := httptest.NewRecorder()
+	httptransport.SetHeader(key, val)(context.Background(), r)
+	if want, have := val, r.Header().Get(key); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+}
+
 func TestSetContentType(t *testing.T) {
-	contentType := "application/whatever"
-	rec := httptest.NewRecorder()
-	httptransport.SetContentType(contentType)(context.Background(), rec)
-	if want, have := contentType, rec.Header().Get("Content-Type"); want != have {
+	const contentType = "application/json"
+	r := httptest.NewRecorder()
+	httptransport.SetContentType(contentType)(context.Background(), r)
+	if want, have := contentType, r.Header().Get("Content-Type"); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
 }

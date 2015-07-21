@@ -8,11 +8,11 @@ import (
 )
 
 // StdlibWriter implements io.Writer by invoking the stdlib log.Print. It's
-// designed to be passed to a gokit logger as the writer, for cases where it's
-// necessary to redirect all gokit log output to the stdlib logger.
+// designed to be passed to a Go kit logger as the writer, for cases where
+// it's necessary to redirect all Go kit log output to the stdlib logger.
 //
 // If you have any choice in the matter, you shouldn't use this. Prefer to
-// redirect the stdlib log to the gokit logger via NewStdlibAdapter.
+// redirect the stdlib log to the Go kit logger via NewStdlibAdapter.
 type StdlibWriter struct{}
 
 // Write implements io.Writer.

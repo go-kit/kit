@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"net/rpc"
 	"os"
 	"os/signal"
 	"strings"
@@ -17,12 +18,11 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
-	"github.com/streadway/handy/cors"
-	"github.com/streadway/handy/encoding"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
+	httpclient "github.com/go-kit/kit/addsvc/client/http"
 	"github.com/go-kit/kit/addsvc/pb"
 	"github.com/go-kit/kit/endpoint"
 	kitlog "github.com/go-kit/kit/log"
@@ -31,7 +31,6 @@ import (
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/metrics/statsd"
 	"github.com/go-kit/kit/tracing/zipkin"
-	jsoncodec "github.com/go-kit/kit/transport/codec/json"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
@@ -43,7 +42,8 @@ func main() {
 		debugAddr        = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
 		httpAddr         = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
 		grpcAddr         = fs.String("grpc.addr", ":8002", "Address for gRPC server")
-		thriftAddr       = fs.String("thrift.addr", ":8003", "Address for Thrift server")
+		netrpcAddr       = fs.String("netrpc.addr", ":8003", "Address for net/rpc server")
+		thriftAddr       = fs.String("thrift.addr", ":8004", "Address for Thrift server")
 		thriftProtocol   = fs.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
 		thriftBufferSize = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
 		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
@@ -62,7 +62,7 @@ func main() {
 	// `package log` domain
 	var logger kitlog.Logger
 	logger = kitlog.NewLogfmtLogger(os.Stderr)
-	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC, "caller", kitlog.DefaultCaller)
+	logger = kitlog.NewContext(logger).With("ts", kitlog.DefaultTimestampUTC)
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
 	stdlog.SetFlags(0)                                // flags are handled in our logger
 
@@ -77,8 +77,8 @@ func main() {
 			Help:      "Total number of received requests.",
 		}, []string{}),
 	)
-	duration := metrics.NewMultiHistogram(
-		expvar.NewHistogram("duration_nanoseconds_total", 0, 100000000, 3),
+	duration := metrics.NewTimeHistogram(time.Nanosecond, metrics.NewMultiHistogram(
+		expvar.NewHistogram("duration_nanoseconds_total", 0, 1e9, 3, 50, 95, 99),
 		statsd.NewHistogram(ioutil.Discard, "duration_nanoseconds_total", time.Second),
 		prometheus.NewSummary(stdprometheus.SummaryOpts{
 			Namespace: "addsvc",
@@ -86,7 +86,7 @@ func main() {
 			Name:      "duration_nanoseconds_total",
 			Help:      "Total nanoseconds spend serving requests.",
 		}, []string{}),
-	)
+	))
 
 	// `package tracing` domain
 	zipkinHostPort := "localhost:1234" // TODO Zipkin makes overly simple assumptions about services
@@ -109,17 +109,14 @@ func main() {
 
 	// Our business and operational domain
 	var a Add = pureAdd
-	if *proxyHTTPURL != "" {
-		codec := jsoncodec.New()
-		makeResponse := func() interface{} { return &addResponse{} }
-
+	if *proxyHTTPAddr != "" {
 		var e endpoint.Endpoint
-		e = httptransport.NewClient(*proxyHTTPURL, codec, makeResponse, httptransport.ClientBefore(zipkin.ToRequest(zipkinSpanFunc)))
+		e = httpclient.NewClient("GET", *proxyHTTPAddr, zipkin.ToRequest(zipkinSpanFunc))
 		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
-
 		a = proxyAdd(e, logger)
 	}
 	a = logging(logger)(a)
+	a = instrument(requests, duration)(a)
 
 	// Server domain
 	var e endpoint.Endpoint
@@ -145,22 +142,11 @@ func main() {
 	go func() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
-
-		field := metrics.Field{Key: "transport", Value: "http"}
-		before := httptransport.BindingBefore(zipkin.ToContext(zipkinSpanFunc))
-		after := httptransport.BindingAfter(httptransport.SetContentType("application/json"))
-		makeRequest := func() interface{} { return &addRequest{} }
-
-		var handler http.Handler
-		handler = httptransport.NewBinding(ctx, makeRequest, jsoncodec.New(), e, before, after)
-		handler = encoding.Gzip(handler)
-		handler = cors.Middleware(cors.Config{})(handler)
-		handler = httpInstrument(requests.With(field), duration.With(field))(handler)
-
-		mux := http.NewServeMux()
-		mux.Handle("/add", handler)
-		logger.Log("addr", *httpAddr, "transport", "HTTP")
-		errc <- http.ListenAndServe(*httpAddr, mux)
+		before := []httptransport.BeforeFunc{zipkin.ToContext(zipkinSpanFunc)}
+		after := []httptransport.AfterFunc{}
+		handler := makeHTTPBinding(ctx, e, before, after)
+		logger.Log("addr", *httpAddr, "transport", "HTTP/JSON")
+		errc <- http.ListenAndServe(*httpAddr, handler)
 	}()
 
 	// Transport: gRPC
@@ -171,15 +157,20 @@ func main() {
 			return
 		}
 		s := grpc.NewServer() // uses its own context?
-		field := metrics.Field{Key: "transport", Value: "grpc"}
-
-		var addServer pb.AddServer
-		addServer = grpcBinding{e}
-		addServer = grpcInstrument(requests.With(field), duration.With(field))(addServer)
-
-		pb.RegisterAddServer(s, addServer)
+		pb.RegisterAddServer(s, grpcBinding{e})
 		logger.Log("addr", *grpcAddr, "transport", "gRPC")
 		errc <- s.Serve(ln)
+	}()
+
+	// Transport: net/rpc
+	go func() {
+		ctx, cancel := context.WithCancel(root)
+		defer cancel()
+		s := rpc.NewServer()
+		s.RegisterName("addsvc", NetrpcBinding{ctx, e})
+		s.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
+		logger.Log("addr", *netrpcAddr, "transport", "net/rpc")
+		errc <- http.ListenAndServe(*netrpcAddr, s)
 	}()
 
 	// Transport: Thrift
@@ -219,15 +210,9 @@ func main() {
 			return
 		}
 
-		field := metrics.Field{Key: "transport", Value: "thrift"}
-
-		var service thriftadd.AddService
-		service = thriftBinding{ctx, e}
-		service = thriftInstrument(requests.With(field), duration.With(field))(service)
-
 		logger.Log("addr", *thriftAddr, "transport", "Thrift")
 		errc <- thrift.NewTSimpleServer4(
-			thriftadd.NewAddServiceProcessor(service),
+			thriftadd.NewAddServiceProcessor(thriftBinding{ctx, e}),
 			transport,
 			transportFactory,
 			protocolFactory,
