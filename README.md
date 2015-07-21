@@ -1,4 +1,4 @@
-# gokit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit)
+# Go kit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit)
 
 **Go kit** is a **distributed programming toolkit** for microservices in the modern enterprise. We want to make Go a viable choice for application (business-logic) software in large organizations.
 
@@ -7,18 +7,35 @@
 
 ## Motivation
 
-See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video of the talk](https://www.youtube.com/watch?v=iFR_7AKkJFU).
+Go has emerged as the language of the server, but it remains underrepresented
+in large, consumer-focused tech companies like Facebook, Twitter, Netflix, and
+SoundCloud. These organizations have largely adopted JVM-based stacks for
+their business logic, owing in large part to libraries and ecosystems that
+directly support their microservice architectures.
+
+To reach its next level of success, Go needs more than simple primitives and
+idioms. It needs a comprehensive toolkit, for coherent distributed programming
+in the large. Go kit is a set of packages and best practices, leveraging years
+of production experience, and providing a comprehensive, robust, and trustable
+platform for organizations of any size.
+
+In short, Go kit brings Go to the modern enterprise.
+
+For more details, see
+ [the motivating blog post](http://peter.bourgon.org/go-kit) and
+ [the video of the talk](https://www.youtube.com/watch?v=iFR_7AKkJFU).
 
 ## Goals
 
 - Operate in a heterogeneous SOA — expect to interact with mostly non-Go-kit services
 - RPC as the primary messaging pattern
 - Pluggable serialization and transport — not just JSON over HTTP
-- Zipkin-compatible request tracing
+- Operate within existing infrastructures — no mandates for specific tools or technologies
 
 ## Non-goals
 
-- Supporting messaging patterns other than RPC (in the initial release) — pub/sub, CQRS, etc.
+- Supporting messaging patterns other than RPC (in the initial release) — MPI, pub/sub, CQRS, etc.
+- Re-implementing functionality that can be provided by wrapping existing packages
 - Having opinions on deployment, orchestration, process supervision, etc.
 - Having opinions on configuration passing — flags, env vars, files, etc.
 
@@ -37,22 +54,22 @@ See [the motivating blog post](http://peter.bourgon.org/go-kit) and [the video o
 - Service discovery — pending
 - Example [addsvc](https://github.com/go-kit/kit/tree/master/addsvc) — **implemented**
 
+### Dependency management
+
+Users who import Go kit into their `package main` are responsible to organize
+and maintain all of their dependencies to ensure code compatibility and build
+reproducibility. Go kit makes no direct use of dependency management tools like
+[Godep](https://github.com/tools/godep).
+
+We will use a variety of continuous integration providers to find and fix
+compatibility problems as soon as they occur.
+
 ## Contributing
 
 Please see [CONTRIBUTING.md]. Thank you, [contributors]!
 
 [CONTRIBUTING.md]: /CONTRIBUTING.md
 [contributors]: https://github.com/go-kit/kit/graphs/contributors
-
-### Dependency management
-
-Users who import Go kit into their `package main` are responsible to organize
-and maintain all of their dependencies to ensure code compatibility and build
-reproducibility. Gokit makes no direct use of dependency management tools like
-[Godep](https://github.com/tools/godep).
-
-We will use a variety of continuous integration providers to find and fix
-compatibility problems as soon as they occur.
 
 ### API stability policy
 
