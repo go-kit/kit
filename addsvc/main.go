@@ -98,6 +98,7 @@ func main() {
 			*zipkinCollectorTimeout,
 			*zipkinCollectorBatchSize,
 			*zipkinCollectorBatchInterval,
+			logger,
 		); err != nil {
 			logger.Log("err", err)
 			os.Exit(1)
@@ -105,7 +106,6 @@ func main() {
 	}
 	zipkinMethodName := "add"
 	zipkinSpanFunc := zipkin.MakeNewSpanFunc(zipkinHostPort, *zipkinServiceName, zipkinMethodName)
-	zipkin.Log.Swap(logger) // log diagnostic/error details
 
 	// Our business and operational domain
 	var a Add = pureAdd
@@ -142,7 +142,7 @@ func main() {
 	go func() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
-		before := []httptransport.BeforeFunc{zipkin.ToContext(zipkinSpanFunc)}
+		before := []httptransport.BeforeFunc{zipkin.ToContext(zipkinSpanFunc, logger)}
 		after := []httptransport.AfterFunc{}
 		handler := makeHTTPBinding(ctx, e, before, after)
 		logger.Log("addr", *httpAddr, "transport", "HTTP/JSON")

@@ -22,10 +22,6 @@ import (
 // • https://groups.google.com/forum/#!topic/zipkin-user/KilwtSA0g1k
 // • https://gist.github.com/yoavaa/3478d3a0df666f21a98c
 
-// Log is used to report diagnostic information. To enable it, swap in your
-// application's logger.
-var Log log.SwapLogger
-
 const (
 	// https://github.com/racker/tryfer#headers
 	traceIDHTTPHeader      = "X-B3-TraceId"
@@ -95,10 +91,10 @@ func AnnotateClient(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
 // ToContext returns a function that satisfies transport/http.BeforeFunc. It
 // takes a Zipkin span from the incoming HTTP request, and saves it in the
 // request context. It's designed to be wired into a server's HTTP transport
-// Before stack.
-func ToContext(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) context.Context {
+// Before stack. The logger is used to report errors.
+func ToContext(newSpan NewSpanFunc, logger log.Logger) func(ctx context.Context, r *http.Request) context.Context {
 	return func(ctx context.Context, r *http.Request) context.Context {
-		return context.WithValue(ctx, SpanContextKey, fromHTTP(newSpan, r))
+		return context.WithValue(ctx, SpanContextKey, fromHTTP(newSpan, r, logger))
 	}
 }
 
@@ -126,26 +122,25 @@ func ToRequest(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) c
 	}
 }
 
-func fromHTTP(newSpan NewSpanFunc, r *http.Request) *Span {
+func fromHTTP(newSpan NewSpanFunc, r *http.Request, logger log.Logger) *Span {
 	traceIDStr := r.Header.Get(traceIDHTTPHeader)
 	if traceIDStr == "" {
-		Log.Log("debug", "make new span")
 		return newSpan(newID(), newID(), 0) // normal; just make a new one
 	}
 	traceID, err := strconv.ParseInt(traceIDStr, 16, 64)
 	if err != nil {
-		Log.Log(traceIDHTTPHeader, traceIDStr, "err", err)
+		logger.Log(traceIDHTTPHeader, traceIDStr, "err", err)
 		return newSpan(newID(), newID(), 0)
 	}
 	spanIDStr := r.Header.Get(spanIDHTTPHeader)
 	if spanIDStr == "" {
-		Log.Log("msg", "trace ID without span ID") // abnormal
-		spanIDStr = strconv.FormatInt(newID(), 64) // deal with it
+		logger.Log("msg", "trace ID without span ID") // abnormal
+		spanIDStr = strconv.FormatInt(newID(), 64)    // deal with it
 	}
 	spanID, err := strconv.ParseInt(spanIDStr, 16, 64)
 	if err != nil {
-		Log.Log(spanIDHTTPHeader, spanIDStr, "err", err) // abnormal
-		spanID = newID()                                 // deal with it
+		logger.Log(spanIDHTTPHeader, spanIDStr, "err", err) // abnormal
+		spanID = newID()                                    // deal with it
 	}
 	parentSpanIDStr := r.Header.Get(parentSpanIDHTTPHeader)
 	if parentSpanIDStr == "" {
@@ -153,8 +148,8 @@ func fromHTTP(newSpan NewSpanFunc, r *http.Request) *Span {
 	}
 	parentSpanID, err := strconv.ParseInt(parentSpanIDStr, 16, 64)
 	if err != nil {
-		Log.Log(parentSpanIDHTTPHeader, parentSpanIDStr, "err", err) // abnormal
-		parentSpanID = 0                                             // the only way to deal with it
+		logger.Log(parentSpanIDHTTPHeader, parentSpanIDStr, "err", err) // abnormal
+		parentSpanID = 0                                                // the only way to deal with it
 	}
 	return newSpan(traceID, spanID, parentSpanID)
 }
