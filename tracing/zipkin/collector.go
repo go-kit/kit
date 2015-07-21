@@ -27,7 +27,6 @@ type ScribeCollector struct {
 	factory       func() (scribe.Scribe, error)
 	spanc         chan *Span
 	sendc         chan struct{}
-	quitc         chan chan struct{}
 	batch         []*scribe.LogEntry
 	nextSend      time.Time
 	batchInterval time.Duration
@@ -91,7 +90,6 @@ func (c *ScribeCollector) loop() {
 			c.nextSend = time.Now().Add(c.batchInterval)
 			if err := c.send(c.batch); err != nil {
 				c.logger.Log("err", err.Error())
-				continue
 			}
 			c.batch = c.batch[:0]
 		}
