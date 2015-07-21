@@ -1,21 +1,34 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
-	"time"
 
-	"github.com/go-kit/kit/metrics"
+	"golang.org/x/net/context"
+
+	"github.com/go-kit/kit/addsvc/reqrep"
+	"github.com/go-kit/kit/endpoint"
+	httptransport "github.com/go-kit/kit/transport/http"
 )
 
-// HTTP bindings require no service-specific declarations, and so are defined
-// in transport/http.
-
-func httpInstrument(requests metrics.Counter, duration metrics.Histogram) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requests.Add(1)
-			defer func(begin time.Time) { duration.Observe(time.Since(begin).Nanoseconds()) }(time.Now())
-			next.ServeHTTP(w, r)
-		})
+func makeHTTPBinding(ctx context.Context, e endpoint.Endpoint, before []httptransport.BeforeFunc, after []httptransport.AfterFunc) http.Handler {
+	decode := func(r *http.Request) (interface{}, error) {
+		var request reqrep.AddRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			return nil, err
+		}
+		r.Body.Close()
+		return request, nil
+	}
+	encode := func(w http.ResponseWriter, response interface{}) error {
+		return json.NewEncoder(w).Encode(response)
+	}
+	return httptransport.Server{
+		Context:    ctx,
+		Endpoint:   e,
+		DecodeFunc: decode,
+		EncodeFunc: encode,
+		Before:     before,
+		After:      append([]httptransport.AfterFunc{httptransport.SetContentType("application/json; charset=utf-8")}, after...),
 	}
 }
