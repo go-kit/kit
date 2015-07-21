@@ -109,9 +109,9 @@ func main() {
 
 	// Our business and operational domain
 	var a Add = pureAdd
-	if *proxyHTTPAddr != "" {
+	if *proxyHTTPURL != "" {
 		var e endpoint.Endpoint
-		e = httpclient.NewClient("GET", *proxyHTTPAddr, zipkin.ToRequest(zipkinSpanFunc))
+		e = httpclient.NewClient("GET", *proxyHTTPURL, zipkin.ToRequest(zipkinSpanFunc))
 		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
 		a = proxyAdd(e, logger)
 	}
