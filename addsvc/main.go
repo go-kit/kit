@@ -96,9 +96,9 @@ func main() {
 		if zipkinCollector, err = zipkin.NewScribeCollector(
 			*zipkinCollectorAddr,
 			*zipkinCollectorTimeout,
-			*zipkinCollectorBatchSize,
-			*zipkinCollectorBatchInterval,
-			logger,
+			zipkin.ScribeBatchSize(*zipkinCollectorBatchSize),
+			zipkin.ScribeBatchInterval(*zipkinCollectorBatchInterval),
+			zipkin.ScribeLogger(logger),
 		); err != nil {
 			logger.Log("err", err)
 			os.Exit(1)
