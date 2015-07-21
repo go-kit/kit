@@ -29,6 +29,12 @@ func TestDefaultLevels(t *testing.T) {
 	if want, have := "level=error msg=\"© violation\"\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
+
+	buf.Reset()
+	logger.Crit("msg", "	")
+	if want, have := "level=crit msg=\"\\t\"\n", buf.String(); want != have {
+		t.Errorf("want %#v, have %#v", want, have)
+	}
 }
 
 func TestModifiedLevels(t *testing.T) {
@@ -37,6 +43,10 @@ func TestModifiedLevels(t *testing.T) {
 		log.NewJSONLogger(&buf),
 		levels.Key("l"),
 		levels.DebugValue("dbg"),
+		levels.InfoValue("nfo"),
+		levels.WarnValue("wrn"),
+		levels.ErrorValue("err"),
+		levels.CritValue("crt"),
 	)
 	logger.With("easter_island", "176°").Debug("msg", "moai")
 	if want, have := `{"easter_island":"176°","l":"dbg","msg":"moai"}`+"\n", buf.String(); want != have {
