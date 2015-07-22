@@ -21,7 +21,7 @@ func TestScribeCollector(t *testing.T) {
 
 	timeout := time.Second
 	batchInterval := time.Millisecond
-	c, err := zipkin.NewScribeCollector(server.addr(), timeout, 0, batchInterval)
+	c, err := zipkin.NewScribeCollector(server.addr(), timeout, zipkin.ScribeBatchSize(0), zipkin.ScribeBatchInterval(batchInterval))
 	if err != nil {
 		t.Fatal(err)
 	}

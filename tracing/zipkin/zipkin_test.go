@@ -2,6 +2,7 @@ package zipkin_test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -12,6 +13,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/zipkin"
 )
 
@@ -31,7 +33,7 @@ func TestToContext(t *testing.T) {
 	r.Header.Set("X-B3-ParentSpanId", strconv.FormatInt(parentSpanID, 16))
 
 	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
-	toContext := zipkin.ToContext(newSpan)
+	toContext := zipkin.ToContext(newSpan, log.NewLogfmtLogger(ioutil.Discard))
 
 	ctx := toContext(context.Background(), r)
 	val := ctx.Value(zipkin.SpanContextKey)

@@ -30,7 +30,9 @@ type Span struct {
 	//binaryAnnotations []BinaryAnnotation // TODO
 }
 
-// NewSpan returns a new Span object ready for use.
+// NewSpan returns a new Span, which can be annotated and collected by a
+// collector. Spans are passed through the request context to each middleware
+// under the SpanContextKey.
 func NewSpan(hostport, serviceName, methodName string, traceID, spanID, parentSpanID int64) *Span {
 	return &Span{
 		host:         makeEndpoint(hostport, serviceName),
@@ -41,26 +43,23 @@ func NewSpan(hostport, serviceName, methodName string, traceID, spanID, parentSp
 	}
 }
 
-// makeEndpoint will return a nil Endpoint if the input parameters are
-// malformed.
+// makeEndpoint takes the hostport and service name that represent this Zipkin
+// service, and returns an endpoint that's embedded into the Zipkin core Span
+// type. It will return a nil endpoint if the input parameters are malformed.
 func makeEndpoint(hostport, serviceName string) *zipkincore.Endpoint {
 	host, port, err := net.SplitHostPort(hostport)
 	if err != nil {
-		Log.Log("hostport", hostport, "err", err)
 		return nil
 	}
 	addrs, err := net.LookupIP(host)
 	if err != nil {
-		Log.Log("host", host, "err", err)
 		return nil
 	}
 	if len(addrs) <= 0 {
-		Log.Log("host", host, "err", "no IPs")
 		return nil
 	}
 	portInt, err := strconv.ParseInt(port, 10, 16)
 	if err != nil {
-		Log.Log("port", port, "err", err)
 		return nil
 	}
 	endpoint := zipkincore.NewEndpoint()
