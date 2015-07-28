@@ -25,7 +25,7 @@ requests, or wrap it with other value-add middleware.
 func main() {
 	var (
 		fooPublisher = loadbalancer.NewDNSSRVPublisher("foo.mynet.local", 5*time.Second, makeEndpoint)
-		fooBalancer  = loadbalancer.RoundRobin(mysvcPublisher)
+		fooBalancer  = loadbalancer.RoundRobin(fooPublisher)
 		fooEndpoint  = loadbalancer.Retry(3, time.Second, fooBalancer)
 	)
 	http.HandleFunc("/", handle(fooEndpoint))
