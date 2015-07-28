@@ -1,6 +1,8 @@
 # Go kit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit)
 
-**Go kit** is a **distributed programming toolkit** for microservices in the modern enterprise. We want to make Go a viable choice for application (business-logic) software in large organizations.
+**Go kit** is a **distributed programming toolkit** for microservices in the
+modern enterprise. We want to make Go a viable choice for application
+(business-logic) software in large organizations.
 
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
 - Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](http://bit.ly/go-slack-signup))
@@ -24,6 +26,8 @@ In short, Go kit brings Go to the modern enterprise.
 For more details, see
  [the motivating blog post](http://peter.bourgon.org/go-kit) and
  [the video of the talk](https://www.youtube.com/watch?v=iFR_7AKkJFU).
+See also the
+ [Go kit talk at GopherCon 2015](https://www.youtube.com/watch?v=1AjaZi4QuGo).
 
 ## Goals
 
