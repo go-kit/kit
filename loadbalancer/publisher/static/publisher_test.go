@@ -1,4 +1,4 @@
-package loadbalancer_test
+package static_test
 
 import (
 	"testing"
@@ -6,14 +6,14 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/loadbalancer"
+	"github.com/go-kit/kit/loadbalancer/publisher/static"
 )
 
 func TestStaticPublisher(t *testing.T) {
 	endpoints := []endpoint.Endpoint{
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 	}
-	p := loadbalancer.NewStaticPublisher(endpoints)
+	p := static.NewPublisher(endpoints)
 	defer p.Stop()
 
 	c := make(chan []endpoint.Endpoint, 1)

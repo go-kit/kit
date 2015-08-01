@@ -1,6 +1,9 @@
-package loadbalancer
+package strategy
 
-import "github.com/go-kit/kit/endpoint"
+import (
+	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/loadbalancer/publisher"
+)
 
 type cache struct {
 	req  chan []endpoint.Endpoint
@@ -8,7 +11,7 @@ type cache struct {
 	quit chan struct{}
 }
 
-func newCache(p Publisher) *cache {
+func newCache(p publisher.Publisher) *cache {
 	c := &cache{
 		req:  make(chan []endpoint.Endpoint),
 		cnt:  make(chan int),
@@ -18,7 +21,7 @@ func newCache(p Publisher) *cache {
 	return c
 }
 
-func (c *cache) loop(p Publisher) {
+func (c *cache) loop(p publisher.Publisher) {
 	e := make(chan []endpoint.Endpoint, 1)
 	p.Subscribe(e)
 	defer p.Unsubscribe(e)

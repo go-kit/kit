@@ -1,4 +1,4 @@
-package loadbalancer
+package dns
 
 import (
 	"crypto/md5"
@@ -10,15 +10,17 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-type dnssrvPublisher struct {
+// SRVPublisher implements Publisher.
+type SRVPublisher struct {
 	subscribe   chan chan<- []endpoint.Endpoint
 	unsubscribe chan chan<- []endpoint.Endpoint
 	quit        chan struct{}
 }
 
-// NewDNSSRVPublisher returns a publisher that resolves the SRV name every ttl, and
-func NewDNSSRVPublisher(name string, ttl time.Duration, makeEndpoint func(hostport string) endpoint.Endpoint) Publisher {
-	p := &dnssrvPublisher{
+// NewSRVPublisher returns a publisher that resolves the SRV name every ttl,
+// and yields endpoints constructed via the makeEndpoint factory.
+func NewSRVPublisher(name string, ttl time.Duration, makeEndpoint func(hostport string) endpoint.Endpoint) *SRVPublisher {
+	p := &SRVPublisher{
 		subscribe:   make(chan chan<- []endpoint.Endpoint),
 		unsubscribe: make(chan chan<- []endpoint.Endpoint),
 		quit:        make(chan struct{}),
@@ -27,21 +29,24 @@ func NewDNSSRVPublisher(name string, ttl time.Duration, makeEndpoint func(hostpo
 	return p
 }
 
-func (p *dnssrvPublisher) Subscribe(c chan<- []endpoint.Endpoint) {
+// Subscribe implements Publisher.
+func (p *SRVPublisher) Subscribe(c chan<- []endpoint.Endpoint) {
 	p.subscribe <- c
 }
 
-func (p *dnssrvPublisher) Unsubscribe(c chan<- []endpoint.Endpoint) {
+// Unsubscribe implements Publisher.
+func (p *SRVPublisher) Unsubscribe(c chan<- []endpoint.Endpoint) {
 	p.unsubscribe <- c
 }
 
-func (p *dnssrvPublisher) Stop() {
+// Stop implements Publisher.
+func (p *SRVPublisher) Stop() {
 	close(p.quit)
 }
 
 var newTicker = time.NewTicker
 
-func (p *dnssrvPublisher) loop(name string, ttl time.Duration, makeEndpoint func(hostport string) endpoint.Endpoint) {
+func (p *SRVPublisher) loop(name string, ttl time.Duration, makeEndpoint func(hostport string) endpoint.Endpoint) {
 	var (
 		subscriptions = map[chan<- []endpoint.Endpoint]struct{}{}
 		addrs, md5, _ = resolve(name)
@@ -101,5 +106,5 @@ func convert(addrs []*net.SRV, makeEndpoint func(hostport string) endpoint.Endpo
 }
 
 func addr2hostport(addr *net.SRV) string {
-	return net.JoinHostPort(addr.Target, fmt.Sprintf("%d", addr.Port))
+	return net.JoinHostPort(addr.Target, fmt.Sprint(addr.Port))
 }

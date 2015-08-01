@@ -12,6 +12,6 @@ type LoadBalancer interface {
 	Get() (endpoint.Endpoint, error)
 }
 
-// ErrNoEndpointsAvailable is given by a load balancer when no endpoints are
-// available to be returned.
+// ErrNoEndpointsAvailable is given by a load balancer or strategy when no
+// endpoints are available to be returned.
 var ErrNoEndpointsAvailable = errors.New("no endpoints available")

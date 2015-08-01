@@ -1,4 +1,4 @@
-package loadbalancer
+package dns
 
 import (
 	"fmt"
@@ -43,7 +43,7 @@ func TestDNSSRVPublisher(t *testing.T) {
 		ttl          = time.Second
 		makeEndpoint = func(hostport string) endpoint.Endpoint { return e(hostport) }
 	)
-	p := NewDNSSRVPublisher(name, ttl, makeEndpoint)
+	p := NewSRVPublisher(name, ttl, makeEndpoint)
 	defer p.Stop()
 
 	// Subscribe

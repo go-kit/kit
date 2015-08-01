@@ -1,4 +1,4 @@
-package loadbalancer
+package strategy
 
 import (
 	"runtime"
@@ -7,13 +7,14 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/loadbalancer/publisher/static"
 )
 
 func TestCache(t *testing.T) {
 	e := func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
 	endpoints := []endpoint.Endpoint{e}
 
-	p := NewStaticPublisher(endpoints)
+	p := static.NewPublisher(endpoints)
 	defer p.Stop()
 
 	c := newCache(p)
