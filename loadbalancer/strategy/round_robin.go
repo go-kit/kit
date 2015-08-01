@@ -1,13 +1,15 @@
-package loadbalancer
+package strategy
 
 import (
 	"sync/atomic"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/loadbalancer"
+	"github.com/go-kit/kit/loadbalancer/publisher"
 )
 
 // RoundRobin returns a load balancer that yields endpoints in sequence.
-func RoundRobin(p Publisher) LoadBalancer {
+func RoundRobin(p publisher.Publisher) loadbalancer.LoadBalancer {
 	return &roundRobin{newCache(p), 0}
 }
 
@@ -21,7 +23,7 @@ func (r *roundRobin) Count() int { return r.cache.count() }
 func (r *roundRobin) Get() (endpoint.Endpoint, error) {
 	endpoints := r.cache.get()
 	if len(endpoints) <= 0 {
-		return nil, ErrNoEndpointsAvailable
+		return nil, loadbalancer.ErrNoEndpointsAvailable
 	}
 	var old uint64
 	for {

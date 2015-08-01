@@ -1,19 +1,21 @@
-package loadbalancer_test
+package strategy_test
 
 import (
 	"reflect"
 	"testing"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/loadbalancer"
 	"golang.org/x/net/context"
+
+	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/loadbalancer/publisher/static"
+	"github.com/go-kit/kit/loadbalancer/strategy"
 )
 
 func TestRoundRobin(t *testing.T) {
-	p := loadbalancer.NewStaticPublisher([]endpoint.Endpoint{})
+	p := static.NewPublisher([]endpoint.Endpoint{})
 	defer p.Stop()
 
-	lb := loadbalancer.RoundRobin(p)
+	lb := strategy.RoundRobin(p)
 	if _, err := lb.Get(); err == nil {
 		t.Error("want error, got none")
 	}

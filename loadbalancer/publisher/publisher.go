@@ -1,4 +1,4 @@
-package loadbalancer
+package publisher
 
 import "github.com/go-kit/kit/endpoint"
 
