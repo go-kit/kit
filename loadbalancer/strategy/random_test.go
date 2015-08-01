@@ -1,19 +1,20 @@
-package loadbalancer_test
+package strategy_test
 
 import (
 	"math"
 	"testing"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/loadbalancer"
+	"github.com/go-kit/kit/loadbalancer/publisher/static"
+	"github.com/go-kit/kit/loadbalancer/strategy"
 	"golang.org/x/net/context"
 )
 
 func TestRandom(t *testing.T) {
-	p := loadbalancer.NewStaticPublisher([]endpoint.Endpoint{})
+	p := static.NewPublisher([]endpoint.Endpoint{})
 	defer p.Stop()
 
-	lb := loadbalancer.Random(p)
+	lb := strategy.Random(p)
 	if _, err := lb.Get(); err == nil {
 		t.Error("want error, got none")
 	}
