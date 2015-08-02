@@ -21,7 +21,7 @@ func TestRoundRobinDistribution(t *testing.T) {
 		}
 	)
 
-	lb := loadbalancer.NewRoundRobin(static.Publisher(endpoints))
+	lb := loadbalancer.NewRoundRobin(static.NewPublisher(endpoints))
 
 	for i, want := range [][]int{
 		{1, 0, 0},
