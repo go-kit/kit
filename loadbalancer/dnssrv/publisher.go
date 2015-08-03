@@ -79,7 +79,12 @@ func (p *Publisher) loop(endpoints []endpoint.Endpoint, md5 string) {
 
 // Endpoints implements the Publisher interface.
 func (p *Publisher) Endpoints() ([]endpoint.Endpoint, error) {
-	return <-p.endpoints, nil
+	select {
+	case endpoints := <-p.endpoints:
+		return endpoints, nil
+	case <-p.quit:
+		return nil, loadbalancer.ErrPublisherStopped
+	}
 }
 
 var (
