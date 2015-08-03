@@ -49,8 +49,8 @@ func fooFactory(instance string) (endpoint.Endpoint, error) {
 ```
 
 It's also possible to wrap a load balancer with a retry strategy, so that it
-can used as an endpoint directly. This may make load balancers more convenient
-to use, at the cost of fine-grained control of failure.
+can be used as an endpoint directly. This may make load balancers more
+convenient to use, at the cost of fine-grained control of failures.
 
 ```go
 func main() {
