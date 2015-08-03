@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/log"
 )
 
@@ -133,6 +134,30 @@ func TestRefreshNoChange(t *testing.T) {
 
 func TestRefreshResolveError(t *testing.T) {
 	t.Skip("TODO")
+}
+
+func TestErrPublisherStopped(t *testing.T) {
+	var (
+		name    = "my-name"
+		ttl     = time.Second
+		factory = func(string) (endpoint.Endpoint, error) { return nil, errors.New("kaboom") }
+		logger  = log.NewNopLogger()
+	)
+
+	oldLookup := lookupSRV
+	defer func() { lookupSRV = oldLookup }()
+	lookupSRV = mockLookupSRV([]*net.SRV{}, nil, nil)
+
+	p, err := NewPublisher(name, ttl, factory, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p.Stop()
+	_, have := p.Endpoints()
+	if want := loadbalancer.ErrPublisherStopped; want != have {
+		t.Fatalf("want %v, have %v", want, have)
+	}
 }
 
 func mockLookupSRV(addrs []*net.SRV, err error, count *uint64) func(service, proto, name string) (string, []*net.SRV, error) {
