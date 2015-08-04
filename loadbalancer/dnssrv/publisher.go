@@ -42,7 +42,7 @@ func NewPublisher(name string, ttl time.Duration, f loadbalancer.Factory, logger
 		endpoints: make(chan []endpoint.Endpoint),
 		quit:      make(chan struct{}),
 	}
-	go p.loop(lift(addrs, f, logger), md5)
+	go p.loop(makeEndpoints(addrs, f, logger), md5)
 	return p, nil
 }
 
@@ -68,7 +68,7 @@ func (p *Publisher) loop(endpoints []endpoint.Endpoint, md5 string) {
 			if newmd5 == md5 {
 				continue // no change
 			}
-			endpoints = lift(addrs, p.factory, p.logger)
+			endpoints = makeEndpoints(addrs, p.factory, p.logger)
 			md5 = newmd5
 
 		case <-p.quit:
@@ -109,7 +109,7 @@ func resolve(name string) (addrs []*net.SRV, md5sum string, err error) {
 	return addrs, fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-func lift(addrs []*net.SRV, f loadbalancer.Factory, logger log.Logger) []endpoint.Endpoint {
+func makeEndpoints(addrs []*net.SRV, f loadbalancer.Factory, logger log.Logger) []endpoint.Endpoint {
 	endpoints := make([]endpoint.Endpoint, 0, len(addrs))
 	for _, addr := range addrs {
 		endpoint, err := f(addr2instance(addr))
