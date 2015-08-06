@@ -6,27 +6,34 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// RoundRobin returns a load balancer that yields endpoints in sequence.
-func RoundRobin(p Publisher) LoadBalancer {
-	return &roundRobin{newCache(p), 0}
+// RoundRobin is a simple load balancer that returns each of the published
+// endpoints in sequence.
+type RoundRobin struct {
+	p       Publisher
+	counter uint64
 }
 
-type roundRobin struct {
-	*cache
-	uint64
+// NewRoundRobin returns a new RoundRobin load balancer.
+func NewRoundRobin(p Publisher) *RoundRobin {
+	return &RoundRobin{
+		p:       p,
+		counter: 0,
+	}
 }
 
-func (r *roundRobin) Count() int { return r.cache.count() }
-
-func (r *roundRobin) Get() (endpoint.Endpoint, error) {
-	endpoints := r.cache.get()
+// Endpoint implements the LoadBalancer interface.
+func (rr *RoundRobin) Endpoint() (endpoint.Endpoint, error) {
+	endpoints, err := rr.p.Endpoints()
+	if err != nil {
+		return nil, err
+	}
 	if len(endpoints) <= 0 {
-		return nil, ErrNoEndpointsAvailable
+		return nil, ErrNoEndpoints
 	}
 	var old uint64
 	for {
-		old = atomic.LoadUint64(&r.uint64)
-		if atomic.CompareAndSwapUint64(&r.uint64, old, old+1) {
+		old = atomic.LoadUint64(&rr.counter)
+		if atomic.CompareAndSwapUint64(&rr.counter, old, old+1) {
 			break
 		}
 	}

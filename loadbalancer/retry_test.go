@@ -2,39 +2,59 @@ package loadbalancer_test
 
 import (
 	"errors"
+	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
-	"golang.org/x/net/context"
-
-	"testing"
+	"github.com/go-kit/kit/loadbalancer/static"
 )
 
-func TestRetryMax(t *testing.T) {
+func TestRetryMaxTotalFail(t *testing.T) {
 	var (
-		endpoints = []endpoint.Endpoint{}
-		p         = loadbalancer.NewStaticPublisher(endpoints)
-		lb        = loadbalancer.RoundRobin(p)
+		endpoints = []endpoint.Endpoint{} // no endpoints
+		p         = static.NewPublisher(endpoints)
+		lb        = loadbalancer.NewRoundRobin(p)
+		retry     = loadbalancer.Retry(999, time.Second, lb) // lots of retries
+		ctx       = context.Background()
 	)
+	if _, err := retry(ctx, struct{}{}); err == nil {
+		t.Errorf("expected error, got none") // should fail
+	}
+}
 
-	if _, err := loadbalancer.Retry(999, time.Second, lb)(context.Background(), struct{}{}); err == nil {
+func TestRetryMaxPartialFail(t *testing.T) {
+	var (
+		endpoints = []endpoint.Endpoint{
+			func(context.Context, interface{}) (interface{}, error) { return nil, errors.New("error one") },
+			func(context.Context, interface{}) (interface{}, error) { return nil, errors.New("error two") },
+			func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil /* OK */ },
+		}
+		retries = len(endpoints) - 1 // not quite enough retries
+		p       = static.NewPublisher(endpoints)
+		lb      = loadbalancer.NewRoundRobin(p)
+		ctx     = context.Background()
+	)
+	if _, err := loadbalancer.Retry(retries, time.Second, lb)(ctx, struct{}{}); err == nil {
 		t.Errorf("expected error, got none")
 	}
+}
 
-	endpoints = []endpoint.Endpoint{
-		func(context.Context, interface{}) (interface{}, error) { return nil, errors.New("error one") },
-		func(context.Context, interface{}) (interface{}, error) { return nil, errors.New("error two") },
-		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil /* OK */ },
-	}
-	p.Replace(endpoints)
-	assertLoadBalancerNotEmpty(t, lb)
-
-	if _, err := loadbalancer.Retry(len(endpoints)-1, time.Second, lb)(context.Background(), struct{}{}); err == nil {
-		t.Errorf("expected error, got none")
-	}
-
-	if _, err := loadbalancer.Retry(len(endpoints), time.Second, lb)(context.Background(), struct{}{}); err != nil {
+func TestRetryMaxSuccess(t *testing.T) {
+	var (
+		endpoints = []endpoint.Endpoint{
+			func(context.Context, interface{}) (interface{}, error) { return nil, errors.New("error one") },
+			func(context.Context, interface{}) (interface{}, error) { return nil, errors.New("error two") },
+			func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil /* OK */ },
+		}
+		retries = len(endpoints) // exactly enough retries
+		p       = static.NewPublisher(endpoints)
+		lb      = loadbalancer.NewRoundRobin(p)
+		ctx     = context.Background()
+	)
+	if _, err := loadbalancer.Retry(retries, time.Second, lb)(ctx, struct{}{}); err != nil {
 		t.Error(err)
 	}
 }
@@ -44,22 +64,20 @@ func TestRetryTimeout(t *testing.T) {
 		step    = make(chan struct{})
 		e       = func(context.Context, interface{}) (interface{}, error) { <-step; return struct{}{}, nil }
 		timeout = time.Millisecond
-		retry   = loadbalancer.Retry(999, timeout, loadbalancer.RoundRobin(loadbalancer.NewStaticPublisher([]endpoint.Endpoint{e})))
-		errs    = make(chan error)
+		retry   = loadbalancer.Retry(999, timeout, loadbalancer.NewRoundRobin(static.NewPublisher([]endpoint.Endpoint{e})))
+		errs    = make(chan error, 1)
 		invoke  = func() { _, err := retry(context.Background(), struct{}{}); errs <- err }
 	)
 
-	go invoke()                    // invoke the endpoint
-	step <- struct{}{}             // tell the endpoint to return
-	if err := <-errs; err != nil { // that should succeed
+	go func() { step <- struct{}{} }() // queue up a flush of the endpoint
+	invoke()                           // invoke the endpoint and trigger the flush
+	if err := <-errs; err != nil {     // that should succeed
 		t.Error(err)
 	}
 
-	go invoke()                                         // invoke the endpoint
-	time.Sleep(2 * timeout)                             // wait
-	time.Sleep(2 * timeout)                             // wait again (CI servers!!)
-	step <- struct{}{}                                  // tell the endpoint to return
-	if err := <-errs; err != context.DeadlineExceeded { // that should not succeed
-		t.Errorf("wanted error, got none")
+	go func() { time.Sleep(10 * timeout); step <- struct{}{} }() // a delayed flush
+	invoke()                                                     // invoke the endpoint
+	if err := <-errs; err != context.DeadlineExceeded {          // that should not succeed
+		t.Errorf("wanted %v, got none", context.DeadlineExceeded)
 	}
 }

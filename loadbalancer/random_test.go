@@ -4,39 +4,55 @@ import (
 	"math"
 	"testing"
 
+	"golang.org/x/net/context"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
-	"golang.org/x/net/context"
+	"github.com/go-kit/kit/loadbalancer/static"
 )
 
-func TestRandom(t *testing.T) {
-	p := loadbalancer.NewStaticPublisher([]endpoint.Endpoint{})
-	defer p.Stop()
+func TestRandomDistribution(t *testing.T) {
+	var (
+		n          = 3
+		endpoints  = make([]endpoint.Endpoint, n)
+		counts     = make([]int, n)
+		seed       = int64(123)
+		ctx        = context.Background()
+		iterations = 100000
+		want       = iterations / n
+		tolerance  = want / 100 // 1%
+	)
 
-	lb := loadbalancer.Random(p)
-	if _, err := lb.Get(); err == nil {
-		t.Error("want error, got none")
-	}
-
-	counts := []int{0, 0, 0}
-	p.Replace([]endpoint.Endpoint{
-		func(context.Context, interface{}) (interface{}, error) { counts[0]++; return struct{}{}, nil },
-		func(context.Context, interface{}) (interface{}, error) { counts[1]++; return struct{}{}, nil },
-		func(context.Context, interface{}) (interface{}, error) { counts[2]++; return struct{}{}, nil },
-	})
-	assertLoadBalancerNotEmpty(t, lb)
-
-	n := 10000
 	for i := 0; i < n; i++ {
-		e, _ := lb.Get()
-		e(context.Background(), struct{}{})
+		i0 := i
+		endpoints[i] = func(context.Context, interface{}) (interface{}, error) { counts[i0]++; return struct{}{}, nil }
 	}
 
-	want := float64(n) / float64(len(counts))
-	tolerance := (want / 100.0) * 5 // 5%
-	for _, have := range counts {
-		if math.Abs(want-float64(have)) > tolerance {
-			t.Errorf("want %.0f, have %d", want, have)
+	lb := loadbalancer.NewRandom(static.NewPublisher(endpoints), seed)
+
+	for i := 0; i < iterations; i++ {
+		e, err := lb.Endpoint()
+		if err != nil {
+			t.Fatal(err)
 		}
+		e(ctx, struct{}{})
+	}
+
+	for i, have := range counts {
+		if math.Abs(float64(want-have)) > float64(tolerance) {
+			t.Errorf("%d: want %d, have %d", i, want, have)
+		}
+	}
+}
+
+func TestRandomBadPublisher(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func TestRandomNoEndpoints(t *testing.T) {
+	lb := loadbalancer.NewRandom(static.NewPublisher([]endpoint.Endpoint{}), 123)
+	_, have := lb.Endpoint()
+	if want := loadbalancer.ErrNoEndpoints; want != have {
+		t.Errorf("want %q, have %q", want, have)
 	}
 }
