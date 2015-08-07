@@ -36,21 +36,6 @@ func TestContext(t *testing.T) {
 	}
 }
 
-func TestContextWithPrefix(t *testing.T) {
-	buf := &bytes.Buffer{}
-	kvs := []interface{}{"a", 123}
-	logger := log.NewJSONLogger(buf)
-	lc := log.NewContext(logger).With(kvs...)
-	kvs[1] = 0             // WithPrefix should copy its key values
-	lc = lc.With("b", "c") // WithPrefix should stack
-	if err := lc.Log("msg", "message"); err != nil {
-		t.Fatal(err)
-	}
-	if want, have := `{"a":123,"b":"c","msg":"message"}`+"\n", buf.String(); want != have {
-		t.Errorf("\nwant: %s\nhave: %s", want, have)
-	}
-}
-
 // Test that With returns a Logger safe for concurrent use. This test
 // validates that the stored logging context does not get corrupted when
 // multiple clients concurrently log additional keyvals.
