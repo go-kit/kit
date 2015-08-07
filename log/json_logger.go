@@ -22,7 +22,7 @@ func (l *jsonLogger) Log(keyvals ...interface{}) error {
 	m := make(map[string]interface{}, n)
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
-		v := ErrMissingValue
+		var v interface{} = ErrMissingValue
 		if i+1 < len(keyvals) {
 			v = keyvals[i+1]
 		}

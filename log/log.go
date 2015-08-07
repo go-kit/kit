@@ -18,9 +18,9 @@ type Logger interface {
 	Log(keyvals ...interface{}) error
 }
 
-// ErrMissingValue may be appended to keyval slices with an odd length to
-// populate the missing value.
-var ErrMissingValue interface{} = errors.New("(MISSING)")
+// ErrMissingValue is appended to keyvals slices with odd length to substitute
+// the missing value.
+var ErrMissingValue = errors.New("(MISSING)")
 
 // NewContext returns a new Context that logs to logger.
 func NewContext(logger Logger) Context {
