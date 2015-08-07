@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 )
 
 type jsonLogger struct {
@@ -30,19 +31,46 @@ func (l *jsonLogger) Log(keyvals ...interface{}) error {
 	return json.NewEncoder(l.Writer).Encode(m)
 }
 
-func merge(dst map[string]interface{}, k, v interface{}) map[string]interface{} {
+func merge(dst map[string]interface{}, k, v interface{}) {
 	var key string
 	switch x := k.(type) {
 	case string:
 		key = x
 	case fmt.Stringer:
-		key = x.String()
+		key = safeString(x)
 	default:
-		key = fmt.Sprintf("%v", x)
+		key = fmt.Sprint(x)
 	}
 	if x, ok := v.(error); ok {
-		v = x.Error()
+		v = safeError(x)
 	}
 	dst[key] = v
-	return dst
+}
+
+func safeString(str fmt.Stringer) (s string) {
+	defer func() {
+		if panicVal := recover(); panicVal != nil {
+			if v := reflect.ValueOf(str); v.Kind() == reflect.Ptr && v.IsNil() {
+				s = "NULL"
+			} else {
+				panic(panicVal)
+			}
+		}
+	}()
+	s = str.String()
+	return
+}
+
+func safeError(err error) (s interface{}) {
+	defer func() {
+		if panicVal := recover(); panicVal != nil {
+			if v := reflect.ValueOf(err); v.Kind() == reflect.Ptr && v.IsNil() {
+				s = nil
+			} else {
+				panic(panicVal)
+			}
+		}
+	}()
+	s = err.Error()
+	return
 }
