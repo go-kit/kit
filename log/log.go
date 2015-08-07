@@ -4,7 +4,10 @@
 // key/value data.
 package log
 
-import "sync/atomic"
+import (
+	"errors"
+	"sync/atomic"
+)
 
 // Logger is the fundamental interface for all log operations. Log creates a
 // log event from keyvals, a variadic sequence of alternating keys and values.
@@ -14,6 +17,10 @@ import "sync/atomic"
 type Logger interface {
 	Log(keyvals ...interface{}) error
 }
+
+// ErrMissingValue may be appended to keyval slices with an odd length to
+// populate the missing value.
+var ErrMissingValue interface{} = errors.New("(MISSING)")
 
 // NewContext returns a new Context that logs to logger.
 func NewContext(logger Logger) Context {
@@ -37,10 +44,10 @@ type Context struct {
 // stored context with their generated value, appends keyvals, and passes the
 // result to the wrapped Logger.
 func (l Context) Log(keyvals ...interface{}) error {
-	if len(keyvals)%2 != 0 {
-		panic("bad keyvals")
-	}
 	kvs := append(l.keyvals, keyvals...)
+	if len(kvs)%2 != 0 {
+		kvs = append(kvs, ErrMissingValue)
+	}
 	if l.hasValuer {
 		// If no keyvals were appended above then we must copy l.keyvals so
 		// that future log events will reevaluate the stored Valuers.
@@ -57,17 +64,17 @@ func (l Context) With(keyvals ...interface{}) Context {
 	if len(keyvals) == 0 {
 		return l
 	}
-	if len(keyvals)%2 != 0 {
-		panic("bad keyvals")
+	kvs := append(l.keyvals, keyvals...)
+	if len(kvs)%2 != 0 {
+		kvs = append(kvs, ErrMissingValue)
 	}
-	// Limiting the capacity of the stored keyvals ensures that a new
-	// backing array is created if the slice must grow in Log or With.
-	// Using the extra capacity without copying risks a data race that
-	// would violate the Logger interface contract.
-	n := len(l.keyvals) + len(keyvals)
 	return Context{
-		logger:    l.logger,
-		keyvals:   append(l.keyvals, keyvals...)[:n:n],
+		logger: l.logger,
+		// Limiting the capacity of the stored keyvals ensures that a new
+		// backing array is created if the slice must grow in Log or With.
+		// Using the extra capacity without copying risks a data race that
+		// would violate the Logger interface contract.
+		keyvals:   kvs[:len(kvs):len(kvs)],
 		hasValuer: l.hasValuer || containsValuer(keyvals),
 	}
 }
@@ -78,16 +85,19 @@ func (l Context) WithPrefix(keyvals ...interface{}) Context {
 	if len(keyvals) == 0 {
 		return l
 	}
-	if len(keyvals)%2 != 0 {
-		panic("bad keyvals")
-	}
 	// Limiting the capacity of the stored keyvals ensures that a new
 	// backing array is created if the slice must grow in Log or With.
 	// Using the extra capacity without copying risks a data race that
 	// would violate the Logger interface contract.
 	n := len(l.keyvals) + len(keyvals)
+	if len(keyvals)%2 != 0 {
+		n++
+	}
 	kvs := make([]interface{}, 0, n)
 	kvs = append(kvs, keyvals...)
+	if len(kvs)%2 != 0 {
+		kvs = append(kvs, ErrMissingValue)
+	}
 	kvs = append(kvs, l.keyvals...)
 	return Context{
 		logger:    l.logger,
