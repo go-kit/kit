@@ -42,7 +42,7 @@ func TestJSONLoggerNilStringerKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := `{"NULL":"v"}`+"\n", buf.String(); want != have {
-		t.Errorf("want %#v, have %#v", want, have)
+		t.Errorf("\nwant %#v\nhave %#v", want, have)
 	}
 }
 
@@ -55,7 +55,7 @@ func TestJSONLoggerNilErrorValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := `{"err":null}`+"\n", buf.String(); want != have {
-		t.Errorf("want %#v, have %#v", want, have)
+		t.Errorf("\nwant %#v\nhave %#v", want, have)
 	}
 }
 
