@@ -104,7 +104,7 @@ Projects with a ★ have had particular influence on Go kit's design.
 - [FogCreek/logging](https://github.com/FogCreek/logging), a tagged style of logging
 - [grpc/grpc-go](https://github.com/grpc/grpc-go), HTTP/2 based RPC
 - [inconshreveable/log15](https://github.com/inconshreveable/log15), simple, powerful logging for Go ★
-- [mailgun/vulcand](https://github.com/mailgun/vulcand), prorammatic load balancer backed by etcd
+- [mailgun/vulcand](https://github.com/mailgun/vulcand), programmatic load balancer backed by etcd
 - [mattheath/phosphor](https://github.com/mattheath/phosphor), distributed system tracing
 - [pivotal-golang/lager](https://github.com/pivotal-golang/lager), an opinionated logging library
 - [rubyist/circuitbreaker](https://github.com/rubyist/circuitbreaker), circuit breaker library
