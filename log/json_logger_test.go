@@ -20,6 +20,19 @@ func TestJSONLogger(t *testing.T) {
 	}
 }
 
+func TestJSONLoggerNilError(t *testing.T) {
+	var err error
+
+	buf := &bytes.Buffer{}
+	logger := log.NewJSONLogger(buf)
+	if err := logger.Log("err", err); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := `{"err":null}`+"\n", buf.String(); want != have {
+		t.Errorf("want %#v, have %#v", want, have)
+	}
+}
+
 func BenchmarkJSONLoggerSimple(b *testing.B) {
 	benchmarkRunner(b, log.NewJSONLogger(ioutil.Discard), baseMessage)
 }

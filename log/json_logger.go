@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 )
 
 type jsonLogger struct {
@@ -37,7 +38,7 @@ func merge(dst map[string]interface{}, k, v interface{}) map[string]interface{} 
 	default:
 		key = fmt.Sprintf("%v", x)
 	}
-	if x, ok := v.(error); ok {
+	if x, ok := v.(error); ok && !reflect.ValueOf(v).IsNil() {
 		v = x.Error()
 	}
 	dst[key] = v
