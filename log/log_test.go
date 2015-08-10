@@ -11,6 +11,7 @@ import (
 var discard = log.Logger(log.LoggerFunc(func(...interface{}) error { return nil }))
 
 func TestContext(t *testing.T) {
+	t.Parallel()
 	buf := &bytes.Buffer{}
 	logger := log.NewLogfmtLogger(buf)
 
@@ -36,18 +37,32 @@ func TestContext(t *testing.T) {
 	}
 }
 
-func TestContextWithPrefix(t *testing.T) {
-	buf := &bytes.Buffer{}
-	kvs := []interface{}{"a", 123}
-	logger := log.NewJSONLogger(buf)
-	lc := log.NewContext(logger).With(kvs...)
-	kvs[1] = 0             // WithPrefix should copy its key values
-	lc = lc.With("b", "c") // WithPrefix should stack
-	if err := lc.Log("msg", "message"); err != nil {
-		t.Fatal(err)
+func TestContextMissingValue(t *testing.T) {
+	t.Parallel()
+	var output []interface{}
+	logger := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {
+		output = keyvals
+		return nil
+	}))
+
+	lc := log.NewContext(logger)
+
+	lc.Log("k")
+	if want, have := 2, len(output); want != have {
+		t.Errorf("want len(output) == %v, have %v", want, have)
 	}
-	if want, have := `{"a":123,"b":"c","msg":"message"}`+"\n", buf.String(); want != have {
-		t.Errorf("\nwant: %s\nhave: %s", want, have)
+	if want, have := log.ErrMissingValue, output[1]; want != have {
+		t.Errorf("want %#v, have %#v", want, have)
+	}
+
+	lc.With("k1").WithPrefix("k0").Log("k2")
+	if want, have := 6, len(output); want != have {
+		t.Errorf("want len(output) == %v, have %v", want, have)
+	}
+	for i := 1; i < 6; i += 2 {
+		if want, have := log.ErrMissingValue, output[i]; want != have {
+			t.Errorf("want output[%d] == %#v, have %#v", i, want, have)
+		}
 	}
 }
 
