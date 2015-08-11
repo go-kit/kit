@@ -1,12 +1,12 @@
 package http
 
-import "net/http"
+import "io"
 
-// DecodeFunc converts an HTTP request (transport-domain) to a user request
-// (business-domain). One straightforward DecodeFunc could be something that
-// JSON-decodes the request body to a concrete request type.
-type DecodeFunc func(*http.Request) (interface{}, error)
+// DecodeFunc converts a serialized request (server) or response (client) to a
+// user version of the same. One straightforward DecodeFunc could be something
+// that JSON-decodes the reader to a concrete type.
+type DecodeFunc func(io.Reader) (interface{}, error)
 
-// EncodeFunc converts a user response (business-domain) to an HTTP response
-// (transport-domain) by encoding the interface to the response writer.
-type EncodeFunc func(http.ResponseWriter, interface{}) error
+// EncodeFunc converts a user response (server) or request (client) to a
+// serialized version of the same, by encoding the interface to the writer.
+type EncodeFunc func(io.Writer, interface{}) error
