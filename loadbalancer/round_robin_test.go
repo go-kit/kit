@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
-	"github.com/go-kit/kit/loadbalancer/static"
+	"github.com/go-kit/kit/loadbalancer/fixed"
 	"golang.org/x/net/context"
 )
 
@@ -21,7 +21,7 @@ func TestRoundRobinDistribution(t *testing.T) {
 		}
 	)
 
-	lb := loadbalancer.NewRoundRobin(static.NewPublisher(endpoints))
+	lb := loadbalancer.NewRoundRobin(fixed.NewPublisher(endpoints))
 
 	for i, want := range [][]int{
 		{1, 0, 0},

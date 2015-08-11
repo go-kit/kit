@@ -1,11 +1,119 @@
 # Go kit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit)
 
-**Go kit** is a **distributed programming toolkit** for microservices in the
-modern enterprise. We want to make Go a viable choice for application
-(business-logic) software in large organizations.
+**Go kit** is a **distributed programming toolkit** for building microservices
+in large organizations. We solve common problems in distributed systems, so
+you can focus on your business logic.
 
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
 - Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](http://bit.ly/go-slack-signup))
+
+## Documentation
+
+### Examples
+
+Perhaps the best way to understand Go kit is to follow along as we build an
+[example service][examples] from first principles. This can serve as a
+blueprint for your own new service, or demonstrate how to adapt your existing
+service to use Go kit components.
+
+[examples]: https://github.com/go-kit/kit/tree/master/examples
+
+### Endpoint
+
+Go kit primarily deals in the RPC messaging pattern. We use an abstraction
+called an **[endpoint][]** to model invidivual RPCs. An endpoint can be
+implemented by a server, and called by a client. It's the fundamental building
+block of many Go kit components.
+
+[endpoint]: https://github.com/go-kit/kit/tree/master/endpoint/endpoint.go
+
+#### Circuit breaker
+
+The [circuitbreaker package][circuitbreaker] provides endpoint adapters to
+several popular circuit breaker libraries. Circuit breakers prevent thundering
+herds, and improve resiliency against intermittent errors. Every client-side
+endpoint should be wrapped in a circuit breaker.
+
+[circuitbreaker]: https://github.com/go-kit/kit/tree/master/circuitbreaker
+
+#### Rate limiter
+
+The [ratelimit package][ratelimit] provides endpoint adapters to rate limiting
+packages. Rate limiters are equally applicable to both server- and client-side
+endpoints. Use rate limiters to enforce upper thresholds on incoming or
+outgoing request throughput.
+
+[ratelimit]: https://github.com/go-kit/kit/tree/master/ratelimit
+
+### Transport
+
+The [transport package][transport] provides helpers to bind endpoints to
+specific serialization mechanisms. At the moment, Go kit just provides helpers
+for simple JSON over HTTP. If your organization uses a fully-featured
+transport, bindings are typically provided by the Go library for the
+transport, and there's not much for Go kit to do. In those cases, see the
+examples to understand how to write adapters for your endpoints. We have
+examples for [Thrift][thrift], [gRPC][grpc], [net/rpc][netrpc], and
+[JSON over HTTP][jsonhttp]. Avro and JSON/RPC examples are planned.
+
+[transport]: https://github.com/go-kit/kit/tree/master/transport
+[thrift]: https://github.com/go-kit/kit/tree/master/examples/thriftsvc
+[grpc]: https://github.com/go-kit/kit/tree/master/grpcsvc
+[netrpc]: https://github.com/go-kit/kit/tree/master/netrpcsvc
+[jsonhttp]: https://github.com/go-kit/kit/tree/master/jsonhttpsvc
+
+### Logging
+
+Services produce logs to be consumed later, either by humans or machines.
+Humans might be interested in debugging errors, or tracing specific requests.
+Machines might be interested in counting interesting events, or aggregating
+information for offline processing. In both cases, it's important that the log
+messages be structured and actionable. Go kit's [log package][log] is designed
+to encourage both of these best practices.
+
+[log]: https://github.com/go-kit/kit/tree/master/log
+
+### Metrics (Instrumentation)
+
+Services can't be considered production-ready until they're thoroughly
+instrumented with metrics that track counts, latency, health, and other
+periodic or per-request information. Go kit's [metrics package][metrics]
+provides a robust common set of interfaces for instrumenting your service.
+Bindings exist for common backends, from [expvar][] to [statsd][] to
+[Prometheus][].
+
+[metrics]: https://github.com/go-kit/kit/tree/master/metrics
+[expvar]: http://golang.org/pkg/expvar
+[statsd]: https://github.com/etsy/statsd
+[Prometheus]: http://prometheus.io
+
+### Request tracing
+
+As your infrastructure grows, it becomes important to be able to trace a
+request, as it travels through multiple services and back to the user. Go
+kit's [tracing package][tracing] provides enhancements for your endpoints and
+transport bindings  to capture information about requests and emit them to
+request tracing systems. (Currently, [Zipkin][] is supported; [Appdash][]
+support is planned.)
+
+[tracing]: https://github.com/go-kit/kit/tree/master/tracing
+[Zipkin]: https://github.com/twitter/zipkin
+[Appdash]: https://github.com/sourcegraph/appdash
+
+### Service discovery and load balancing
+
+If your service calls another service, it needs to know how to find it, and
+should intelligently spread its load among those discovered instances. Go
+kit's [loadbalancer package][loadbalancer] provides client-side endpoint
+middleware to solve that problem, whether your organization uses static hosts
+or IPs, [DNS SRV records][dnssrv], Consul, etcd, or Zookeeper. And if you use
+a custom system, it's very easy to write your own [Publisher][] and use Go
+kit's load balancing strategies. (Currently, static hosts and DNS SRV are
+supported; Consul, etcd, and Zookeeper support is planned.)
+
+[loadbalancer]: https://github.com/go-kit/kit/tree/master/loadbalancer
+[dnssrv]: https://github.com/go-kit/kit/tree/master/loadbalancer/dnssrv
+[Publisher]: https://github.com/go-kit/kit/tree/master/loadbalancer/publisher.go
 
 ## Motivation
 
@@ -43,22 +151,14 @@ See also the
 - Having opinions on deployment, orchestration, process supervision, etc.
 - Having opinions on configuration passing — flags, env vars, files, etc.
 
-## Component status
+## Contributing
 
-- [API stability](https://github.com/go-kit/kit/blob/master/rfc/rfc007-api-stability.md) — **adopted**
-- [`package log`](https://github.com/go-kit/kit/tree/master/log) — **implemented**
-- [`package metrics`](https://github.com/go-kit/kit/tree/master/metrics) — **implemented**
-- [`package endpoint`](https://github.com/go-kit/kit/tree/master/endpoint) — **implemented**
-- [`package transport`](https://github.com/go-kit/kit/tree/master/transport) — **implemented**
-- [`package circuitbreaker`](https://github.com/go-kit/kit/tree/master/circuitbreaker) — **implemented**
-- [`package loadbalancer`](https://github.com/go-kit/kit/tree/master/loadbalancer) — **implemented**
-- [`package ratelimit`](https://github.com/go-kit/kit/tree/master/ratelimit) — **implemented**
-- [`package tracing`](https://github.com/go-kit/kit/tree/master/tracing) — prototyping
-- Client patterns — prototyping
-- Service discovery — pending
-- Example [addsvc](https://github.com/go-kit/kit/tree/master/addsvc) — **implemented**
+Please see [CONTRIBUTING.md]. Thank you, [contributors]!
 
-### Dependency management
+[CONTRIBUTING.md]: /CONTRIBUTING.md
+[contributors]: https://github.com/go-kit/kit/graphs/contributors
+
+## Dependency management
 
 Go kit is a library, designed to be imported into a binary package. Vendoring
 is currently the best way for binary package authors to ensure reliable,
@@ -76,20 +176,13 @@ occur.
 [govendor]: https://github.com/kardianos/govendor
 [Godep]: https://github.com/tools/godep
 
-## Contributing
-
-Please see [CONTRIBUTING.md]. Thank you, [contributors]!
-
-[CONTRIBUTING.md]: /CONTRIBUTING.md
-[contributors]: https://github.com/go-kit/kit/graphs/contributors
-
-### API stability policy
+## API stability policy
 
 The Go kit project depends on code maintained by others.
 This includes the Go standard library and sub-repositories and other external libraries.
 The Go language and standard library provide stability guarantees, but the other external libraries typically do not.
- [The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
-proposes a standard policy for package authors to advertise API stability.
+[The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
+ proposes a standard policy for package authors to advertise API stability.
 The Go kit project prefers to depend on code that abides the API stability policy.
 
 ## Related projects

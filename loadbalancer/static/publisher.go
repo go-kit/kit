@@ -1,35 +1,26 @@
 package static
 
 import (
-	"sync"
-
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/loadbalancer"
+	"github.com/go-kit/kit/loadbalancer/fixed"
+	"github.com/go-kit/kit/log"
 )
 
-// Publisher yields the same set of static endpoints.
-type Publisher struct {
-	mtx       sync.RWMutex
-	endpoints []endpoint.Endpoint
-}
+// Publisher yields a set of static endpoints as produced by the passed factory.
+type Publisher struct{ *fixed.Publisher }
 
 // NewPublisher returns a static endpoint Publisher.
-func NewPublisher(endpoints []endpoint.Endpoint) *Publisher {
-	return &Publisher{
-		endpoints: endpoints,
+func NewPublisher(instances []string, factory loadbalancer.Factory, logger log.Logger) Publisher {
+	logger = log.NewContext(logger).With("component", "Fixed Publisher")
+	endpoints := []endpoint.Endpoint{}
+	for _, instance := range instances {
+		e, err := factory(instance)
+		if err != nil {
+			_ = logger.Log("instance", instance, "err", err)
+			continue
+		}
+		endpoints = append(endpoints, e)
 	}
-}
-
-// Endpoints implements the Publisher interface.
-func (p *Publisher) Endpoints() ([]endpoint.Endpoint, error) {
-	p.mtx.RLock()
-	defer p.mtx.RUnlock()
-	return p.endpoints, nil
-}
-
-// Replace is a utility method to swap out the underlying endpoints of an
-// existing static publisher. It's useful mostly for testing.
-func (p *Publisher) Replace(endpoints []endpoint.Endpoint) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	p.endpoints = endpoints
+	return Publisher{fixed.NewPublisher(endpoints)}
 }
