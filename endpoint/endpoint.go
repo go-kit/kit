@@ -13,6 +13,26 @@ type Endpoint func(ctx context.Context, request interface{}) (response interface
 // Middleware is a chainable behavior modifier for endpoints.
 type Middleware func(Endpoint) Endpoint
 
+type MWComposer func(Middleware, Middleware) Middleware
+
+func ComposeMW(m1, m2 Middleware) Middleware {
+	return func(e Endpoint) Endpoint {
+		return m2(m1(e))
+	}
+}
+
+func ReduceMW(c MWComposer, m Middleware, mw ...Middleware) Middleware {
+	l := len(mw)
+	if l > 1 {
+		// merge last two elements in list, recurse
+		return ReduceMW(c, m, append(mw[:l-2], c(mw[l-1], mw[l-2]))...)
+	} else if l == 1 {
+		return c(mw[0], m)
+	} else {
+		return m
+	}
+}
+
 // ErrBadCast indicates an unexpected concrete request or response struct was
 // received from an endpoint.
 var ErrBadCast = errors.New("bad cast")
