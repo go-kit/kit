@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -40,6 +41,9 @@ func testFailingEndpoint(t *testing.T, breaker endpoint.Middleware, primeWith in
 		}
 	}
 	thru := m.thru
+
+	// https://github.com/afex/hystrix-go/issues/41
+	time.Sleep(time.Millisecond)
 
 	// But the rest should be blocked by an open circuit.
 	for i := 0; i < 10; i++ {
