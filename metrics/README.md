@@ -37,7 +37,6 @@ import (
 
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/prometheus"
-	"github.com/go-kit/kit/metrics/statsd"
 )
 
 var requestDuration = prometheus.NewSummary(stdprometheus.SummaryOpts{
