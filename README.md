@@ -60,13 +60,21 @@ See also the
 
 ### Dependency management
 
-Users who import Go kit into their `package main` are responsible to organize
-and maintain all of their dependencies to ensure code compatibility and build
-reproducibility. Go kit makes no direct use of dependency management tools like
-[Godep](https://github.com/tools/godep).
+Go kit is a library, designed to be imported into a binary package. Vendoring
+is currently the best way for binary package authors to ensure reliable,
+reproducible builds.  Therefore, we strongly recommend our users use vendoring
+for all of their dependencies, including Go kit.   To avoid compatibility and
+availability issues, Go kit doesn't vendor its own dependencies, and doesn't
+recommend use of third-party import proxies.
 
-We will use a variety of continuous integration providers to find and fix
-compatibility problems as soon as they occur.
+There are several tools which make vendoring easier, including [gb][],
+[govendor][], and [Godep][]. And Go kit uses a variety of continuous
+integration providers to find and fix compatibility problems as soon as they
+occur.
+
+[gb]: http://getgb.io
+[govendor]: https://github.com/kardianos/govendor
+[Godep]: https://github.com/tools/godep
 
 ## Contributing
 
