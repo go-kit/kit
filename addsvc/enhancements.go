@@ -5,8 +5,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics"
+	"gopkg.in/kit.v0/log"
+	"gopkg.in/kit.v0/metrics"
 )
 
 func logging(logger log.Logger) func(Add) Add {

@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	httptransport "github.com/go-kit/kit/transport/http"
+	httptransport "gopkg.in/kit.v0/transport/http"
 )
 
 func TestSetHeader(t *testing.T) {

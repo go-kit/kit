@@ -5,8 +5,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/addsvc/reqrep"
-	"github.com/go-kit/kit/endpoint"
+	"gopkg.in/kit.v0/addsvc/reqrep"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 // NewClient takes a net/rpc Client that should point to an instance of an

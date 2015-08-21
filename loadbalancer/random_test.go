@@ -6,9 +6,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/loadbalancer"
-	"github.com/go-kit/kit/loadbalancer/static"
+	"gopkg.in/kit.v0/endpoint"
+	"gopkg.in/kit.v0/loadbalancer"
+	"gopkg.in/kit.v0/loadbalancer/static"
 )
 
 func TestRandomDistribution(t *testing.T) {

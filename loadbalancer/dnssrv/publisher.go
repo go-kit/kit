@@ -7,9 +7,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/loadbalancer"
-	"github.com/go-kit/kit/log"
+	"gopkg.in/kit.v0/endpoint"
+	"gopkg.in/kit.v0/loadbalancer"
+	"gopkg.in/kit.v0/log"
 )
 
 // Publisher yields endpoints taken from the named DNS SRV record. The name is

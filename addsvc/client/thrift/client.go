@@ -3,9 +3,9 @@ package thrift
 import (
 	"golang.org/x/net/context"
 
-	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
-	"github.com/go-kit/kit/addsvc/reqrep"
-	"github.com/go-kit/kit/endpoint"
+	thriftadd "gopkg.in/kit.v0/addsvc/_thrift/gen-go/add"
+	"gopkg.in/kit.v0/addsvc/reqrep"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 // NewClient takes a Thrift AddServiceClient, which should point to an

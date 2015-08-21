@@ -3,9 +3,9 @@ package main
 import (
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/addsvc/pb"
-	"github.com/go-kit/kit/addsvc/reqrep"
-	"github.com/go-kit/kit/endpoint"
+	"gopkg.in/kit.v0/addsvc/pb"
+	"gopkg.in/kit.v0/addsvc/reqrep"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 // A binding wraps an Endpoint so that it's usable by a transport. grpcBinding

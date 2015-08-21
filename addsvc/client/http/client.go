@@ -7,9 +7,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/addsvc/reqrep"
-	"github.com/go-kit/kit/endpoint"
-	httptransport "github.com/go-kit/kit/transport/http"
+	"gopkg.in/kit.v0/addsvc/reqrep"
+	"gopkg.in/kit.v0/endpoint"
+	httptransport "gopkg.in/kit.v0/transport/http"
 )
 
 // NewClient takes a URL that should point to an instance of an addsvc. It

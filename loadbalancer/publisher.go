@@ -3,7 +3,7 @@ package loadbalancer
 import (
 	"errors"
 
-	"github.com/go-kit/kit/endpoint"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 // Publisher describes something that provides a set of identical endpoints.

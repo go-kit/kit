@@ -4,9 +4,9 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/go-kit/kit/addsvc/pb"
-	"github.com/go-kit/kit/addsvc/reqrep"
-	"github.com/go-kit/kit/endpoint"
+	"gopkg.in/kit.v0/addsvc/pb"
+	"gopkg.in/kit.v0/addsvc/reqrep"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 // NewClient takes a gRPC ClientConn that should point to an instance of an

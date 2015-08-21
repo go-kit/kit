@@ -3,7 +3,7 @@ package loadbalancer
 import (
 	"sync/atomic"
 
-	"github.com/go-kit/kit/endpoint"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 // RoundRobin is a simple load balancer that returns each of the published

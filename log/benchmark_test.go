@@ -3,7 +3,7 @@ package log_test
 import (
 	"testing"
 
-	"github.com/go-kit/kit/log"
+	"gopkg.in/kit.v0/log"
 )
 
 func benchmarkRunner(b *testing.B, logger log.Logger, f func(log.Logger)) {

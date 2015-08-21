@@ -3,7 +3,7 @@ package loadbalancer
 import (
 	"math/rand"
 
-	"github.com/go-kit/kit/endpoint"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 // Random is a completely stateless load balancer that chooses a random

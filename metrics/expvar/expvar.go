@@ -25,7 +25,7 @@ import (
 
 	"github.com/codahale/hdrhistogram"
 
-	"github.com/go-kit/kit/metrics"
+	"gopkg.in/kit.v0/metrics"
 )
 
 type counter struct {

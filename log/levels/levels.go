@@ -1,6 +1,6 @@
 package levels
 
-import "github.com/go-kit/kit/log"
+import "gopkg.in/kit.v0/log"
 
 // Levels provides a leveled logging wrapper around a logger. It has five
 // levels: debug, info, warning (warn), error, and critical (crit). If you

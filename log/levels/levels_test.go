@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/levels"
+	"gopkg.in/kit.v0/log"
+	"gopkg.in/kit.v0/log/levels"
 )
 
 func TestDefaultLevels(t *testing.T) {

@@ -3,8 +3,8 @@ package main
 import (
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/addsvc/reqrep"
-	"github.com/go-kit/kit/endpoint"
+	"gopkg.in/kit.v0/addsvc/reqrep"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 // NetrpcBinding makes an endpoint usable over net/rpc. It needs to be

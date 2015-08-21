@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/log"
+	"gopkg.in/kit.v0/log"
 )
 
 func TestValueBinding(t *testing.T) {

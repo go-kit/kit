@@ -3,9 +3,9 @@ package main
 import (
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/addsvc/reqrep"
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/log"
+	"gopkg.in/kit.v0/addsvc/reqrep"
+	"gopkg.in/kit.v0/endpoint"
+	"gopkg.in/kit.v0/log"
 )
 
 // Add is the abstract definition of what this service does. It could easily

@@ -21,17 +21,17 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
-	httpclient "github.com/go-kit/kit/addsvc/client/http"
-	"github.com/go-kit/kit/addsvc/pb"
-	"github.com/go-kit/kit/endpoint"
-	kitlog "github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/metrics/expvar"
-	"github.com/go-kit/kit/metrics/prometheus"
-	"github.com/go-kit/kit/metrics/statsd"
-	"github.com/go-kit/kit/tracing/zipkin"
-	httptransport "github.com/go-kit/kit/transport/http"
+	thriftadd "gopkg.in/kit.v0/addsvc/_thrift/gen-go/add"
+	httpclient "gopkg.in/kit.v0/addsvc/client/http"
+	"gopkg.in/kit.v0/addsvc/pb"
+	"gopkg.in/kit.v0/endpoint"
+	kitlog "gopkg.in/kit.v0/log"
+	"gopkg.in/kit.v0/metrics"
+	"gopkg.in/kit.v0/metrics/expvar"
+	"gopkg.in/kit.v0/metrics/prometheus"
+	"gopkg.in/kit.v0/metrics/statsd"
+	"gopkg.in/kit.v0/tracing/zipkin"
+	httptransport "gopkg.in/kit.v0/transport/http"
 )
 
 func main() {

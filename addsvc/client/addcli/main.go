@@ -12,13 +12,13 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
-	grpcclient "github.com/go-kit/kit/addsvc/client/grpc"
-	httpclient "github.com/go-kit/kit/addsvc/client/http"
-	netrpcclient "github.com/go-kit/kit/addsvc/client/netrpc"
-	thriftclient "github.com/go-kit/kit/addsvc/client/thrift"
-	"github.com/go-kit/kit/addsvc/reqrep"
-	"github.com/go-kit/kit/endpoint"
+	thriftadd "gopkg.in/kit.v0/addsvc/_thrift/gen-go/add"
+	grpcclient "gopkg.in/kit.v0/addsvc/client/grpc"
+	httpclient "gopkg.in/kit.v0/addsvc/client/http"
+	netrpcclient "gopkg.in/kit.v0/addsvc/client/netrpc"
+	thriftclient "gopkg.in/kit.v0/addsvc/client/thrift"
+	"gopkg.in/kit.v0/addsvc/reqrep"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 func main() {

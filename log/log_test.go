@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/go-kit/kit/log"
+	"gopkg.in/kit.v0/log"
 )
 
 var discard = log.Logger(log.LoggerFunc(func(...interface{}) error { return nil }))

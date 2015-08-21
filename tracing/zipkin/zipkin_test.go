@@ -12,9 +12,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/tracing/zipkin"
+	"gopkg.in/kit.v0/endpoint"
+	"gopkg.in/kit.v0/log"
+	"gopkg.in/kit.v0/tracing/zipkin"
 )
 
 func TestToContext(t *testing.T) {

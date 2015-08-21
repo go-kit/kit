@@ -3,7 +3,7 @@ package static
 import (
 	"sync"
 
-	"github.com/go-kit/kit/endpoint"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 // Publisher yields the same set of static endpoints.

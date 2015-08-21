@@ -4,7 +4,7 @@ package prometheus
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/go-kit/kit/metrics"
+	"gopkg.in/kit.v0/metrics"
 )
 
 // Prometheus has strong opinions about the dimensionality of fields. Users

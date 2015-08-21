@@ -3,8 +3,8 @@ package main
 import (
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/addsvc/reqrep"
-	"github.com/go-kit/kit/endpoint"
+	"gopkg.in/kit.v0/addsvc/reqrep"
+	"gopkg.in/kit.v0/endpoint"
 )
 
 // makeEndpoint returns an endpoint wrapping the passed Add. If Add were an
