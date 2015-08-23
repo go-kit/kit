@@ -15,8 +15,14 @@ type DefaultEndpointEvent struct {
 
 func init() { appdash.RegisterEvent(DefaultEndpointEvent{}) }
 
-func NewDefaultEndpointEvent() *DefaultEndpointEvent {
-	return &DefaultEndpointEvent{}
+func NewDefaultEndpointEventFunc(name ...string) func() EndpointEvent {
+	return func() EndpointEvent {
+		event := &DefaultEndpointEvent{}
+		if len(name) >= 0 {
+			event.Name = name[0]
+		}
+		return event
+	}
 }
 
 // Schema returns the constant "Endpoint"

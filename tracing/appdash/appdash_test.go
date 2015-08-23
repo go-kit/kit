@@ -13,11 +13,7 @@ func TestMiddlewareWithDefaultEndpoint(t *testing.T) {
 	ms := appdash.NewMemoryStore()
 	c := appdash.NewLocalCollector(ms)
 
-	endpointEvent := NewDefaultEndpointEvent()
-	newEventFunc := func() EndpointEvent {
-		endpointEvent.Name = "TEST"
-		return endpointEvent
-	}
+	newEventFunc := NewDefaultEndpointEventFunc("TEST")
 
 	ctx := context.Background()
 

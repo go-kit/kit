@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewEndpointEvent(t *testing.T) {
-	e := NewDefaultEndpointEvent()
+	e := &DefaultEndpointEvent{}
 
 	if e.Schema() != "Endpoint" {
 		t.Errorf("unexpected schema: %v", e.Schema())
