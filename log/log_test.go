@@ -2,13 +2,13 @@ package log_test
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 	"testing"
 
 	"github.com/go-kit/kit/log"
+	"gopkg.in/stack.v1"
 )
-
-var discard = log.Logger(log.LoggerFunc(func(...interface{}) error { return nil }))
 
 func TestContext(t *testing.T) {
 	t.Parallel()
@@ -66,6 +66,59 @@ func TestContextMissingValue(t *testing.T) {
 	}
 }
 
+// Test that Context.Log has a consistent function stack depth when binding
+// log.Valuers, regardless of how many times Context.With has been called or
+// whether Context.Log is called via an interface typed variable or a concrete
+// typed variable.
+func TestContextStackDepth(t *testing.T) {
+	fn := fmt.Sprintf("%n", stack.Caller(0))
+
+	var output []interface{}
+
+	logger := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {
+		output = keyvals
+		return nil
+	}))
+
+	stackValuer := log.Valuer(func() interface{} {
+		for i, c := range stack.Trace() {
+			if fmt.Sprintf("%n", c) == fn {
+				return i
+			}
+		}
+		t.Fatal("Test function not found in stack trace.")
+		return nil
+	})
+
+	concrete := log.NewContext(logger).With("stack", stackValuer)
+	var iface log.Logger = concrete
+
+	// Call through interface to get baseline.
+	iface.Log("k", "v")
+	want := output[1].(int)
+
+	for len(output) < 10 {
+		concrete.Log("k", "v")
+		if have := output[1]; have != want {
+			t.Errorf("%d Withs: have %v, want %v", len(output)/2-1, have, want)
+		}
+
+		iface.Log("k", "v")
+		if have := output[1]; have != want {
+			t.Errorf("%d Withs: have %v, want %v", len(output)/2-1, have, want)
+		}
+
+		wrapped := log.NewContext(concrete)
+		wrapped.Log("k", "v")
+		if have := output[1]; have != want {
+			t.Errorf("%d Withs: have %v, want %v", len(output)/2-1, have, want)
+		}
+
+		concrete = concrete.With("k", "v")
+		iface = concrete
+	}
+}
+
 // Test that With returns a Logger safe for concurrent use. This test
 // validates that the stored logging context does not get corrupted when
 // multiple clients concurrently log additional keyvals.
@@ -111,7 +164,7 @@ func TestWithConcurrent(t *testing.T) {
 }
 
 func BenchmarkDiscard(b *testing.B) {
-	logger := discard
+	logger := log.NewNopLogger()
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -120,7 +173,7 @@ func BenchmarkDiscard(b *testing.B) {
 }
 
 func BenchmarkOneWith(b *testing.B) {
-	logger := discard
+	logger := log.NewNopLogger()
 	lc := log.NewContext(logger).With("k", "v")
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -130,7 +183,7 @@ func BenchmarkOneWith(b *testing.B) {
 }
 
 func BenchmarkTwoWith(b *testing.B) {
-	logger := discard
+	logger := log.NewNopLogger()
 	lc := log.NewContext(logger).With("k", "v")
 	for i := 1; i < 2; i++ {
 		lc = lc.With("k", "v")
@@ -143,7 +196,7 @@ func BenchmarkTwoWith(b *testing.B) {
 }
 
 func BenchmarkTenWith(b *testing.B) {
-	logger := discard
+	logger := log.NewNopLogger()
 	lc := log.NewContext(logger).With("k", "v")
 	for i := 1; i < 10; i++ {
 		lc = lc.With("k", "v")

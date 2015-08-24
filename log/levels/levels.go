@@ -7,7 +7,7 @@ import "github.com/go-kit/kit/log"
 // want a different set of levels, you can create your own levels type very
 // easily, and you can elide the configuration.
 type Levels struct {
-	ctx      log.Context
+	ctx      *log.Context
 	levelKey string
 
 	// We have a choice between storing level values in string fields or

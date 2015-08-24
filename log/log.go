@@ -23,12 +23,46 @@ type Logger interface {
 var ErrMissingValue = errors.New("(MISSING)")
 
 // NewContext returns a new Context that logs to logger.
-func NewContext(logger Logger) Context {
-	if c, ok := logger.(Context); ok {
+func NewContext(logger Logger) *Context {
+	if c, ok := logger.(*Context); ok {
 		return c
 	}
-	return Context{logger: logger}
+	return &Context{logger: logger}
 }
+
+// Context must always have the same number of stack frames between calls to
+// its Log method and the eventual binding of Valuers to their value. This
+// requirement comes from the functional requirement to allow a context to
+// resolve application call site information for a log.Caller stored in the
+// context. To do this we must be able to predict the number of logging
+// functions on the stack when bindValues is called.
+//
+// Three implementation details provide the needed stack depth consistency.
+// The first two of these details also result in better amortized performance,
+// and thus make sense even without the requirements regarding stack depth.
+// The third detail, however, is subtle and tied to the implementation of the
+// Go compiler.
+//
+//    1. NewContext avoids introducing an additional layer when asked to
+//       wrap another Context.
+//    2. With avoids introducing an additional layer by returning a newly
+//       constructed Context with a merged keyvals rather than simply
+//       wrapping the existing Context.
+//    3. All of Context's methods take pointer receivers even though they
+//       do not mutate the Context.
+//
+// Before explaining the last detail, first some background. The Go compiler
+// generates wrapper methods to implement the auto dereferencing behavior when
+// calling a value method through a pointer variable. These wrapper methods
+// are also used when calling a value method through an interface variable
+// because interfaces store a pointer to the underlying concrete value.
+// Calling a pointer receiver through an interface does not require generating
+// an additional function.
+//
+// If Context had value methods then calling Context.Log through a variable
+// with type Logger would have an extra stack frame compared to calling
+// Context.Log through a variable with type Context. Using pointer receivers
+// avoids this problem.
 
 // A Context wraps a Logger and holds keyvals that it includes in all log
 // events. When logging, a Context replaces all value elements (odd indexes)
@@ -43,7 +77,7 @@ type Context struct {
 // Log replaces all value elements (odd indexes) containing a Valuer in the
 // stored context with their generated value, appends keyvals, and passes the
 // result to the wrapped Logger.
-func (l Context) Log(keyvals ...interface{}) error {
+func (l *Context) Log(keyvals ...interface{}) error {
 	kvs := append(l.keyvals, keyvals...)
 	if len(kvs)%2 != 0 {
 		kvs = append(kvs, ErrMissingValue)
@@ -60,7 +94,7 @@ func (l Context) Log(keyvals ...interface{}) error {
 }
 
 // With returns a new Context with keyvals appended to those of the receiver.
-func (l Context) With(keyvals ...interface{}) Context {
+func (l *Context) With(keyvals ...interface{}) *Context {
 	if len(keyvals) == 0 {
 		return l
 	}
@@ -68,7 +102,7 @@ func (l Context) With(keyvals ...interface{}) Context {
 	if len(kvs)%2 != 0 {
 		kvs = append(kvs, ErrMissingValue)
 	}
-	return Context{
+	return &Context{
 		logger: l.logger,
 		// Limiting the capacity of the stored keyvals ensures that a new
 		// backing array is created if the slice must grow in Log or With.
@@ -81,7 +115,7 @@ func (l Context) With(keyvals ...interface{}) Context {
 
 // WithPrefix returns a new Context with keyvals prepended to those of the
 // receiver.
-func (l Context) WithPrefix(keyvals ...interface{}) Context {
+func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
 	if len(keyvals) == 0 {
 		return l
 	}
@@ -99,7 +133,7 @@ func (l Context) WithPrefix(keyvals ...interface{}) Context {
 		kvs = append(kvs, ErrMissingValue)
 	}
 	kvs = append(kvs, l.keyvals...)
-	return Context{
+	return &Context{
 		logger:    l.logger,
 		keyvals:   kvs,
 		hasValuer: l.hasValuer || containsValuer(keyvals),
