@@ -2,10 +2,12 @@ package log_test
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 	"testing"
 
 	"github.com/go-kit/kit/log"
+	"gopkg.in/stack.v1"
 )
 
 func TestContext(t *testing.T) {
@@ -61,6 +63,59 @@ func TestContextMissingValue(t *testing.T) {
 		if want, have := log.ErrMissingValue, output[i]; want != have {
 			t.Errorf("want output[%d] == %#v, have %#v", i, want, have)
 		}
+	}
+}
+
+// Test that Context.Log has a consistent function stack depth when binding
+// log.Valuers, regardless of how many times Context.With has been called or
+// whether Context.Log is called via an interface typed variable or a concrete
+// typed variable.
+func TestContextStackDepth(t *testing.T) {
+	fn := fmt.Sprintf("%n", stack.Caller(0))
+
+	var output []interface{}
+
+	logger := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {
+		output = keyvals
+		return nil
+	}))
+
+	stackValuer := log.Valuer(func() interface{} {
+		for i, c := range stack.Trace() {
+			if fmt.Sprintf("%n", c) == fn {
+				return i
+			}
+		}
+		t.Fatal("Test function not found in stack trace.")
+		return nil
+	})
+
+	concrete := log.NewContext(logger).With("stack", stackValuer)
+	var iface log.Logger = concrete
+
+	// Call through interface to get baseline.
+	iface.Log("k", "v")
+	want := output[1].(int)
+
+	for len(output) < 10 {
+		concrete.Log("k", "v")
+		if have := output[1]; have != want {
+			t.Errorf("%d Withs: have %v, want %v", len(output)/2-1, have, want)
+		}
+
+		iface.Log("k", "v")
+		if have := output[1]; have != want {
+			t.Errorf("%d Withs: have %v, want %v", len(output)/2-1, have, want)
+		}
+
+		wrapped := log.NewContext(concrete)
+		wrapped.Log("k", "v")
+		if have := output[1]; have != want {
+			t.Errorf("%d Withs: have %v, want %v", len(output)/2-1, have, want)
+		}
+
+		concrete = concrete.With("k", "v")
+		iface = concrete
 	}
 }
 
