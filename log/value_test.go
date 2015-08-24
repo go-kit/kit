@@ -89,7 +89,7 @@ func TestValueBinding_loggingZeroKeyvals(t *testing.T) {
 }
 
 func BenchmarkValueBindingTimestamp(b *testing.B) {
-	logger := discard
+	logger := log.NewNopLogger()
 	lc := log.NewContext(logger).With("ts", log.DefaultTimestamp)
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -99,7 +99,7 @@ func BenchmarkValueBindingTimestamp(b *testing.B) {
 }
 
 func BenchmarkValueBindingCaller(b *testing.B) {
-	logger := discard
+	logger := log.NewNopLogger()
 	lc := log.NewContext(logger).With("caller", log.DefaultCaller)
 	b.ReportAllocs()
 	b.ResetTimer()

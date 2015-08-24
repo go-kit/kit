@@ -8,8 +8,6 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-var discard = log.Logger(log.LoggerFunc(func(...interface{}) error { return nil }))
-
 func TestContext(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
@@ -111,7 +109,7 @@ func TestWithConcurrent(t *testing.T) {
 }
 
 func BenchmarkDiscard(b *testing.B) {
-	logger := discard
+	logger := log.NewNopLogger()
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -120,7 +118,7 @@ func BenchmarkDiscard(b *testing.B) {
 }
 
 func BenchmarkOneWith(b *testing.B) {
-	logger := discard
+	logger := log.NewNopLogger()
 	lc := log.NewContext(logger).With("k", "v")
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -130,7 +128,7 @@ func BenchmarkOneWith(b *testing.B) {
 }
 
 func BenchmarkTwoWith(b *testing.B) {
-	logger := discard
+	logger := log.NewNopLogger()
 	lc := log.NewContext(logger).With("k", "v")
 	for i := 1; i < 2; i++ {
 		lc = lc.With("k", "v")
@@ -143,7 +141,7 @@ func BenchmarkTwoWith(b *testing.B) {
 }
 
 func BenchmarkTenWith(b *testing.B) {
-	logger := discard
+	logger := log.NewNopLogger()
 	lc := log.NewContext(logger).With("k", "v")
 	for i := 1; i < 10; i++ {
 		lc = lc.With("k", "v")
