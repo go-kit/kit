@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	stdlog "log"
 	"math/rand"
-	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"net/rpc"
@@ -16,14 +15,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
+	"github.com/sasha-s/kit/addsvc2/add"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 
-	thriftadd "github.com/go-kit/kit/addsvc/_thrift/gen-go/add"
 	httpclient "github.com/go-kit/kit/addsvc/client/http"
-	"github.com/go-kit/kit/addsvc/pb"
 	"github.com/go-kit/kit/endpoint"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -39,16 +35,10 @@ func main() {
 	// of glog. So, we define a new flag set, to keep those domains distinct.
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	var (
-		debugAddr        = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
-		httpAddr         = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
-		grpcAddr         = fs.String("grpc.addr", ":8002", "Address for gRPC server")
-		netrpcAddr       = fs.String("netrpc.addr", ":8003", "Address for net/rpc server")
-		thriftAddr       = fs.String("thrift.addr", ":8004", "Address for Thrift server")
-		thriftProtocol   = fs.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
-		thriftBufferSize = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
-		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
-
-		proxyHTTPURL = fs.String("proxy.http.url", "", "if set, proxy requests over HTTP to this addsvc")
+		debugAddr     = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
+		httpAddr      = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
+		netrpcAddr    = fs.String("netrpc.addr", ":8003", "Address for net/rpc server")
+		proxyHTTPAddr = fs.String("proxy.http.url", "", "if set, proxy requests over HTTP to this addsvc")
 
 		zipkinServiceName            = fs.String("zipkin.service.name", "addsvc", "Zipkin service name")
 		zipkinCollectorAddr          = fs.String("zipkin.collector.addr", "", "Zipkin Scribe collector address (empty will log spans)")
@@ -62,7 +52,7 @@ func main() {
 	// `package log` domain
 	var logger kitlog.Logger
 	logger = kitlog.NewLogfmtLogger(os.Stderr)
-	logger = kitlog.NewContext(logger).With("ts", kitlog.DefaultTimestampUTC)
+	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
 	stdlog.SetFlags(0)                                // flags are handled in our logger
 
@@ -88,6 +78,8 @@ func main() {
 		}, []string{}),
 	))
 
+	_, _ = requests, duration
+
 	// `package tracing` domain
 	zipkinHostPort := "localhost:1234" // TODO Zipkin makes overly simple assumptions about services
 	var zipkinCollector zipkin.Collector = loggingCollector{logger}
@@ -96,9 +88,8 @@ func main() {
 		if zipkinCollector, err = zipkin.NewScribeCollector(
 			*zipkinCollectorAddr,
 			*zipkinCollectorTimeout,
-			zipkin.ScribeBatchSize(*zipkinCollectorBatchSize),
-			zipkin.ScribeBatchInterval(*zipkinCollectorBatchInterval),
-			zipkin.ScribeLogger(logger),
+			*zipkinCollectorBatchSize,
+			*zipkinCollectorBatchInterval,
 		); err != nil {
 			logger.Log("err", err)
 			os.Exit(1)
@@ -106,21 +97,28 @@ func main() {
 	}
 	zipkinMethodName := "add"
 	zipkinSpanFunc := zipkin.MakeNewSpanFunc(zipkinHostPort, *zipkinServiceName, zipkinMethodName)
+	zipkin.Log.Swap(logger) // log diagnostic/error details
 
 	// Our business and operational domain
-	var a Add = pureAdd
-	if *proxyHTTPURL != "" {
+	var a add.Adder = pureAdd{}
+	if *proxyHTTPAddr != "" {
 		var e endpoint.Endpoint
-		e = httpclient.NewClient("GET", *proxyHTTPURL, zipkin.ToRequest(zipkinSpanFunc))
+		e = httpclient.NewClient("GET", *proxyHTTPAddr, zipkin.ToRequest(zipkinSpanFunc))
 		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
-		a = proxyAdd(e, logger)
+		a = add.MakeAdderClient(func(method string) endpoint.Endpoint {
+			if method != "Add" {
+				panic(fmt.Errorf("unknown method %s", method))
+			}
+			return e
+		})
 	}
-	a = logging(logger)(a)
-	a = instrument(requests, duration)(a)
+	// This could happen at endpoint level.
+	// a = logging(logger)(a)
+	// a = instrument(requests, duration)(a)
 
 	// Server domain
 	var e endpoint.Endpoint
-	e = makeEndpoint(a)
+	e = add.MakeAdderEndpoints(a).Add
 	e = zipkin.AnnotateServer(zipkinSpanFunc, zipkinCollector)(e)
 
 	// Mechanical stuff
@@ -142,28 +140,11 @@ func main() {
 	go func() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
-		before := []httptransport.BeforeFunc{zipkin.ToContext(zipkinSpanFunc, logger)}
+		before := []httptransport.BeforeFunc{zipkin.ToContext(zipkinSpanFunc)}
 		after := []httptransport.AfterFunc{}
-		handler := makeHTTPBinding(ctx, e, before, after)
+		handler := add.MakeAdderAddHTTPBinding(ctx, e, before, after)
 		logger.Log("addr", *httpAddr, "transport", "HTTP/JSON")
 		errc <- http.ListenAndServe(*httpAddr, handler)
-	}()
-
-	// Transport: gRPC
-	go func() {
-		ln, err := net.Listen("tcp", *grpcAddr)
-		if err != nil {
-			errc <- err
-			return
-		}
-		s := grpc.NewServer() // uses its own context?
-		pb.RegisterAddServer(s, grpcBinding{e})
-		logger.Log("addr", *grpcAddr, "transport", "gRPC")
-		go func() {
-			<-root.Done()
-			s.Stop()
-		}()
-		errc <- s.Serve(ln)
 	}()
 
 	// Transport: net/rpc
@@ -171,56 +152,10 @@ func main() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
 		s := rpc.NewServer()
-		s.RegisterName("addsvc", NetrpcBinding{ctx, e})
+		s.RegisterName("Add", add.AdderAddNetrpcBinding{ctx, e})
 		s.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
 		logger.Log("addr", *netrpcAddr, "transport", "net/rpc")
 		errc <- http.ListenAndServe(*netrpcAddr, s)
-	}()
-
-	// Transport: Thrift
-	go func() {
-		ctx, cancel := context.WithCancel(root)
-		defer cancel()
-
-		var protocolFactory thrift.TProtocolFactory
-		switch *thriftProtocol {
-		case "binary":
-			protocolFactory = thrift.NewTBinaryProtocolFactoryDefault()
-		case "compact":
-			protocolFactory = thrift.NewTCompactProtocolFactory()
-		case "json":
-			protocolFactory = thrift.NewTJSONProtocolFactory()
-		case "simplejson":
-			protocolFactory = thrift.NewTSimpleJSONProtocolFactory()
-		default:
-			errc <- fmt.Errorf("invalid Thrift protocol %q", *thriftProtocol)
-			return
-		}
-
-		var transportFactory thrift.TTransportFactory
-		if *thriftBufferSize > 0 {
-			transportFactory = thrift.NewTBufferedTransportFactory(*thriftBufferSize)
-		} else {
-			transportFactory = thrift.NewTTransportFactory()
-		}
-
-		if *thriftFramed {
-			transportFactory = thrift.NewTFramedTransportFactory(transportFactory)
-		}
-
-		transport, err := thrift.NewTServerSocket(*thriftAddr)
-		if err != nil {
-			errc <- err
-			return
-		}
-
-		logger.Log("addr", *thriftAddr, "transport", "Thrift")
-		errc <- thrift.NewTSimpleServer4(
-			thriftadd.NewAddServiceProcessor(thriftBinding{ctx, e}),
-			transport,
-			transportFactory,
-			protocolFactory,
-		).Serve()
 	}()
 
 	logger.Log("fatal", <-errc)
@@ -248,3 +183,8 @@ func (c loggingCollector) Collect(s *zipkin.Span) error {
 	)
 	return nil
 }
+
+// pureAdd implements Add with no dependencies.
+type pureAdd struct{}
+
+func (pureAdd) Add(_ context.Context, a, b int64) int64 { return a + b }
