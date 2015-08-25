@@ -74,3 +74,7 @@ func safeError(err error) (s interface{}) {
 	s = err.Error()
 	return
 }
+
+func (l *jsonLogger) Hijack(f func(io.Writer) io.Writer) {
+	l.Writer = f(l.Writer)
+}

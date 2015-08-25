@@ -32,3 +32,7 @@ func (l logfmtLogger) Log(keyvals ...interface{}) error {
 	}
 	return nil
 }
+
+func (l *logfmtLogger) Hijack(f func(io.Writer) io.Writer) {
+	l.w = f(l.w)
+}
