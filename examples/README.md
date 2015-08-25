@@ -1,7 +1,5 @@
 # Examples
 
-TODO
-
 1. [A minimal example](#a-minimal-example)
 	1. [Your business logic](#your-business-logic)
 	1. [Requests and responses](#requests-and-responses)
@@ -633,7 +631,7 @@ listen=:8080 caller=logging.go:28 method=uppercase input=baz output=BAZ err=null
 ### Request tracing
 
 Once your infrastructure grows beyond a certain size, it becomes important to trace requests through multiple services, so you can identify and troubleshoot hotspots.
-See [package tracing](https://github.com/go-kit/kit/tracing) for more information.
+See [package tracing](https://github.com/go-kit/kit/blob/master/tracing) for more information.
 
 ### Creating a client package
 
@@ -652,7 +650,7 @@ It may also be possible to pass things like loggers and metrics objects through 
 
 ### addsvc
 
-[addsvc](https://github.com/go-kit/kit/examples/addsvc) was the original example application.
+[addsvc](https://github.com/go-kit/kit/blob/master/examples/addsvc) was the original example application.
 It exposes a set of operations over all supported transports.
 It's fully logged, instrumented, and uses Zipkin request tracing.
 It also demonstrates how to create and use client packages.
