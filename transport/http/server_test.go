@@ -2,6 +2,7 @@ package http_test
 
 import (
 	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -16,8 +17,8 @@ func TestServerBadDecode(t *testing.T) {
 	handler := httptransport.Server{
 		Context:    context.Background(),
 		Endpoint:   func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
-		DecodeFunc: func(*http.Request) (interface{}, error) { return struct{}{}, errors.New("dang") },
-		EncodeFunc: func(http.ResponseWriter, interface{}) error { return nil },
+		DecodeFunc: func(io.Reader) (interface{}, error) { return struct{}{}, errors.New("dang") },
+		EncodeFunc: func(io.Writer, interface{}) error { return nil },
 	}
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -31,8 +32,8 @@ func TestServerBadEndpoint(t *testing.T) {
 	handler := httptransport.Server{
 		Context:    context.Background(),
 		Endpoint:   func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errors.New("dang") },
-		DecodeFunc: func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		EncodeFunc: func(http.ResponseWriter, interface{}) error { return nil },
+		DecodeFunc: func(io.Reader) (interface{}, error) { return struct{}{}, nil },
+		EncodeFunc: func(io.Writer, interface{}) error { return nil },
 	}
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -46,8 +47,8 @@ func TestServerBadEncode(t *testing.T) {
 	handler := httptransport.Server{
 		Context:    context.Background(),
 		Endpoint:   func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
-		DecodeFunc: func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		EncodeFunc: func(http.ResponseWriter, interface{}) error { return errors.New("dang") },
+		DecodeFunc: func(io.Reader) (interface{}, error) { return struct{}{}, nil },
+		EncodeFunc: func(io.Writer, interface{}) error { return errors.New("dang") },
 	}
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -68,17 +69,6 @@ func TestServerHappyPath(t *testing.T) {
 	}
 }
 
-func TestServerContextCancel(t *testing.T) {
-	cancel, _, response := testServer(t)
-	cancel()
-	resp := <-response
-	defer resp.Body.Close()
-	buf, _ := ioutil.ReadAll(resp.Body)
-	if want, have := http.StatusInternalServerError, resp.StatusCode; want != have {
-		t.Errorf("want %d, have %d (%s)", want, have, buf)
-	}
-}
-
 func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) {
 	var (
 		ctx, cancelfn = context.WithCancel(context.Background())
@@ -88,10 +78,10 @@ func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) 
 		handler       = httptransport.Server{
 			Context:    ctx,
 			Endpoint:   endpoint,
-			DecodeFunc: func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-			EncodeFunc: func(http.ResponseWriter, interface{}) error { return nil },
-			Before:     []httptransport.BeforeFunc{func(ctx context.Context, r *http.Request) context.Context { return ctx }},
-			After:      []httptransport.AfterFunc{func(ctx context.Context, w http.ResponseWriter) { return }},
+			DecodeFunc: func(io.Reader) (interface{}, error) { return struct{}{}, nil },
+			EncodeFunc: func(io.Writer, interface{}) error { return nil },
+			Before:     []httptransport.RequestFunc{func(ctx context.Context, r *http.Request) context.Context { return ctx }},
+			After:      []httptransport.ResponseFunc{func(ctx context.Context, w http.ResponseWriter) { return }},
 		}
 	)
 	go func() {

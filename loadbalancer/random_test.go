@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
-	"github.com/go-kit/kit/loadbalancer/static"
+	"github.com/go-kit/kit/loadbalancer/fixed"
 )
 
 func TestRandomDistribution(t *testing.T) {
@@ -28,7 +28,7 @@ func TestRandomDistribution(t *testing.T) {
 		endpoints[i] = func(context.Context, interface{}) (interface{}, error) { counts[i0]++; return struct{}{}, nil }
 	}
 
-	lb := loadbalancer.NewRandom(static.NewPublisher(endpoints), seed)
+	lb := loadbalancer.NewRandom(fixed.NewPublisher(endpoints), seed)
 
 	for i := 0; i < iterations; i++ {
 		e, err := lb.Endpoint()
@@ -50,7 +50,7 @@ func TestRandomBadPublisher(t *testing.T) {
 }
 
 func TestRandomNoEndpoints(t *testing.T) {
-	lb := loadbalancer.NewRandom(static.NewPublisher([]endpoint.Endpoint{}), 123)
+	lb := loadbalancer.NewRandom(fixed.NewPublisher([]endpoint.Endpoint{}), 123)
 	_, have := lb.Endpoint()
 	if want := loadbalancer.ErrNoEndpoints; want != have {
 		t.Errorf("want %q, have %q", want, have)

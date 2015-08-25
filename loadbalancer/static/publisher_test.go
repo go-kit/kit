@@ -1,48 +1,38 @@
 package static_test
 
 import (
-	"reflect"
+	"fmt"
 	"testing"
 
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer/static"
+	"github.com/go-kit/kit/log"
 )
 
 func TestStatic(t *testing.T) {
 	var (
-		e1        = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-		e2        = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-		endpoints = []endpoint.Endpoint{e1, e2}
+		instances = []string{"foo", "bar", "baz"}
+		endpoints = map[string]endpoint.Endpoint{
+			"foo": func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
+			"bar": func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
+			"baz": func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
+		}
+		factory = func(instance string) (endpoint.Endpoint, error) {
+			if e, ok := endpoints[instance]; ok {
+				return e, nil
+			}
+			return nil, fmt.Errorf("%s: not found", instance)
+		}
 	)
-	p := static.NewPublisher(endpoints)
+	p := static.NewPublisher(instances, factory, log.NewNopLogger())
 	have, err := p.Endpoints()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := endpoints; !reflect.DeepEqual(want, have) {
-		t.Fatalf("want %#+v, have %#+v", want, have)
-	}
-}
-
-func TestStaticReplace(t *testing.T) {
-	p := static.NewPublisher([]endpoint.Endpoint{
-		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
-	})
-	have, err := p.Endpoints()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if want, have := 1, len(have); want != have {
-		t.Fatalf("want %d, have %d", want, have)
-	}
-	p.Replace([]endpoint.Endpoint{})
-	have, err = p.Endpoints()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if want, have := 0, len(have); want != have {
-		t.Fatalf("want %d, have %d", want, have)
+	want := []endpoint.Endpoint{endpoints["foo"], endpoints["bar"], endpoints["baz"]}
+	if fmt.Sprint(want) != fmt.Sprint(have) {
+		t.Fatalf("want %v, have %v", want, have)
 	}
 }

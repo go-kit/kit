@@ -9,13 +9,13 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
-	"github.com/go-kit/kit/loadbalancer/static"
+	"github.com/go-kit/kit/loadbalancer/fixed"
 )
 
 func TestRetryMaxTotalFail(t *testing.T) {
 	var (
 		endpoints = []endpoint.Endpoint{} // no endpoints
-		p         = static.NewPublisher(endpoints)
+		p         = fixed.NewPublisher(endpoints)
 		lb        = loadbalancer.NewRoundRobin(p)
 		retry     = loadbalancer.Retry(999, time.Second, lb) // lots of retries
 		ctx       = context.Background()
@@ -33,7 +33,7 @@ func TestRetryMaxPartialFail(t *testing.T) {
 			func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil /* OK */ },
 		}
 		retries = len(endpoints) - 1 // not quite enough retries
-		p       = static.NewPublisher(endpoints)
+		p       = fixed.NewPublisher(endpoints)
 		lb      = loadbalancer.NewRoundRobin(p)
 		ctx     = context.Background()
 	)
@@ -50,7 +50,7 @@ func TestRetryMaxSuccess(t *testing.T) {
 			func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil /* OK */ },
 		}
 		retries = len(endpoints) // exactly enough retries
-		p       = static.NewPublisher(endpoints)
+		p       = fixed.NewPublisher(endpoints)
 		lb      = loadbalancer.NewRoundRobin(p)
 		ctx     = context.Background()
 	)
@@ -64,7 +64,7 @@ func TestRetryTimeout(t *testing.T) {
 		step    = make(chan struct{})
 		e       = func(context.Context, interface{}) (interface{}, error) { <-step; return struct{}{}, nil }
 		timeout = time.Millisecond
-		retry   = loadbalancer.Retry(999, timeout, loadbalancer.NewRoundRobin(static.NewPublisher([]endpoint.Endpoint{e})))
+		retry   = loadbalancer.Retry(999, timeout, loadbalancer.NewRoundRobin(fixed.NewPublisher([]endpoint.Endpoint{e})))
 		errs    = make(chan error, 1)
 		invoke  = func() { _, err := retry(context.Background(), struct{}{}); errs <- err }
 	)
