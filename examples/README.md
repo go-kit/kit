@@ -19,7 +19,10 @@
 	1. [Creating a client package](#creating-a-client-package)
 	1. [Request tracing](#request-tracing)
 	1. [Threading a context](#threading-a-context)
-	1. [Multiple transports](#multiple-transports)
+1. [Other examples](#other-examples)
+	1. [Transport-specific](#transport-specific)
+	1. [addsvc](#addsvc)
+	1. [apigateway](#apigateway)
 
 ## A minimal example
 
@@ -647,6 +650,11 @@ But it may be useful to do so, to get access to request-scoped information like 
 It may also be possible to pass things like loggers and metrics objects through the context, although this is not currently recommended.
 
 ## Other examples
+
+### Transport-specific
+
+We plan to have small example services that bind to each of our supported transports.
+Stay tuned.
 
 ### addsvc
 
