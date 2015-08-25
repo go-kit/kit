@@ -13,10 +13,14 @@ TODO
 Typical application logging.
 
 ```go
-import "github.com/go-kit/kit/log"
+import (
+  "os"
+
+  "github.com/go-kit/kit/log"
+)
 
 func main() {
-	logger := log.NewPrefixLogger(os.Stderr)
+	logger := log.NewLogfmtLogger(os.Stderr)
 	logger.Log("question", "what is the meaning of life?", "answer", 42)
 }
 ```
@@ -25,16 +29,16 @@ Contextual logging.
 
 ```go
 func handle(logger log.Logger, req *Request) {
-	logger = log.With(logger, "txid", req.TransactionID, "query", req.Query)
-	logger.Log()
+	ctx := log.NewContext(logger).With("txid", req.TransactionID, "query", req.Query)
+	ctx.Log()
 
-	answer, err := process(logger, req.Query)
+	answer, err := process(ctx, req.Query)
 	if err != nil {
-		logger.Log("err", err)
+		ctx.Log("err", err)
 		return
 	}
 
-	logger.Log("answer", answer)
+	ctx.Log("answer", answer)
 }
 ```
 
