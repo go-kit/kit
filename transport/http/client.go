@@ -1,7 +1,6 @@
 package http
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -25,11 +24,12 @@ type Client struct {
 	// A background context must be provided.
 	context.Context
 
-	// EncodeFunc, used to encode request types, must be provided.
-	EncodeFunc
+	// EncodeRequestFunc must be provided. The HTTP request passed to the
+	// EncodeRequestFunc will have a nil body.
+	EncodeRequestFunc
 
-	// DecodeFunc, used to decode response types, must be provided.
-	DecodeFunc
+	// DecodeResponseFunc must be provided.
+	DecodeResponseFunc
 
 	// Before functions are executed on the outgoing request after it is
 	// created, but before it's sent to the HTTP client. Clients have no After
@@ -44,14 +44,13 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		var buf bytes.Buffer
-		if err := c.EncodeFunc(&buf, request); err != nil {
-			return nil, fmt.Errorf("Encode: %v", err)
-		}
-
-		req, err := http.NewRequest(c.Method, c.URL.String(), &buf)
+		req, err := http.NewRequest(c.Method, c.URL.String(), nil)
 		if err != nil {
 			return nil, fmt.Errorf("NewRequest: %v", err)
+		}
+
+		if err = c.EncodeRequestFunc(req, request); err != nil {
+			return nil, fmt.Errorf("Encode: %v", err)
 		}
 
 		for _, f := range c.Before {
@@ -69,7 +68,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		}
 		defer func() { _ = resp.Body.Close() }()
 
-		response, err := c.DecodeFunc(resp.Body)
+		response, err := c.DecodeResponseFunc(resp)
 		if err != nil {
 			return nil, fmt.Errorf("Decode: %v", err)
 		}
