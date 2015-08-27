@@ -4,5 +4,6 @@ test:
     - go get github.com/mattn/goveralls
     - if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
   override:
+    - go get -v -u -d github.com/go-kit/kit/...
     - bin/coverage-circle.bash
 
