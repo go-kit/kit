@@ -5,7 +5,7 @@
 # visualizer for each package. If you set a COVERALLS environment variable,
 # it will report the reults to Coveralls.io.
 
-set -ex
+set -e
 
 function go_files { find . -name '*_test.go' ; }
 function filter { grep -v '/_' ; }
