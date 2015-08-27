@@ -29,39 +29,54 @@ type Server struct {
 	// After functions are executed on the HTTP response writer after the
 	// endpoint is invoked, but before anything is written to the client.
 	After []ResponseFunc
+
+	// ErrorEncoder is used to encode errors to the http.ResponseWriter
+	// whenever they're encountered in the processing of a request. Clients
+	// can use this to provide custom error formatting and response codes. If
+	// ErrorEncoder is nil, the error will be written as plain text with
+	// StatusInternalServerError.
+	ErrorEncoder func(w http.ResponseWriter, err error)
+}
+
+func defaultErrorEncoder(w http.ResponseWriter, err error) {
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
 // ServeHTTP implements http.Handler.
-func (b Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithCancel(b.Context)
+func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.ErrorEncoder == nil {
+		s.ErrorEncoder = defaultErrorEncoder
+	}
+
+	ctx, cancel := context.WithCancel(s.Context)
 	defer cancel()
 
-	for _, f := range b.Before {
+	for _, f := range s.Before {
 		ctx = f(ctx, r)
 	}
 
-	request, err := b.DecodeRequestFunc(r)
+	request, err := s.DecodeRequestFunc(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.ErrorEncoder(w, err)
 		return
 	}
 	if err := r.Body.Close(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		s.ErrorEncoder(w, err)
 		return
 	}
 
-	response, err := b.Endpoint(ctx, request)
+	response, err := s.Endpoint(ctx, request)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		s.ErrorEncoder(w, err)
 		return
 	}
 
-	for _, f := range b.After {
+	for _, f := range s.After {
 		f(ctx, w)
 	}
 
-	if err := b.EncodeResponseFunc(w, response); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := s.EncodeResponseFunc(w, response); err != nil {
+		s.ErrorEncoder(w, err)
 		return
 	}
 }

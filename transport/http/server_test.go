@@ -22,7 +22,7 @@ func TestServerBadDecode(t *testing.T) {
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Get(server.URL)
-	if want, have := http.StatusBadRequest, resp.StatusCode; want != have {
+	if want, have := http.StatusInternalServerError, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
@@ -53,6 +53,29 @@ func TestServerBadEncode(t *testing.T) {
 	defer server.Close()
 	resp, _ := http.Get(server.URL)
 	if want, have := http.StatusInternalServerError, resp.StatusCode; want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+}
+
+func TestServerErrorEncoder(t *testing.T) {
+	errTeapot := errors.New("teapot")
+	code := func(err error) int {
+		if err == errTeapot {
+			return http.StatusTeapot
+		}
+		return http.StatusInternalServerError
+	}
+	handler := httptransport.Server{
+		Context:            context.Background(),
+		Endpoint:           func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
+		DecodeRequestFunc:  func(*http.Request) (interface{}, error) { return struct{}{}, errTeapot },
+		EncodeResponseFunc: func(http.ResponseWriter, interface{}) error { return nil },
+		ErrorEncoder:       func(w http.ResponseWriter, err error) { w.WriteHeader(code(err)) },
+	}
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	resp, _ := http.Get(server.URL)
+	if want, have := http.StatusTeapot, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
