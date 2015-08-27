@@ -2,8 +2,7 @@
 
 # This script runs the cover tool on all packages with test files. If you set a
 # WEB environment variable, it will additionally open the web-based coverage
-# visualizer for each package. If you set a COVERALLS environment variable,
-# it will report the reults to Coveralls.io.
+# visualizer for each package.
 
 set -e
 
@@ -43,6 +42,6 @@ clean
 
 if [ -n "${WEB+x}" ]
 then
-	go tool cover -html=$path/cover.coverprofile
+	go tool cover -html=gover.coverprofile
 fi
 
