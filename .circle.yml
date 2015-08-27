@@ -1,0 +1,10 @@
+test:
+  pre:
+    - go get github.com/axw/gocov/gocov
+    - go get github.com/mattn/goveralls
+    - if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
+  override:
+    - go test -v -cover -race -coverprofile=/home/ubuntu/coverage.out
+  post:
+    - /home/ubuntu/bin/goveralls -coverprofile=/home/ubuntu/coverage.out -service=circle-ci -repotoken=$COVERALLS_TOKEN
+
