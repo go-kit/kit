@@ -10,12 +10,25 @@ import (
 
 // Server wraps an endpoint and implements http.Handler.
 type Server struct {
+	// A background context must be provided.
 	context.Context
+
+	// The endpoint that will be invoked.
 	endpoint.Endpoint
-	DecodeFunc
-	EncodeFunc
+
+	// DecodeRequestFunc must be provided.
+	DecodeRequestFunc
+
+	// EncodeResponseFunc must be provided.
+	EncodeResponseFunc
+
+	// Before functions are executed on the HTTP request object before the
+	// request is decoded.
 	Before []RequestFunc
-	After  []ResponseFunc
+
+	// After functions are executed on the HTTP response writer after the
+	// endpoint is invoked, but before anything is written to the client.
+	After []ResponseFunc
 }
 
 // ServeHTTP implements http.Handler.
@@ -27,7 +40,7 @@ func (b Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx = f(ctx, r)
 	}
 
-	request, err := b.DecodeFunc(r.Body)
+	request, err := b.DecodeRequestFunc(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -47,7 +60,7 @@ func (b Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f(ctx, w)
 	}
 
-	if err := b.EncodeFunc(w, response); err != nil {
+	if err := b.EncodeResponseFunc(w, response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

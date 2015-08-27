@@ -82,12 +82,12 @@ func makeUppercaseProxy(ctx context.Context, instance string) endpoint.Endpoint 
 		u.Path = "/uppercase"
 	}
 	return (httptransport.Client{
-		Client:     http.DefaultClient,
-		Method:     "GET",
-		URL:        u,
-		Context:    ctx,
-		EncodeFunc: encode,
-		DecodeFunc: decodeUppercaseResponse,
+		Client:             http.DefaultClient,
+		Method:             "GET",
+		URL:                u,
+		Context:            ctx,
+		DecodeResponseFunc: decodeUppercaseResponse,
+		EncodeRequestFunc:  encodeRequest,
 	}).Endpoint()
 }
 
