@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -38,17 +37,17 @@ func main() {
 	svc := stringService{}
 
 	uppercaseHandler := httptransport.Server{
-		Context:    ctx,
-		Endpoint:   makeUppercaseEndpoint(svc),
-		DecodeFunc: decodeUppercaseRequest,
-		EncodeFunc: encodeResponse,
+		Context:            ctx,
+		Endpoint:           makeUppercaseEndpoint(svc),
+		DecodeRequestFunc:  decodeUppercaseRequest,
+		EncodeResponseFunc: encodeResponse,
 	}
 
 	countHandler := httptransport.Server{
-		Context:    ctx,
-		Endpoint:   makeCountEndpoint(svc),
-		DecodeFunc: decodeCountRequest,
-		EncodeFunc: encodeResponse,
+		Context:            ctx,
+		Endpoint:           makeCountEndpoint(svc),
+		DecodeRequestFunc:  decodeCountRequest,
+		EncodeResponseFunc: encodeResponse,
 	}
 
 	http.Handle("/uppercase", uppercaseHandler)
@@ -72,23 +71,23 @@ func makeCountEndpoint(svc StringService) endpoint.Endpoint {
 	}
 }
 
-func decodeUppercaseRequest(r io.Reader) (interface{}, error) {
+func decodeUppercaseRequest(r *http.Request) (interface{}, error) {
 	var request uppercaseRequest
-	if err := json.NewDecoder(r).Decode(&request); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func decodeCountRequest(r io.Reader) (interface{}, error) {
+func decodeCountRequest(r *http.Request) (interface{}, error) {
 	var request countRequest
-	if err := json.NewDecoder(r).Decode(&request); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func encodeResponse(w io.Writer, response interface{}) error {
+func encodeResponse(w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
 

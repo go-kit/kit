@@ -1,7 +1,6 @@
 package http_test
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,8 +14,8 @@ import (
 
 func TestHTTPClient(t *testing.T) {
 	var (
-		decode    = func(r io.Reader) (interface{}, error) { return struct{}{}, nil }
-		encode    = func(w io.Writer, response interface{}) error { return nil }
+		encode    = func(*http.Request, interface{}) error { return nil }
+		decode    = func(*http.Response) (interface{}, error) { return struct{}{}, nil }
 		headers   = make(chan string, 1)
 		headerKey = "X-Foo"
 		headerVal = "abcde"
@@ -28,12 +27,12 @@ func TestHTTPClient(t *testing.T) {
 	}))
 
 	client := httptransport.Client{
-		Method:     "GET",
-		URL:        mustParse(server.URL),
-		Context:    context.Background(),
-		DecodeFunc: decode,
-		EncodeFunc: encode,
-		Before:     []httptransport.RequestFunc{httptransport.SetRequestHeader(headerKey, headerVal)},
+		Method:             "GET",
+		URL:                mustParse(server.URL),
+		Context:            context.Background(),
+		EncodeRequestFunc:  encode,
+		DecodeResponseFunc: decode,
+		Before:             []httptransport.RequestFunc{httptransport.SetRequestHeader(headerKey, headerVal)},
 	}
 
 	_, err := client.Endpoint()(context.Background(), struct{}{})

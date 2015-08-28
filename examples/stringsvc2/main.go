@@ -44,17 +44,17 @@ func main() {
 	svc = instrumentingMiddleware{requestCount, requestLatency, countResult, svc}
 
 	uppercaseHandler := httptransport.Server{
-		Context:    ctx,
-		Endpoint:   makeUppercaseEndpoint(svc),
-		DecodeFunc: decodeUppercaseRequest,
-		EncodeFunc: encodeResponse,
+		Context:            ctx,
+		Endpoint:           makeUppercaseEndpoint(svc),
+		DecodeRequestFunc:  decodeUppercaseRequest,
+		EncodeResponseFunc: encodeResponse,
 	}
 
 	countHandler := httptransport.Server{
-		Context:    ctx,
-		Endpoint:   makeCountEndpoint(svc),
-		DecodeFunc: decodeCountRequest,
-		EncodeFunc: encodeResponse,
+		Context:            ctx,
+		Endpoint:           makeCountEndpoint(svc),
+		DecodeRequestFunc:  decodeCountRequest,
+		EncodeResponseFunc: encodeResponse,
 	}
 
 	http.Handle("/uppercase", uppercaseHandler)

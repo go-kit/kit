@@ -1,12 +1,27 @@
 package http
 
-import "io"
+import "net/http"
 
-// DecodeFunc converts a serialized request (server) or response (client) to a
-// user version of the same. One straightforward DecodeFunc could be something
-// that JSON-decodes the reader to a concrete type.
-type DecodeFunc func(io.Reader) (interface{}, error)
+// DecodeRequestFunc extracts a user-domain request object from an HTTP
+// request object. It's designed to be used in HTTP servers, for server-side
+// endpoints. One straightforward DecodeRequestFunc could be something that
+// JSON decodes from the request body to the concrete response type.
+type DecodeRequestFunc func(*http.Request) (request interface{}, err error)
 
-// EncodeFunc converts a user response (server) or request (client) to a
-// serialized version of the same, by encoding the interface to the writer.
-type EncodeFunc func(io.Writer, interface{}) error
+// EncodeRequestFunc encodes the passed request object into the HTTP request
+// object. It's designed to be used in HTTP clients, for client-side
+// endpoints. One straightforward EncodeRequestFunc could something that JSON
+// encodes the object directly to the request body.
+type EncodeRequestFunc func(*http.Request, interface{}) error
+
+// EncodeResponseFunc encodes the passed response object to the HTTP response
+// writer. It's designed to be used in HTTP servers, for server-side
+// endpoints. One straightforward EncodeResponseFunc could be something that
+// JSON encodes the object directly to the response body.
+type EncodeResponseFunc func(http.ResponseWriter, interface{}) error
+
+// DecodeResponseFunc extracts a user-domain response object from an HTTP
+// response object. It's designed to be used in HTTP clients, for client-side
+// endpoints. One straightforward DecodeResponseFunc could be something that
+// JSON decodes from the response body to the concrete response type.
+type DecodeResponseFunc func(*http.Response) (response interface{}, err error)

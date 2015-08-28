@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
-	"io"
+	"io/ioutil"
+	"net/http"
 
 	"golang.org/x/net/context"
 
@@ -25,32 +27,41 @@ func makeCountEndpoint(svc StringService) endpoint.Endpoint {
 	}
 }
 
-func decodeUppercaseRequest(r io.Reader) (interface{}, error) {
+func decodeUppercaseRequest(r *http.Request) (interface{}, error) {
 	var request uppercaseRequest
-	if err := json.NewDecoder(r).Decode(&request); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func decodeCountRequest(r io.Reader) (interface{}, error) {
+func decodeCountRequest(r *http.Request) (interface{}, error) {
 	var request countRequest
-	if err := json.NewDecoder(r).Decode(&request); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func decodeUppercaseResponse(r io.Reader) (interface{}, error) {
+func decodeUppercaseResponse(r *http.Response) (interface{}, error) {
 	var response uppercaseResponse
-	if err := json.NewDecoder(r).Decode(&response); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&response); err != nil {
 		return nil, err
 	}
 	return response, nil
 }
 
-func encode(w io.Writer, response interface{}) error {
+func encodeResponse(w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
+}
+
+func encodeRequest(r *http.Request, request interface{}) error {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(request); err != nil {
+		return err
+	}
+	r.Body = ioutil.NopCloser(&buf)
+	return nil
 }
 
 type uppercaseRequest struct {
