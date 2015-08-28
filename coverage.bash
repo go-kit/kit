@@ -4,6 +4,8 @@
 # WEB environment variable, it will additionally open the web-based coverage
 # visualizer for each package.
 
+set -e
+
 function go_files { find . -name '*_test.go' ; }
 function filter { grep -v '/_' ; }
 function remove_relative_prefix { sed -e 's/^\.\///g' ; }
@@ -19,24 +21,27 @@ function unique_directories { directories | sort | uniq ; }
 
 PATHS=${1:-$(unique_directories)}
 
-function package_names {
-	for d in $PATHS
+function report {
+	for path in $PATHS
 	do
-		echo github.com/go-kit/kit/$d
+		go test -coverprofile=$path/cover.coverprofile ./$path
 	done
 }
 
-function report {
-	package_names | while read pkg
-	do
-		go test -coverprofile=cover.out $pkg
-		if [ -n "${WEB+x}" ]
-		then
-			go tool cover -html=cover.out
-		fi
-	done
-	rm cover.out
+function combine {
+	gover
+}
+
+function clean {
+	find . -name cover.coverprofile | xargs rm
 }
 
 report
+combine
+clean
+
+if [ -n "${WEB+x}" ]
+then
+	go tool cover -html=gover.coverprofile
+fi
 
