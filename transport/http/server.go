@@ -34,12 +34,8 @@ type Server struct {
 	// whenever they're encountered in the processing of a request. Clients
 	// can use this to provide custom error formatting and response codes. If
 	// ErrorEncoder is nil, the error will be written as plain text with
-	// StatusInternalServerError.
+	// an appropriate, if generic, status code.
 	ErrorEncoder func(w http.ResponseWriter, err error)
-}
-
-func defaultErrorEncoder(w http.ResponseWriter, err error) {
-	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
 // ServeHTTP implements http.Handler.
@@ -57,11 +53,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	request, err := s.DecodeRequestFunc(r)
 	if err != nil {
-		s.ErrorEncoder(w, err)
-		return
-	}
-	if err := r.Body.Close(); err != nil {
-		s.ErrorEncoder(w, err)
+		s.ErrorEncoder(w, badRequestError{err})
 		return
 	}
 
@@ -80,3 +72,14 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func defaultErrorEncoder(w http.ResponseWriter, err error) {
+	switch err.(type) {
+	case badRequestError:
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+type badRequestError struct{ error }
