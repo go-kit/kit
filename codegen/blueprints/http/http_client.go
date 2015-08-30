@@ -13,7 +13,7 @@ import (
 
 // NewClient takes a URL that should point to an instance of an addsvc. It
 // returns an endpoint that makes a request to that URL.
-func NewHTTPClient(method, url string, before ...httptransport.BeforeFunc) endpoint.Endpoint {
+func NewHTTPClient(method, url string, before ...httptransport.RequestFunc) endpoint.Endpoint {
 	return func(ctx0 context.Context, request interface{}) (interface{}, error) {
 		var (
 			ctx, cancel = context.WithCancel(ctx0)

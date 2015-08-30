@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/build"
+	"go/importer"
 	"go/parser"
 	"go/printer"
 	"go/token"
@@ -21,9 +22,7 @@ import (
 
 	"github.com/sasha-s/go-inline/goinline"
 
-	"golang.org/x/tools/go/types"
-
-	_ "golang.org/x/tools/go/gcimporter"
+	"go/types"
 )
 
 func main() {
@@ -91,8 +90,10 @@ func (g *generator) generate() error {
 	conf := types.Config{
 		IgnoreFuncBodies: true,
 		Error: func(err error) {
+			panic(err)
 			errs.Add(err)
 		},
+		Importer: importer.Default(),
 	}
 	g.info = types.Info{
 		Types:      map[ast.Expr]types.TypeAndValue{},
@@ -102,6 +103,7 @@ func (g *generator) generate() error {
 	}
 	g.pkg, err = conf.Check(fs[0].Name.Name, fset, fs, &g.info)
 	if err != nil {
+		panic(err)
 		return err
 	}
 	if len(errs) > 0 {

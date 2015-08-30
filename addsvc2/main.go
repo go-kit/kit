@@ -19,7 +19,6 @@ import (
 	"github.com/sasha-s/kit/addsvc2/add"
 	"golang.org/x/net/context"
 
-	httpclient "github.com/go-kit/kit/addsvc/client/http"
 	"github.com/go-kit/kit/endpoint"
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -52,7 +51,7 @@ func main() {
 	// `package log` domain
 	var logger kitlog.Logger
 	logger = kitlog.NewLogfmtLogger(os.Stderr)
-	logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
+	logger = kitlog.NewContext(logger).With("ts", kitlog.DefaultTimestampUTC)
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger)) // redirect stdlib logging to us
 	stdlog.SetFlags(0)                                // flags are handled in our logger
 
@@ -88,8 +87,9 @@ func main() {
 		if zipkinCollector, err = zipkin.NewScribeCollector(
 			*zipkinCollectorAddr,
 			*zipkinCollectorTimeout,
-			*zipkinCollectorBatchSize,
-			*zipkinCollectorBatchInterval,
+			zipkin.ScribeBatchSize(*zipkinCollectorBatchSize),
+			zipkin.ScribeBatchInterval(*zipkinCollectorBatchInterval),
+			zipkin.ScribeLogger(logger),
 		); err != nil {
 			logger.Log("err", err)
 			os.Exit(1)
@@ -97,13 +97,12 @@ func main() {
 	}
 	zipkinMethodName := "add"
 	zipkinSpanFunc := zipkin.MakeNewSpanFunc(zipkinHostPort, *zipkinServiceName, zipkinMethodName)
-	zipkin.Log.Swap(logger) // log diagnostic/error details
 
 	// Our business and operational domain
 	var a add.Adder = pureAdd{}
 	if *proxyHTTPAddr != "" {
 		var e endpoint.Endpoint
-		e = httpclient.NewClient("GET", *proxyHTTPAddr, zipkin.ToRequest(zipkinSpanFunc))
+		e = add.NewAdderAddHTTPClient("GET", *proxyHTTPAddr, zipkin.ToRequest(zipkinSpanFunc))
 		e = zipkin.AnnotateClient(zipkinSpanFunc, zipkinCollector)(e)
 		a = add.MakeAdderClient(func(method string) endpoint.Endpoint {
 			if method != "Add" {
@@ -140,8 +139,8 @@ func main() {
 	go func() {
 		ctx, cancel := context.WithCancel(root)
 		defer cancel()
-		before := []httptransport.BeforeFunc{zipkin.ToContext(zipkinSpanFunc)}
-		after := []httptransport.AfterFunc{}
+		before := []httptransport.RequestFunc{zipkin.ToContext(zipkinSpanFunc, logger)}
+		after := []httptransport.ResponseFunc{}
 		handler := add.MakeAdderAddHTTPBinding(ctx, e, before, after)
 		logger.Log("addr", *httpAddr, "transport", "HTTP/JSON")
 		errc <- http.ListenAndServe(*httpAddr, handler)

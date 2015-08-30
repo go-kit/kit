@@ -13,7 +13,7 @@ import (
 type RequestT struct{}
 type ResponseT struct{}
 
-func makeHTTPBinding(ctx context.Context, e endpoint.Endpoint, before []httptransport.BeforeFunc, after []httptransport.AfterFunc) http.Handler {
+func makeHTTPBinding(ctx context.Context, e endpoint.Endpoint, before []httptransport.RequestFunc, after []httptransport.ResponseFunc) http.Handler {
 	decode := func(r *http.Request) (interface{}, error) {
 		defer r.Body.Close()
 		var request RequestT
@@ -26,11 +26,11 @@ func makeHTTPBinding(ctx context.Context, e endpoint.Endpoint, before []httptran
 		return json.NewEncoder(w).Encode(response)
 	}
 	return httptransport.Server{
-		Context:    ctx,
-		Endpoint:   e,
-		DecodeFunc: decode,
-		EncodeFunc: encode,
-		Before:     before,
-		After:      append([]httptransport.AfterFunc{httptransport.SetContentType("application/json; charset=utf-8")}, after...),
+		Context:            ctx,
+		Endpoint:           e,
+		DecodeRequestFunc:  decode,
+		EncodeResponseFunc: encode,
+		Before:             before,
+		After:              append([]httptransport.ResponseFunc{httptransport.SetContentType("application/json; charset=utf-8")}, after...),
 	}
 }
