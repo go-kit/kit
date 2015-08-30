@@ -19,28 +19,29 @@ type EndpointEvent interface {
 	AfterResponse(interface{}, error)
 }
 
-// NewEndpointEventFunc TODO(pb)
-type NewEndpointEventFunc func() EndpointEvent
+// EndpointEventFunc TODO(pb)
+type EndpointEventFunc func() EndpointEvent
 
-// NewTrace returns an endpoint.Middleware that extracts a span ID from the
-// context, executes event.BeforeRequest and event.AfterResponse for the
+// AnnotateServer returns an endpoint.Middleware that extracts a span ID from
+// the context, executes event.BeforeRequest and event.AfterResponse for the
 // event, and submits the event to the collector. If no span ID is found in
 // the context, a new span ID is generated and inserted.
-func NewTrace(newEventFunc NewEndpointEventFunc, collector appdash.Collector) endpoint.Middleware {
+func AnnotateServer(newEvent EndpointEventFunc, c appdash.Collector) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (interface{}, error) {
+		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			spanID, ok := fromContext(ctx)
 			if !ok {
 				spanID = appdash.NewRootSpanID()
 				ctx = context.WithValue(ctx, SpanContextKey, spanID)
 			}
-			rec := appdash.NewRecorder(spanID, collector)
-			event := newEventFunc()
+			var (
+				rec   = appdash.NewRecorder(spanID, c)
+				event = newEvent()
+			)
 			event.BeforeRequest(request)
-			response, err := next(ctx, request)
-			event.AfterResponse(response, err)
-			rec.Event(event)
-			return response, err
+			defer func() { event.AfterResponse(response, err); rec.Event(event) }()
+			response, err = next(ctx, request)
+			return
 		}
 	}
 }

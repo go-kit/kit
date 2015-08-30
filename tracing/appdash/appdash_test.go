@@ -12,17 +12,17 @@ import (
 
 func TestMiddlewareWithDefaultEndpoint(t *testing.T) {
 	var (
-		ms           = appdash.NewMemoryStore()
-		c            = appdash.NewLocalCollector(ms)
-		newEventFunc = NewDefaultEndpointEventFunc("TEST")
-		spanID       = appdash.SpanID{Trace: 1, Span: 2, Parent: 3}
-		ctx          = context.WithValue(context.Background(), SpanContextKey, spanID)
+		ms       = appdash.NewMemoryStore()
+		c        = appdash.NewLocalCollector(ms)
+		newEvent = MakeEndpointEventFunc("TEST")
+		spanID   = appdash.SpanID{Trace: 1, Span: 2, Parent: 3}
+		ctx      = context.WithValue(context.Background(), SpanContextKey, spanID)
 	)
 
 	// Invoke the endpoint.
 	var e endpoint.Endpoint
 	e = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-	e = NewTrace(newEventFunc, c)(e)
+	e = AnnotateServer(newEvent, c)(e)
 	if _, err := e(ctx, struct{}{}); err != nil {
 		t.Fatal(err)
 	}

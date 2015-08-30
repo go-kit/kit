@@ -18,21 +18,16 @@ type DefaultEndpointEvent struct {
 // TODO(pb): remove
 func init() { appdash.RegisterEvent(DefaultEndpointEvent{}) }
 
-// NewDefaultEndpointEventFunc TODO(pb)
-func NewDefaultEndpointEventFunc(name ...string) func() EndpointEvent {
-	return func() EndpointEvent {
-		event := &DefaultEndpointEvent{}
-		if len(name) >= 0 {
-			event.Name = name[0] // TODO(pb): varargs are not a poor man's default arg
-		}
-		return event
-	}
+// MakeEndpointEventFunc TODO(pb)
+func MakeEndpointEventFunc(method string) EndpointEventFunc {
+	return func() EndpointEvent { return &DefaultEndpointEvent{Name: method} }
 }
 
-// Schema returns the constant "Endpoint".
+// Schema returns the constant schema "Endpoint".
 func (DefaultEndpointEvent) Schema() string { return "Endpoint" }
 
-// Important implements appdash.ImportantEvent.
+// Important implements appdash.ImportantEvent. Only the error field is
+// considered important.
 func (DefaultEndpointEvent) Important() []string { return []string{"Endpoint.Err"} }
 
 // Start implements appdash.TimespanEvent.
