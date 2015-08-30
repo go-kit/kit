@@ -1,47 +1,51 @@
 package appdash
 
 import (
-	"github.com/go-kit/kit/endpoint"
-	"golang.org/x/net/context"
 	"reflect"
-	"sourcegraph.com/sourcegraph/appdash"
 	"testing"
-	"time"
+
+	"golang.org/x/net/context"
+	"sourcegraph.com/sourcegraph/appdash"
+
+	"github.com/go-kit/kit/endpoint"
 )
 
 func TestMiddlewareWithDefaultEndpoint(t *testing.T) {
-	ms := appdash.NewMemoryStore()
-	c := appdash.NewLocalCollector(ms)
+	var (
+		ms           = appdash.NewMemoryStore()
+		c            = appdash.NewLocalCollector(ms)
+		newEventFunc = NewDefaultEndpointEventFunc("TEST")
+		spanID       = appdash.SpanID{Trace: 1, Span: 2, Parent: 3}
+		ctx          = context.WithValue(context.Background(), SpanContextKey, spanID)
+	)
 
-	newEventFunc := NewDefaultEndpointEventFunc("TEST")
-
-	ctx := context.Background()
-
-	spanID := appdash.SpanID{1, 2, 3} // Trace,Span,Parent
-	ctx = context.WithValue(ctx, SpanContextKey, &spanID)
-
+	// Invoke the endpoint.
 	var e endpoint.Endpoint
 	e = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
 	e = NewTrace(newEventFunc, c)(e)
-	e(ctx, struct{}{})
+	if _, err := e(ctx, struct{}{}); err != nil {
+		t.Fatal(err)
+	}
 
+	// Get the generated trace.
 	trace, err := ms.Trace(1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// Get the event from the trace.
 	var event DefaultEndpointEvent
 	if err := appdash.UnmarshalEvent(trace.Span.Annotations, &event); err != nil {
 		t.Fatal(err)
 	}
 
-	wantEvent := DefaultEndpointEvent{
+	// It should match what we sent, modulo times.
+	if want, have := (DefaultEndpointEvent{
 		Name: "TEST",
-	}
-	event.Recv = time.Time{}
-	event.Send = time.Time{}
-
-	if !reflect.DeepEqual(event, wantEvent) {
-		t.Errorf("got EndpointEvent %+v,want %+v", event, wantEvent)
+		Recv: event.Recv,
+		Send: event.Send,
+		Err:  "",
+	}), event; !reflect.DeepEqual(want, have) {
+		t.Errorf("want %#v, have %#v", want, have)
 	}
 }

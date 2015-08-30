@@ -1,11 +1,13 @@
 package appdash
 
 import (
-	"sourcegraph.com/sourcegraph/appdash"
 	"time"
+
+	"sourcegraph.com/sourcegraph/appdash"
 )
 
-// A DefaultEndpointEvent is a simple endpoint event that doesn't extract contents of `request` and `response`.
+// A DefaultEndpointEvent is a simple endpoint event that doesn't extract
+// contents of `request` and `response`.
 type DefaultEndpointEvent struct {
 	Name string    `trace:"Endpoint.Name"`
 	Recv time.Time `trace:"Endpoint.Recv"`
@@ -13,36 +15,38 @@ type DefaultEndpointEvent struct {
 	Err  string    `trace:"Endpoint.Err"`
 }
 
+// TODO(pb): remove
 func init() { appdash.RegisterEvent(DefaultEndpointEvent{}) }
 
+// NewDefaultEndpointEventFunc TODO(pb)
 func NewDefaultEndpointEventFunc(name ...string) func() EndpointEvent {
 	return func() EndpointEvent {
 		event := &DefaultEndpointEvent{}
 		if len(name) >= 0 {
-			event.Name = name[0]
+			event.Name = name[0] // TODO(pb): varargs are not a poor man's default arg
 		}
 		return event
 	}
 }
 
-// Schema returns the constant "Endpoint"
+// Schema returns the constant "Endpoint".
 func (DefaultEndpointEvent) Schema() string { return "Endpoint" }
 
-// Important implements the appdash ImportantEvent
-func (DefaultEndpointEvent) Important() []string {
-	return []string{"Endpoint.Err"}
-}
+// Important implements appdash.ImportantEvent.
+func (DefaultEndpointEvent) Important() []string { return []string{"Endpoint.Err"} }
 
-// Start implements the appdash TimespanEvent interface.
+// Start implements appdash.TimespanEvent.
 func (e DefaultEndpointEvent) Start() time.Time { return e.Recv }
 
-// End implements the appdash TimespanEvent interface.
+// End implements appdash.TimespanEvent.
 func (e DefaultEndpointEvent) End() time.Time { return e.Send }
 
-func (e *DefaultEndpointEvent) BeforeRequest(_ interface{}) {
+// BeforeRequest TODO(pb)
+func (e *DefaultEndpointEvent) BeforeRequest(interface{}) {
 	e.Recv = time.Now()
 }
 
+// AfterResponse TODO(pb)
 func (e *DefaultEndpointEvent) AfterResponse(_ interface{}, err error) {
 	e.Send = time.Now()
 	if err != nil {

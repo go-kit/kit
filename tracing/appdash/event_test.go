@@ -2,31 +2,27 @@ package appdash
 
 import (
 	"reflect"
-	"sourcegraph.com/sourcegraph/appdash"
 	"testing"
+
+	"sourcegraph.com/sourcegraph/appdash"
 )
 
 func TestNewEndpointEvent(t *testing.T) {
-	e := &DefaultEndpointEvent{}
-
-	if e.Schema() != "Endpoint" {
-		t.Errorf("unexpected schema: %v", e.Schema())
+	e := DefaultEndpointEvent{}
+	if want, have := "Endpoint", e.Schema(); want != have {
+		t.Errorf("want %q, have %q", want, have)
 	}
-
-	anns, err := appdash.MarshalEvent(e)
+	as, err := appdash.MarshalEvent(e)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	expected := map[string]string{
+	if want, have := map[string]string{
 		"_schema:Endpoint": "",
 		"Endpoint.Name":    "",
 		"Endpoint.Recv":    "0001-01-01T00:00:00Z",
 		"Endpoint.Send":    "0001-01-01T00:00:00Z",
 		"Endpoint.Err":     "",
-	}
-
-	if !reflect.DeepEqual(anns.StringMap(), expected) {
-		t.Errorf("got %#v, want %$v", anns.StringMap(), expected)
+	}, as.StringMap(); !reflect.DeepEqual(want, have) {
+		t.Errorf("want %#v, have %#v", want, have)
 	}
 }
