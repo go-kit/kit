@@ -3,6 +3,7 @@ package term_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"strconv"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/term"
-	"gopkg.in/logfmt.v0"
 )
 
 type mymap map[int]int
@@ -20,7 +20,7 @@ func (m mymap) String() string { return "special_behavior" }
 
 func TestColorLogger(t *testing.T) {
 	var buf bytes.Buffer
-	logger := newColorLogger(t, &buf)
+	logger := newColorLogger(&buf)
 
 	if err := logger.Log("hello", "world"); err != nil {
 		t.Fatal(err)
@@ -36,21 +36,13 @@ func TestColorLogger(t *testing.T) {
 	if want, have := "\u001b[32m\u001b[48ma=1 err=error\n\u001b[0m", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
-
-	buf.Reset()
-	if err := logger.Log("std_map", map[int]int{1: 2}, "my_map", mymap{0: 0}); err != nil {
-		t.Fatal(err)
-	}
-	if want, have := "std_map=\""+logfmt.ErrUnsupportedValueType.Error()+"\" my_map=special_behavior\n", buf.String(); want != have {
-		t.Errorf("want %#v, have %#v", want, have)
-	}
 }
 
-func newColorLogger(t testing.TB, w io.Writer) log.Logger {
+func newColorLogger(w io.Writer) log.Logger {
 	return term.NewColorLogger(log.NewLogfmtLogger(w),
 		func(keyvals ...interface{}) term.FgBgColor {
 			for i := 0; i < len(keyvals); i += 2 {
-				key := term.AsString(keyvals[i])
+				key := asString(keyvals[i])
 				if key == "a" {
 					return term.FgBgColor{Fg: term.Green, Bg: term.Default}
 				}
@@ -63,15 +55,15 @@ func newColorLogger(t testing.TB, w io.Writer) log.Logger {
 }
 
 func BenchmarkColorLoggerSimple(b *testing.B) {
-	benchmarkRunner(b, newColorLogger(b, ioutil.Discard), baseMessage)
+	benchmarkRunner(b, newColorLogger(ioutil.Discard), baseMessage)
 }
 
 func BenchmarkColorLoggerContextual(b *testing.B) {
-	benchmarkRunner(b, newColorLogger(b, ioutil.Discard), withMessage)
+	benchmarkRunner(b, newColorLogger(ioutil.Discard), withMessage)
 }
 
 func TestColorLoggerConcurrency(t *testing.T) {
-	testConcurrency(t, newColorLogger(t, ioutil.Discard))
+	testConcurrency(t, newColorLogger(ioutil.Discard))
 }
 
 // copied from log/benchmark_test.go
@@ -104,5 +96,18 @@ func testConcurrency(t *testing.T, logger log.Logger) {
 func spam(logger log.Logger) {
 	for i := 0; i < 100; i++ {
 		logger.Log("key", strconv.FormatInt(int64(i), 10))
+	}
+}
+
+func asString(v interface{}) string {
+	switch x := v.(type) {
+	case string:
+		return x
+	case fmt.Stringer:
+		return x.String()
+	case fmt.Formatter:
+		return fmt.Sprint(x)
+	default:
+		return fmt.Sprintf("%v", x)
 	}
 }

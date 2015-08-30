@@ -5,16 +5,18 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sync"
 )
 
 type jsonLogger struct {
 	io.Writer
+	mu sync.RWMutex
 }
 
 // NewJSONLogger returns a Logger that encodes keyvals to the Writer as a
 // single JSON object.
 func NewJSONLogger(w io.Writer) Logger {
-	return &jsonLogger{w}
+	return &jsonLogger{Writer: w}
 }
 
 func (l *jsonLogger) Log(keyvals ...interface{}) error {
@@ -28,7 +30,10 @@ func (l *jsonLogger) Log(keyvals ...interface{}) error {
 		}
 		merge(m, k, v)
 	}
-	return json.NewEncoder(l.Writer).Encode(m)
+	l.mu.RLock()
+	w := l.Writer
+	l.mu.RUnlock()
+	return json.NewEncoder(w).Encode(m)
 }
 
 func merge(dst map[string]interface{}, k, v interface{}) {
@@ -76,5 +81,7 @@ func safeError(err error) (s interface{}) {
 }
 
 func (l *jsonLogger) Hijack(f func(io.Writer) io.Writer) {
+	l.mu.Lock()
 	l.Writer = f(l.Writer)
+	l.mu.Unlock()
 }
