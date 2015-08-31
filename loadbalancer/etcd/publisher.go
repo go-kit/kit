@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"github.com/coreos/go-etcd/etcd"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/log"
@@ -10,7 +11,7 @@ import (
 // Publisher yield endpoints stored in a certain etcd keyspace. Any kind of
 // change in that keyspace is watched and wil update the Publisher endpoints.
 type Publisher struct {
-	client    EtcdClient
+	client    Client
 	prefix    string
 	factory   loadbalancer.Factory
 	logger    log.Logger
@@ -20,7 +21,7 @@ type Publisher struct {
 
 // NewPublisher returs a etcd publisher. Etcd will start watching the given
 // prefix for changes and update the Publisher endpoints.
-func NewPublisher(c EtcdClient, prefix string, f loadbalancer.Factory, logger log.Logger) (*Publisher, error) {
+func NewPublisher(c Client, prefix string, f loadbalancer.Factory, logger log.Logger) (*Publisher, error) {
 	logger = log.NewContext(logger).With("component", "Etcd Publisher")
 
 	p := &Publisher{
