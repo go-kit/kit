@@ -1,6 +1,7 @@
 package term
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"sync"
@@ -21,7 +22,20 @@ const (
 	Cyan
 	White
 	Default
+
+	maxColor
 )
+
+var resetColorBytes = []byte("\x1b[0m")
+var fgColorBytes [][]byte
+var bgColorBytes [][]byte
+
+func init() {
+	for color := NoColor; color < maxColor; color++ {
+		fgColorBytes = append(fgColorBytes, []byte(fmt.Sprintf("\x1b[%dm", 30+color)))
+		bgColorBytes = append(bgColorBytes, []byte(fmt.Sprintf("\x1b[%dm", 40+color)))
+	}
+}
 
 type FgBgColor struct {
 	Fg, Bg Color
@@ -55,82 +69,70 @@ var _ = log.Logger((*colorLogger)(nil))
 //
 //	logger.Log("c", "c is uncolored value", "err", nil)
 //	logger.Log("c", "c is colored 'cause err colors it", "err", errors.New("coloring error"))
-func NewColorLogger(logger log.Logger, color func(keyvals ...interface{}) FgBgColor) log.Logger {
-	// FIXME(tgulacsi): I don't understand why can't I use log.Hijacker here...
-	hj, ok := logger.(interface {
-		Hijack(func(io.Writer) io.Writer)
-	})
-	if !ok {
-		return logger
+func NewColorLogger(w io.Writer, newLogger func(io.Writer) log.Logger, color func(keyvals ...interface{}) FgBgColor) log.Logger {
+	if color == nil {
+		panic("color func nil")
 	}
-	cl := &colorLogger{
-		logger: logger,
+	return &colorLogger{
+		w:             w,
+		newLogger:     newLogger,
+		color:         color,
+		bufPool:       sync.Pool{New: func() interface{} { return &loggerBuf{} }},
+		noColorLogger: newLogger(w),
 	}
-	cl.color = color // otherwise, no coloring is possible!
-	hj.Hijack(func(w io.Writer) io.Writer {
-		cl.w = w
-		return cl
-	})
-	return cl
 }
 
 type colorLogger struct {
-	logger log.Logger
-	color  func(keyvals ...interface{}) FgBgColor
-	w      io.Writer
-	mu     sync.RWMutex // protects w
-
-	actColor   FgBgColor
-	actColorMu sync.RWMutex // protects actColor
+	w             io.Writer
+	newLogger     func(io.Writer) log.Logger
+	color         func(keyvals ...interface{}) FgBgColor
+	bufPool       sync.Pool
+	noColorLogger log.Logger
 }
 
 func (l *colorLogger) Log(keyvals ...interface{}) error {
-	l.actColorMu.Lock() // Unlock is in Write!
-	if l.color != nil {
-		l.actColor = l.color(keyvals...)
-	}
-	l.actColorMu.Unlock()
-	return l.logger.Log(keyvals...)
-}
-
-func (l *colorLogger) Write(p []byte) (int, error) {
-	l.actColorMu.RLock()
-	color := l.actColor
-	l.actColorMu.RUnlock()
+	color := l.color(keyvals...)
 	if color.IsZero() {
-		return l.w.Write(p)
+		return l.noColorLogger.Log(keyvals...)
 	}
-	var n int
+
+	lb := l.getLoggerBuf()
+	defer l.putLoggerBuf(lb)
 	if color.Fg != NoColor {
-		m, err := fmt.Fprintf(l.w, "\x1b[%dm", 30+color.Fg)
-		if err != nil {
-			return m, err
-		}
-		n += m
+		lb.buf.Write(fgColorBytes[color.Fg])
 	}
 	if color.Bg != NoColor {
-		m, err := fmt.Fprintf(l.w, "\x1b[%dm", 40+color.Bg)
-		if err != nil {
-			return n + m, err
-		}
-		n += m
+		lb.buf.Write(bgColorBytes[color.Bg])
 	}
-	m, err := l.w.Write(p)
+	err := lb.logger.Log(keyvals...)
 	if err != nil {
-		return n + m, err
+		return err
 	}
-	n += m
-	l.mu.RLock()
-	w := l.w
-	l.mu.RUnlock()
-	m, err = w.Write([]byte("\x1b[0m"))
-	return n + m, err
+	if color.Fg != NoColor || color.Bg != NoColor {
+		lb.buf.Write(resetColorBytes)
+	}
+	_, err = io.Copy(l.w, lb.buf)
+	return err
 }
 
-func (l *colorLogger) Hijack(f func(io.Writer) io.Writer) {
-	l.mu.Lock()
-	l.w = f(l.w)
-	l.mu.Unlock()
+type loggerBuf struct {
+	buf    *bytes.Buffer
+	logger log.Logger
+}
+
+func (l *colorLogger) getLoggerBuf() *loggerBuf {
+	lb := l.bufPool.Get().(*loggerBuf)
+	if lb.buf == nil {
+		lb.buf = &bytes.Buffer{}
+		lb.logger = l.newLogger(lb.buf)
+	} else {
+		lb.buf.Reset()
+	}
+	return lb
+}
+
+func (l *colorLogger) putLoggerBuf(cb *loggerBuf) {
+	l.bufPool.Put(cb)
 }
 
 func asString(v interface{}) string {

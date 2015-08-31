@@ -6,7 +6,6 @@ package log
 
 import (
 	"errors"
-	"io"
 	"sync/atomic"
 )
 
@@ -17,13 +16,6 @@ import (
 // modifies any of its elements must make a copy first.
 type Logger interface {
 	Log(keyvals ...interface{}) error
-}
-
-// Hijacker allows accessing the Logger's underlying io.Writer with Hijack.
-type Hijacker interface {
-	// Hijack gets the Logger's underlying Writer, and replaces it with the returned one.
-	// The implementor must ensure safe concurrent calls!
-	Hijack(func(io.Writer) io.Writer)
 }
 
 // ErrMissingValue is appended to keyvals slices with odd length to substitute

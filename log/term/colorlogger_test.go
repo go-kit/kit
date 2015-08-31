@@ -3,7 +3,6 @@ package term_test
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"strconv"
@@ -39,10 +38,10 @@ func TestColorLogger(t *testing.T) {
 }
 
 func newColorLogger(w io.Writer) log.Logger {
-	return term.NewColorLogger(log.NewLogfmtLogger(w),
+	return term.NewColorLogger(w, log.NewLogfmtLogger,
 		func(keyvals ...interface{}) term.FgBgColor {
 			for i := 0; i < len(keyvals); i += 2 {
-				key := asString(keyvals[i])
+				key := keyvals[i]
 				if key == "a" {
 					return term.FgBgColor{Fg: term.Green, Bg: term.Default}
 				}
@@ -95,19 +94,6 @@ func testConcurrency(t *testing.T, logger log.Logger) {
 
 func spam(logger log.Logger) {
 	for i := 0; i < 100; i++ {
-		logger.Log("key", strconv.FormatInt(int64(i), 10))
-	}
-}
-
-func asString(v interface{}) string {
-	switch x := v.(type) {
-	case string:
-		return x
-	case fmt.Stringer:
-		return x.String()
-	case fmt.Formatter:
-		return fmt.Sprint(x)
-	default:
-		return fmt.Sprintf("%v", x)
+		logger.Log("a", strconv.FormatInt(int64(i), 10))
 	}
 }
