@@ -1,25 +1,27 @@
-package etcd
+package etcd_test
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/coreos/go-etcd/etcd"
+	stdetcd "github.com/coreos/go-etcd/etcd"
+	"golang.org/x/net/context"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
+	kitetcd "github.com/go-kit/kit/loadbalancer/etcd"
 	"github.com/go-kit/kit/log"
-	"golang.org/x/net/context"
 )
 
 var (
-	node = &etcd.Node{
+	node = &stdetcd.Node{
 		Key: "/foo",
-		Nodes: []*etcd.Node{
+		Nodes: []*stdetcd.Node{
 			{Key: "/foo/1", Value: "1:1"},
 			{Key: "/foo/2", Value: "1:2"},
 		},
 	}
-	fakeResponse = &etcd.Response{
+	fakeResponse = &stdetcd.Response{
 		Node: node,
 	}
 )
@@ -34,11 +36,11 @@ func TestPublisher(t *testing.T) {
 		return e, nil
 	}
 
-	client := &FakeEtcdClient{
-		responses: map[string]*etcd.Response{"/foo": fakeResponse},
+	client := &fakeClient{
+		responses: map[string]*stdetcd.Response{"/foo": fakeResponse},
 	}
 
-	p, err := NewPublisher(client, "/foo", factory, logger)
+	p, err := kitetcd.NewPublisher(client, "/foo", factory, logger)
 	if err != nil {
 		t.Fatalf("failed to create new publisher: %v", err)
 	}
@@ -59,11 +61,11 @@ func TestBadFactory(t *testing.T) {
 		return e, errors.New("_")
 	}
 
-	client := &FakeEtcdClient{
-		responses: map[string]*etcd.Response{"/foo": fakeResponse},
+	client := &fakeClient{
+		responses: map[string]*stdetcd.Response{"/foo": fakeResponse},
 	}
 
-	p, err := NewPublisher(client, "/foo", factory, logger)
+	p, err := kitetcd.NewPublisher(client, "/foo", factory, logger)
 	if err != nil {
 		t.Fatalf("failed to create new publisher: %v", err)
 	}
@@ -89,11 +91,11 @@ func TestPublisherStoppped(t *testing.T) {
 		return e, errors.New("_")
 	}
 
-	client := &FakeEtcdClient{
-		responses: map[string]*etcd.Response{"/foo": fakeResponse},
+	client := &fakeClient{
+		responses: map[string]*stdetcd.Response{"/foo": fakeResponse},
 	}
 
-	p, err := NewPublisher(client, "/foo", factory, logger)
+	p, err := kitetcd.NewPublisher(client, "/foo", factory, logger)
 	if err != nil {
 		t.Fatalf("failed to create new publisher: %v", err)
 	}
@@ -105,3 +107,22 @@ func TestPublisherStoppped(t *testing.T) {
 		t.Fatalf("want %v, have %v", want, have)
 	}
 }
+
+type fakeClient struct {
+	responses map[string]*stdetcd.Response
+}
+
+func (c *fakeClient) GetEntries(prefix string) ([]string, error) {
+	response, ok := c.responses[prefix]
+	if !ok {
+		return nil, errors.New("key not exist")
+	}
+
+	entries := make([]string, len(response.Node.Nodes))
+	for i, node := range response.Node.Nodes {
+		entries[i] = node.Value
+	}
+	return entries, nil
+}
+
+func (c *fakeClient) WatchPrefix(prefix string, responseChan chan *stdetcd.Response) {}
