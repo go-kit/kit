@@ -45,30 +45,9 @@ func (c FgBgColor) IsZero() bool {
 	return c.Fg == NoColor && c.Bg == NoColor
 }
 
-var _ = log.Logger((*colorLogger)(nil))
-
-// NewColorLogger returns a log.Logger which produces nice colored logs.
-// It colors whole records based on the FgBgColor returned by the color function.
-//
-// For example for such a function, see LevelColor.
-//
-// Example for coloring errors with red:
-//
-//	logger := term.NewColorLogger(log.NewLogfmtLogger(os.Stdout),
-//		func(keyvals ...interface) term.FgBgColor {
-//			for i := 1; i < len(keyvals); i += 2 {
-//				if keyvals[i] != nil {
-//					continue
-//				}
-//				if _, ok := keyvals[i].(error) {
-//					return term.FgBgColor{Fg: term.White, Bg: term.Red}
-//				}
-//			}
-//			return term.FgBgColor{}
-//		})
-//
-//	logger.Log("c", "c is uncolored value", "err", nil)
-//	logger.Log("c", "c is colored 'cause err colors it", "err", errors.New("coloring error"))
+// NewColorLogger returns a log.Logger which writes colored logs to w. It
+// colors whole records based on the FgBgColor returned by the color function.
+// Log events are formatted by the Logger returned by newLogger.
 func NewColorLogger(w io.Writer, newLogger func(io.Writer) log.Logger, color func(keyvals ...interface{}) FgBgColor) log.Logger {
 	if color == nil {
 		panic("color func nil")
@@ -139,16 +118,13 @@ func asString(v interface{}) string {
 	switch x := v.(type) {
 	case string:
 		return x
-	case fmt.Stringer:
-		return x.String()
-	case fmt.Formatter:
-		return fmt.Sprint(x)
 	default:
-		return fmt.Sprintf("%v", x)
+		return fmt.Sprint(x)
 	}
 }
 
-// LevelColor returns the color for the record based on the value of the "level" key, if exists.
+// LevelColor returns the color for the record based on the value of the
+// "level" key, if it exists.
 func LevelColor(keyvals ...interface{}) FgBgColor {
 	for i := 0; i < len(keyvals); i += 2 {
 		if asString(keyvals[i]) != "level" {

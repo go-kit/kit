@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"sync"
 	"testing"
@@ -96,4 +97,20 @@ func spam(logger log.Logger) {
 	for i := 0; i < 100; i++ {
 		logger.Log("a", strconv.FormatInt(int64(i), 10))
 	}
+}
+
+func ExampleNewColorLogger() {
+	// Color errors red
+	logger := term.NewColorLogger(os.Stdout, log.NewLogfmtLogger,
+		func(keyvals ...interface{}) term.FgBgColor {
+			for i := 1; i < len(keyvals); i += 2 {
+				if _, ok := keyvals[i].(error); ok {
+					return term.FgBgColor{Fg: term.White, Bg: term.Red}
+				}
+			}
+			return term.FgBgColor{}
+		})
+
+	logger.Log("c", "c is uncolored value", "err", nil)
+	logger.Log("c", "c is colored 'cause err colors it", "err", errors.New("coloring error"))
 }
