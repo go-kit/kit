@@ -24,7 +24,7 @@ type client struct {
 // It will return an error if a connection to the cluster cannot be made.
 // The parameter machines needs to be a full URL with schemas.
 // e.g. "http://localhost:4001" will work, but "localhost:4001" will not.
-func NewClient(machines []string, cert, key, caCert string) (*client, error) {
+func NewClient(machines []string, cert, key, caCert string) (Client, error) {
 	var c *etcd.Client
 	var err error
 
