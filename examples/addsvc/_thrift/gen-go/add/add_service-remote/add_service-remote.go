@@ -20,7 +20,8 @@ func Usage() {
 	fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "\nFunctions:")
-	fmt.Fprintln(os.Stderr, "  AddReply Add(i64 a, i64 b)")
+	fmt.Fprintln(os.Stderr, "  SumReply Sum(i64 a, i64 b)")
+	fmt.Fprintln(os.Stderr, "  ConcatReply Concat(string a, string b)")
 	fmt.Fprintln(os.Stderr)
 	os.Exit(0)
 }
@@ -115,24 +116,36 @@ func main() {
 	}
 
 	switch cmd {
-	case "Add":
+	case "Sum":
 		if flag.NArg()-1 != 2 {
-			fmt.Fprintln(os.Stderr, "Add requires 2 args")
+			fmt.Fprintln(os.Stderr, "Sum requires 2 args")
 			flag.Usage()
 		}
-		argvalue0, err4 := (strconv.ParseInt(flag.Arg(1), 10, 64))
-		if err4 != nil {
+		argvalue0, err6 := (strconv.ParseInt(flag.Arg(1), 10, 64))
+		if err6 != nil {
 			Usage()
 			return
 		}
 		value0 := argvalue0
-		argvalue1, err5 := (strconv.ParseInt(flag.Arg(2), 10, 64))
-		if err5 != nil {
+		argvalue1, err7 := (strconv.ParseInt(flag.Arg(2), 10, 64))
+		if err7 != nil {
 			Usage()
 			return
 		}
 		value1 := argvalue1
-		fmt.Print(client.Add(value0, value1))
+		fmt.Print(client.Sum(value0, value1))
+		fmt.Print("\n")
+		break
+	case "Concat":
+		if flag.NArg()-1 != 2 {
+			fmt.Fprintln(os.Stderr, "Concat requires 2 args")
+			flag.Usage()
+		}
+		argvalue0 := flag.Arg(1)
+		value0 := argvalue0
+		argvalue1 := flag.Arg(2)
+		value1 := argvalue1
+		fmt.Print(client.Concat(value0, value1))
 		fmt.Print("\n")
 		break
 	case "":

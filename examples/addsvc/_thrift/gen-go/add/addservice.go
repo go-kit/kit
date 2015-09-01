@@ -6,7 +6,6 @@ package add
 import (
 	"bytes"
 	"fmt"
-
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
@@ -19,7 +18,11 @@ type AddService interface {
 	// Parameters:
 	//  - A
 	//  - B
-	Add(a int64, b int64) (r *AddReply, err error)
+	Sum(a int64, b int64) (r *SumReply, err error)
+	// Parameters:
+	//  - A
+	//  - B
+	Concat(a string, b string) (r *ConcatReply, err error)
 }
 
 type AddServiceClient struct {
@@ -51,24 +54,24 @@ func NewAddServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, op
 // Parameters:
 //  - A
 //  - B
-func (p *AddServiceClient) Add(a int64, b int64) (r *AddReply, err error) {
-	if err = p.sendAdd(a, b); err != nil {
+func (p *AddServiceClient) Sum(a int64, b int64) (r *SumReply, err error) {
+	if err = p.sendSum(a, b); err != nil {
 		return
 	}
-	return p.recvAdd()
+	return p.recvSum()
 }
 
-func (p *AddServiceClient) sendAdd(a int64, b int64) (err error) {
+func (p *AddServiceClient) sendSum(a int64, b int64) (err error) {
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
 		p.OutputProtocol = oprot
 	}
 	p.SeqId++
-	if err = oprot.WriteMessageBegin("Add", thrift.CALL, p.SeqId); err != nil {
+	if err = oprot.WriteMessageBegin("Sum", thrift.CALL, p.SeqId); err != nil {
 		return
 	}
-	args := AddArgs{
+	args := SumArgs{
 		A: a,
 		B: b,
 	}
@@ -81,7 +84,7 @@ func (p *AddServiceClient) sendAdd(a int64, b int64) (err error) {
 	return oprot.Flush()
 }
 
-func (p *AddServiceClient) recvAdd() (value *AddReply, err error) {
+func (p *AddServiceClient) recvSum() (value *SumReply, err error) {
 	iprot := p.InputProtocol
 	if iprot == nil {
 		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -105,10 +108,81 @@ func (p *AddServiceClient) recvAdd() (value *AddReply, err error) {
 		return
 	}
 	if p.SeqId != seqId {
-		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "Add failed: out of sequence response")
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "Sum failed: out of sequence response")
 		return
 	}
-	result := AddResult{}
+	result := SumResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	value = result.GetSuccess()
+	return
+}
+
+// Parameters:
+//  - A
+//  - B
+func (p *AddServiceClient) Concat(a string, b string) (r *ConcatReply, err error) {
+	if err = p.sendConcat(a, b); err != nil {
+		return
+	}
+	return p.recvConcat()
+}
+
+func (p *AddServiceClient) sendConcat(a string, b string) (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("Concat", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := ConcatArgs{
+		A: a,
+		B: b,
+	}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *AddServiceClient) recvConcat() (value *ConcatReply, err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	_, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error2 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error3 error
+		error3, err = error2.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error3
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "Concat failed: out of sequence response")
+		return
+	}
+	result := ConcatResult{}
 	if err = result.Read(iprot); err != nil {
 		return
 	}
@@ -139,9 +213,10 @@ func (p *AddServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFunctio
 
 func NewAddServiceProcessor(handler AddService) *AddServiceProcessor {
 
-	self2 := &AddServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self2.processorMap["Add"] = &addServiceProcessorAdd{handler: handler}
-	return self2
+	self4 := &AddServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self4.processorMap["Sum"] = &addServiceProcessorSum{handler: handler}
+	self4.processorMap["Concat"] = &addServiceProcessorConcat{handler: handler}
+	return self4
 }
 
 func (p *AddServiceProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -154,25 +229,25 @@ func (p *AddServiceProcessor) Process(iprot, oprot thrift.TProtocol) (success bo
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x3 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x5 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x3.Write(oprot)
+	x5.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x3
+	return false, x5
 
 }
 
-type addServiceProcessorAdd struct {
+type addServiceProcessorSum struct {
 	handler AddService
 }
 
-func (p *addServiceProcessorAdd) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := AddArgs{}
+func (p *addServiceProcessorSum) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := SumArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("Add", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("Sum", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush()
@@ -180,12 +255,12 @@ func (p *addServiceProcessorAdd) Process(seqId int32, iprot, oprot thrift.TProto
 	}
 
 	iprot.ReadMessageEnd()
-	result := AddResult{}
-	var retval *AddReply
+	result := SumResult{}
+	var retval *SumReply
 	var err2 error
-	if retval, err2 = p.handler.Add(args.A, args.B); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Add: "+err2.Error())
-		oprot.WriteMessageBegin("Add", thrift.EXCEPTION, seqId)
+	if retval, err2 = p.handler.Sum(args.A, args.B); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Sum: "+err2.Error())
+		oprot.WriteMessageBegin("Sum", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush()
@@ -193,7 +268,55 @@ func (p *addServiceProcessorAdd) Process(seqId int32, iprot, oprot thrift.TProto
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("Add", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("Sum", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type addServiceProcessorConcat struct {
+	handler AddService
+}
+
+func (p *addServiceProcessorConcat) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ConcatArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("Concat", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := ConcatResult{}
+	var retval *ConcatReply
+	var err2 error
+	if retval, err2 = p.handler.Concat(args.A, args.B); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Concat: "+err2.Error())
+		oprot.WriteMessageBegin("Concat", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("Concat", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -213,23 +336,23 @@ func (p *addServiceProcessorAdd) Process(seqId int32, iprot, oprot thrift.TProto
 
 // HELPER FUNCTIONS AND STRUCTURES
 
-type AddArgs struct {
+type SumArgs struct {
 	A int64 `thrift:"a,1" json:"a"`
 	B int64 `thrift:"b,2" json:"b"`
 }
 
-func NewAddArgs() *AddArgs {
-	return &AddArgs{}
+func NewSumArgs() *SumArgs {
+	return &SumArgs{}
 }
 
-func (p *AddArgs) GetA() int64 {
+func (p *SumArgs) GetA() int64 {
 	return p.A
 }
 
-func (p *AddArgs) GetB() int64 {
+func (p *SumArgs) GetB() int64 {
 	return p.B
 }
-func (p *AddArgs) Read(iprot thrift.TProtocol) error {
+func (p *SumArgs) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return fmt.Errorf("%T read error: %s", p, err)
 	}
@@ -265,7 +388,7 @@ func (p *AddArgs) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *AddArgs) ReadField1(iprot thrift.TProtocol) error {
+func (p *SumArgs) ReadField1(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI64(); err != nil {
 		return fmt.Errorf("error reading field 1: %s", err)
 	} else {
@@ -274,7 +397,7 @@ func (p *AddArgs) ReadField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *AddArgs) ReadField2(iprot thrift.TProtocol) error {
+func (p *SumArgs) ReadField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI64(); err != nil {
 		return fmt.Errorf("error reading field 2: %s", err)
 	} else {
@@ -283,8 +406,8 @@ func (p *AddArgs) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *AddArgs) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("Add_args"); err != nil {
+func (p *SumArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("Sum_args"); err != nil {
 		return fmt.Errorf("%T write struct begin error: %s", p, err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -302,7 +425,7 @@ func (p *AddArgs) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *AddArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *SumArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("a", thrift.I64, 1); err != nil {
 		return fmt.Errorf("%T write field begin error 1:a: %s", p, err)
 	}
@@ -315,7 +438,7 @@ func (p *AddArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *AddArgs) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *SumArgs) writeField2(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("b", thrift.I64, 2); err != nil {
 		return fmt.Errorf("%T write field begin error 2:b: %s", p, err)
 	}
@@ -328,34 +451,34 @@ func (p *AddArgs) writeField2(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *AddArgs) String() string {
+func (p *SumArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("AddArgs(%+v)", *p)
+	return fmt.Sprintf("SumArgs(%+v)", *p)
 }
 
-type AddResult struct {
-	Success *AddReply `thrift:"success,0" json:"success"`
+type SumResult struct {
+	Success *SumReply `thrift:"success,0" json:"success"`
 }
 
-func NewAddResult() *AddResult {
-	return &AddResult{}
+func NewSumResult() *SumResult {
+	return &SumResult{}
 }
 
-var AddResult_Success_DEFAULT *AddReply
+var SumResult_Success_DEFAULT *SumReply
 
-func (p *AddResult) GetSuccess() *AddReply {
+func (p *SumResult) GetSuccess() *SumReply {
 	if !p.IsSetSuccess() {
-		return AddResult_Success_DEFAULT
+		return SumResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *AddResult) IsSetSuccess() bool {
+func (p *SumResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *AddResult) Read(iprot thrift.TProtocol) error {
+func (p *SumResult) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return fmt.Errorf("%T read error: %s", p, err)
 	}
@@ -387,16 +510,16 @@ func (p *AddResult) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *AddResult) ReadField0(iprot thrift.TProtocol) error {
-	p.Success = &AddReply{}
+func (p *SumResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = &SumReply{}
 	if err := p.Success.Read(iprot); err != nil {
 		return fmt.Errorf("%T error reading struct: %s", p.Success, err)
 	}
 	return nil
 }
 
-func (p *AddResult) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("Add_result"); err != nil {
+func (p *SumResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("Sum_result"); err != nil {
 		return fmt.Errorf("%T write struct begin error: %s", p, err)
 	}
 	if err := p.writeField0(oprot); err != nil {
@@ -411,7 +534,7 @@ func (p *AddResult) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *AddResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *SumResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			return fmt.Errorf("%T write field begin error 0:success: %s", p, err)
@@ -426,9 +549,229 @@ func (p *AddResult) writeField0(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *AddResult) String() string {
+func (p *SumResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("AddResult(%+v)", *p)
+	return fmt.Sprintf("SumResult(%+v)", *p)
+}
+
+type ConcatArgs struct {
+	A string `thrift:"a,1" json:"a"`
+	B string `thrift:"b,2" json:"b"`
+}
+
+func NewConcatArgs() *ConcatArgs {
+	return &ConcatArgs{}
+}
+
+func (p *ConcatArgs) GetA() string {
+	return p.A
+}
+
+func (p *ConcatArgs) GetB() string {
+	return p.B
+}
+func (p *ConcatArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return fmt.Errorf("%T read error: %s", p, err)
+	}
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return fmt.Errorf("%T field %d read error: %s", p, fieldId, err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.ReadField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.ReadField2(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return fmt.Errorf("%T read struct end error: %s", p, err)
+	}
+	return nil
+}
+
+func (p *ConcatArgs) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return fmt.Errorf("error reading field 1: %s", err)
+	} else {
+		p.A = v
+	}
+	return nil
+}
+
+func (p *ConcatArgs) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return fmt.Errorf("error reading field 2: %s", err)
+	} else {
+		p.B = v
+	}
+	return nil
+}
+
+func (p *ConcatArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("Concat_args"); err != nil {
+		return fmt.Errorf("%T write struct begin error: %s", p, err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return fmt.Errorf("write field stop error: %s", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return fmt.Errorf("write struct stop error: %s", err)
+	}
+	return nil
+}
+
+func (p *ConcatArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("a", thrift.STRING, 1); err != nil {
+		return fmt.Errorf("%T write field begin error 1:a: %s", p, err)
+	}
+	if err := oprot.WriteString(string(p.A)); err != nil {
+		return fmt.Errorf("%T.a (1) field write error: %s", p, err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return fmt.Errorf("%T write field end error 1:a: %s", p, err)
+	}
+	return err
+}
+
+func (p *ConcatArgs) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("b", thrift.STRING, 2); err != nil {
+		return fmt.Errorf("%T write field begin error 2:b: %s", p, err)
+	}
+	if err := oprot.WriteString(string(p.B)); err != nil {
+		return fmt.Errorf("%T.b (2) field write error: %s", p, err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return fmt.Errorf("%T write field end error 2:b: %s", p, err)
+	}
+	return err
+}
+
+func (p *ConcatArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ConcatArgs(%+v)", *p)
+}
+
+type ConcatResult struct {
+	Success *ConcatReply `thrift:"success,0" json:"success"`
+}
+
+func NewConcatResult() *ConcatResult {
+	return &ConcatResult{}
+}
+
+var ConcatResult_Success_DEFAULT *ConcatReply
+
+func (p *ConcatResult) GetSuccess() *ConcatReply {
+	if !p.IsSetSuccess() {
+		return ConcatResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ConcatResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ConcatResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return fmt.Errorf("%T read error: %s", p, err)
+	}
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return fmt.Errorf("%T field %d read error: %s", p, fieldId, err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if err := p.ReadField0(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return fmt.Errorf("%T read struct end error: %s", p, err)
+	}
+	return nil
+}
+
+func (p *ConcatResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = &ConcatReply{}
+	if err := p.Success.Read(iprot); err != nil {
+		return fmt.Errorf("%T error reading struct: %s", p.Success, err)
+	}
+	return nil
+}
+
+func (p *ConcatResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("Concat_result"); err != nil {
+		return fmt.Errorf("%T write struct begin error: %s", p, err)
+	}
+	if err := p.writeField0(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return fmt.Errorf("write field stop error: %s", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return fmt.Errorf("write struct stop error: %s", err)
+	}
+	return nil
+}
+
+func (p *ConcatResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return fmt.Errorf("%T write field begin error 0:success: %s", p, err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return fmt.Errorf("%T error writing struct: %s", p.Success, err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return fmt.Errorf("%T write field end error 0:success: %s", p, err)
+		}
+	}
+	return err
+}
+
+func (p *ConcatResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ConcatResult(%+v)", *p)
 }

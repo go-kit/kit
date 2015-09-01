@@ -29,7 +29,6 @@ func TestHTTPClient(t *testing.T) {
 	client := httptransport.Client{
 		Method:             "GET",
 		URL:                mustParse(server.URL),
-		Context:            context.Background(),
 		EncodeRequestFunc:  encode,
 		DecodeResponseFunc: decode,
 		Before:             []httptransport.RequestFunc{httptransport.SetRequestHeader(headerKey, headerVal)},

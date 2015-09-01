@@ -85,7 +85,6 @@ func makeUppercaseProxy(ctx context.Context, instance string) endpoint.Endpoint 
 		Client:             http.DefaultClient,
 		Method:             "GET",
 		URL:                u,
-		Context:            ctx,
 		DecodeResponseFunc: decodeUppercaseResponse,
 		EncodeRequestFunc:  encodeRequest,
 	}).Endpoint()

@@ -6,6 +6,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/log"
 )
 
 // Server wraps an endpoint and implements http.Handler.
@@ -36,6 +37,9 @@ type Server struct {
 	// ErrorEncoder is nil, the error will be written as plain text with
 	// an appropriate, if generic, status code.
 	ErrorEncoder func(w http.ResponseWriter, err error)
+
+	// Logger is used to log errors.
+	Logger log.Logger
 }
 
 // ServeHTTP implements http.Handler.
@@ -53,12 +57,14 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	request, err := s.DecodeRequestFunc(r)
 	if err != nil {
+		_ = s.Logger.Log("err", err)
 		s.ErrorEncoder(w, badRequestError{err})
 		return
 	}
 
 	response, err := s.Endpoint(ctx, request)
 	if err != nil {
+		_ = s.Logger.Log("err", err)
 		s.ErrorEncoder(w, err)
 		return
 	}
@@ -68,6 +74,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.EncodeResponseFunc(w, response); err != nil {
+		_ = s.Logger.Log("err", err)
 		s.ErrorEncoder(w, err)
 		return
 	}

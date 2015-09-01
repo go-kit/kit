@@ -9,12 +9,16 @@ It is generated from these files:
 	add.proto
 
 It has these top-level messages:
-	AddRequest
-	AddReply
+	SumRequest
+	SumReply
+	ConcatRequest
+	ConcatReply
 */
 package pb
 
 import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
+import math "math"
 
 import (
 	context "golang.org/x/net/context"
@@ -22,39 +26,59 @@ import (
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
-
-// Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
+var _ = fmt.Errorf
+var _ = math.Inf
 
-// The request contains two parameters.
-type AddRequest struct {
+// The sum request contains two parameters.
+type SumRequest struct {
 	A int64 `protobuf:"varint,1,opt,name=a" json:"a,omitempty"`
 	B int64 `protobuf:"varint,2,opt,name=b" json:"b,omitempty"`
 }
 
-func (m *AddRequest) Reset()         { *m = AddRequest{} }
-func (m *AddRequest) String() string { return proto.CompactTextString(m) }
-func (*AddRequest) ProtoMessage()    {}
+func (m *SumRequest) Reset()         { *m = SumRequest{} }
+func (m *SumRequest) String() string { return proto.CompactTextString(m) }
+func (*SumRequest) ProtoMessage()    {}
 
-// The response contains the result of the calculation.
-type AddReply struct {
+// The sum response contains the result of the calculation.
+type SumReply struct {
 	V int64 `protobuf:"varint,1,opt,name=v" json:"v,omitempty"`
 }
 
-func (m *AddReply) Reset()         { *m = AddReply{} }
-func (m *AddReply) String() string { return proto.CompactTextString(m) }
-func (*AddReply) ProtoMessage()    {}
+func (m *SumReply) Reset()         { *m = SumReply{} }
+func (m *SumReply) String() string { return proto.CompactTextString(m) }
+func (*SumReply) ProtoMessage()    {}
 
-func init() {
+// The Concat request contains two parameters.
+type ConcatRequest struct {
+	A string `protobuf:"bytes,1,opt,name=a" json:"a,omitempty"`
+	B string `protobuf:"bytes,2,opt,name=b" json:"b,omitempty"`
 }
+
+func (m *ConcatRequest) Reset()         { *m = ConcatRequest{} }
+func (m *ConcatRequest) String() string { return proto.CompactTextString(m) }
+func (*ConcatRequest) ProtoMessage()    {}
+
+// The Concat response contains the result of the concatenation.
+type ConcatReply struct {
+	V string `protobuf:"bytes,1,opt,name=v" json:"v,omitempty"`
+}
+
+func (m *ConcatReply) Reset()         { *m = ConcatReply{} }
+func (m *ConcatReply) String() string { return proto.CompactTextString(m) }
+func (*ConcatReply) ProtoMessage()    {}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
 
 // Client API for Add service
 
 type AddClient interface {
-	// Adds two integers.
-	Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddReply, error)
+	// Sums two integers.
+	Sum(ctx context.Context, in *SumRequest, opts ...grpc.CallOption) (*SumReply, error)
+	// Concatenates two strings
+	Concat(ctx context.Context, in *ConcatRequest, opts ...grpc.CallOption) (*ConcatReply, error)
 }
 
 type addClient struct {
@@ -65,9 +89,18 @@ func NewAddClient(cc *grpc.ClientConn) AddClient {
 	return &addClient{cc}
 }
 
-func (c *addClient) Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddReply, error) {
-	out := new(AddReply)
-	err := grpc.Invoke(ctx, "/pb.Add/Add", in, out, c.cc, opts...)
+func (c *addClient) Sum(ctx context.Context, in *SumRequest, opts ...grpc.CallOption) (*SumReply, error) {
+	out := new(SumReply)
+	err := grpc.Invoke(ctx, "/pb.Add/Sum", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *addClient) Concat(ctx context.Context, in *ConcatRequest, opts ...grpc.CallOption) (*ConcatReply, error) {
+	out := new(ConcatReply)
+	err := grpc.Invoke(ctx, "/pb.Add/Concat", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,20 +110,34 @@ func (c *addClient) Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOp
 // Server API for Add service
 
 type AddServer interface {
-	// Adds two integers.
-	Add(context.Context, *AddRequest) (*AddReply, error)
+	// Sums two integers.
+	Sum(context.Context, *SumRequest) (*SumReply, error)
+	// Concatenates two strings
+	Concat(context.Context, *ConcatRequest) (*ConcatReply, error)
 }
 
 func RegisterAddServer(s *grpc.Server, srv AddServer) {
 	s.RegisterService(&_Add_serviceDesc, srv)
 }
 
-func _Add_Add_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
-	in := new(AddRequest)
+func _Add_Sum_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+	in := new(SumRequest)
 	if err := codec.Unmarshal(buf, in); err != nil {
 		return nil, err
 	}
-	out, err := srv.(AddServer).Add(ctx, in)
+	out, err := srv.(AddServer).Sum(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func _Add_Concat_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+	in := new(ConcatRequest)
+	if err := codec.Unmarshal(buf, in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(AddServer).Concat(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +149,12 @@ var _Add_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*AddServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Add",
-			Handler:    _Add_Add_Handler,
+			MethodName: "Sum",
+			Handler:    _Add_Sum_Handler,
+		},
+		{
+			MethodName: "Concat",
+			Handler:    _Add_Concat_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{},

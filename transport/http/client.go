@@ -21,9 +21,6 @@ type Client struct {
 	// URL must be provided.
 	URL *url.URL
 
-	// A background context must be provided.
-	context.Context
-
 	// EncodeRequestFunc must be provided. The HTTP request passed to the
 	// EncodeRequestFunc will have a nil body.
 	EncodeRequestFunc

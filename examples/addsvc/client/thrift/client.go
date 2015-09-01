@@ -1,42 +1,35 @@
 package thrift
 
 import (
-	"golang.org/x/net/context"
-
-	"github.com/go-kit/kit/endpoint"
 	thriftadd "github.com/go-kit/kit/examples/addsvc/_thrift/gen-go/add"
-	"github.com/go-kit/kit/examples/addsvc/reqrep"
+	"github.com/go-kit/kit/examples/addsvc/server"
+	"github.com/go-kit/kit/log"
 )
 
-// NewClient takes a Thrift AddServiceClient, which should point to an
-// instance of an addsvc. It returns an endpoint that wraps and invokes that
-// client.
-func NewClient(client *thriftadd.AddServiceClient) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		var (
-			errs      = make(chan error, 1)
-			responses = make(chan interface{}, 1)
-		)
-		go func() {
-			addReq, ok := request.(reqrep.AddRequest)
-			if !ok {
-				errs <- endpoint.ErrBadCast
-				return
-			}
-			reply, err := client.Add(addReq.A, addReq.B)
-			if err != nil {
-				errs <- err
-				return
-			}
-			responses <- reqrep.AddResponse{V: reply.Value}
-		}()
-		select {
-		case <-ctx.Done():
-			return nil, context.DeadlineExceeded
-		case err := <-errs:
-			return nil, err
-		case response := <-responses:
-			return response, nil
-		}
+// New returns an AddService that's backed by the Thrift client.
+func New(cli *thriftadd.AddServiceClient, logger log.Logger) server.AddService {
+	return &client{cli, logger}
+}
+
+type client struct {
+	*thriftadd.AddServiceClient
+	log.Logger
+}
+
+func (c client) Sum(a, b int) int {
+	reply, err := c.AddServiceClient.Sum(int64(a), int64(b))
+	if err != nil {
+		_ = c.Logger.Log("err", err)
+		return 0
 	}
+	return int(reply.Value)
+}
+
+func (c client) Concat(a, b string) string {
+	reply, err := c.AddServiceClient.Concat(a, b)
+	if err != nil {
+		_ = c.Logger.Log("err", err)
+		return ""
+	}
+	return reply.Value
 }
