@@ -56,6 +56,9 @@ func (stringService) Uppercase(s string) (string, error) {
 func (stringService) Count(s string) int {
 	return len(s)
 }
+
+// ErrEmpty is returned when input string is empty
+var ErrEmpty = errors.New("Empty string")
 ```
 
 ### Requests and responses
@@ -148,15 +151,15 @@ func main() {
 	uppercaseHandler := httptransport.Server{
 		Context:    ctx,
 		Endpoint:   makeUppercaseEndpoint(svc),
-		DecodeFunc: decodeUppercaseRequest,
-		EncodeFunc: encodeResponse,
+		DecodeRequestFunc:  decodeUppercaseRequest,
+		EncodeResponseFunc: encodeResponse,
 	}
 
 	countHandler := httptransport.Server{
 		Context:    ctx,
 		Endpoint:   makeCountEndpoint(svc),
-		DecodeFunc: decodeCountRequest,
-		EncodeFunc: encodeResponse,
+		DecodeRequestFunc:  decodeCountRequest,
+		EncodeResponseFunc: encodeResponse,
 	}
 
 	http.Handle("/uppercase", uppercaseHandler)
@@ -164,23 +167,23 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func decodeUppercaseRequest(r io.Reader) (interface{}, error) {
+func decodeUppercaseRequest(r *http.Request) (interface{}, error) {
 	var request uppercaseRequest
-	if err := json.NewDecoder(r).Decode(&request); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func decodeCountRequest(r io.Reader) (interface{}, error) {
+func decodeCountRequest(r *http.Request) (interface{}, error) {
 	var request countRequest
-	if err := json.NewDecoder(r).Decode(&request); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
 	}
 	return request, nil
 }
 
-func encodeResponse(w io.Writer, response interface{}) error {
+func encodeResponse(w http.ResponseWritererr, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
 ```
