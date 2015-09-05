@@ -7,7 +7,7 @@
 
 package term
 
-// IsTty always returns false on AppEngine.
-func IsTty(fd uintptr) bool {
+// IsTerminal always returns false on AppEngine.
+func IsTerminal(fd uintptr) bool {
 	return false
 }

@@ -2,10 +2,8 @@ package term_test
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"io/ioutil"
-	"os"
 	"strconv"
 	"sync"
 	"testing"
@@ -26,29 +24,23 @@ func TestColorLogger(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := "hello=world\n", buf.String(); want != have {
-		t.Errorf("want %#v, have %#v", want, have)
+		t.Errorf("\nwant %#v\nhave %#v", want, have)
 	}
 
 	buf.Reset()
-	if err := logger.Log("a", 1, "err", errors.New("error")); err != nil {
+	if err := logger.Log("a", 1); err != nil {
 		t.Fatal(err)
 	}
-	if want, have := "\u001b[32m\u001b[48ma=1 err=error\n\u001b[0m", buf.String(); want != have {
-		t.Errorf("want %#v, have %#v", want, have)
+	if want, have := "\x1b[32;1m\x1b[47;1ma=1\n\x1b[39;49m", buf.String(); want != have {
+		t.Errorf("\nwant %#v\nhave %#v", want, have)
 	}
 }
 
 func newColorLogger(w io.Writer) log.Logger {
 	return term.NewColorLogger(w, log.NewLogfmtLogger,
 		func(keyvals ...interface{}) term.FgBgColor {
-			for i := 0; i < len(keyvals); i += 2 {
-				key := keyvals[i]
-				if key == "a" {
-					return term.FgBgColor{Fg: term.Green, Bg: term.Default}
-				}
-				if key == "err" && keyvals[i+1] != nil {
-					return term.FgBgColor{Fg: term.White, Bg: term.Red}
-				}
+			if keyvals[0] == "a" {
+				return term.FgBgColor{Fg: term.Green, Bg: term.White}
 			}
 			return term.FgBgColor{}
 		})
@@ -97,20 +89,4 @@ func spam(logger log.Logger) {
 	for i := 0; i < 100; i++ {
 		logger.Log("a", strconv.FormatInt(int64(i), 10))
 	}
-}
-
-func ExampleNewColorLogger() {
-	// Color errors red
-	logger := term.NewColorLogger(os.Stdout, log.NewLogfmtLogger,
-		func(keyvals ...interface{}) term.FgBgColor {
-			for i := 1; i < len(keyvals); i += 2 {
-				if _, ok := keyvals[i].(error); ok {
-					return term.FgBgColor{Fg: term.White, Bg: term.Red}
-				}
-			}
-			return term.FgBgColor{}
-		})
-
-	logger.Log("c", "c is uncolored value", "err", nil)
-	logger.Log("c", "c is colored 'cause err colors it", "err", errors.New("coloring error"))
 }

@@ -9,11 +9,22 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-// Color is the abstract color, the zero value is the Default.
+// Color represents an ANSI color. The zero value is Default.
 type Color uint8
 
+// ANSI colors.
 const (
-	NoColor = Color(iota)
+	Default = Color(iota)
+	Black
+	DarkRed
+	DarkGreen
+	Brown
+	DarkBlue
+	DarkMagenta
+	DarkCyan
+	Gray
+
+	DarkGray
 	Red
 	Green
 	Yellow
@@ -21,33 +32,44 @@ const (
 	Magenta
 	Cyan
 	White
-	Default
 
-	maxColor
+	numColors
 )
 
-var resetColorBytes = []byte("\x1b[0m")
+var resetColorBytes = []byte("\x1b[39;49m")
 var fgColorBytes [][]byte
 var bgColorBytes [][]byte
 
 func init() {
-	for color := NoColor; color < maxColor; color++ {
-		fgColorBytes = append(fgColorBytes, []byte(fmt.Sprintf("\x1b[%dm", 30+color)))
-		bgColorBytes = append(bgColorBytes, []byte(fmt.Sprintf("\x1b[%dm", 40+color)))
+	// Default
+	fgColorBytes = append(fgColorBytes, []byte("\x1b[39m"))
+	bgColorBytes = append(bgColorBytes, []byte("\x1b[49m"))
+
+	// dark colors
+	for color := Black; color < DarkGray; color++ {
+		fgColorBytes = append(fgColorBytes, []byte(fmt.Sprintf("\x1b[%dm", 30+color-Black)))
+		bgColorBytes = append(bgColorBytes, []byte(fmt.Sprintf("\x1b[%dm", 40+color-Black)))
+	}
+
+	// bright colors
+	for color := DarkGray; color < numColors; color++ {
+		fgColorBytes = append(fgColorBytes, []byte(fmt.Sprintf("\x1b[%d;1m", 30+color-DarkGray)))
+		bgColorBytes = append(bgColorBytes, []byte(fmt.Sprintf("\x1b[%d;1m", 40+color-DarkGray)))
 	}
 }
 
+// FgBgColor represents a foreground and background color.
 type FgBgColor struct {
 	Fg, Bg Color
 }
 
-func (c FgBgColor) IsZero() bool {
-	return c.Fg == NoColor && c.Bg == NoColor
+func (c FgBgColor) isZero() bool {
+	return c.Fg == Default && c.Bg == Default
 }
 
-// NewColorLogger returns a log.Logger which writes colored logs to w. It
-// colors whole records based on the FgBgColor returned by the color function.
-// Log events are formatted by the Logger returned by newLogger.
+// NewColorLogger returns a Logger which writes colored logs to w. ANSI color
+// codes for the colors returned by color are added to the formatted output
+// from the Logger returned by newLogger and the combined result written to w.
 func NewColorLogger(w io.Writer, newLogger func(io.Writer) log.Logger, color func(keyvals ...interface{}) FgBgColor) log.Logger {
 	if color == nil {
 		panic("color func nil")
@@ -71,23 +93,23 @@ type colorLogger struct {
 
 func (l *colorLogger) Log(keyvals ...interface{}) error {
 	color := l.color(keyvals...)
-	if color.IsZero() {
+	if color.isZero() {
 		return l.noColorLogger.Log(keyvals...)
 	}
 
 	lb := l.getLoggerBuf()
 	defer l.putLoggerBuf(lb)
-	if color.Fg != NoColor {
+	if color.Fg != Default {
 		lb.buf.Write(fgColorBytes[color.Fg])
 	}
-	if color.Bg != NoColor {
+	if color.Bg != Default {
 		lb.buf.Write(bgColorBytes[color.Bg])
 	}
 	err := lb.logger.Log(keyvals...)
 	if err != nil {
 		return err
 	}
-	if color.Fg != NoColor || color.Bg != NoColor {
+	if color.Fg != Default || color.Bg != Default {
 		lb.buf.Write(resetColorBytes)
 	}
 	_, err = io.Copy(l.w, lb.buf)
@@ -132,15 +154,15 @@ func LevelColor(keyvals ...interface{}) FgBgColor {
 		}
 		switch asString(keyvals[i+1]) {
 		case "debug":
-			return FgBgColor{Fg: Green}
+			return FgBgColor{Fg: DarkGray}
 		case "info":
-			return FgBgColor{Fg: White}
+			return FgBgColor{Fg: Gray}
 		case "warn":
 			return FgBgColor{Fg: Yellow}
 		case "error":
 			return FgBgColor{Fg: Red}
 		case "crit":
-			return FgBgColor{Fg: Default, Bg: Red}
+			return FgBgColor{Fg: Gray, Bg: DarkRed}
 		default:
 			return FgBgColor{}
 		}
