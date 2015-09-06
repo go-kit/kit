@@ -11,15 +11,12 @@ import (
 // possible. Log events are formatted by the Logger returned by newLogger. If
 // w is a terminal each log event is colored according to the color function.
 func NewLogger(w io.Writer, newLogger func(io.Writer) log.Logger, color func(keyvals ...interface{}) FgBgColor) log.Logger {
-	fw, ok := w.(FdWriter)
-	if !ok || !IsTerminal(fw.Fd()) {
+	if !IsTerminal(w) {
 		return newLogger(w)
 	}
-	return NewColorLogger(NewColorWriter(fw), newLogger, color)
+	return NewColorLogger(NewColorWriter(w), newLogger, color)
 }
 
-// An FdWriter is a Writer that has a file descriptor.
-type FdWriter interface {
-	io.Writer
+type fder interface {
 	Fd() uintptr
 }

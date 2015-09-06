@@ -7,7 +7,9 @@
 
 package term
 
+import "io"
+
 // IsTerminal always returns false on AppEngine.
-func IsTerminal(fd uintptr) bool {
+func IsTerminal(w io.Writer) bool {
 	return false
 }

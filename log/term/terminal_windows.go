@@ -8,6 +8,7 @@
 package term
 
 import (
+	"io"
 	"syscall"
 	"unsafe"
 )
@@ -18,9 +19,13 @@ var (
 	procGetConsoleMode = kernel32.NewProc("GetConsoleMode")
 )
 
-// IsTerminal returns true if the given file descriptor is a terminal.
-func IsTerminal(fd uintptr) bool {
+// IsTerminal returns true if w writes to a terminal.
+func IsTerminal(w io.Writer) bool {
+	fw, ok := w.(fder)
+	if !ok {
+		return false
+	}
 	var st uint32
-	r, _, e := syscall.Syscall(procGetConsoleMode.Addr(), 2, fd, uintptr(unsafe.Pointer(&st)), 0)
+	r, _, e := syscall.Syscall(procGetConsoleMode.Addr(), 2, fw.Fd(), uintptr(unsafe.Pointer(&st)), 0)
 	return r != 0 && e == 0
 }

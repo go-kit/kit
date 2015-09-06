@@ -8,13 +8,18 @@
 package term
 
 import (
+	"io"
 	"syscall"
 	"unsafe"
 )
 
-// IsTerminal returns true if the given file descriptor is a terminal.
-func IsTerminal(fd uintptr) bool {
+// IsTerminal returns true if w writes to a terminal.
+func IsTerminal(w io.Writer) bool {
+	fw, ok := w.(fder)
+	if !ok {
+		return false
+	}
 	var termios syscall.Termios
-	_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, fd, ioctlReadTermios, uintptr(unsafe.Pointer(&termios)), 0, 0, 0)
+	_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, fw.Fd(), ioctlReadTermios, uintptr(unsafe.Pointer(&termios)), 0, 0, 0)
 	return err == 0
 }

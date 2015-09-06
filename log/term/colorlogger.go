@@ -15,6 +15,7 @@ type Color uint8
 // ANSI colors.
 const (
 	Default = Color(iota)
+
 	Black
 	DarkRed
 	DarkGreen
@@ -36,9 +37,15 @@ const (
 	numColors
 )
 
-var resetColorBytes = []byte("\x1b[39;49m")
-var fgColorBytes [][]byte
-var bgColorBytes [][]byte
+// For more on ANSI escape codes see
+// https://en.wikipedia.org/wiki/ANSI_escape_code. See in particular
+// https://en.wikipedia.org/wiki/ANSI_escape_code#Colors.
+
+var (
+	resetColorBytes = []byte("\x1b[39;49m")
+	fgColorBytes    [][]byte
+	bgColorBytes    [][]byte
+)
 
 func init() {
 	// Default
@@ -134,38 +141,4 @@ func (l *colorLogger) getLoggerBuf() *loggerBuf {
 
 func (l *colorLogger) putLoggerBuf(cb *loggerBuf) {
 	l.bufPool.Put(cb)
-}
-
-func asString(v interface{}) string {
-	switch x := v.(type) {
-	case string:
-		return x
-	default:
-		return fmt.Sprint(x)
-	}
-}
-
-// LevelColor returns the color for the record based on the value of the
-// "level" key, if it exists.
-func LevelColor(keyvals ...interface{}) FgBgColor {
-	for i := 0; i < len(keyvals); i += 2 {
-		if asString(keyvals[i]) != "level" {
-			continue
-		}
-		switch asString(keyvals[i+1]) {
-		case "debug":
-			return FgBgColor{Fg: DarkGray}
-		case "info":
-			return FgBgColor{Fg: Gray}
-		case "warn":
-			return FgBgColor{Fg: Yellow}
-		case "error":
-			return FgBgColor{Fg: Red}
-		case "crit":
-			return FgBgColor{Fg: Gray, Bg: DarkRed}
-		default:
-			return FgBgColor{}
-		}
-	}
-	return FgBgColor{}
 }

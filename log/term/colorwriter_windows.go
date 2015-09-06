@@ -14,51 +14,6 @@ import (
 	"unsafe"
 )
 
-const (
-	foregroundBlue      = 0x1
-	foregroundGreen     = 0x2
-	foregroundRed       = 0x4
-	foregroundIntensity = 0x8
-	foregroundMask      = (foregroundRed | foregroundBlue | foregroundGreen | foregroundIntensity)
-	backgroundBlue      = 0x10
-	backgroundGreen     = 0x20
-	backgroundRed       = 0x40
-	backgroundIntensity = 0x80
-	backgroundMask      = (backgroundRed | backgroundBlue | backgroundGreen | backgroundIntensity)
-)
-
-type (
-	wchar uint16
-	short int16
-	dword uint32
-	word  uint16
-)
-
-type coord struct {
-	x short
-	y short
-}
-
-type smallRect struct {
-	left   short
-	top    short
-	right  short
-	bottom short
-}
-
-type consoleScreenBufferInfo struct {
-	size              coord
-	cursorPosition    coord
-	attributes        word
-	window            smallRect
-	maximumWindowSize coord
-}
-
-var (
-	procGetConsoleScreenBufferInfo = kernel32.NewProc("GetConsoleScreenBufferInfo")
-	procSetConsoleTextAttribute    = kernel32.NewProc("SetConsoleTextAttribute")
-)
-
 type colorWriter struct {
 	out     io.Writer
 	handle  syscall.Handle
@@ -69,14 +24,20 @@ type colorWriter struct {
 // NewColorWriter returns an io.Writer that writes to w and provides cross
 // platform support for ANSI color codes. If w is not a terminal it is
 // returned unmodified.
-func NewColorWriter(w FdWriter) io.Writer {
-	if !IsTerminal(w.Fd()) {
+func NewColorWriter(w io.Writer) io.Writer {
+	if !IsTerminal(w) {
 		return w
 	}
+
 	var csbi consoleScreenBufferInfo
-	handle := syscall.Handle(w.Fd())
+	handle := syscall.Handle(w.(fder).Fd())
 	procGetConsoleScreenBufferInfo.Call(uintptr(handle), uintptr(unsafe.Pointer(&csbi)))
-	return &colorWriter{out: w, handle: handle, oldattr: csbi.attributes}
+
+	return &colorWriter{
+		out:     w,
+		handle:  handle,
+		oldattr: csbi.attributes,
+	}
 }
 
 func (w *colorWriter) Write(data []byte) (n int, err error) {
@@ -181,4 +142,49 @@ loop:
 		}
 	}
 	return len(data) - w.lastbuf.Len(), nil
+}
+
+var (
+	procGetConsoleScreenBufferInfo = kernel32.NewProc("GetConsoleScreenBufferInfo")
+	procSetConsoleTextAttribute    = kernel32.NewProc("SetConsoleTextAttribute")
+)
+
+const (
+	foregroundBlue      = 0x1
+	foregroundGreen     = 0x2
+	foregroundRed       = 0x4
+	foregroundIntensity = 0x8
+	foregroundMask      = (foregroundRed | foregroundBlue | foregroundGreen | foregroundIntensity)
+	backgroundBlue      = 0x10
+	backgroundGreen     = 0x20
+	backgroundRed       = 0x40
+	backgroundIntensity = 0x80
+	backgroundMask      = (backgroundRed | backgroundBlue | backgroundGreen | backgroundIntensity)
+)
+
+type (
+	wchar uint16
+	short int16
+	dword uint32
+	word  uint16
+)
+
+type coord struct {
+	x short
+	y short
+}
+
+type smallRect struct {
+	left   short
+	top    short
+	right  short
+	bottom short
+}
+
+type consoleScreenBufferInfo struct {
+	size              coord
+	cursorPosition    coord
+	attributes        word
+	window            smallRect
+	maximumWindowSize coord
 }

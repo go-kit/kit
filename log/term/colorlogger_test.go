@@ -12,10 +12,6 @@ import (
 	"github.com/go-kit/kit/log/term"
 )
 
-type mymap map[int]int
-
-func (m mymap) String() string { return "special_behavior" }
-
 func TestColorLogger(t *testing.T) {
 	var buf bytes.Buffer
 	logger := newColorLogger(&buf)
