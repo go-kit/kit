@@ -75,7 +75,7 @@ type uppercaseRequest struct {
 
 type uppercaseResponse struct {
 	V   string `json:"v"`
-	Err string `json:"err"` // errors don't define JSON marshaling
+	Err string `json:"err,omitempty"` // errors don't define JSON marshaling
 }
 
 type countRequest struct {

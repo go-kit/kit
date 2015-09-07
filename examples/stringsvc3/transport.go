@@ -15,7 +15,10 @@ func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(uppercaseRequest)
 		v, err := svc.Uppercase(req.S)
-		return uppercaseResponse{v, err.Error()}, nil
+		if err != nil {
+			return uppercaseResponse{v, err.Error()}, nil
+		}
+		return uppercaseResponse{v, ""}, nil
 	}
 }
 
@@ -70,7 +73,7 @@ type uppercaseRequest struct {
 
 type uppercaseResponse struct {
 	V   string `json:"v"`
-	Err string `json:"err"`
+	Err string `json:"err,omitempty"`
 }
 
 type countRequest struct {
