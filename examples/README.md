@@ -422,6 +422,8 @@ func main() {
 		Endpoint: makeCountEndpoint(svc),
 		// ...
 	}
+
+	http.Handle("/metrics", stdprometheus.Handler())
 }
 ```
 
