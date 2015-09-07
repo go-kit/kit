@@ -7,9 +7,7 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-// New returns an AddService that's backed by the URL. baseurl will have its
-// scheme and hostport used, but its path will be overwritten. If client is
-// nil, http.DefaultClient will be used.
+// New returns an AddService that's backed by the provided rpc.Client.
 func New(cli *rpc.Client, logger log.Logger) server.AddService {
 	return client{cli, logger}
 }
