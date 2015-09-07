@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -57,7 +58,10 @@ func (mw proxymw) Uppercase(s string) (string, error) {
 	}
 
 	resp := response.(uppercaseResponse)
-	return resp.V, resp.Err
+	if resp.Err != "" {
+		return resp.V, errors.New(resp.Err)
+	}
+	return resp.V, nil
 }
 
 func factory(ctx context.Context, qps int) loadbalancer.Factory {

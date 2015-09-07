@@ -75,7 +75,7 @@ type uppercaseRequest struct {
 
 type uppercaseResponse struct {
 	V   string `json:"v"`
-	Err error  `json:"err"`
+	Err string `json:"err"` // errors don't define JSON marshaling
 }
 
 type countRequest struct {
@@ -109,7 +109,7 @@ func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(uppercaseRequest)
 		v, err := svc.Uppercase(req.S)
-		return uppercaseResponse{v, err}, nil
+		return uppercaseResponse{v, err.Error()}, nil
 	}
 }
 
@@ -483,7 +483,10 @@ func (mw proxymw) Uppercase(s string) (string, error) {
 		return "", err
 	}
 	resp := response.(uppercaseResponse)
-	return resp.V, resp.Err
+	if resp.Err != "" {
+		return resp.V, errors.New(resp.Err)
+	}
+	return resp.V, nil
 }
 ```
 
