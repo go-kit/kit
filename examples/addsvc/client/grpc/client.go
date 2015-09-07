@@ -1,12 +1,12 @@
 package grpc
 
 import (
-	"github.com/go-kit/kit/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	"github.com/go-kit/kit/examples/addsvc/pb"
 	"github.com/go-kit/kit/examples/addsvc/server"
+	"github.com/go-kit/kit/log"
 )
 
 // New returns an AddService that's backed by the provided ClientConn.
