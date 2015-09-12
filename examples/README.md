@@ -507,14 +507,12 @@ func proxyingMiddleware(proxyURL string, ctx context.Context) ServiceMiddleware 
 }
 
 func makeUppercaseEndpoint(ctx context.Context, proxyURL string) endpoint.Endpoint {
-	return (httptransport.Client{
-		Client:     http.DefaultClient,
-		Method:     "GET",
-		URL:        mustParseURL(proxyURL),
-		Context:    ctx,
-		EncodeFunc: encodeUppercaseRequest,
-		DecodeFunc: decodeUppercaseResponse,
-	}).Endpoint()
+	return httptransport.NewClient(
+		"GET",
+		mustParseURL(proxyURL),
+		encodeUppercaseRequest,
+		decodeUppercaseResponse,
+	).Endpoint()
 }
 ```
 
