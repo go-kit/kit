@@ -148,19 +148,19 @@ func main() {
 	ctx := context.Background()
 	svc := stringService{}
 
-	uppercaseHandler := httptransport.Server{
-		Context:    ctx,
-		Endpoint:   makeUppercaseEndpoint(svc),
-		DecodeRequestFunc:  decodeUppercaseRequest,
-		EncodeResponseFunc: encodeResponse,
-	}
+	uppercaseHandler := httptransport.NewServer(
+		ctx,
+		makeUppercaseEndpoint(svc),
+		decodeUppercaseRequest,
+		encodeResponse,
+	)
 
-	countHandler := httptransport.Server{
-		Context:    ctx,
-		Endpoint:   makeCountEndpoint(svc),
-		DecodeRequestFunc:  decodeCountRequest,
-		EncodeResponseFunc: encodeResponse,
-	}
+	countHandler := httptransport.NewServer(
+		ctx,
+		makeCountEndpoint(svc),
+		decodeCountRequest,
+		encodeResponse,
+	)
 
 	http.Handle("/uppercase", uppercaseHandler)
 	http.Handle("/count", countHandler)
@@ -254,15 +254,17 @@ var count endpoint.Endpoint
 count = makeCountEndpoint(svc)
 count = loggingMiddleware(log.NewContext(logger).With("method", "count"))(count)
 
-uppercaseHandler := httptransport.Server{
-	Endpoint: uppercase,
+uppercaseHandler := httptransport.Server(
 	// ...
-}
+	uppercase,
+	// ...
+)
 
-countHandler := httptransport.Server{
-	Endpoint: count,
+countHandler := httptransport.Server(
 	// ...
-}
+	count,
+	// ...
+)
 ```
 
 It turns out that this technique is useful for a lot more than just logging.
@@ -327,15 +329,17 @@ func main() {
 	svc := stringService{}
 	svc = loggingMiddleware{logger, svc}
 
-	uppercaseHandler := httptransport.Server{
-		Endpoint: makeUppercaseEndpoint(svc),
+	uppercaseHandler := httptransport.NewServer(
 		// ...
-	}
+		makeUppercaseEndpoint(svc),
+		// ...
+	)
 
-	countHandler := httptransport.Server{
-		Endpoint: makeCountEndpoint(svc),
+	countHandler := httptransport.NewServer(
 		// ...
-	}
+		makeCountEndpoint(svc),
+		// ...
+	)
 }
 ```
 
@@ -413,15 +417,17 @@ func main() {
 	svc = loggingMiddleware{logger, svc}
 	svc = instrumentingMiddleware{requestCount, requestLatency, countResult, svc}
 
-	uppercaseHandler := httptransport.Server{
-		Endpoint: makeUppercaseEndpoint(svc),
+	uppercaseHandler := httptransport.NewServer(
 		// ...
-	}
+		makeUppercaseEndpoint(svc),
+		// ...
+	)
 
-	countHandler := httptransport.Server{
-		Endpoint: makeCountEndpoint(svc),
+	countHandler := httptransport.NewServer(
 		// ...
-	}
+		makeCountEndpoint(svc),
+		// ...
+	)
 
 	http.Handle("/metrics", stdprometheus.Handler())
 }

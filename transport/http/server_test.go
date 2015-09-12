@@ -9,18 +9,16 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
 func TestServerBadDecode(t *testing.T) {
-	handler := httptransport.Server{
-		Context:            context.Background(),
-		Endpoint:           func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
-		DecodeRequestFunc:  func(*http.Request) (interface{}, error) { return struct{}{}, errors.New("dang") },
-		EncodeResponseFunc: func(http.ResponseWriter, interface{}) error { return nil },
-		Logger:             log.NewNopLogger(),
-	}
+	handler := httptransport.NewServer(
+		context.Background(),
+		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
+		func(*http.Request) (interface{}, error) { return struct{}{}, errors.New("dang") },
+		func(http.ResponseWriter, interface{}) error { return nil },
+	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Get(server.URL)
@@ -30,13 +28,12 @@ func TestServerBadDecode(t *testing.T) {
 }
 
 func TestServerBadEndpoint(t *testing.T) {
-	handler := httptransport.Server{
-		Context:            context.Background(),
-		Endpoint:           func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errors.New("dang") },
-		DecodeRequestFunc:  func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		EncodeResponseFunc: func(http.ResponseWriter, interface{}) error { return nil },
-		Logger:             log.NewNopLogger(),
-	}
+	handler := httptransport.NewServer(
+		context.Background(),
+		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errors.New("dang") },
+		func(*http.Request) (interface{}, error) { return struct{}{}, nil },
+		func(http.ResponseWriter, interface{}) error { return nil },
+	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Get(server.URL)
@@ -46,13 +43,12 @@ func TestServerBadEndpoint(t *testing.T) {
 }
 
 func TestServerBadEncode(t *testing.T) {
-	handler := httptransport.Server{
-		Context:            context.Background(),
-		Endpoint:           func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
-		DecodeRequestFunc:  func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		EncodeResponseFunc: func(http.ResponseWriter, interface{}) error { return errors.New("dang") },
-		Logger:             log.NewNopLogger(),
-	}
+	handler := httptransport.NewServer(
+		context.Background(),
+		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
+		func(*http.Request) (interface{}, error) { return struct{}{}, nil },
+		func(http.ResponseWriter, interface{}) error { return errors.New("dang") },
+	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Get(server.URL)
@@ -69,14 +65,13 @@ func TestServerErrorEncoder(t *testing.T) {
 		}
 		return http.StatusInternalServerError
 	}
-	handler := httptransport.Server{
-		Context:            context.Background(),
-		Endpoint:           func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errTeapot },
-		DecodeRequestFunc:  func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		EncodeResponseFunc: func(http.ResponseWriter, interface{}) error { return nil },
-		ErrorEncoder:       func(w http.ResponseWriter, err error) { w.WriteHeader(code(err)) },
-		Logger:             log.NewNopLogger(),
-	}
+	handler := httptransport.NewServer(
+		context.Background(),
+		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errTeapot },
+		func(*http.Request) (interface{}, error) { return struct{}{}, nil },
+		func(http.ResponseWriter, interface{}) error { return nil },
+		httptransport.ServerErrorEncoder(func(w http.ResponseWriter, err error) { w.WriteHeader(code(err)) }),
+	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Get(server.URL)
@@ -102,15 +97,14 @@ func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) 
 		stepch        = make(chan bool)
 		endpoint      = func(context.Context, interface{}) (interface{}, error) { <-stepch; return struct{}{}, nil }
 		response      = make(chan *http.Response)
-		handler       = httptransport.Server{
-			Context:            ctx,
-			Endpoint:           endpoint,
-			DecodeRequestFunc:  func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-			EncodeResponseFunc: func(http.ResponseWriter, interface{}) error { return nil },
-			Before:             []httptransport.RequestFunc{func(ctx context.Context, r *http.Request) context.Context { return ctx }},
-			After:              []httptransport.ResponseFunc{func(ctx context.Context, w http.ResponseWriter) { return }},
-			Logger:             log.NewNopLogger(),
-		}
+		handler       = httptransport.NewServer(
+			ctx,
+			endpoint,
+			func(*http.Request) (interface{}, error) { return struct{}{}, nil },
+			func(http.ResponseWriter, interface{}) error { return nil },
+			httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context { return ctx }),
+			httptransport.ServerAfter(func(ctx context.Context, w http.ResponseWriter) { return }),
+		)
 	)
 	go func() {
 		server := httptest.NewServer(handler)
