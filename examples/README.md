@@ -109,7 +109,10 @@ func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(uppercaseRequest)
 		v, err := svc.Uppercase(req.S)
-		return uppercaseResponse{v, err.Error()}, nil
+		if err != nil {
+			return uppercaseResponse{v, err.Error()}, nil
+		}
+		return uppercaseResponse{v, ""}, nil
 	}
 }
 
@@ -183,7 +186,7 @@ func decodeCountRequest(r *http.Request) (interface{}, error) {
 	return request, nil
 }
 
-func encodeResponse(w http.ResponseWritererr, response interface{}) error {
+func encodeResponse(w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
 ```
