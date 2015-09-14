@@ -30,7 +30,11 @@ import (
 func main() {
 	// Construct a load balancer for foosvc, which gets foosvc instances by
 	// polling a specific DNS SRV name.
-	p := dnssrv.NewPublisher("foosvc.internal.domain", 5*time.Second, fooFactory, logger)
+	p, err := dnssrv.NewPublisher("foosvc.internal.domain", 5*time.Second, fooFactory, logger)
+	if err != nil {
+		panic(err)
+	}
+	
 	lb := loadbalancer.NewRoundRobin(p)
 
 	// Get a new endpoint from the load balancer.
