@@ -15,6 +15,10 @@ import (
 // balancer. Requests that return errors will be retried until they succeed,
 // up to max times, or until the timeout is elapsed, whichever comes first.
 func Retry(max int, timeout time.Duration, lb LoadBalancer) endpoint.Endpoint {
+	if lb == nil {
+		panic("nil LoadBalancer")
+	}
+
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		var (
 			newctx, cancel = context.WithTimeout(ctx, timeout)
