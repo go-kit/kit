@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -85,13 +84,12 @@ func makeUppercaseProxy(ctx context.Context, instance string) endpoint.Endpoint 
 	if u.Path == "" {
 		u.Path = "/uppercase"
 	}
-	return (httptransport.Client{
-		Client:             http.DefaultClient,
-		Method:             "GET",
-		URL:                u,
-		DecodeResponseFunc: decodeUppercaseResponse,
-		EncodeRequestFunc:  encodeRequest,
-	}).Endpoint()
+	return httptransport.NewClient(
+		"GET",
+		u,
+		encodeRequest,
+		decodeUppercaseResponse,
+	).Endpoint()
 }
 
 func split(s string) []string {

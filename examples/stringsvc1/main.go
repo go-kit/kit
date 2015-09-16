@@ -36,19 +36,19 @@ func main() {
 	ctx := context.Background()
 	svc := stringService{}
 
-	uppercaseHandler := httptransport.Server{
-		Context:            ctx,
-		Endpoint:           makeUppercaseEndpoint(svc),
-		DecodeRequestFunc:  decodeUppercaseRequest,
-		EncodeResponseFunc: encodeResponse,
-	}
+	uppercaseHandler := httptransport.NewServer(
+		ctx,
+		makeUppercaseEndpoint(svc),
+		decodeUppercaseRequest,
+		encodeResponse,
+	)
 
-	countHandler := httptransport.Server{
-		Context:            ctx,
-		Endpoint:           makeCountEndpoint(svc),
-		DecodeRequestFunc:  decodeCountRequest,
-		EncodeResponseFunc: encodeResponse,
-	}
+	countHandler := httptransport.NewServer(
+		ctx,
+		makeCountEndpoint(svc),
+		decodeCountRequest,
+		encodeResponse,
+	)
 
 	http.Handle("/uppercase", uppercaseHandler)
 	http.Handle("/count", countHandler)

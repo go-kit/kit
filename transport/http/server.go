@@ -11,71 +11,99 @@ import (
 
 // Server wraps an endpoint and implements http.Handler.
 type Server struct {
-	// A background context must be provided.
-	context.Context
+	ctx          context.Context
+	e            endpoint.Endpoint
+	dec          DecodeRequestFunc
+	enc          EncodeResponseFunc
+	before       []RequestFunc
+	after        []ResponseFunc
+	errorEncoder func(w http.ResponseWriter, err error)
+	logger       log.Logger
+}
 
-	// The endpoint that will be invoked.
-	endpoint.Endpoint
+// NewServer constructs a new server, which implements http.Server and wraps
+// the provided endpoint.
+func NewServer(
+	ctx context.Context,
+	e endpoint.Endpoint,
+	dec DecodeRequestFunc,
+	enc EncodeResponseFunc,
+	options ...ServerOption,
+) *Server {
+	s := &Server{
+		ctx:          ctx,
+		e:            e,
+		dec:          dec,
+		enc:          enc,
+		errorEncoder: defaultErrorEncoder,
+		logger:       log.NewNopLogger(),
+	}
+	for _, option := range options {
+		option(s)
+	}
+	return s
+}
 
-	// DecodeRequestFunc must be provided.
-	DecodeRequestFunc
+// ServerOption sets an optional parameter for servers.
+type ServerOption func(*Server)
 
-	// EncodeResponseFunc must be provided.
-	EncodeResponseFunc
+// ServerBefore functions are executed on the HTTP request object before the
+// request is decoded.
+func ServerBefore(before ...RequestFunc) ServerOption {
+	return func(s *Server) { s.before = before }
+}
 
-	// Before functions are executed on the HTTP request object before the
-	// request is decoded.
-	Before []RequestFunc
+// ServerAfter functions are executed on the HTTP response writer after the
+// endpoint is invoked, but before anything is written to the client.
+func ServerAfter(after ...ResponseFunc) ServerOption {
+	return func(s *Server) { s.after = after }
+}
 
-	// After functions are executed on the HTTP response writer after the
-	// endpoint is invoked, but before anything is written to the client.
-	After []ResponseFunc
+// ServerErrorEncoder is used to encode errors to the http.ResponseWriter
+// whenever they're encountered in the processing of a request. Clients can
+// use this to provide custom error formatting and response codes. By default,
+// errors will be written as plain text with an appropriate, if generic,
+// status code.
+func ServerErrorEncoder(f func(w http.ResponseWriter, err error)) ServerOption {
+	return func(s *Server) { s.errorEncoder = f }
+}
 
-	// ErrorEncoder is used to encode errors to the http.ResponseWriter
-	// whenever they're encountered in the processing of a request. Clients
-	// can use this to provide custom error formatting and response codes. If
-	// ErrorEncoder is nil, the error will be written as plain text with
-	// an appropriate, if generic, status code.
-	ErrorEncoder func(w http.ResponseWriter, err error)
-
-	// Logger is used to log errors.
-	Logger log.Logger
+// ServerErrorLogger is used to log non-terminal errors. By default, no errors
+// are logged.
+func ServerErrorLogger(logger log.Logger) ServerOption {
+	return func(s *Server) { s.logger = logger }
 }
 
 // ServeHTTP implements http.Handler.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if s.ErrorEncoder == nil {
-		s.ErrorEncoder = defaultErrorEncoder
-	}
-
-	ctx, cancel := context.WithCancel(s.Context)
+	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 
-	for _, f := range s.Before {
+	for _, f := range s.before {
 		ctx = f(ctx, r)
 	}
 
-	request, err := s.DecodeRequestFunc(r)
+	request, err := s.dec(r)
 	if err != nil {
-		_ = s.Logger.Log("err", err)
-		s.ErrorEncoder(w, badRequestError{err})
+		_ = s.logger.Log("err", err)
+		s.errorEncoder(w, badRequestError{err})
 		return
 	}
 
-	response, err := s.Endpoint(ctx, request)
+	response, err := s.e(ctx, request)
 	if err != nil {
-		_ = s.Logger.Log("err", err)
-		s.ErrorEncoder(w, err)
+		_ = s.logger.Log("err", err)
+		s.errorEncoder(w, err)
 		return
 	}
 
-	for _, f := range s.After {
+	for _, f := range s.after {
 		f(ctx, w)
 	}
 
-	if err := s.EncodeResponseFunc(w, response); err != nil {
-		_ = s.Logger.Log("err", err)
-		s.ErrorEncoder(w, err)
+	if err := s.enc(w, response); err != nil {
+		_ = s.logger.Log("err", err)
+		s.errorEncoder(w, err)
 		return
 	}
 }

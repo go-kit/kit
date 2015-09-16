@@ -26,13 +26,13 @@ func TestHTTPClient(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	client := httptransport.Client{
-		Method:             "GET",
-		URL:                mustParse(server.URL),
-		EncodeRequestFunc:  encode,
-		DecodeResponseFunc: decode,
-		Before:             []httptransport.RequestFunc{httptransport.SetRequestHeader(headerKey, headerVal)},
-	}
+	client := httptransport.NewClient(
+		"GET",
+		mustParse(server.URL),
+		encode,
+		decode,
+		httptransport.SetClientBefore(httptransport.SetRequestHeader(headerKey, headerVal)),
+	)
 
 	_, err := client.Endpoint()(context.Background(), struct{}{})
 	if err != nil {

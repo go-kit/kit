@@ -29,20 +29,18 @@ func New(ctx context.Context, baseurl *url.URL, logger log.Logger, c *http.Clien
 	return client{
 		Context: ctx,
 		Logger:  logger,
-		sum: (httptransport.Client{
-			Client:             c,
-			Method:             "GET",
-			URL:                sumURL,
-			EncodeRequestFunc:  server.EncodeSumRequest,
-			DecodeResponseFunc: server.DecodeSumResponse,
-		}).Endpoint(),
-		concat: (httptransport.Client{
-			Client:             c,
-			Method:             "GET",
-			URL:                concatURL,
-			EncodeRequestFunc:  server.EncodeConcatRequest,
-			DecodeResponseFunc: server.DecodeConcatResponse,
-		}).Endpoint(),
+		sum: httptransport.NewClient(
+			"GET",
+			sumURL,
+			server.EncodeSumRequest,
+			server.DecodeSumResponse,
+		).Endpoint(),
+		concat: httptransport.NewClient(
+			"GET",
+			concatURL,
+			server.EncodeConcatRequest,
+			server.DecodeConcatResponse,
+		).Endpoint(),
 	}
 }
 

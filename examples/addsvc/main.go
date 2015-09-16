@@ -139,27 +139,25 @@ func main() {
 
 		sum = makeSumEndpoint(svc)
 		sum = zipkin.AnnotateServer(newSumSpan, collector)(sum)
-		mux.Handle("/sum", httptransport.Server{
-			Context:            root,
-			Endpoint:           sum,
-			DecodeRequestFunc:  server.DecodeSumRequest,
-			EncodeResponseFunc: server.EncodeSumResponse,
-			Before:             []httptransport.RequestFunc{traceSum},
-			After:              []httptransport.ResponseFunc{},
-			Logger:             transportLogger,
-		})
+		mux.Handle("/sum", httptransport.NewServer(
+			root,
+			sum,
+			server.DecodeSumRequest,
+			server.EncodeSumResponse,
+			httptransport.ServerBefore(traceSum),
+			httptransport.ServerErrorLogger(transportLogger),
+		))
 
 		concat = makeConcatEndpoint(svc)
 		concat = zipkin.AnnotateServer(newConcatSpan, collector)(concat)
-		mux.Handle("/concat", httptransport.Server{
-			Context:            root,
-			Endpoint:           concat,
-			DecodeRequestFunc:  server.DecodeConcatRequest,
-			EncodeResponseFunc: server.EncodeConcatResponse,
-			Before:             []httptransport.RequestFunc{traceConcat},
-			After:              []httptransport.ResponseFunc{},
-			Logger:             transportLogger,
-		})
+		mux.Handle("/concat", httptransport.NewServer(
+			root,
+			concat,
+			server.DecodeConcatRequest,
+			server.EncodeConcatResponse,
+			httptransport.ServerBefore(traceConcat),
+			httptransport.ServerErrorLogger(transportLogger),
+		))
 
 		_ = transportLogger.Log("addr", *httpAddr)
 		errc <- http.ListenAndServe(*httpAddr, mux)
