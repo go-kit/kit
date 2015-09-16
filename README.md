@@ -186,13 +186,14 @@ The Go kit project prefers to depend on code that abides the API stability polic
 
 ## Related projects
 
-Projects with a ★ have had particular influence on Go kit's design.
+Projects with a ★ have had particular influence on Go kit's design (or vice-versa).
 
 ### Service frameworks
 
 - [go-micro](https://github.com/asim/go-micro), a microservices client/server library ★
 - [gocircuit](https://github.com/gocircuit/circuit), dynamic cloud orchestration
 - [gotalk](https://github.com/rsms/gotalk), async peer communication protocol &amp; library
+- [h2](https://github.com/hailocab/h2), a microservices framework ★
 - [Kite](https://github.com/koding/kite), a micro-service framework
 
 ### Individual components
