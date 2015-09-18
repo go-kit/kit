@@ -51,24 +51,24 @@ func (p *Publisher) Stop() {
 	close(p.quit)
 }
 
-func (p *Publisher) loop(endpoints []endpoint.Endpoint, md5 string) {
+func (p *Publisher) loop(m map[string]endpointCloser, md5 string) {
 	t := newTicker(p.ttl)
 	defer t.Stop()
 	for {
 		select {
-		case p.endpoints <- endpoints:
+		case p.endpoints <- flatten(m):
 
 		case <-t.C:
 			// TODO should we do this out-of-band?
 			addrs, newmd5, err := resolve(p.name)
 			if err != nil {
 				p.logger.Log("name", p.name, "err", err)
-				continue // don't replace good endpoints with bad ones
+				continue // don't replace probably-good endpoints with bad ones
 			}
 			if newmd5 == md5 {
-				continue // no change
+				continue // optimization: no change
 			}
-			endpoints = makeEndpoints(addrs, p.factory, p.logger)
+			m = migrate(m, makeEndpoints(addrs, p.factory, p.logger))
 			md5 = newmd5
 
 		case <-p.quit:
@@ -97,31 +97,54 @@ func resolve(name string) (addrs []*net.SRV, md5sum string, err error) {
 	if err != nil {
 		return addrs, "", err
 	}
-	hostports := make([]string, len(addrs))
+	instances := make([]string, len(addrs))
 	for i, addr := range addrs {
-		hostports[i] = fmt.Sprintf("%s:%d", addr.Target, addr.Port)
+		instances[i] = addr2instance(addr)
 	}
-	sort.Sort(sort.StringSlice(hostports))
+	sort.Sort(sort.StringSlice(instances))
 	h := md5.New()
-	for _, hostport := range hostports {
-		fmt.Fprintf(h, hostport)
+	for _, instance := range instances {
+		fmt.Fprintf(h, instance)
 	}
 	return addrs, fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-func makeEndpoints(addrs []*net.SRV, f loadbalancer.Factory, logger log.Logger) []endpoint.Endpoint {
-	endpoints := make([]endpoint.Endpoint, 0, len(addrs))
+func makeEndpoints(addrs []*net.SRV, f loadbalancer.Factory, logger log.Logger) map[string]endpointCloser {
+	m := make(map[string]endpointCloser, len(addrs))
 	for _, addr := range addrs {
-		endpoint, err := f(addr2instance(addr))
+		instance := addr2instance(addr)
+		endpoint, closer, err := f(instance)
 		if err != nil {
 			logger.Log("instance", addr2instance(addr), "err", err)
 			continue
 		}
-		endpoints = append(endpoints, endpoint)
+		m[instance] = endpointCloser{endpoint, closer}
 	}
-	return endpoints
+	return m
+}
+
+func migrate(prev, curr map[string]endpointCloser) map[string]endpointCloser {
+	for instance, ec := range prev {
+		if _, ok := curr[instance]; !ok {
+			close(ec.Closer)
+		}
+	}
+	return curr
 }
 
 func addr2instance(addr *net.SRV) string {
 	return net.JoinHostPort(addr.Target, fmt.Sprint(addr.Port))
+}
+
+func flatten(m map[string]endpointCloser) []endpoint.Endpoint {
+	a := make([]endpoint.Endpoint, 0, len(m))
+	for _, ec := range m {
+		a = append(a, ec.Endpoint)
+	}
+	return a
+}
+
+type endpointCloser struct {
+	endpoint.Endpoint
+	loadbalancer.Closer
 }

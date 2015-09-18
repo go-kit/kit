@@ -30,11 +30,11 @@ func TestPublisher(t *testing.T) {
 	defer func() { lookupSRV = oldLookup }()
 	lookupSRV = mockLookupSRV(addrs, nil, nil)
 
-	factory := func(instance string) (endpoint.Endpoint, error) {
+	factory := func(instance string) (endpoint.Endpoint, loadbalancer.Closer, error) {
 		if want, have := addr2instance(addr), instance; want != have {
 			t.Errorf("want %q, have %q", want, have)
 		}
-		return e, nil
+		return e, make(loadbalancer.Closer), nil
 	}
 
 	p, err := NewPublisher(name, ttl, factory, logger)
@@ -56,7 +56,7 @@ func TestBadLookup(t *testing.T) {
 	var (
 		name    = "some-name"
 		ttl     = time.Second
-		factory = func(string) (endpoint.Endpoint, error) { return nil, errors.New("unreachable") }
+		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return nil, nil, errors.New("false") }
 		logger  = log.NewNopLogger()
 	)
 
@@ -71,7 +71,7 @@ func TestBadFactory(t *testing.T) {
 		addrs   = []*net.SRV{addr}
 		name    = "some-name"
 		ttl     = time.Second
-		factory = func(string) (endpoint.Endpoint, error) { return nil, errors.New("kaboom") }
+		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return nil, nil, errors.New("kaboom") }
 		logger  = log.NewNopLogger()
 	)
 
@@ -107,7 +107,7 @@ func TestRefreshNoChange(t *testing.T) {
 		addrs   = []*net.SRV{addr}
 		name    = "my-name"
 		ttl     = time.Second
-		factory = func(string) (endpoint.Endpoint, error) { return nil, errors.New("kaboom") }
+		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return nil, nil, errors.New("kaboom") }
 		logger  = log.NewNopLogger()
 	)
 
@@ -140,7 +140,7 @@ func TestErrPublisherStopped(t *testing.T) {
 	var (
 		name    = "my-name"
 		ttl     = time.Second
-		factory = func(string) (endpoint.Endpoint, error) { return nil, errors.New("kaboom") }
+		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return nil, nil, errors.New("kaboom") }
 		logger  = log.NewNopLogger()
 	)
 

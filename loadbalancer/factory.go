@@ -8,4 +8,8 @@ import "github.com/go-kit/kit/endpoint"
 // endpoints. Users are expected to provide their own factory functions that
 // assume specific transports, or can deduce transports by parsing the
 // instance string.
-type Factory func(instance string) (endpoint.Endpoint, error)
+type Factory func(instance string) (endpoint.Endpoint, Closer, error)
+
+// Closer is returned by factory functions as a way to close a generated
+// endpoint.
+type Closer chan struct{}
