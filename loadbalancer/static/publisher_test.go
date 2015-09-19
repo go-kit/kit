@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/loadbalancer/static"
 	"github.com/go-kit/kit/log"
 )
@@ -19,11 +20,11 @@ func TestStatic(t *testing.T) {
 			"bar": func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 			"baz": func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 		}
-		factory = func(instance string) (endpoint.Endpoint, error) {
+		factory = func(instance string) (endpoint.Endpoint, loadbalancer.Closer, error) {
 			if e, ok := endpoints[instance]; ok {
-				return e, nil
+				return e, make(loadbalancer.Closer), nil
 			}
-			return nil, fmt.Errorf("%s: not found", instance)
+			return nil, nil, fmt.Errorf("%s: not found", instance)
 		}
 	)
 	p := static.NewPublisher(instances, factory, log.NewNopLogger())

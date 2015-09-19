@@ -8,19 +8,24 @@ import (
 )
 
 // Publisher yields a set of static endpoints as produced by the passed factory.
-type Publisher struct{ *fixed.Publisher }
+type Publisher struct{ publisher *fixed.Publisher }
 
 // NewPublisher returns a static endpoint Publisher.
 func NewPublisher(instances []string, factory loadbalancer.Factory, logger log.Logger) Publisher {
 	logger = log.NewContext(logger).With("component", "Fixed Publisher")
 	endpoints := []endpoint.Endpoint{}
 	for _, instance := range instances {
-		e, err := factory(instance)
+		e, _, err := factory(instance) // never close
 		if err != nil {
 			_ = logger.Log("instance", instance, "err", err)
 			continue
 		}
 		endpoints = append(endpoints, e)
 	}
-	return Publisher{fixed.NewPublisher(endpoints)}
+	return Publisher{publisher: fixed.NewPublisher(endpoints)}
+}
+
+// Endpoints implements Publisher.
+func (p Publisher) Endpoints() ([]endpoint.Endpoint, error) {
+	return p.publisher.Endpoints()
 }

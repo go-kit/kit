@@ -64,12 +64,12 @@ func (mw proxymw) Uppercase(s string) (string, error) {
 }
 
 func factory(ctx context.Context, qps int) loadbalancer.Factory {
-	return func(instance string) (endpoint.Endpoint, error) {
+	return func(instance string) (endpoint.Endpoint, loadbalancer.Closer, error) {
 		var e endpoint.Endpoint
 		e = makeUppercaseProxy(ctx, instance)
 		e = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(e)
 		e = kitratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(float64(qps), int64(qps)))(e)
-		return e, nil
+		return e, make(loadbalancer.Closer), nil
 	}
 }
 

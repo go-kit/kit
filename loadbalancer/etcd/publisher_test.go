@@ -32,8 +32,8 @@ func TestPublisher(t *testing.T) {
 		e      = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
 	)
 
-	factory := func(instance string) (endpoint.Endpoint, error) {
-		return e, nil
+	factory := func(string) (endpoint.Endpoint, loadbalancer.Closer, error) {
+		return e, make(loadbalancer.Closer), nil
 	}
 
 	client := &fakeClient{
@@ -52,13 +52,10 @@ func TestPublisher(t *testing.T) {
 }
 
 func TestBadFactory(t *testing.T) {
-	var (
-		logger = log.NewNopLogger()
-		e      = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-	)
+	logger := log.NewNopLogger()
 
-	factory := func(instance string) (endpoint.Endpoint, error) {
-		return e, errors.New("_")
+	factory := func(string) (endpoint.Endpoint, loadbalancer.Closer, error) {
+		return nil, nil, errors.New("kaboom")
 	}
 
 	client := &fakeClient{
@@ -82,13 +79,10 @@ func TestBadFactory(t *testing.T) {
 }
 
 func TestPublisherStoppped(t *testing.T) {
-	var (
-		logger = log.NewNopLogger()
-		e      = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-	)
+	logger := log.NewNopLogger()
 
-	factory := func(instance string) (endpoint.Endpoint, error) {
-		return e, errors.New("_")
+	factory := func(string) (endpoint.Endpoint, loadbalancer.Closer, error) {
+		return nil, nil, errors.New("kaboom")
 	}
 
 	client := &fakeClient{
