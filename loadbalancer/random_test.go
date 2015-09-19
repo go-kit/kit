@@ -35,7 +35,9 @@ func TestRandomDistribution(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		e(ctx, struct{}{})
+		if _, err := e(ctx, struct{}{}); err != nil {
+			t.Error(err)
+		}
 	}
 
 	for i, have := range counts {
