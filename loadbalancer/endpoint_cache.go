@@ -7,7 +7,15 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-// EndpointCache TODO
+// EndpointCache caches resource-managed endpoints. Clients update the cache
+// by providing a current set of instance strings. The cache converts each
+// instance string to an endpoint and a closer via the factory function.
+//
+// Instance strings are assumed to be unique and used as keys. Endpoints that
+// were in the previous set of instances and removed from the current set are
+// considered invalid and closed.
+//
+// EndpointCache is designed to be used in your publisher implementation.
 type EndpointCache struct {
 	mtx    sync.RWMutex
 	f      Factory
@@ -15,7 +23,9 @@ type EndpointCache struct {
 	logger log.Logger
 }
 
-// NewEndpointCache TODO
+// NewEndpointCache produces a new EndpointCache, ready for use. Instance
+// strings will be converted to endpoints via the provided factory function.
+// The logger is used to log errors.
 func NewEndpointCache(f Factory, logger log.Logger) *EndpointCache {
 	return &EndpointCache{
 		f:      f,
@@ -29,7 +39,9 @@ type endpointCloser struct {
 	Closer
 }
 
-// Replace TODO
+// Replace replaces the current set of endpoints with endpoints manufactured
+// by the passed instances. If the same instance exists in both the existing
+// and new sets, it's left untouched.
 func (t *EndpointCache) Replace(instances []string) {
 	t.mtx.Lock()
 	defer t.mtx.Unlock()
@@ -62,7 +74,7 @@ func (t *EndpointCache) Replace(instances []string) {
 	t.m = m
 }
 
-// Endpoints TODO
+// Endpoints returns the current set of endpoints in undefined order.
 func (t *EndpointCache) Endpoints() []endpoint.Endpoint {
 	t.mtx.RLock()
 	defer t.mtx.RUnlock()
