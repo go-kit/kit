@@ -21,7 +21,7 @@ service to use Go kit components.
 ### Endpoint
 
 Go kit primarily deals in the RPC messaging pattern. We use an abstraction
-called an **[endpoint][]** to model invidivual RPCs. An endpoint can be
+called an **[endpoint][]** to model individual RPCs. An endpoint can be
 implemented by a server, and called by a client. It's the fundamental building
 block of many Go kit components.
 
