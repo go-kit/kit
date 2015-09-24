@@ -16,31 +16,15 @@ import (
 
 func TestPublisher(t *testing.T) {
 	var (
-		target = "my-target"
-		port   = uint16(1234)
-		addr   = &net.SRV{Target: target, Port: port}
-		addrs  = []*net.SRV{addr}
-		name   = "my-name"
-		ttl    = time.Second
-		logger = log.NewNopLogger()
-		e      = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
+		name    = "foo"
+		ttl     = time.Second
+		e       = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
+		c       = make(chan struct{})
+		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return e, c, nil }
+		logger  = log.NewNopLogger()
 	)
 
-	oldLookup := lookupSRV
-	defer func() { lookupSRV = oldLookup }()
-	lookupSRV = mockLookupSRV(addrs, nil, nil)
-
-	factory := func(instance string) (endpoint.Endpoint, loadbalancer.Closer, error) {
-		if want, have := addr2instance(addr), instance; want != have {
-			t.Errorf("want %q, have %q", want, have)
-		}
-		return e, make(loadbalancer.Closer), nil
-	}
-
-	p, err := NewPublisher(name, ttl, factory, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := NewPublisher(name, ttl, factory, logger)
 	defer p.Stop()
 
 	if _, err := p.Endpoints(); err != nil {
@@ -56,12 +40,21 @@ func TestBadLookup(t *testing.T) {
 	var (
 		name    = "some-name"
 		ttl     = time.Second
-		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return nil, nil, errors.New("false") }
+		e       = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
+		c       = make(chan struct{})
+		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return e, c, nil }
 		logger  = log.NewNopLogger()
 	)
 
-	if _, err := NewPublisher(name, ttl, factory, logger); err == nil {
-		t.Fatal("wanted error, got none")
+	p := NewPublisher(name, ttl, factory, logger)
+	defer p.Stop()
+
+	endpoints, err := p.Endpoints()
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 0, len(endpoints); want != have {
+		t.Errorf("want %d, have %d", want, have)
 	}
 }
 
@@ -79,15 +72,12 @@ func TestBadFactory(t *testing.T) {
 	defer func() { lookupSRV = oldLookup }()
 	lookupSRV = mockLookupSRV(addrs, nil, nil)
 
-	p, err := NewPublisher(name, ttl, factory, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := NewPublisher(name, ttl, factory, logger)
 	defer p.Stop()
 
 	endpoints, err := p.Endpoints()
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	if want, have := 0, len(endpoints); want != have {
 		t.Errorf("want %q, have %q", want, have)
@@ -120,10 +110,7 @@ func TestRefreshNoChange(t *testing.T) {
 	defer func() { lookupSRV = oldLookup }()
 	lookupSRV = mockLookupSRV(addrs, nil, &resolves)
 
-	p, err := NewPublisher(name, ttl, factory, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := NewPublisher(name, ttl, factory, logger)
 	defer p.Stop()
 
 	tick <- time.Now()
@@ -148,10 +135,7 @@ func TestErrPublisherStopped(t *testing.T) {
 	defer func() { lookupSRV = oldLookup }()
 	lookupSRV = mockLookupSRV([]*net.SRV{}, nil, nil)
 
-	p, err := NewPublisher(name, ttl, factory, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := NewPublisher(name, ttl, factory, logger)
 
 	p.Stop()
 	_, have := p.Endpoints()

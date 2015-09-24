@@ -12,7 +12,7 @@ type Publisher struct{ publisher *fixed.Publisher }
 
 // NewPublisher returns a static endpoint Publisher.
 func NewPublisher(instances []string, factory loadbalancer.Factory, logger log.Logger) Publisher {
-	logger = log.NewContext(logger).With("component", "Fixed Publisher")
+	logger = log.NewContext(logger).With("component", "Static Publisher")
 	endpoints := []endpoint.Endpoint{}
 	for _, instance := range instances {
 		e, _, err := factory(instance) // never close

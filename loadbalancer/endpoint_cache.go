@@ -7,13 +7,14 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-// EndpointCache caches resource-managed endpoints. Clients update the cache
-// by providing a current set of instance strings. The cache converts each
-// instance string to an endpoint and a closer via the factory function.
+// EndpointCache caches endpoints that need to be deallocated when they're no
+// longer useful. Clients update the cache by providing a current set of
+// instance strings. The cache converts each instance string to an endpoint
+// and a closer via the factory function.
 //
-// Instance strings are assumed to be unique and used as keys. Endpoints that
-// were in the previous set of instances and removed from the current set are
-// considered invalid and closed.
+// Instance strings are assumed to be unique and are used as keys. Endpoints
+// that were in the previous set of instances and are not in the current set
+// are considered invalid and closed.
 //
 // EndpointCache is designed to be used in your publisher implementation.
 type EndpointCache struct {
@@ -30,7 +31,7 @@ func NewEndpointCache(f Factory, logger log.Logger) *EndpointCache {
 	return &EndpointCache{
 		f:      f,
 		m:      map[string]endpointCloser{},
-		logger: logger,
+		logger: log.NewContext(logger).With("component", "Endpoint Cache"),
 	}
 }
 
