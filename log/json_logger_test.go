@@ -9,6 +9,20 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+func TestJSONLoggerCaller(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	logger := log.NewJSONLogger(buf)
+	logger = log.NewContext(logger).With("caller", log.DefaultCaller)
+
+	if err := logger.Log(); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := `{"caller":"json_logger_test.go:18"}`+"\n", buf.String(); want != have {
+		t.Errorf("\nwant %#v\nhave %#v", want, have)
+	}
+}
+
 func TestJSONLogger(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
