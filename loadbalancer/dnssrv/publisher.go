@@ -13,12 +13,11 @@ import (
 // Publisher yields endpoints taken from the named DNS SRV record. The name is
 // resolved on a fixed schedule. Priorities and weights are ignored.
 type Publisher struct {
-	name      string
-	ttl       time.Duration
-	cache     *loadbalancer.EndpointCache
-	logger    log.Logger
-	endpoints chan []endpoint.Endpoint
-	quit      chan struct{}
+	name   string
+	ttl    time.Duration
+	cache  *loadbalancer.EndpointCache
+	logger log.Logger
+	quit   chan struct{}
 }
 
 // NewPublisher returns a DNS SRV publisher. The name is resolved
@@ -28,12 +27,11 @@ type Publisher struct {
 // factory errors.
 func NewPublisher(name string, ttl time.Duration, factory loadbalancer.Factory, logger log.Logger) *Publisher {
 	p := &Publisher{
-		name:      name,
-		ttl:       ttl,
-		cache:     loadbalancer.NewEndpointCache(factory, logger),
-		logger:    logger,
-		endpoints: make(chan []endpoint.Endpoint),
-		quit:      make(chan struct{}),
+		name:   name,
+		ttl:    ttl,
+		cache:  loadbalancer.NewEndpointCache(factory, logger),
+		logger: logger,
+		quit:   make(chan struct{}),
 	}
 
 	instances, err := p.resolve()
@@ -58,8 +56,6 @@ func (p *Publisher) loop() {
 	defer t.Stop()
 	for {
 		select {
-		case p.endpoints <- p.cache.Endpoints():
-
 		case <-t.C:
 			instances, err := p.resolve()
 			if err != nil {
@@ -76,12 +72,7 @@ func (p *Publisher) loop() {
 
 // Endpoints implements the Publisher interface.
 func (p *Publisher) Endpoints() ([]endpoint.Endpoint, error) {
-	select {
-	case endpoints := <-p.endpoints:
-		return endpoints, nil
-	case <-p.quit:
-		return nil, loadbalancer.ErrPublisherStopped
-	}
+	return p.cache.Endpoints(), nil
 }
 
 var (
