@@ -78,30 +78,6 @@ func TestBadFactory(t *testing.T) {
 	}
 }
 
-func TestPublisherStoppped(t *testing.T) {
-	logger := log.NewNopLogger()
-
-	factory := func(string) (endpoint.Endpoint, loadbalancer.Closer, error) {
-		return nil, nil, errors.New("kaboom")
-	}
-
-	client := &fakeClient{
-		responses: map[string]*stdetcd.Response{"/foo": fakeResponse},
-	}
-
-	p, err := kitetcd.NewPublisher(client, "/foo", factory, logger)
-	if err != nil {
-		t.Fatalf("failed to create new publisher: %v", err)
-	}
-
-	p.Stop()
-
-	_, have := p.Endpoints()
-	if want := loadbalancer.ErrPublisherStopped; want != have {
-		t.Fatalf("want %v, have %v", want, have)
-	}
-}
-
 type fakeClient struct {
 	responses map[string]*stdetcd.Response
 }
