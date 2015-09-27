@@ -1,6 +1,7 @@
 package loadbalancer_test
 
 import (
+	"io"
 	"testing"
 	"time"
 
@@ -14,10 +15,10 @@ import (
 func TestEndpointCache(t *testing.T) {
 	var (
 		e  = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-		ca = make(loadbalancer.Closer)
-		cb = make(loadbalancer.Closer)
-		c  = map[string]loadbalancer.Closer{"a": ca, "b": cb}
-		f  = func(s string) (endpoint.Endpoint, loadbalancer.Closer, error) { return e, c[s], nil }
+		ca = make(closer)
+		cb = make(closer)
+		c  = map[string]io.Closer{"a": ca, "b": cb}
+		f  = func(s string) (endpoint.Endpoint, io.Closer, error) { return e, c[s], nil }
 		ec = loadbalancer.NewEndpointCache(f, log.NewNopLogger())
 	)
 
@@ -64,3 +65,7 @@ func TestEndpointCache(t *testing.T) {
 		t.Errorf("didn't close the deleted instance in time")
 	}
 }
+
+type closer chan struct{}
+
+func (c closer) Close() error { close(c); return nil }

@@ -1,6 +1,7 @@
 package loadbalancer
 
 import (
+	"io"
 	"sync"
 
 	"github.com/go-kit/kit/endpoint"
@@ -37,7 +38,7 @@ func NewEndpointCache(f Factory, logger log.Logger) *EndpointCache {
 
 type endpointCloser struct {
 	endpoint.Endpoint
-	Closer
+	io.Closer
 }
 
 // Replace replaces the current set of endpoints with endpoints manufactured
@@ -68,7 +69,9 @@ func (t *EndpointCache) Replace(instances []string) {
 
 	// Close any leftover endpoints.
 	for _, ec := range t.m {
-		close(ec.Closer)
+		if ec.Closer != nil {
+			ec.Closer.Close()
+		}
 	}
 
 	// Swap and GC.

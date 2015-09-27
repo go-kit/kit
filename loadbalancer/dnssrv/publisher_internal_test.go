@@ -2,6 +2,7 @@ package dnssrv
 
 import (
 	"errors"
+	"io"
 	"net"
 	"sync/atomic"
 	"testing"
@@ -10,7 +11,6 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/log"
 )
 
@@ -19,8 +19,7 @@ func TestPublisher(t *testing.T) {
 		name    = "foo"
 		ttl     = time.Second
 		e       = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-		c       = make(chan struct{})
-		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return e, c, nil }
+		factory = func(string) (endpoint.Endpoint, io.Closer, error) { return e, nil, nil }
 		logger  = log.NewNopLogger()
 	)
 
@@ -41,8 +40,7 @@ func TestBadLookup(t *testing.T) {
 		name    = "some-name"
 		ttl     = time.Second
 		e       = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-		c       = make(chan struct{})
-		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return e, c, nil }
+		factory = func(string) (endpoint.Endpoint, io.Closer, error) { return e, nil, nil }
 		logger  = log.NewNopLogger()
 	)
 
@@ -64,7 +62,7 @@ func TestBadFactory(t *testing.T) {
 		addrs   = []*net.SRV{addr}
 		name    = "some-name"
 		ttl     = time.Second
-		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return nil, nil, errors.New("kaboom") }
+		factory = func(string) (endpoint.Endpoint, io.Closer, error) { return nil, nil, errors.New("kaboom") }
 		logger  = log.NewNopLogger()
 	)
 
@@ -97,7 +95,7 @@ func TestRefreshNoChange(t *testing.T) {
 		addrs   = []*net.SRV{addr}
 		name    = "my-name"
 		ttl     = time.Second
-		factory = func(string) (endpoint.Endpoint, loadbalancer.Closer, error) { return nil, nil, errors.New("kaboom") }
+		factory = func(string) (endpoint.Endpoint, io.Closer, error) { return nil, nil, errors.New("kaboom") }
 		logger  = log.NewNopLogger()
 	)
 

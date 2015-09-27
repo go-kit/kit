@@ -2,13 +2,13 @@ package etcd_test
 
 import (
 	"errors"
+	"io"
 	"testing"
 
 	stdetcd "github.com/coreos/go-etcd/etcd"
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/loadbalancer"
 	kitetcd "github.com/go-kit/kit/loadbalancer/etcd"
 	"github.com/go-kit/kit/log"
 )
@@ -32,8 +32,8 @@ func TestPublisher(t *testing.T) {
 		e      = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
 	)
 
-	factory := func(string) (endpoint.Endpoint, loadbalancer.Closer, error) {
-		return e, make(loadbalancer.Closer), nil
+	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
+		return e, nil, nil
 	}
 
 	client := &fakeClient{
@@ -54,7 +54,7 @@ func TestPublisher(t *testing.T) {
 func TestBadFactory(t *testing.T) {
 	logger := log.NewNopLogger()
 
-	factory := func(string) (endpoint.Endpoint, loadbalancer.Closer, error) {
+	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
 		return nil, nil, errors.New("kaboom")
 	}
 
