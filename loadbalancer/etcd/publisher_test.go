@@ -2,13 +2,13 @@ package etcd_test
 
 import (
 	"errors"
+	"io"
 	"testing"
 
 	stdetcd "github.com/coreos/go-etcd/etcd"
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/loadbalancer"
 	kitetcd "github.com/go-kit/kit/loadbalancer/etcd"
 	"github.com/go-kit/kit/log"
 )
@@ -32,8 +32,8 @@ func TestPublisher(t *testing.T) {
 		e      = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
 	)
 
-	factory := func(instance string) (endpoint.Endpoint, error) {
-		return e, nil
+	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
+		return e, nil, nil
 	}
 
 	client := &fakeClient{
@@ -52,13 +52,10 @@ func TestPublisher(t *testing.T) {
 }
 
 func TestBadFactory(t *testing.T) {
-	var (
-		logger = log.NewNopLogger()
-		e      = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-	)
+	logger := log.NewNopLogger()
 
-	factory := func(instance string) (endpoint.Endpoint, error) {
-		return e, errors.New("_")
+	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
+		return nil, nil, errors.New("kaboom")
 	}
 
 	client := &fakeClient{
@@ -78,33 +75,6 @@ func TestBadFactory(t *testing.T) {
 
 	if want, have := 0, len(endpoints); want != have {
 		t.Errorf("want %q, have %q", want, have)
-	}
-}
-
-func TestPublisherStoppped(t *testing.T) {
-	var (
-		logger = log.NewNopLogger()
-		e      = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-	)
-
-	factory := func(instance string) (endpoint.Endpoint, error) {
-		return e, errors.New("_")
-	}
-
-	client := &fakeClient{
-		responses: map[string]*stdetcd.Response{"/foo": fakeResponse},
-	}
-
-	p, err := kitetcd.NewPublisher(client, "/foo", factory, logger)
-	if err != nil {
-		t.Fatalf("failed to create new publisher: %v", err)
-	}
-
-	p.Stop()
-
-	_, have := p.Endpoints()
-	if want := loadbalancer.ErrPublisherStopped; want != have {
-		t.Fatalf("want %v, have %v", want, have)
 	}
 }
 

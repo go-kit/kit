@@ -2,6 +2,7 @@ package static_test
 
 import (
 	"fmt"
+	"io"
 	"testing"
 
 	"golang.org/x/net/context"
@@ -19,11 +20,11 @@ func TestStatic(t *testing.T) {
 			"bar": func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 			"baz": func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 		}
-		factory = func(instance string) (endpoint.Endpoint, error) {
+		factory = func(instance string) (endpoint.Endpoint, io.Closer, error) {
 			if e, ok := endpoints[instance]; ok {
-				return e, nil
+				return e, nil, nil
 			}
-			return nil, fmt.Errorf("%s: not found", instance)
+			return nil, nil, fmt.Errorf("%s: not found", instance)
 		}
 	)
 	p := static.NewPublisher(instances, factory, log.NewNopLogger())

@@ -36,7 +36,9 @@ func TestRoundRobinDistribution(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		e(ctx, struct{}{})
+		if _, err := e(ctx, struct{}{}); err != nil {
+			t.Error(err)
+		}
 		if have := counts; !reflect.DeepEqual(want, have) {
 			t.Fatalf("%d: want %v, have %v", i, want, have)
 		}

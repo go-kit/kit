@@ -7,7 +7,7 @@ import (
 	"github.com/coreos/go-etcd/etcd"
 )
 
-// Client is a wrapper arround the etcd client
+// Client is a wrapper arround the etcd client.
 type Client interface {
 	// GetEntries will query the given prefix in etcd and returns a set of entries.
 	GetEntries(prefix string) ([]string, error)
@@ -43,7 +43,7 @@ func NewClient(machines []string, cert, key, caCert string) (Client, error) {
 	return &client{c}, nil
 }
 
-// GetEntries implements the EtcdClient interface.
+// GetEntries implements the etcd Client interface.
 func (c *client) GetEntries(key string) ([]string, error) {
 	resp, err := c.Get(key, false, true)
 	if err != nil {
@@ -57,7 +57,7 @@ func (c *client) GetEntries(key string) ([]string, error) {
 	return entries, nil
 }
 
-// WatchPrefix implements the EtcdClient interface.
+// WatchPrefix implements the etcd Client interface.
 func (c *client) WatchPrefix(prefix string, responseChan chan *etcd.Response) {
 	c.Watch(prefix, 0, true, responseChan, nil)
 }
