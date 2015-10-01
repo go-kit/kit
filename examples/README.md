@@ -483,7 +483,7 @@ type proxymw struct {
 
 ### Client-side endpoints
 
-We've got exactly the same endpoint we already know about, but we'll use it invoke, rather than serve, a request.
+We've got exactly the same endpoint we already know about, but we'll use it to invoke, rather than serve, a request.
 When used this way, we call it a _client_ endpoint.
 And to invoke the client endpoint, we just do some simple conversions.
 
