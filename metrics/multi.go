@@ -5,10 +5,7 @@ type multiCounter []Counter
 // NewMultiCounter returns a wrapper around multiple Counters.
 func NewMultiCounter(counters ...Counter) Counter {
 	c := make(multiCounter, 0, len(counters))
-	for _, counter := range counters {
-		c = append(c, counter)
-	}
-	return c
+	return append(c, counters...)
 }
 
 func (c multiCounter) With(f Field) Counter {
@@ -30,10 +27,7 @@ type multiGauge []Gauge
 // NewMultiGauge returns a wrapper around multiple Gauges.
 func NewMultiGauge(gauges ...Gauge) Gauge {
 	g := make(multiGauge, 0, len(gauges))
-	for _, gauge := range gauges {
-		g = append(g, gauge)
-	}
-	return g
+	return append(g, gauges...)
 }
 
 func (g multiGauge) With(f Field) Gauge {
@@ -61,10 +55,7 @@ type multiHistogram []Histogram
 // NewMultiHistogram returns a wrapper around multiple Histograms.
 func NewMultiHistogram(histograms ...Histogram) Histogram {
 	h := make(multiHistogram, 0, len(histograms))
-	for _, histogram := range histograms {
-		h = append(h, histogram)
-	}
-	return h
+	return append(h, histograms...)
 }
 
 func (h multiHistogram) With(f Field) Histogram {
