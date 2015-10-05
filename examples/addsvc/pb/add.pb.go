@@ -120,9 +120,9 @@ func RegisterAddServer(s *grpc.Server, srv AddServer) {
 	s.RegisterService(&_Add_serviceDesc, srv)
 }
 
-func _Add_Sum_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Add_Sum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(SumRequest)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(AddServer).Sum(ctx, in)
@@ -132,9 +132,9 @@ func _Add_Sum_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, bu
 	return out, nil
 }
 
-func _Add_Concat_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Add_Concat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(ConcatRequest)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(AddServer).Concat(ctx, in)
