@@ -95,7 +95,7 @@ func (a StdlibAdapter) Write(p []byte) (int, error) {
 const (
 	logRegexpDate = `(?P<date>[0-9]{4}/[0-9]{2}/[0-9]{2})?[ ]?`
 	logRegexpTime = `(?P<time>[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?)?[ ]?`
-	logRegexpFile = `(?P<file>[^:]+:[0-9]+)?`
+	logRegexpFile = `(?P<file>.+:[0-9]+)?`
 	logRegexpMsg  = `(: )?(?P<msg>.*)`
 )
 
