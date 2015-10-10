@@ -86,7 +86,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	request, err := s.dec(r)
 	if err != nil {
 		_ = s.logger.Log("err", err)
-		s.errorEncoder(w, badRequestError{err})
+		s.errorEncoder(w, BadRequestError{err})
 		return
 	}
 
@@ -110,11 +110,12 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func defaultErrorEncoder(w http.ResponseWriter, err error) {
 	switch err.(type) {
-	case badRequestError:
+	case BadRequestError:
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-type badRequestError struct{ error }
+// BadRequestError is an error in decoding the request.
+type BadRequestError struct{ error }
