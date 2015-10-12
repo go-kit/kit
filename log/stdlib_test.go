@@ -164,6 +164,36 @@ func TestStdlibAdapterSubexps(t *testing.T) {
 			"file": "C:/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
+		"2009/01/23 01:23:23.123123 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": map[string]string{
+			"date": "2009/01/23",
+			"time": "01:23:23.123123",
+			"file": "C:/a/b/c/d.go:23",
+			"msg":  ":.;<>_#{[]}\"\\",
+		},
+		"01:23:23.123123 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": map[string]string{
+			"date": "",
+			"time": "01:23:23.123123",
+			"file": "C:/a/b/c/d.go:23",
+			"msg":  ":.;<>_#{[]}\"\\",
+		},
+		"2009/01/23 01:23:23 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": map[string]string{
+			"date": "2009/01/23",
+			"time": "01:23:23",
+			"file": "C:/a/b/c/d.go:23",
+			"msg":  ":.;<>_#{[]}\"\\",
+		},
+		"2009/01/23 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": map[string]string{
+			"date": "2009/01/23",
+			"time": "",
+			"file": "C:/a/b/c/d.go:23",
+			"msg":  ":.;<>_#{[]}\"\\",
+		},
+		"C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": map[string]string{
+			"date": "",
+			"time": "",
+			"file": "C:/a/b/c/d.go:23",
+			"msg":  ":.;<>_#{[]}\"\\",
+		},
 	} {
 		haveMap := subexps([]byte(input))
 		for key, want := range wantMap {
