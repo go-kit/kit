@@ -511,7 +511,7 @@ import (
 
 func proxyingMiddleware(proxyURL string, ctx context.Context) ServiceMiddleware {
 	return func(next StringService) StringService {
-		return proxymw{ctx, makeUppercaseEndpoint(ctx, proxyURL), next}
+		return proxymw{ctx, next, makeUppercaseEndpoint(ctx, proxyURL)}
 	}
 }
 
