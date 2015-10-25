@@ -78,13 +78,14 @@ func (t *EndpointCache) Replace(instances []string) {
 	t.m = m
 }
 
-// Endpoints returns the current set of endpoints in undefined order.
-func (t *EndpointCache) Endpoints() []endpoint.Endpoint {
+// Endpoints returns the current set of endpoints in undefined order. Satisfies
+// Publisher interface.
+func (t *EndpointCache) Endpoints() ([]endpoint.Endpoint, error) {
 	t.mtx.RLock()
 	defer t.mtx.RUnlock()
 	a := make([]endpoint.Endpoint, 0, len(t.m))
 	for _, ec := range t.m {
 		a = append(a, ec.Endpoint)
 	}
-	return a
+	return a, nil
 }
