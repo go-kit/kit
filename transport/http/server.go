@@ -116,6 +116,3 @@ func defaultErrorEncoder(w http.ResponseWriter, err error) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
-
-// BadRequestError is an error in decoding the request.
-type BadRequestError struct{ error }
