@@ -118,3 +118,20 @@ func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) 
 	}()
 	return cancelfn, func() { stepch <- true }, response
 }
+
+type testBadRequestError struct {
+	code int
+}
+
+func (err testBadRequestError) Error() string {
+	return "Bad Request"
+}
+
+func TestBadRequestError(t *testing.T) {
+	inner := testBadRequestError{1234}
+	var outer error = httptransport.BadRequestError{inner}
+	err := outer.(httptransport.BadRequestError)
+	if want, have := inner, err.Err; want != have {
+		t.Errorf("want %#v, have %#v", want, have)
+	}
+}
