@@ -62,7 +62,7 @@ func (p *Publisher) loop() {
 
 // Endpoints implements the Publisher interface.
 func (p *Publisher) Endpoints() ([]endpoint.Endpoint, error) {
-	return p.cache.Endpoints(), nil
+	return p.cache.Endpoints()
 }
 
 // Stop terminates the Publisher.
