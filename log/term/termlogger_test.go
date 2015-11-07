@@ -15,6 +15,8 @@ import (
 func TestTerminalLogger(t *testing.T) {
 	var buf bytes.Buffer
 	logger := newTerminalLogger(t, &buf)
+	opts := term.NewLogOpts()
+	colorLogger := term.NewColorLogger(&buf, opts.NewLogger, opts.Color)
 
 	if err := logger.Log("hello", "world", "level", "info"); err != nil {
 		t.Fatal(err)
@@ -24,7 +26,7 @@ func TestTerminalLogger(t *testing.T) {
 	}
 
 	buf.Reset()
-	if err := logger.Log("a", 1, "level", "error", "err", errors.New("error")); err != nil {
+	if err := colorLogger.Log("a", 1, "level", "error", "err", errors.New("error")); err != nil {
 		t.Fatal(err)
 	}
 	if want, have := "\x1b[31;1m[EROR] []  a=1 err=error\n\x1b[39;49m", buf.String(); want != have {
@@ -32,7 +34,7 @@ func TestTerminalLogger(t *testing.T) {
 	}
 
 	buf.Reset()
-	if err := logger.Log("level", "crit", "std_map", map[int]int{1: 2}); err != nil {
+	if err := colorLogger.Log("level", "crit", "std_map", map[int]int{1: 2}); err != nil {
 		t.Fatal(err)
 	}
 	if want, have := "\x1b[41;1m[CRIT] []  std_map=\""+logfmt.ErrUnsupportedValueType.Error()+"\"\n\x1b[39;49m", buf.String(); want != have {

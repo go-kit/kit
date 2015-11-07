@@ -13,34 +13,35 @@ import (
 
 var _ = log.Logger((*terminalLogger)(nil))
 
-// NewTerminalLogger returns a log.Logger which prouces nice colored logs.
-// It uses ColorLogger for coloring the whole line based on "level".
+// NewTerminalLogger returns a log.Logger which formats its output as
+// [TIME] [LEVEL] MESAGE key=value key=value ...
+// (see github.com/inconshreveable/log15).
+//
+// The output is NOT colored, for that wrap it in a ColorLogger.
 //
 // The options can be nil, in this case the default options
-// (as returned by NewTermLogOpts) are used.
+// (as returned by NewLogOpts) are used.
 //
 // Example usage:
 //	logger := log.NewLogfmtLogger(os.Stderr)
 //	if term.IsTerminal(os.Stderr) {
 //		logger = term.NewTerminalLogger(os.Stderr, nil)
 //	}
-func NewTerminalLogger(w io.Writer, options *TermLogOpts) log.Logger {
-	var opts TermLogOpts
+func NewTerminalLogger(w io.Writer, options *LogOpts) log.Logger {
+	var opts LogOpts
 	if options == nil {
-		opts = *NewTermLogOpts()
+		opts = *NewLogOpts()
 	} else {
 		opts = *options
 	}
-	return NewColorLogger(
-		w,
-		func(w io.Writer) log.Logger {
-			return &terminalLogger{w: w, TermLogOpts: opts}
-		},
-		opts.Color,
-	)
+	return &terminalLogger{w: w, LogOpts: opts}
 }
 
-func (opts TermLogOpts) Color(keyvals ...interface{}) FgBgColor {
+// Color returns the color to be used printing this log record.
+// This function uses the level (the value where the key is opts.LevelKey and the value is one of opts.DebugValue ... opts.CritValue) to determine the color.
+//
+// For customization, the easiest is to copy this little code and change the colors.
+func (opts LogOpts) Color(keyvals ...interface{}) FgBgColor {
 	for i := 0; i < len(keyvals); i += 2 {
 		if asString(keyvals[i]) == opts.LevelKey {
 			switch asString(keyvals[i+1]) {
@@ -60,9 +61,33 @@ func (opts TermLogOpts) Color(keyvals ...interface{}) FgBgColor {
 	return FgBgColor{}
 }
 
+// NewLogger returns a new TerminaLogger - this is a convenience function
+// for calling opts.NewLogger(w) instead of NewTerminalLogger(w, opts).
+//
+// This can be used for example to ease wrapping with ColorLoger:
+//    NewColorLogger(w, opts.NewLogger, opts.Color)
+func (opts LogOpts) NewLogger(w io.Writer) log.Logger {
+	return &terminalLogger{w: w, LogOpts: opts}
+}
+
+// NewColorLogger is a convenience function for returning a log.Logger
+// as NewColorLogger(w, opts.NewLogger, opts.Color) does.
+//
+// The options can be nil, in this case the default options
+// (as returned by NewLogOpts) are used.
+//
+// Example usage:
+//	logger := log.NewLogfmtLogger(os.Stderr)
+//	if term.IsTerminal(os.Stderr) {
+//		logger = term.NewLogOpts().NewColorLogger(os.Stderr)
+//	}
+func (opts LogOpts) NewColorLogger(w io.Writer) log.Logger {
+	return NewColorLogger(w, opts.NewLogger, opts.Color)
+}
+
 type terminalLogger struct {
 	w io.Writer
-	TermLogOpts
+	LogOpts
 
 	buf bytes.Buffer
 	mu  sync.Mutex
@@ -118,7 +143,7 @@ func (l *terminalLogger) Log(keyvals ...interface{}) error {
 	l.buf.Reset()
 	fmt.Fprintf(&l.buf, "[%s] [%s] %s ", lvl, ts, msg)
 
-	// copied from gopkg.in/kit.v0/log/logfmt_logger.go
+	// copied from github.com/go-kit/kit/log/logfmt_logger.go
 	// ---8<---
 	b, err := logfmt.MarshalKeyvals(keyvals...)
 	if err != nil {
@@ -160,8 +185,8 @@ func asTimeString(v interface{}, timeFormat string) string {
 	}
 }
 
-// TermLogOpts contains the options for a terminalLogger.
-type TermLogOpts struct {
+// LogOpts contains the options for a terminalLogger.
+type LogOpts struct {
 	MsgKey     string
 	TsKey      string
 	LevelKey   string
@@ -174,9 +199,9 @@ type TermLogOpts struct {
 	CritValue  string
 }
 
-// NewTermLogOpts returns the default TermLogOpts.
-func NewTermLogOpts() *TermLogOpts {
-	return &TermLogOpts{
+// NewLogOpts returns the default LogOpts.
+func NewLogOpts() *LogOpts {
+	return &LogOpts{
 		TimeFormat: time.RFC3339,
 		MsgKey:     "msg",
 		TsKey:      "ts",
