@@ -81,7 +81,7 @@ Bindings exist for common backends, from [expvar][] to [statsd][] to
 [Prometheus][].
 
 [metrics]: https://github.com/go-kit/kit/tree/master/metrics
-[expvar]: http://golang.org/pkg/expvar
+[expvar]: https://golang.org/pkg/expvar/
 [statsd]: https://github.com/etsy/statsd
 [Prometheus]: http://prometheus.io
 
@@ -95,7 +95,7 @@ request tracing systems. (Currently, [Zipkin][] is supported; [Appdash][]
 support is planned.)
 
 [tracing]: https://github.com/go-kit/kit/tree/master/tracing
-[Zipkin]: https://github.com/twitter/zipkin
+[Zipkin]: https://github.com/openzipkin/zipkin
 [Appdash]: https://github.com/sourcegraph/appdash
 
 ### Service discovery and load balancing
@@ -130,7 +130,7 @@ platform for organizations of any size.
 In short, Go kit brings Go to the modern enterprise.
 
 For more details, see
- [the motivating blog post](http://peter.bourgon.org/go-kit) and
+ [the motivating blog post](http://peter.bourgon.org/go-kit/) and
  [the video of the talk](https://www.youtube.com/watch?v=iFR_7AKkJFU).
 See also the
  [Go kit talk at GopherCon 2015](https://www.youtube.com/watch?v=1AjaZi4QuGo).
@@ -189,7 +189,7 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 
 ### Service frameworks
 
-- [go-micro](https://github.com/asim/go-micro), a microservices client/server library ★
+- [go-micro](https://github.com/myodc/go-micro), a microservices client/server library ★
 - [gocircuit](https://github.com/gocircuit/circuit), dynamic cloud orchestration
 - [gotalk](https://github.com/rsms/gotalk), async peer communication protocol &amp; library
 - [h2](https://github.com/hailocab/h2), a microservices framework ★
@@ -204,15 +204,15 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 - [FogCreek/logging](https://github.com/FogCreek/logging), a tagged style of logging
 - [grpc/grpc-go](https://github.com/grpc/grpc-go), HTTP/2 based RPC
 - [inconshreveable/log15](https://github.com/inconshreveable/log15), simple, powerful logging for Go ★
-- [mailgun/vulcand](https://github.com/mailgun/vulcand), programmatic load balancer backed by etcd
-- [mattheath/phosphor](https://github.com/mattheath/phosphor), distributed system tracing
+- [mailgun/vulcand](https://github.com/vulcand/vulcand), programmatic load balancer backed by etcd
+- [mattheath/phosphor](https://github.com/mondough/phosphor), distributed system tracing
 - [pivotal-golang/lager](https://github.com/pivotal-golang/lager), an opinionated logging library
 - [rubyist/circuitbreaker](https://github.com/rubyist/circuitbreaker), circuit breaker library
 - [Sirupsen/logrus](https://github.com/Sirupsen/logrus), structured, pluggable logging for Go ★
 - [sourcegraph/appdash](https://github.com/sourcegraph/appdash), application tracing system based on Google's Dapper
 - [spacemonkeygo/monitor](https://github.com/spacemonkeygo/monitor), data collection, monitoring, instrumentation, and Zipkin client library
 - [streadway/handy](https://github.com/streadway/handy), net/http handler filters
-- [vitess/rpcplus](https://godoc.org/code.google.com/p/vitess/go/rpcplus), package rpc + context.Context
+- [vitess/rpcplus](https://godoc.org/github.com/youtube/vitess/go/rpcplus), package rpc + context.Context
 - [gdamore/mangos](https://github.com/gdamore/mangos), nanomsg implementation in pure Go
 
 ### Web frameworks
