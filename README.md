@@ -201,7 +201,7 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 - [armon/go-metrics](https://github.com/armon/go-metrics), library for exporting performance and runtime metrics to external metrics systems
 - [codahale/lunk](https://github.com/codahale/lunk), structured logging in the style of Google's Dapper or Twitter's Zipkin
 - [eapache/go-resiliency](https://github.com/eapache/go-resiliency), resiliency patterns
-- [FogCreek/logging](https://github.com/FogCreek/logging), a tagged style of logging
+- [sasbury/logging](https://github.com/sasbury/logging), a tagged style of logging
 - [grpc/grpc-go](https://github.com/grpc/grpc-go), HTTP/2 based RPC
 - [inconshreveable/log15](https://github.com/inconshreveable/log15), simple, powerful logging for Go ★
 - [mailgun/vulcand](https://github.com/vulcand/vulcand), programmatic load balancer backed by etcd
