@@ -13,9 +13,11 @@ Next, [download Thrift](https://thrift.apache.org/download) and [install the com
 On a Mac, you may be able to `brew install thrift`.
 
 Then, compile your service definition, from .thrift to .go.
+You'll probably want to specify the package_prefix option to the --gen go flag.
+See [THRIFT-3021](https://issues.apache.org/jira/browse/THRIFT-3021) for more details.
 
 ```
-thrift -r --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift add.thrift
+thrift -r --gen go:package_prefix=github.com/my-org/my-repo/thrift/gen-go/ add.thrift
 ```
 
 Finally, write a tiny binding from your service definition to the Thrift definition.
