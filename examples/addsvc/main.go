@@ -94,7 +94,7 @@ func main() {
 				zipkin.ScribeBatchInterval(*zipkinCollectorBatchInterval),
 				zipkin.ScribeLogger(zipkinLogger),
 			); err != nil {
-				_ = zipkinLogger.Log("err", err)
+				zipkinLogger.Log("err", err)
 				os.Exit(1)
 			}
 		}
@@ -120,7 +120,7 @@ func main() {
 	// Debug/instrumentation
 	go func() {
 		transportLogger := log.NewContext(logger).With("transport", "debug")
-		_ = transportLogger.Log("addr", *debugAddr)
+		transportLogger.Log("addr", *debugAddr)
 		errc <- http.ListenAndServe(*debugAddr, nil) // DefaultServeMux
 	}()
 
@@ -159,7 +159,7 @@ func main() {
 			httptransport.ServerErrorLogger(transportLogger),
 		))
 
-		_ = transportLogger.Log("addr", *httpAddr)
+		transportLogger.Log("addr", *httpAddr)
 		errc <- http.ListenAndServe(*httpAddr, mux)
 	}()
 
@@ -173,7 +173,7 @@ func main() {
 		}
 		s := grpc.NewServer() // uses its own, internal context
 		pb.RegisterAddServer(s, grpcBinding{svc})
-		_ = transportLogger.Log("addr", *grpcAddr)
+		transportLogger.Log("addr", *grpcAddr)
 		errc <- s.Serve(ln)
 	}()
 
@@ -186,7 +186,7 @@ func main() {
 			return
 		}
 		s.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
-		_ = transportLogger.Log("addr", *netrpcAddr)
+		transportLogger.Log("addr", *netrpcAddr)
 		errc <- http.ListenAndServe(*netrpcAddr, s)
 	}()
 
@@ -221,7 +221,7 @@ func main() {
 			return
 		}
 		transportLogger := log.NewContext(logger).With("transport", "net/rpc")
-		_ = transportLogger.Log("addr", *thriftAddr)
+		transportLogger.Log("addr", *thriftAddr)
 		errc <- thrift.NewTSimpleServer4(
 			thriftadd.NewAddServiceProcessor(thriftBinding{svc}),
 			transport,
@@ -230,7 +230,7 @@ func main() {
 		).Serve()
 	}()
 
-	_ = logger.Log("fatal", <-errc)
+	logger.Log("fatal", <-errc)
 }
 
 func interrupt() error {
@@ -247,7 +247,7 @@ func (c loggingCollector) Collect(s *zipkin.Span) error {
 	for i, a := range annotations {
 		values[i] = a.Value
 	}
-	_ = c.Logger.Log(
+	c.Logger.Log(
 		"trace_id", s.TraceID(),
 		"span_id", s.SpanID(),
 		"parent_span_id", s.ParentSpanID(),

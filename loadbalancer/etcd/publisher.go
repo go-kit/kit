@@ -31,9 +31,9 @@ func NewPublisher(c Client, prefix string, f loadbalancer.Factory, logger log.Lo
 
 	instances, err := p.client.GetEntries(p.prefix)
 	if err == nil {
-		logger.Log(p.prefix, len(instances))
+		logger.Log("prefix", p.prefix, "instances", len(instances))
 	} else {
-		logger.Log("msg", "failed to retrieve entries", "err", err)
+		logger.Log("prefix", p.prefix, "err", err)
 	}
 	p.cache.Replace(instances)
 

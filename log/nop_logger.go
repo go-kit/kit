@@ -2,6 +2,7 @@ package log
 
 type nopLogger struct{}
 
-func (nopLogger) Log(...interface{}) error { return nil }
-
+// NewNopLogger returns a logger that doesn't do anything.
 func NewNopLogger() Logger { return nopLogger{} }
+
+func (nopLogger) Log(...interface{}) error { return nil }

@@ -17,7 +17,7 @@ func NewPublisher(instances []string, factory loadbalancer.Factory, logger log.L
 	for _, instance := range instances {
 		e, _, err := factory(instance) // never close
 		if err != nil {
-			_ = logger.Log("instance", instance, "err", err)
+			logger.Log("instance", instance, "err", err)
 			continue
 		}
 		endpoints = append(endpoints, e)

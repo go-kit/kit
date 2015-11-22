@@ -129,7 +129,7 @@ func (err testBadRequestError) Error() string {
 
 func TestBadRequestError(t *testing.T) {
 	inner := testBadRequestError{1234}
-	var outer error = httptransport.BadRequestError{inner}
+	var outer error = httptransport.BadRequestError{Err: inner}
 	err := outer.(httptransport.BadRequestError)
 	if want, have := inner, err.Err; want != have {
 		t.Errorf("want %#v, have %#v", want, have)
