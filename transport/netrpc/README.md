@@ -5,7 +5,7 @@ It's a simple and fast transport that's appropriate when all of your services ar
 
 Using net/rpc with Go kit is very simple.
 Just write a simple binding from your service definition to the net/rpc definition.
-[See netrpc_binding.go](https://github.com/go-kit/kit/blob/ec8b02591ee873433565a1ae9d317353412d1d27/examples/addsvc/netrpc_binding.go) for an example.
+See [netrpc_binding.go](https://github.com/go-kit/kit/blob/ec8b02591ee873433565a1ae9d317353412d1d27/examples/addsvc/netrpc_binding.go) for an example.
 
 That's it!
 The net/rpc binding can be registered to a name, and bound to an HTTP handler, the same as any other net/rpc endpoint.

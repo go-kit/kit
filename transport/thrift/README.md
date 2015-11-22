@@ -1,6 +1,6 @@
 # Thrift
 
-[Thrift](https://thrift.apache.org/) is a popular IDL and transport package from Apache, popularized by Facebook.
+[Thrift](https://thrift.apache.org/) is a large IDL and transport package from Apache, popularized by Facebook.
 Thrift is well-supported in Go kit, for organizations that already have significant Thrift investment.
 And using Thrift with Go kit is very simple.
 
