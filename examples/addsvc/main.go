@@ -20,9 +20,9 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/go-kit/kit/endpoint"
-	thriftadd "github.com/go-kit/kit/examples/addsvc/_thrift/gen-go/add"
 	"github.com/go-kit/kit/examples/addsvc/pb"
 	"github.com/go-kit/kit/examples/addsvc/server"
+	thriftadd "github.com/go-kit/kit/examples/addsvc/thrift/gen-go/add"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/expvar"
