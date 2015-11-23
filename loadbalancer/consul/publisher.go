@@ -2,6 +2,7 @@ package consul
 
 import (
 	"fmt"
+	"strings"
 
 	consul "github.com/hashicorp/consul/api"
 
@@ -34,8 +35,6 @@ func NewPublisher(
 	service string,
 	tags ...string,
 ) (*Publisher, error) {
-	logger = log.NewContext(logger).With("component", "Consul Publisher")
-
 	p := &Publisher{
 		cache:   loadbalancer.NewEndpointCache(factory, logger),
 		client:  client,
@@ -45,12 +44,13 @@ func NewPublisher(
 		quitc:   make(chan struct{}),
 	}
 
-	is, index, err := p.getInstances(defaultIndex)
-	if err != nil {
-		return nil, err
+	instances, index, err := p.getInstances(defaultIndex)
+	if err == nil {
+		logger.Log("service", service, "tags", strings.Join(tags, ", "), "instances", len(instances))
+	} else {
+		logger.Log("service", service, "tags", strings.Join(tags, ", "), "err", err)
 	}
-
-	p.cache.Replace(is)
+	p.cache.Replace(instances)
 
 	go p.loop(index)
 
@@ -75,15 +75,14 @@ func (p *Publisher) loop(lastIndex uint64) {
 
 	for {
 		go func() {
-			is, index, err := p.getInstances(lastIndex)
+			instances, index, err := p.getInstances(lastIndex)
 			if err != nil {
 				errc <- err
 				return
 			}
-
 			resc <- response{
 				index:     index,
-				instances: is,
+				instances: instances,
 			}
 		}()
 
@@ -159,7 +158,7 @@ ENTRIES:
 }
 
 func makeInstances(entries []*consul.ServiceEntry) []string {
-	is := make([]string, len(entries))
+	instances := make([]string, len(entries))
 
 	for i, entry := range entries {
 		addr := entry.Node.Address
@@ -168,8 +167,8 @@ func makeInstances(entries []*consul.ServiceEntry) []string {
 			addr = entry.Service.Address
 		}
 
-		is[i] = fmt.Sprintf("%s:%d", addr, entry.Service.Port)
+		instances[i] = fmt.Sprintf("%s:%d", addr, entry.Service.Port)
 	}
 
-	return is
+	return instances
 }

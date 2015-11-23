@@ -85,14 +85,14 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	request, err := s.dec(r)
 	if err != nil {
-		_ = s.logger.Log("err", err)
+		s.logger.Log("err", err)
 		s.errorEncoder(w, BadRequestError{err})
 		return
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
-		_ = s.logger.Log("err", err)
+		s.logger.Log("err", err)
 		s.errorEncoder(w, err)
 		return
 	}
@@ -102,7 +102,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.enc(w, response); err != nil {
-		_ = s.logger.Log("err", err)
+		s.logger.Log("err", err)
 		s.errorEncoder(w, err)
 		return
 	}

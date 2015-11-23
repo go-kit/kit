@@ -70,6 +70,6 @@ func main() {
 	http.Handle("/uppercase", uppercaseHandler)
 	http.Handle("/count", countHandler)
 	http.Handle("/metrics", stdprometheus.Handler())
-	_ = logger.Log("msg", "HTTP", "addr", *listen)
-	_ = logger.Log("err", http.ListenAndServe(*listen, nil))
+	logger.Log("msg", "HTTP", "addr", *listen)
+	logger.Log("err", http.ListenAndServe(*listen, nil))
 }

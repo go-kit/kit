@@ -35,10 +35,10 @@ func NewPublisher(name string, ttl time.Duration, factory loadbalancer.Factory, 
 	}
 
 	instances, err := p.resolve()
-	if err != nil {
-		logger.Log(name, len(instances))
+	if err == nil {
+		logger.Log("name", name, "instances", len(instances))
 	} else {
-		logger.Log(name, err)
+		logger.Log("name", name, "err", err)
 	}
 	p.cache.Replace(instances)
 

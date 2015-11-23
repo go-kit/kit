@@ -23,11 +23,11 @@ import (
 
 func proxyingMiddleware(proxyList string, ctx context.Context, logger log.Logger) ServiceMiddleware {
 	if proxyList == "" {
-		_ = logger.Log("proxy_to", "none")
+		logger.Log("proxy_to", "none")
 		return func(next StringService) StringService { return next }
 	}
 	proxies := split(proxyList)
-	_ = logger.Log("proxy_to", fmt.Sprint(proxies))
+	logger.Log("proxy_to", fmt.Sprint(proxies))
 
 	return func(next StringService) StringService {
 		var (

@@ -55,7 +55,7 @@ func main() {
 	case "grpc":
 		cc, err := grpc.Dial(*grpcAddr)
 		if err != nil {
-			_ = logger.Log("err", err)
+			logger.Log("err", err)
 			os.Exit(1)
 		}
 		defer cc.Close()
@@ -68,7 +68,7 @@ func main() {
 		}
 		baseurl, err := url.Parse(rawurl)
 		if err != nil {
-			_ = logger.Log("err", err)
+			logger.Log("err", err)
 			os.Exit(1)
 		}
 		svc = httpjsonclient.New(root, baseurl, logger, nil)
@@ -76,7 +76,7 @@ func main() {
 	case "netrpc":
 		cli, err := rpc.DialHTTP("tcp", *netrpcAddr)
 		if err != nil {
-			_ = logger.Log("err", err)
+			logger.Log("err", err)
 			os.Exit(1)
 		}
 		defer cli.Close()
@@ -94,7 +94,7 @@ func main() {
 		case "binary", "":
 			protocolFactory = thrift.NewTBinaryProtocolFactoryDefault()
 		default:
-			_ = logger.Log("protocol", *thriftProtocol, "err", "invalid protocol")
+			logger.Log("protocol", *thriftProtocol, "err", "invalid protocol")
 			os.Exit(1)
 		}
 		var transportFactory thrift.TTransportFactory
@@ -108,20 +108,20 @@ func main() {
 		}
 		transportSocket, err := thrift.NewTSocket(*thriftAddr)
 		if err != nil {
-			_ = logger.Log("during", "thrift.NewTSocket", "err", err)
+			logger.Log("during", "thrift.NewTSocket", "err", err)
 			os.Exit(1)
 		}
 		trans := transportFactory.GetTransport(transportSocket)
 		defer trans.Close()
 		if err := trans.Open(); err != nil {
-			_ = logger.Log("during", "thrift transport.Open", "err", err)
+			logger.Log("during", "thrift transport.Open", "err", err)
 			os.Exit(1)
 		}
 		cli := thriftadd.NewAddServiceClientFactory(trans, protocolFactory)
 		svc = thriftclient.New(cli, logger)
 
 	default:
-		_ = logger.Log("err", "invalid transport")
+		logger.Log("err", "invalid transport")
 		os.Exit(1)
 	}
 
@@ -131,15 +131,15 @@ func main() {
 		a, _ := strconv.Atoi(s1)
 		b, _ := strconv.Atoi(s2)
 		v := svc.Sum(a, b)
-		_ = logger.Log("method", "sum", "a", a, "b", b, "v", v, "took", time.Since(begin))
+		logger.Log("method", "sum", "a", a, "b", b, "v", v, "took", time.Since(begin))
 
 	case "concat":
 		a, b := s1, s2
 		v := svc.Concat(a, b)
-		_ = logger.Log("method", "concat", "a", a, "b", b, "v", v, "took", time.Since(begin))
+		logger.Log("method", "concat", "a", a, "b", b, "v", v, "took", time.Since(begin))
 
 	default:
-		_ = logger.Log("err", "invalid method "+method)
+		logger.Log("err", "invalid method "+method)
 		os.Exit(1)
 	}
 }
