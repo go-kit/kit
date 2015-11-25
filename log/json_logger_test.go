@@ -73,6 +73,64 @@ func TestJSONLoggerNilErrorValue(t *testing.T) {
 	}
 }
 
+// aller implements json.Marshaler, encoding.TextMarshaler, and fmt.Stringer.
+type aller struct{}
+
+func (aller) MarshalJSON() ([]byte, error) {
+	return []byte("\"json\""), nil
+}
+
+func (aller) MarshalText() ([]byte, error) {
+	return []byte("text"), nil
+}
+
+func (aller) String() string {
+	return "string"
+}
+
+// textstringer implements encoding.TextMarshaler and fmt.Stringer.
+type textstringer struct{}
+
+func (textstringer) MarshalText() ([]byte, error) {
+	return []byte("text"), nil
+}
+
+func (textstringer) String() string {
+	return "string"
+}
+
+func TestJSONLoggerStringValue(t *testing.T) {
+	tests := []struct {
+		v        interface{}
+		expected string
+	}{
+		{
+			v:        aller{},
+			expected: `{"v":"json"}`,
+		},
+		{
+			v:        textstringer{},
+			expected: `{"v":"text"}`,
+		},
+		{
+			v:        stringer("string"),
+			expected: `{"v":"string"}`,
+		},
+	}
+
+	for _, test := range tests {
+		buf := &bytes.Buffer{}
+		logger := log.NewJSONLogger(buf)
+		if err := logger.Log("v", test.v); err != nil {
+			t.Fatal(err)
+		}
+
+		if want, have := test.expected+"\n", buf.String(); want != have {
+			t.Errorf("\nwant %#v\nhave %#v", want, have)
+		}
+	}
+}
+
 type stringer string
 
 func (s stringer) String() string {
