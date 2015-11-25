@@ -1,6 +1,7 @@
 package log
 
 import (
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -44,6 +45,19 @@ func merge(dst map[string]interface{}, k, v interface{}) {
 	if x, ok := v.(error); ok {
 		v = safeError(x)
 	}
+
+	// We want json.Marshaler and encoding.TextMarshaller to take priority over
+	// err.Error() and v.String(). But json.Marshall (called later) does that by
+	// default so we force a no-op if it's one of those 2 case.
+	switch x := v.(type) {
+	case json.Marshaler:
+	case encoding.TextMarshaler:
+	case error:
+		v = safeError(x)
+	case fmt.Stringer:
+		v = safeString(x)
+	}
+
 	dst[key] = v
 }
 
