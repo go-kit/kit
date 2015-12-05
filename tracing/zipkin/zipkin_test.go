@@ -209,3 +209,7 @@ func (c *countingCollector) Collect(s *zipkin.Span) error {
 	}
 	return nil
 }
+
+func (c *countingCollector) Close() error {
+	return nil
+}
