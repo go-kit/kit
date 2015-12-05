@@ -7,7 +7,6 @@ go:
 
 before_install:
   - wget http://archive.apache.org/dist/zookeeper/zookeeper-3.3.3/zookeeper-3.3.3.tar.gz
-  - tar -zxvf zookeeper*tar.gz
 
 before_script:
-  - ln -s zookeeper-3.3.3.tar.gz loadbalancer/zk/
+  - tar -C loadbalancer/zk -xzf zookeeper*tar.gz
