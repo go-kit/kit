@@ -62,29 +62,29 @@ func (l Levels) With(keyvals ...interface{}) Levels {
 	}
 }
 
-// Debug logs a debug event along with keyvals.
-func (l Levels) Debug(keyvals ...interface{}) error {
-	return l.ctx.WithPrefix(l.levelKey, l.debugValue).Log(keyvals...)
+// Debug returns a debug level logger.
+func (l Levels) Debug(keyvals ...interface{}) log.Logger {
+	return l.ctx.WithPrefix(l.levelKey, l.debugValue)
 }
 
-// Info logs an info event along with keyvals.
-func (l Levels) Info(keyvals ...interface{}) error {
-	return l.ctx.WithPrefix(l.levelKey, l.infoValue).Log(keyvals...)
+// Info returns an info level logger.
+func (l Levels) Info(keyvals ...interface{}) log.Logger {
+	return l.ctx.WithPrefix(l.levelKey, l.infoValue)
 }
 
-// Warn logs a warn event along with keyvals.
-func (l Levels) Warn(keyvals ...interface{}) error {
-	return l.ctx.WithPrefix(l.levelKey, l.warnValue).Log(keyvals...)
+// Warn returns a warning level logger.
+func (l Levels) Warn(keyvals ...interface{}) log.Logger {
+	return l.ctx.WithPrefix(l.levelKey, l.warnValue)
 }
 
-// Error logs an error event along with keyvals.
-func (l Levels) Error(keyvals ...interface{}) error {
-	return l.ctx.WithPrefix(l.levelKey, l.errorValue).Log(keyvals...)
+// Error returns an error level logger.
+func (l Levels) Error(keyvals ...interface{}) log.Logger {
+	return l.ctx.WithPrefix(l.levelKey, l.errorValue)
 }
 
-// Crit logs a crit event along with keyvals.
-func (l Levels) Crit(keyvals ...interface{}) error {
-	return l.ctx.WithPrefix(l.levelKey, l.critValue).Log(keyvals...)
+// Crit returns a critical level logger.
+func (l Levels) Crit(keyvals ...interface{}) log.Logger {
+	return l.ctx.WithPrefix(l.levelKey, l.critValue)
 }
 
 // Option sets a parameter for leveled loggers.
