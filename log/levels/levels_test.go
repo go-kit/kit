@@ -13,26 +13,26 @@ func TestDefaultLevels(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := levels.New(log.NewLogfmtLogger(&buf))
 
-	logger.Debug().Log("msg", "résumé") // of course you'd want to do this
-	if want, have := "level=debug msg=résumé\n", buf.String(); want != have {
+	logger.Debug("key", "val").Log("msg", "résumé") // of course you'd want to do this
+	if want, have := "level=debug key=val msg=résumé\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 
 	buf.Reset()
-	logger.Info().Log("msg", "Åhus")
-	if want, have := "level=info msg=Åhus\n", buf.String(); want != have {
+	logger.Info("key", "val").Log("msg", "Åhus")
+	if want, have := "level=info key=val msg=Åhus\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 
 	buf.Reset()
-	logger.Error().Log("msg", "© violation")
-	if want, have := "level=error msg=\"© violation\"\n", buf.String(); want != have {
+	logger.Error("key", "val").Log("msg", "© violation")
+	if want, have := "level=error key=val msg=\"© violation\"\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 
 	buf.Reset()
-	logger.Crit().Log("msg", "	")
-	if want, have := "level=crit msg=\"\\t\"\n", buf.String(); want != have {
+	logger.Crit("key", "val").Log("msg", "	")
+	if want, have := "level=crit key=val msg=\"\\t\"\n", buf.String(); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 }

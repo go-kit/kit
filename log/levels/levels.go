@@ -64,27 +64,27 @@ func (l Levels) With(keyvals ...interface{}) Levels {
 
 // Debug returns a debug level logger.
 func (l Levels) Debug(keyvals ...interface{}) log.Logger {
-	return l.ctx.WithPrefix(l.levelKey, l.debugValue)
+	return l.ctx.WithPrefix(l.levelKey, l.debugValue).With(keyvals...)
 }
 
 // Info returns an info level logger.
 func (l Levels) Info(keyvals ...interface{}) log.Logger {
-	return l.ctx.WithPrefix(l.levelKey, l.infoValue)
+	return l.ctx.WithPrefix(l.levelKey, l.infoValue).With(keyvals...)
 }
 
 // Warn returns a warning level logger.
 func (l Levels) Warn(keyvals ...interface{}) log.Logger {
-	return l.ctx.WithPrefix(l.levelKey, l.warnValue)
+	return l.ctx.WithPrefix(l.levelKey, l.warnValue).With(keyvals...)
 }
 
 // Error returns an error level logger.
 func (l Levels) Error(keyvals ...interface{}) log.Logger {
-	return l.ctx.WithPrefix(l.levelKey, l.errorValue)
+	return l.ctx.WithPrefix(l.levelKey, l.errorValue).With(keyvals...)
 }
 
 // Crit returns a critical level logger.
 func (l Levels) Crit(keyvals ...interface{}) log.Logger {
-	return l.ctx.WithPrefix(l.levelKey, l.critValue)
+	return l.ctx.WithPrefix(l.levelKey, l.critValue).With(keyvals...)
 }
 
 // Option sets a parameter for leveled loggers.
