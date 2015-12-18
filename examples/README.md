@@ -220,7 +220,7 @@ So, we construct our logger in our `func main`, and pass it to components that n
 We never use a globally-scoped logger.
 
 We could pass a logger directly into our stringService implementation, but there's a better way.
-Let's use a **middleware**, also known as decorator.
+Let's use a **middleware**, also known as a decorator.
 A middleware is a function that takes an endpoint and returns an endpoint.
 
 ```go
