@@ -15,12 +15,12 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	thriftadd "github.com/go-kit/kit/examples/addsvc/_thrift/gen-go/add"
 	grpcclient "github.com/go-kit/kit/examples/addsvc/client/grpc"
 	httpjsonclient "github.com/go-kit/kit/examples/addsvc/client/httpjson"
 	netrpcclient "github.com/go-kit/kit/examples/addsvc/client/netrpc"
 	thriftclient "github.com/go-kit/kit/examples/addsvc/client/thrift"
 	"github.com/go-kit/kit/examples/addsvc/server"
+	thriftadd "github.com/go-kit/kit/examples/addsvc/thrift/gen-go/add"
 	"github.com/go-kit/kit/log"
 )
 

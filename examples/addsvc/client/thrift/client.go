@@ -1,8 +1,8 @@
 package thrift
 
 import (
-	thriftadd "github.com/go-kit/kit/examples/addsvc/_thrift/gen-go/add"
 	"github.com/go-kit/kit/examples/addsvc/server"
+	thriftadd "github.com/go-kit/kit/examples/addsvc/thrift/gen-go/add"
 	"github.com/go-kit/kit/log"
 )
 
