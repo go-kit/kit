@@ -1,6 +1,7 @@
 package http_test
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -12,10 +13,20 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
+type TestResponse struct {
+	Body   io.ReadCloser
+	String string
+}
+
 func TestHTTPClient(t *testing.T) {
 	var (
-		encode    = func(*http.Request, interface{}) error { return nil }
-		decode    = func(*http.Response) (interface{}, error) { return struct{}{}, nil }
+		testbody = "testbody"
+		encode   = func(*http.Request, interface{}) error { return nil }
+		decode   = func(r *http.Response) (interface{}, error) {
+			buffer := make([]byte, len(testbody))
+			r.Body.Read(buffer)
+			return TestResponse{r.Body, string(buffer)}, nil
+		}
 		headers   = make(chan string, 1)
 		headerKey = "X-Foo"
 		headerVal = "abcde"
@@ -24,6 +35,7 @@ func TestHTTPClient(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headers <- r.Header.Get(headerKey)
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(testbody))
 	}))
 
 	client := httptransport.NewClient(
@@ -34,7 +46,7 @@ func TestHTTPClient(t *testing.T) {
 		httptransport.SetClientBefore(httptransport.SetRequestHeader(headerKey, headerVal)),
 	)
 
-	_, err := client.Endpoint()(context.Background(), struct{}{})
+	res, err := client.Endpoint()(context.Background(), struct{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +57,71 @@ func TestHTTPClient(t *testing.T) {
 	case <-time.After(time.Millisecond):
 		t.Fatalf("timeout waiting for %s", headerKey)
 	}
+	// Check that Request Header was successfully received
 	if want := headerVal; want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+
+	// Check that the response was successfully decoded
+	response, ok := res.(TestResponse)
+	if !ok {
+		t.Fatal("response should be TestResponse")
+	}
+	if want, have := testbody, response.String; want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+
+	// Check that response body was closed
+	b := make([]byte, 1)
+	_, err = response.Body.Read(b)
+	if err == nil {
+		t.Fatal("wanted error, got none")
+	}
+	if doNotWant, have := io.EOF, err; doNotWant == have {
+		t.Errorf("do not want %q, have %q", doNotWant, have)
+	}
+}
+
+func TestHTTPClientBufferedStream(t *testing.T) {
+	var (
+		testbody = "testbody"
+		encode   = func(*http.Request, interface{}) error { return nil }
+		decode   = func(r *http.Response) (interface{}, error) {
+			return TestResponse{r.Body, ""}, nil
+		}
+	)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(testbody))
+	}))
+
+	client := httptransport.NewClient(
+		"GET",
+		mustParse(server.URL),
+		encode,
+		decode,
+		httptransport.SetBufferedStream(true),
+	)
+
+	res, err := client.Endpoint()(context.Background(), struct{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the response was successfully decoded
+	response, ok := res.(TestResponse)
+	if !ok {
+		t.Fatal("response should be TestResponse")
+	}
+
+	// Check that response body was NOT closed
+	b := make([]byte, len(testbody))
+	_, err = response.Body.Read(b)
+	if want, have := io.EOF, err; have != want {
+		t.Fatal("want %q, have %q", want, have)
+	}
+	if want, have := testbody, string(b); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
 }

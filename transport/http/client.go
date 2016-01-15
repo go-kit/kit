@@ -13,23 +13,25 @@ import (
 
 // Client wraps a URL and provides a method that implements endpoint.Endpoint.
 type Client struct {
-	client *http.Client
-	method string
-	tgt    *url.URL
-	enc    EncodeRequestFunc
-	dec    DecodeResponseFunc
-	before []RequestFunc
+	client         *http.Client
+	method         string
+	tgt            *url.URL
+	enc            EncodeRequestFunc
+	dec            DecodeResponseFunc
+	before         []RequestFunc
+	bufferedStream bool
 }
 
 // NewClient returns a
 func NewClient(method string, tgt *url.URL, enc EncodeRequestFunc, dec DecodeResponseFunc, options ...ClientOption) *Client {
 	c := &Client{
-		client: http.DefaultClient,
-		method: method,
-		tgt:    tgt,
-		enc:    enc,
-		dec:    dec,
-		before: []RequestFunc{},
+		client:         http.DefaultClient,
+		method:         method,
+		tgt:            tgt,
+		enc:            enc,
+		dec:            dec,
+		before:         []RequestFunc{},
+		bufferedStream: false,
 	}
 	for _, option := range options {
 		option(c)
@@ -50,6 +52,12 @@ func SetClient(client *http.Client) ClientOption {
 // request before it's invoked.
 func SetClientBefore(before ...RequestFunc) ClientOption {
 	return func(c *Client) { c.before = before }
+}
+
+// SetBufferedStream sets whether the Response.Body is left open, allowing it
+// to be read from later. Useful for transporting a file as a buffered stream.
+func SetBufferedStream(buffered bool) ClientOption {
+	return func(c *Client) { c.bufferedStream = buffered }
 }
 
 // Endpoint returns a usable endpoint that will invoke the RPC specified by
@@ -76,7 +84,9 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		if err != nil {
 			return nil, fmt.Errorf("Do: %v", err)
 		}
-		defer func() { _ = resp.Body.Close() }()
+		if !c.bufferedStream {
+			defer resp.Body.Close()
+		}
 
 		response, err := c.dec(resp)
 		if err != nil {
