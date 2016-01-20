@@ -59,8 +59,10 @@ func TestKafkaErrors(t *testing.T) {
 
 	errs := make(chan []interface{}, len(spans))
 	lg := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {
-		if len(keyvals) > 0 && keyvals[0] == "failed to produce message" {
-			errs <- keyvals
+		for i := 0; i < len(keyvals); i += 2 {
+			if keyvals[i] == "result" && keyvals[i+1] == "failed to produce msg" {
+				errs <- keyvals
+			}
 		}
 		return nil
 	}))

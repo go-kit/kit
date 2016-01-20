@@ -56,7 +56,7 @@ func (c *KafkaCollector) loop() {
 	for {
 		select {
 		case pe := <-c.producer.Errors():
-			c.logger.Log("failed to produce message", "msg", pe.Msg, "err", pe.Err)
+			c.logger.Log("msg", pe.Msg, "err", pe.Err, "result", "failed to produce msg")
 		}
 	}
 }
