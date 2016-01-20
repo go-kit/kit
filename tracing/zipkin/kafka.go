@@ -49,11 +49,11 @@ func NewKafkaCollector(addrs []string, options ...KafkaOption) (Collector, error
 		c.logger = log.NewNopLogger()
 	}
 
-	go c.loop()
+	go c.logErrors()
 	return c, nil
 }
 
-func (c *KafkaCollector) loop() {
+func (c *KafkaCollector) logErrors() {
 	for pe := range c.producer.Errors() {
 		c.logger.Log("msg", pe.Msg, "err", pe.Err, "result", "failed to produce msg")
 	}
