@@ -25,7 +25,7 @@ func KafkaLogger(logger log.Logger) KafkaOption {
 	return func(k *KafkaCollector) { k.logger = logger }
 }
 
-// KafkaProducer sets the producer used to produce to kafka.
+// KafkaProducer sets the producer used to produce to Kafka.
 func KafkaProducer(p sarama.AsyncProducer) KafkaOption {
 	return func(c *KafkaCollector) { c.producer = p }
 }
