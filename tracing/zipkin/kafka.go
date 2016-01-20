@@ -54,11 +54,8 @@ func NewKafkaCollector(addrs []string, options ...KafkaOption) (Collector, error
 }
 
 func (c *KafkaCollector) loop() {
-	for {
-		select {
-		case pe := <-c.producer.Errors():
-			c.logger.Log("msg", pe.Msg, "err", pe.Err, "result", "failed to produce msg")
-		}
+	for pe := range c.producer.Errors() {
+		c.logger.Log("msg", pe.Msg, "err", pe.Err, "result", "failed to produce msg")
 	}
 }
 
