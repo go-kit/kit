@@ -2,13 +2,15 @@ package zipkin_test
 
 import (
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/apache/thrift/lib/go/thrift"
+	"gopkg.in/Shopify/sarama.v1"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/zipkin"
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
-	"gopkg.in/Shopify/sarama.v1"
-	"testing"
-	"time"
 )
 
 type fakeProducer struct {

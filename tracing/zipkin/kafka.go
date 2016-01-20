@@ -2,8 +2,9 @@ package zipkin
 
 import (
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/go-kit/kit/log"
 	"gopkg.in/Shopify/sarama.v1"
+
+	"github.com/go-kit/kit/log"
 )
 
 var KafkaTopic = "zipkin"
