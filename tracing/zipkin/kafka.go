@@ -69,6 +69,10 @@ func (c *KafkaCollector) Collect(s *Span) error {
 	return nil
 }
 
+func (c *KafkaCollector) Close() error {
+	return c.producer.Close()
+}
+
 func byteSerialize(s *Span) []byte {
 	t := thrift.NewTMemoryBuffer()
 	p := thrift.NewTBinaryProtocolTransport(t)

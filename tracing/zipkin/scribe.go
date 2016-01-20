@@ -69,6 +69,11 @@ func (c *ScribeCollector) Collect(s *Span) error {
 	return nil // accepted
 }
 
+func (c *ScribeCollector) Close() error {
+	// TODO Close the underlying transport here?
+	return nil
+}
+
 func (c *ScribeCollector) loop() {
 	tickc := time.Tick(c.batchInterval / 10)
 

@@ -13,17 +13,33 @@ import (
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
 )
 
-type fakeProducer struct {
-	in    chan *sarama.ProducerMessage
-	err   chan *sarama.ProducerError
-	kdown bool
+type stubProducer struct {
+	in     chan *sarama.ProducerMessage
+	err    chan *sarama.ProducerError
+	kdown  bool
+	closed bool
 }
 
-func (p *fakeProducer) AsyncClose()                               {}
-func (p *fakeProducer) Close() error                              { return nil }
-func (p *fakeProducer) Input() chan<- *sarama.ProducerMessage     { return p.in }
-func (p *fakeProducer) Successes() <-chan *sarama.ProducerMessage { return nil }
-func (p *fakeProducer) Errors() <-chan *sarama.ProducerError      { return p.err }
+func (p *stubProducer) AsyncClose() {}
+func (p *stubProducer) Close() error {
+	if p.kdown {
+		return errors.New("Kafka is down")
+	}
+	p.closed = true
+	return nil
+}
+func (p *stubProducer) Input() chan<- *sarama.ProducerMessage     { return p.in }
+func (p *stubProducer) Successes() <-chan *sarama.ProducerMessage { return nil }
+func (p *stubProducer) Errors() <-chan *sarama.ProducerError      { return p.err }
+
+func newStubProducer(kdown bool) *stubProducer {
+	return &stubProducer{
+		make(chan *sarama.ProducerMessage),
+		make(chan *sarama.ProducerError),
+		kdown,
+		false,
+	}
+}
 
 var spans = []*zipkin.Span{
 	zipkin.NewSpan("203.0.113.10:1234", "service1", "avg", 123, 456, 0),
@@ -32,11 +48,7 @@ var spans = []*zipkin.Span{
 }
 
 func TestKafkaProduce(t *testing.T) {
-	p := &fakeProducer{
-		make(chan *sarama.ProducerMessage),
-		make(chan *sarama.ProducerError),
-		false,
-	}
+	p := newStubProducer(false)
 	c, err := zipkin.NewKafkaCollector(
 		[]string{"192.0.2.10:9092"}, zipkin.KafkaProducer(p),
 	)
@@ -52,13 +64,37 @@ func TestKafkaProduce(t *testing.T) {
 	}
 }
 
-func TestKafkaErrors(t *testing.T) {
-	p := &fakeProducer{
-		make(chan *sarama.ProducerMessage),
-		make(chan *sarama.ProducerError),
-		true,
+func TestKafkaClose(t *testing.T) {
+	p := newStubProducer(false)
+	c, err := zipkin.NewKafkaCollector(
+		[]string{"192.0.2.10:9092"}, zipkin.KafkaProducer(p),
+	)
+	if err != nil {
+		t.Fatal(err)
 	}
+	if err = c.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if !p.closed {
+		t.Fatal("producer not closed")
+	}
+}
 
+func TestKafkaCloseError(t *testing.T) {
+	p := newStubProducer(true)
+	c, err := zipkin.NewKafkaCollector(
+		[]string{"192.0.2.10:9092"}, zipkin.KafkaProducer(p),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Close(); err == nil {
+		t.Error("no error on close")
+	}
+}
+
+func TestKafkaErrors(t *testing.T) {
+	p := newStubProducer(true)
 	errs := make(chan []interface{}, len(spans))
 	lg := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {
 		for i := 0; i < len(keyvals); i += 2 {
@@ -89,7 +125,7 @@ func TestKafkaErrors(t *testing.T) {
 	}
 }
 
-func collectSpan(t *testing.T, c zipkin.Collector, p *fakeProducer, s *zipkin.Span) *sarama.ProducerMessage {
+func collectSpan(t *testing.T, c zipkin.Collector, p *stubProducer, s *zipkin.Span) *sarama.ProducerMessage {
 	var m *sarama.ProducerMessage
 	rcvd := make(chan bool, 1)
 	go func() {
