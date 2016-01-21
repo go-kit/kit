@@ -1,4 +1,0 @@
-dependencies:
-  pre:
-    - wget http://archive.apache.org/dist/zookeeper/zookeeper-3.3.3/zookeeper-3.3.3.tar.gz
-    - tar -C loadbalancer/zk -xzf zookeeper*tar.gz

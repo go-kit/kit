@@ -6,98 +6,141 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eapache/channels"
 	"github.com/samuel/go-zookeeper/zk"
 
 	"github.com/go-kit/kit/log"
 )
 
-// DefaultACL is the default ACL to use for creating znodes
-var DefaultACL = zk.WorldACL(zk.PermAll)
+// DefaultACL is the default ACL to use for creating znodes.
+var (
+	DefaultACL            = zk.WorldACL(zk.PermAll)
+	ErrInvalidPath        = errors.New("path must start with / character")
+	ErrInvalidCredentials = errors.New("invalid credentials provided")
+	ErrClientClosed       = errors.New("client service closed")
+)
 
 const (
-	// ConnectTimeout is the default timeout to establish a connection to a
-	// ZooKeeper node.
-	ConnectTimeout = 2 * time.Second
-	// SessionTimeout is the default timeout to keep the current ZooKeeper
-	// session alive during a temporary disconnect.
-	SessionTimeout = 5 * time.Second
+	// DefaultConnectTimeout is the default timeout to establish a connection to
+	// a ZooKeeper node.
+	DefaultConnectTimeout = 2 * time.Second
+	// DefaultSessionTimeout is the default timeout to keep the current
+	// ZooKeeper session alive during a temporary disconnect.
+	DefaultSessionTimeout = 5 * time.Second
 )
+
+// Event is a data container for znode watch events returned by GetEntries. It
+// provides a consistent trigger for watch events to Publishers, while still
+// allowing the underlying ZooKeeper client library watch payload to be
+// inspected.
+type Event struct {
+	payload interface{}
+}
 
 // Client is a wrapper around a lower level ZooKeeper client implementation.
 type Client interface {
 	// GetEntries should query the provided path in ZooKeeper, place a watch on
 	// it and retrieve data from its current child nodes.
-	GetEntries(path string) ([]string, channels.SimpleOutChannel, error)
+	GetEntries(path string) ([]string, <-chan Event, error)
 	// CreateParentNodes should try to create the path in case it does not exist
 	// yet on ZooKeeper.
 	CreateParentNodes(path string) error
+	// Stop should properly shutdown the client implementation
+	Stop()
 }
 
 type clientConfig struct {
+	logger          log.Logger
 	acl             []zk.ACL
+	credentials     []byte
 	connectTimeout  time.Duration
 	sessionTimeout  time.Duration
 	rootNodePayload [][]byte
+	eventHandler    func(zk.Event)
 }
 
-type configOption func(c *clientConfig) error
+// Option functions enable friendly APIs.
+type Option func(*clientConfig) error
 
 type client struct {
 	*zk.Conn
 	clientConfig
-	Eventc <-chan zk.Event
+	active bool
 	quit   chan struct{}
 }
 
-// WithACL returns a configOption specifying a non-default ACL.
-func WithACL(acl []zk.ACL) configOption {
+// ACL returns an Option specifying a non-default ACL for creating parent nodes.
+func ACL(acl []zk.ACL) Option {
 	return func(c *clientConfig) error {
 		c.acl = acl
 		return nil
 	}
 }
 
-// WithConnectTimeout returns a configOption specifying a non-default connection
-// timeout when we try to establish a connection to a ZooKeeper server.
-func WithConnectTimeout(t time.Duration) configOption {
+// Credentials returns an Option specifying a user/password combination which
+// the client will use to authenticate itself with.
+func Credentials(user, pass string) Option {
+	return func(c *clientConfig) error {
+		if user == "" || pass == "" {
+			return ErrInvalidCredentials
+		}
+		c.credentials = []byte(user + ":" + pass)
+		return nil
+	}
+}
+
+// ConnectTimeout returns an Option specifying a non-default connection timeout
+// when we try to establish a connection to a ZooKeeper server.
+func ConnectTimeout(t time.Duration) Option {
 	return func(c *clientConfig) error {
 		if t.Seconds() < 1 {
-			return errors.New("Invalid Connect Timeout. Minimum value is 1 second")
+			return errors.New("invalid connect timeout (minimum value is 1 second)")
 		}
 		c.connectTimeout = t
 		return nil
 	}
 }
 
-// WithSessionTimeout returns a configOption specifying a non-default session
-// timeout.
-func WithSessionTimeout(t time.Duration) configOption {
+// SessionTimeout returns an Option specifying a non-default session timeout.
+func SessionTimeout(t time.Duration) Option {
 	return func(c *clientConfig) error {
 		if t.Seconds() < 1 {
-			return errors.New("Invalid Session Timeout. Minimum value is 1 second")
+			return errors.New("invalid session timeout (minimum value is 1 second)")
 		}
 		c.sessionTimeout = t
 		return nil
 	}
 }
 
-// WithPayload returns a configOption specifying non-default data values for
-// each znode created by CreateParentNodes.
-func WithPayload(payload [][]byte) configOption {
+// Payload returns an Option specifying non-default data values for each znode
+// created by CreateParentNodes.
+func Payload(payload [][]byte) Option {
 	return func(c *clientConfig) error {
 		c.rootNodePayload = payload
 		return nil
 	}
 }
 
+// EventHandler returns an Option specifying a callback function to handle
+// incoming zk.Event payloads (ZooKeeper connection events).
+func EventHandler(handler func(zk.Event)) Option {
+	return func(c *clientConfig) error {
+		c.eventHandler = handler
+		return nil
+	}
+}
+
 // NewClient returns a ZooKeeper client with a connection to the server cluster.
 // It will return an error if the server cluster cannot be resolved.
-func NewClient(servers []string, logger log.Logger, options ...configOption) (Client, error) {
+func NewClient(servers []string, logger log.Logger, options ...Option) (Client, error) {
+	defaultEventHandler := func(event zk.Event) {
+		logger.Log("eventtype", event.Type.String(), "server", event.Server, "state", event.State.String(), "err", event.Err)
+	}
 	config := clientConfig{
 		acl:            DefaultACL,
-		connectTimeout: ConnectTimeout,
-		sessionTimeout: SessionTimeout,
+		connectTimeout: DefaultConnectTimeout,
+		sessionTimeout: DefaultSessionTimeout,
+		eventHandler:   defaultEventHandler,
+		logger:         logger,
 	}
 	for _, option := range options {
 		if err := option(&config); err != nil {
@@ -106,20 +149,49 @@ func NewClient(servers []string, logger log.Logger, options ...configOption) (Cl
 	}
 	// dialer overrides the default ZooKeeper library Dialer so we can configure
 	// the connectTimeout. The current library has a hardcoded value of 1 second
-	// and there are reports of race conditions, due to slow DNS resolvers
-	// and other network latency issues.
+	// and there are reports of race conditions, due to slow DNS resolvers and
+	// other network latency issues.
 	dialer := func(network, address string, _ time.Duration) (net.Conn, error) {
 		return net.DialTimeout(network, address, config.connectTimeout)
 	}
 	conn, eventc, err := zk.Connect(servers, config.sessionTimeout, withLogger(logger), zk.WithDialer(dialer))
+
 	if err != nil {
 		return nil, err
 	}
-	return &client{conn, config, eventc, make(chan struct{})}, nil
+
+	if len(config.credentials) > 0 {
+		err = conn.AddAuth("digest", config.credentials)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	c := &client{conn, config, true, make(chan struct{})}
+
+	// Start listening for incoming Event payloads and callback the set
+	// eventHandler.
+	go func() {
+		for {
+			select {
+			case event := <-eventc:
+				config.eventHandler(event)
+			case <-c.quit:
+				return
+			}
+		}
+	}()
+	return c, nil
 }
 
 // CreateParentNodes implements the ZooKeeper Client interface.
 func (c *client) CreateParentNodes(path string) error {
+	if !c.active {
+		return ErrClientClosed
+	}
+	if path[0] != '/' {
+		return ErrInvalidPath
+	}
 	payload := []byte("")
 	pathString := ""
 	pathNodes := strings.Split(path, "/")
@@ -131,6 +203,9 @@ func (c *client) CreateParentNodes(path string) error {
 		}
 		pathString += "/" + pathNodes[i]
 		_, err := c.Create(pathString, payload, 0, c.acl)
+		// not being able to create the node because it exists or not having
+		// sufficient rights is not an issue. It is ok for the node to already
+		// exist and/or us to only have read rights
 		if err != nil && err != zk.ErrNodeExists && err != zk.ErrNoAuth {
 			return err
 		}
@@ -139,11 +214,22 @@ func (c *client) CreateParentNodes(path string) error {
 }
 
 // GetEntries implements the ZooKeeper Client interface.
-func (c *client) GetEntries(path string) ([]string, channels.SimpleOutChannel, error) {
+func (c *client) GetEntries(path string) ([]string, <-chan Event, error) {
+	eventc := make(chan Event, 1)
+	if !c.active {
+		close(eventc)
+		return nil, eventc, ErrClientClosed
+	}
 	// retrieve list of child nodes for given path and add watch to path
 	znodes, _, updateReceived, err := c.ChildrenW(path)
+	go func() {
+		// wait for update and forward over Event channel
+		payload := <-updateReceived
+		eventc <- Event{payload}
+	}()
+
 	if err != nil {
-		return nil, channels.Wrap(updateReceived), err
+		return nil, eventc, err
 	}
 
 	var resp []string
@@ -153,5 +239,12 @@ func (c *client) GetEntries(path string) ([]string, channels.SimpleOutChannel, e
 			resp = append(resp, string(data))
 		}
 	}
-	return resp, channels.Wrap(updateReceived), nil
+	return resp, eventc, nil
+}
+
+// Stop implements the ZooKeeper Client interface.
+func (c *client) Stop() {
+	c.active = false
+	close(c.quit)
+	c.Close()
 }

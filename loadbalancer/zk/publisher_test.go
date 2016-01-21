@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eapache/channels"
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
@@ -120,14 +119,14 @@ func TestServiceUpdate(t *testing.T) {
 }
 
 type fakeClient struct {
-	ch        chan bool
+	ch        chan Event
 	responses map[string]string
 	result    bool
 }
 
 func newFakeClient() *fakeClient {
 	return &fakeClient{
-		make(chan bool, 1),
+		make(chan Event, 1),
 		make(map[string]string),
 		true,
 	}
@@ -137,16 +136,16 @@ func (c *fakeClient) CreateParentNodes(path string) error {
 	return nil
 }
 
-func (c *fakeClient) GetEntries(path string) ([]string, channels.SimpleOutChannel, error) {
+func (c *fakeClient) GetEntries(path string) ([]string, <-chan Event, error) {
 	responses := []string{}
 	if c.result == false {
 		c.result = true
-		return responses, channels.Wrap(c.ch), errors.New("Dummy Error")
+		return responses, c.ch, errors.New("Dummy Error")
 	}
 	for _, data := range c.responses {
 		responses = append(responses, data)
 	}
-	return responses, channels.Wrap(c.ch), nil
+	return responses, c.ch, nil
 }
 
 func (c *fakeClient) AddService(node, data string) {
@@ -164,6 +163,8 @@ func (c *fakeClient) SendErrorOnWatch() {
 	c.triggerWatch()
 }
 
+func (c *fakeClient) Stop() {}
+
 func NewFactory(fakeError string) loadbalancer.Factory {
 	return func(string) (endpoint.Endpoint, io.Closer, error) {
 		if fakeError == "" {
@@ -174,12 +175,12 @@ func NewFactory(fakeError string) loadbalancer.Factory {
 }
 
 func (c *fakeClient) triggerWatch() {
-	c.ch <- true
+	c.ch <- Event{true}
 	// watches on ZooKeeper Nodes trigger once, most ZooKeeper libraries also
 	// implement "fire once" channels for these watches
 	close(c.ch)
-	c.ch = make(chan bool, 1)
+	c.ch = make(chan Event, 1)
 
 	// make sure we allow the Publisher to handle this update
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 }

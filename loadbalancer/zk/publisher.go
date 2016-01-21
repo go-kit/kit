@@ -1,8 +1,6 @@
 package zk
 
 import (
-	"github.com/eapache/channels"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/log"
@@ -29,37 +27,42 @@ func NewPublisher(c Client, path string, f loadbalancer.Factory, logger log.Logg
 		quit:   make(chan struct{}),
 	}
 
-	// try to create path nodes if they are not available
-	p.client.CreateParentNodes(p.path)
+	err := p.client.CreateParentNodes(p.path)
+	if err != nil {
+		return nil, err
+	}
 
 	// intial node retrieval and cache fill
-	instances, simpleOutChannel, err := p.client.GetEntries(p.path)
+	instances, eventc, err := p.client.GetEntries(p.path)
 	if err != nil {
 		logger.Log("path", p.path, "msg", "failed to retrieve entries", "err", err)
-	} else {
-		logger.Log("path", p.path, "instances", len(instances))
+		return nil, err
 	}
+	logger.Log("path", p.path, "instances", len(instances))
 	p.cache.Replace(instances)
 
 	// handle incoming path updates
-	go p.loop(simpleOutChannel)
+	go p.loop(eventc)
 
 	return p, nil
 }
 
-func (p *Publisher) loop(simpleOutChannel channels.SimpleOutChannel) {
+func (p *Publisher) loop(eventc <-chan Event) {
 	var (
 		instances []string
 		err       error
 	)
 	for {
-		responseChan := simpleOutChannel.Out()
 		select {
-		case <-responseChan:
+		case _, more := <-eventc:
+			if !more {
+				// channel was closed by client... end this loop
+				return
+			}
 			// we received a path update notification, call GetEntries to
 			// retrieve child node data and set new watch as zk watches are one
 			// time triggers
-			instances, simpleOutChannel, err = p.client.GetEntries(p.path)
+			instances, eventc, err = p.client.GetEntries(p.path)
 			if err != nil {
 				p.logger.Log("path", p.path, "msg", "failed to retrieve entries", "err", err)
 				continue

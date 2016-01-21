@@ -4,9 +4,3 @@ go:
     - 1.4.2
     - 1.5
     - tip
-
-before_install:
-  - wget http://archive.apache.org/dist/zookeeper/zookeeper-3.3.3/zookeeper-3.3.3.tar.gz
-
-before_script:
-  - tar -C loadbalancer/zk -xzf zookeeper*tar.gz
