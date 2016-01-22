@@ -11,6 +11,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/log"
+	"github.com/samuel/go-zookeeper/zk"
 )
 
 var (
@@ -22,7 +23,7 @@ var (
 func TestPublisher(t *testing.T) {
 	client := newFakeClient()
 
-	p, err := NewPublisher(client, path, NewFactory(""), logger)
+	p, err := NewPublisher(client, path, newFactory(""), logger)
 	if err != nil {
 		t.Fatalf("failed to create new publisher: %v", err)
 	}
@@ -36,7 +37,7 @@ func TestPublisher(t *testing.T) {
 func TestBadFactory(t *testing.T) {
 	client := newFakeClient()
 
-	p, err := NewPublisher(client, path, NewFactory("kaboom"), logger)
+	p, err := NewPublisher(client, path, newFactory("kaboom"), logger)
 	if err != nil {
 		t.Fatalf("failed to create new publisher: %v", err)
 	}
@@ -46,16 +47,18 @@ func TestBadFactory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// instance1 came online
+	client.AddService(path+"/instance1", "zookeeper_node_data")
 
 	if want, have := 0, len(endpoints); want != have {
-		t.Errorf("want %q, have %q", want, have)
+		t.Errorf("want %d, have %d", want, have)
 	}
 }
 
 func TestServiceUpdate(t *testing.T) {
 	client := newFakeClient()
 
-	p, err := NewPublisher(client, path, NewFactory(""), logger)
+	p, err := NewPublisher(client, path, newFactory(""), logger)
 	if err != nil {
 		t.Fatalf("failed to create new publisher: %v", err)
 	}
@@ -66,7 +69,7 @@ func TestServiceUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := 0, len(endpoints); want != have {
-		t.Errorf("want %q, have %q", want, have)
+		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// instance1 came online
@@ -78,7 +81,7 @@ func TestServiceUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := 1, len(endpoints); want != have {
-		t.Errorf("want %q, have %q", want, have)
+		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// instance2 came online
@@ -90,7 +93,7 @@ func TestServiceUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := 2, len(endpoints); want != have {
-		t.Errorf("want %q, have %q", want, have)
+		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// watch triggers an error...
@@ -102,7 +105,7 @@ func TestServiceUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := 2, len(endpoints); want != have {
-		t.Errorf("want %q, have %q", want, have)
+		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// instances go offline
@@ -114,29 +117,51 @@ func TestServiceUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := 0, len(endpoints); want != have {
-		t.Errorf("want %q, have %q", want, have)
+		t.Errorf("want %d, have %d", want, have)
+	}
+}
+
+func TestBadPublisherCreate(t *testing.T) {
+	client := newFakeClient()
+	client.SendErrorOnWatch()
+	p, err := NewPublisher(client, path, newFactory(""), logger)
+	if err == nil {
+		t.Errorf("expected error on new publisher")
+	}
+	if p != nil {
+		t.Errorf("expected publisher not to be created")
+	}
+	p, err = NewPublisher(client, "BadPath", newFactory(""), logger)
+	if err == nil {
+		t.Errorf("expected error on new publisher")
+	}
+	if p != nil {
+		t.Errorf("expected publisher not to be created")
 	}
 }
 
 type fakeClient struct {
-	ch        chan Event
+	ch        chan zk.Event
 	responses map[string]string
 	result    bool
 }
 
 func newFakeClient() *fakeClient {
 	return &fakeClient{
-		make(chan Event, 1),
+		make(chan zk.Event, 1),
 		make(map[string]string),
 		true,
 	}
 }
 
 func (c *fakeClient) CreateParentNodes(path string) error {
+	if path == "BadPath" {
+		return errors.New("Dummy Error")
+	}
 	return nil
 }
 
-func (c *fakeClient) GetEntries(path string) ([]string, <-chan Event, error) {
+func (c *fakeClient) GetEntries(path string) ([]string, <-chan zk.Event, error) {
 	responses := []string{}
 	if c.result == false {
 		c.result = true
@@ -165,7 +190,7 @@ func (c *fakeClient) SendErrorOnWatch() {
 
 func (c *fakeClient) Stop() {}
 
-func NewFactory(fakeError string) loadbalancer.Factory {
+func newFactory(fakeError string) loadbalancer.Factory {
 	return func(string) (endpoint.Endpoint, io.Closer, error) {
 		if fakeError == "" {
 			return e, nil, nil
@@ -175,11 +200,11 @@ func NewFactory(fakeError string) loadbalancer.Factory {
 }
 
 func (c *fakeClient) triggerWatch() {
-	c.ch <- Event{true}
+	c.ch <- zk.Event{}
 	// watches on ZooKeeper Nodes trigger once, most ZooKeeper libraries also
 	// implement "fire once" channels for these watches
 	close(c.ch)
-	c.ch = make(chan Event, 1)
+	c.ch = make(chan zk.Event, 1)
 
 	// make sure we allow the Publisher to handle this update
 	time.Sleep(1 * time.Millisecond)

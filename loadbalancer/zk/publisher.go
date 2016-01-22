@@ -4,6 +4,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/log"
+	"github.com/samuel/go-zookeeper/zk"
 )
 
 // Publisher yield endpoints stored in a certain ZooKeeper path. Any kind of
@@ -47,18 +48,14 @@ func NewPublisher(c Client, path string, f loadbalancer.Factory, logger log.Logg
 	return p, nil
 }
 
-func (p *Publisher) loop(eventc <-chan Event) {
+func (p *Publisher) loop(eventc <-chan zk.Event) {
 	var (
 		instances []string
 		err       error
 	)
 	for {
 		select {
-		case _, more := <-eventc:
-			if !more {
-				// channel was closed by client... end this loop
-				return
-			}
+		case <-eventc:
 			// we received a path update notification, call GetEntries to
 			// retrieve child node data and set new watch as zk watches are one
 			// time triggers

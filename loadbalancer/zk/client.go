@@ -14,7 +14,6 @@ import (
 // DefaultACL is the default ACL to use for creating znodes.
 var (
 	DefaultACL            = zk.WorldACL(zk.PermAll)
-	ErrInvalidPath        = errors.New("path must start with / character")
 	ErrInvalidCredentials = errors.New("invalid credentials provided")
 	ErrClientClosed       = errors.New("client service closed")
 )
@@ -28,19 +27,11 @@ const (
 	DefaultSessionTimeout = 5 * time.Second
 )
 
-// Event is a data container for znode watch events returned by GetEntries. It
-// provides a consistent trigger for watch events to Publishers, while still
-// allowing the underlying ZooKeeper client library watch payload to be
-// inspected.
-type Event struct {
-	payload interface{}
-}
-
 // Client is a wrapper around a lower level ZooKeeper client implementation.
 type Client interface {
 	// GetEntries should query the provided path in ZooKeeper, place a watch on
 	// it and retrieve data from its current child nodes.
-	GetEntries(path string) ([]string, <-chan Event, error)
+	GetEntries(path string) ([]string, <-chan zk.Event, error)
 	// CreateParentNodes should try to create the path in case it does not exist
 	// yet on ZooKeeper.
 	CreateParentNodes(path string) error
@@ -190,7 +181,7 @@ func (c *client) CreateParentNodes(path string) error {
 		return ErrClientClosed
 	}
 	if path[0] != '/' {
-		return ErrInvalidPath
+		return zk.ErrInvalidPath
 	}
 	payload := []byte("")
 	pathString := ""
@@ -214,19 +205,9 @@ func (c *client) CreateParentNodes(path string) error {
 }
 
 // GetEntries implements the ZooKeeper Client interface.
-func (c *client) GetEntries(path string) ([]string, <-chan Event, error) {
-	eventc := make(chan Event, 1)
-	if !c.active {
-		close(eventc)
-		return nil, eventc, ErrClientClosed
-	}
+func (c *client) GetEntries(path string) ([]string, <-chan zk.Event, error) {
 	// retrieve list of child nodes for given path and add watch to path
-	znodes, _, updateReceived, err := c.ChildrenW(path)
-	go func() {
-		// wait for update and forward over Event channel
-		payload := <-updateReceived
-		eventc <- Event{payload}
-	}()
+	znodes, _, eventc, err := c.ChildrenW(path)
 
 	if err != nil {
 		return nil, eventc, err
