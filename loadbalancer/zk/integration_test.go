@@ -4,6 +4,7 @@ package zk
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -17,15 +18,20 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	fmt.Println("ZooKeeper Integration Test Initializing. Starting ZooKeeper Server...")
+	flag.Parse()
+
+	fmt.Println("Starting ZooKeeper server...")
+
 	ts, err := stdzk.StartTestCluster(1, nil, nil)
 	if err != nil {
-		fmt.Printf("Unable to start ZooKeeper Server: %v\n", err)
-		os.Exit(-1)
+		fmt.Printf("ZooKeeper server error: %v\n", err)
+		os.Exit(1)
 	}
-	defer ts.Stop()
+
 	host = []string{fmt.Sprintf("localhost:%d", ts.Servers[0].Port)}
 	code := m.Run()
+
+	ts.Stop()
 	os.Exit(code)
 }
 
