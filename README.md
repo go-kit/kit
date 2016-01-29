@@ -106,8 +106,8 @@ kit's [loadbalancer package][loadbalancer] provides client-side endpoint
 middleware to solve that problem, whether your organization uses static hosts
 or IPs, [DNS SRV records][dnssrv], Consul, etcd, or Zookeeper. And if you use
 a custom system, it's very easy to write your own [Publisher][] and use Go
-kit's load balancing strategies. (Currently, static hosts, DNS SRV, etcd, and
-Consul are supported; ZooKeeper support is planned.)
+kit's load balancing strategies. (Currently, static hosts, DNS SRV, etcd, Consul
+and ZooKeeper are supported)
 
 [loadbalancer]: https://github.com/go-kit/kit/tree/master/loadbalancer
 [dnssrv]: https://github.com/go-kit/kit/tree/master/loadbalancer/dnssrv
