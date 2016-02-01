@@ -94,17 +94,27 @@ func (h *histogram) Name() string {
 func (h histogram) String() string {
 	var total float64
 	d := h.hist.Merge().Distribution()
+	max := 0.0
 	for _, b := range d {
-		total += float64(b.Count)
+		c := float64(b.Count)
+		total += c
+		if c > max {
+			max = c
+		}
 	}
+	max = max / total // max probability
 	f := "%8v,%8v,%8v,%7v, %v\n"
 	bs := "####################################################################################################"
-	flbs := float64(len(bs))
+	flbs := float64(len(bs)) - 1.0 // -1.0 to avoid running off the end of the slice index
+	axis := "|"
 	s := fmt.Sprintf(f, "From", "To", "Count", "Prob", "Bar")
 	for _, b := range d {
 		if b.Count > 0 {
 			p := float64(b.Count) / total
-			s += fmt.Sprintf(f, b.From, b.To, b.Count, fmt.Sprintf("%0.4f", p), "|"+bs[:int(p*flbs)])
+			s += fmt.Sprintf(f, b.From, b.To, b.Count, fmt.Sprintf("%0.4f", p), axis+bs[:int(p*flbs/max)])
+			axis = "|"
+		} else {
+			axis = ":" // show that some bars were skipped
 		}
 	}
 	return fmt.Sprintf("name: %v\ncount: %v\ngauges: %v\n%v\n", h.name, h.count, h.gauges, s)
@@ -127,9 +137,9 @@ func NewHistogram(name string, minValue, maxValue int64, sigfigs int, quantiles 
 	h := &histogram{
 		hist:   hdrhistogram.NewWindowed(5, minValue, maxValue, sigfigs),
 		name:   name,
+		count:  NewCounter(name + "_count"),
 		gauges: gauges,
 	}
-	h.count = NewCounter(name + "_count")
 	go h.rotateLoop(1 * time.Minute)
 	return h
 }
