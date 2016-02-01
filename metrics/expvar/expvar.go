@@ -27,7 +27,7 @@ import (
 
 	"github.com/codahale/hdrhistogram"
 
-	"github.com/adrianco/kit/metrics"
+	"github.com/go-kit/kit/metrics"
 )
 
 type counter struct {
