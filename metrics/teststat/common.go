@@ -18,6 +18,9 @@ func PopulateNormalHistogram(t *testing.T, h metrics.Histogram, seed int64, mean
 	rand.Seed(seed)
 	for i := 0; i < population; i++ {
 		sample := int64(rand.NormFloat64()*float64(stdev) + float64(mean))
+		if sample < 0 {
+			sample = 0
+		}
 		h.Observe(sample)
 	}
 }
