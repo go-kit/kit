@@ -2,6 +2,8 @@ package etcd
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
@@ -37,9 +39,16 @@ func NewClient(machines []string, cert, key, caCert string) (Client, error) {
 			return nil, err
 		}
 
+		caCertCt, err2 := ioutil.ReadFile(caCert)
+		if err2 != nil {
+			return nil, err2
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCertCt)
+
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{tlsCert},
-			//			InsecureSkipVerify: true,
+			RootCAs:      caCertPool,
 		}
 
 		transport := &http.Transport{
