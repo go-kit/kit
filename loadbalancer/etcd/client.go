@@ -1,10 +1,13 @@
 package etcd
 
 import (
-	"fmt"
-	"strings"
+	"crypto/tls"
+	"net"
+	"net/http"
+	"time"
 
-	"github.com/coreos/go-etcd/etcd"
+	"github.com/coreos/etcd/Godeps/_workspace/src/golang.org/x/net/context"
+	etcd "github.com/coreos/etcd/client"
 )
 
 // Client is a wrapper arround the etcd client.
@@ -17,7 +20,7 @@ type Client interface {
 }
 
 type client struct {
-	*etcd.Client
+	etcd.KeysAPI
 }
 
 // NewClient returns an *etcd.Client with a connection to the named machines.
@@ -25,27 +28,62 @@ type client struct {
 // The parameter machines needs to be a full URL with schemas.
 // e.g. "http://localhost:4001" will work, but "localhost:4001" will not.
 func NewClient(machines []string, cert, key, caCert string) (Client, error) {
-	var c *etcd.Client
-	var err error
+	var c etcd.KeysAPI
 
 	if cert != "" && key != "" {
-		c, err = etcd.NewTLSClient(machines, cert, key, caCert)
+
+		tlsCert, err := tls.LoadX509KeyPair(cert, key)
 		if err != nil {
 			return nil, err
 		}
+
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{tlsCert},
+			//			InsecureSkipVerify: true,
+		}
+
+		transport := &http.Transport{
+			TLSClientConfig: tlsConfig,
+			Dial: func(network, addr string) (net.Conn, error) {
+				dialer := net.Dialer{
+					Timeout:   time.Second,
+					KeepAlive: time.Second,
+				}
+
+				return dialer.Dial(network, addr)
+			},
+		}
+
+		cfg := etcd.Config{
+			Endpoints:               machines,
+			Transport:               transport,
+			HeaderTimeoutPerRequest: time.Second,
+		}
+		ce, err := etcd.New(cfg)
+		if err != nil {
+			return nil, err
+		}
+		c = etcd.NewKeysAPI(ce)
+
 	} else {
-		c = etcd.NewClient(machines)
-	}
-	success := c.SetCluster(machines)
-	if !success {
-		return nil, fmt.Errorf("cannot connect to the etcd cluster: %s", strings.Join(machines, ","))
+		//		c = etcd.NewClient(machines)
+		cfg := etcd.Config{
+			Endpoints:               machines,
+			Transport:               etcd.DefaultTransport,
+			HeaderTimeoutPerRequest: time.Second,
+		}
+		ce, err := etcd.New(cfg)
+		if err != nil {
+			return nil, err
+		}
+		c = etcd.NewKeysAPI(ce)
 	}
 	return &client{c}, nil
 }
 
 // GetEntries implements the etcd Client interface.
 func (c *client) GetEntries(key string) ([]string, error) {
-	resp, err := c.Get(key, false, true)
+	resp, err := c.Get(context.Background(), key, &etcd.GetOptions{Recursive: true})
 	if err != nil {
 		return nil, err
 	}
@@ -59,5 +97,12 @@ func (c *client) GetEntries(key string) ([]string, error) {
 
 // WatchPrefix implements the etcd Client interface.
 func (c *client) WatchPrefix(prefix string, responseChan chan *etcd.Response) {
-	c.Watch(prefix, 0, true, responseChan, nil)
+	watch := c.Watcher(prefix, &etcd.WatcherOptions{AfterIndex: 0, Recursive: true})
+	for {
+		res, err := watch.Next(context.Background())
+		if err != nil {
+			return
+		}
+		responseChan <- res
+	}
 }
