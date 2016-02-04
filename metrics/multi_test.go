@@ -22,6 +22,7 @@ import (
 
 func TestMultiWith(t *testing.T) {
 	c := metrics.NewMultiCounter(
+		"multifoo",
 		expvar.NewCounter("foo"),
 		prometheus.NewCounter(stdprometheus.CounterOpts{
 			Namespace: "test",
@@ -47,6 +48,7 @@ func TestMultiWith(t *testing.T) {
 
 func TestMultiCounter(t *testing.T) {
 	metrics.NewMultiCounter(
+		"multialpha",
 		expvar.NewCounter("alpha"),
 		prometheus.NewCounter(stdprometheus.CounterOpts{
 			Namespace: "test",
@@ -71,6 +73,7 @@ func TestMultiCounter(t *testing.T) {
 
 func TestMultiGauge(t *testing.T) {
 	g := metrics.NewMultiGauge(
+		"multidelta",
 		expvar.NewGauge("delta"),
 		prometheus.NewGauge(stdprometheus.GaugeOpts{
 			Namespace: "test",
@@ -111,6 +114,7 @@ func TestMultiGauge(t *testing.T) {
 func TestMultiHistogram(t *testing.T) {
 	quantiles := []int{50, 90, 99}
 	h := metrics.NewMultiHistogram(
+		"multiomicron",
 		expvar.NewHistogram("omicron", 0, 100, 3, quantiles...),
 		prometheus.NewSummary(stdprometheus.SummaryOpts{
 			Namespace: "test",
