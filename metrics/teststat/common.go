@@ -15,9 +15,9 @@ const population = 1234
 // PopulateNormalHistogram populates the Histogram with a normal distribution
 // of observations.
 func PopulateNormalHistogram(t *testing.T, h metrics.Histogram, seed int64, mean, stdev int64) {
-	rand.Seed(seed)
+	r := rand.New(rand.NewSource(seed))
 	for i := 0; i < population; i++ {
-		sample := int64(rand.NormFloat64()*float64(stdev) + float64(mean))
+		sample := int64(r.NormFloat64()*float64(stdev) + float64(mean))
 		if sample < 0 {
 			sample = 0
 		}

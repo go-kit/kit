@@ -70,6 +70,7 @@ func main() {
 	var requestDuration metrics.TimeHistogram
 	{
 		requestDuration = metrics.NewTimeHistogram(time.Nanosecond, metrics.NewMultiHistogram(
+			"request_duration_ns",
 			expvar.NewHistogram("request_duration_ns", 0, 5e9, 1, 50, 95, 99),
 			prometheus.NewSummary(stdprometheus.SummaryOpts{
 				Namespace: "myorg",

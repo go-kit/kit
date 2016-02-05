@@ -21,9 +21,10 @@ func TestTimeHistogram(t *testing.T) {
 	)
 
 	const seed, mean, stdev int64 = 321, 100, 20
+	r := rand.New(rand.NewSource(seed))
 
 	for i := 0; i < 4321; i++ {
-		sample := time.Duration(rand.NormFloat64()*float64(stdev)+float64(mean)) * time.Millisecond
+		sample := time.Duration(r.NormFloat64()*float64(stdev)+float64(mean)) * time.Millisecond
 		th.Observe(sample)
 	}
 

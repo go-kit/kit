@@ -13,7 +13,11 @@ It has **[counters][]**, **[gauges][]**, and **[histograms][]**,
 
 ## Rationale
 
-TODO
+Code instrumentation is absolutely essential to achieve [observability][] into a distributed system.
+Metrics and instrumentation tools have coalesced around a few well-defined idioms.
+`package metrics` provides a common, minimal interface those idioms for service authors. 
+
+[observability]: https://speakerdeck.com/mattheath/observability-in-micro-service-architectures
 
 ## Usage
 
@@ -53,6 +57,7 @@ func handleRequest() {
 ```
 
 A gauge for the number of goroutines currently running, exported via statsd.
+
 ```go
 import (
 	"net"
@@ -66,14 +71,13 @@ import (
 func main() {
 	statsdWriter, err := net.Dial("udp", "127.0.0.1:8126")
 	if err != nil {
-		os.Exit(1)
+		panic(err)
 	}
 
-	reportingDuration := 5 * time.Second
-	goroutines := statsd.NewGauge(statsdWriter, "total_goroutines", reportingDuration)
-	for range time.Tick(reportingDuration) {
+	reportInterval := 5 * time.Second
+	goroutines := statsd.NewGauge(statsdWriter, "total_goroutines", reportInterval)
+	for range time.Tick(reportInterval) {
 		goroutines.Set(float64(runtime.NumGoroutine()))
 	}
 }
-
 ```

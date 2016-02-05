@@ -27,7 +27,10 @@ import (
 
 const maxBufferSize = 1400 // bytes
 
-type statsdCounter chan string
+type statsdCounter struct {
+	key string
+	c   chan string
+}
 
 // NewCounter returns a Counter that emits observations in the statsd protocol
 // to the passed writer. Observations are buffered for the report interval or
@@ -36,16 +39,24 @@ type statsdCounter chan string
 //
 // TODO: support for sampling.
 func NewCounter(w io.Writer, key string, reportInterval time.Duration) metrics.Counter {
-	c := make(chan string)
-	go fwd(w, key, reportInterval, c)
-	return statsdCounter(c)
+	c := &statsdCounter{
+		key: key,
+		c:   make(chan string),
+	}
+	go fwd(w, key, reportInterval, c.c)
+	return c
 }
 
-func (c statsdCounter) With(metrics.Field) metrics.Counter { return c }
+func (c *statsdCounter) Name() string { return c.key }
 
-func (c statsdCounter) Add(delta uint64) { c <- fmt.Sprintf("%d|c", delta) }
+func (c *statsdCounter) With(metrics.Field) metrics.Counter { return c }
 
-type statsdGauge chan string
+func (c *statsdCounter) Add(delta uint64) { c.c <- fmt.Sprintf("%d|c", delta) }
+
+type statsdGauge struct {
+	key string
+	g   chan string
+}
 
 // NewGauge returns a Gauge that emits values in the statsd protocol to the
 // passed writer. Values are buffered for the report interval or until the
@@ -54,24 +65,29 @@ type statsdGauge chan string
 //
 // TODO: support for sampling.
 func NewGauge(w io.Writer, key string, reportInterval time.Duration) metrics.Gauge {
-	g := make(chan string)
-	go fwd(w, key, reportInterval, g)
-	return statsdGauge(g)
+	g := &statsdGauge{
+		key: key,
+		g:   make(chan string),
+	}
+	go fwd(w, key, reportInterval, g.g)
+	return g
 }
 
-func (g statsdGauge) With(metrics.Field) metrics.Gauge { return g }
+func (g *statsdGauge) Name() string { return g.key }
 
-func (g statsdGauge) Add(delta float64) {
+func (g *statsdGauge) With(metrics.Field) metrics.Gauge { return g }
+
+func (g *statsdGauge) Add(delta float64) {
 	// https://github.com/etsy/statsd/blob/master/docs/metric_types.md#gauges
 	sign := "+"
 	if delta < 0 {
 		sign, delta = "-", -delta
 	}
-	g <- fmt.Sprintf("%s%f|g", sign, delta)
+	g.g <- fmt.Sprintf("%s%f|g", sign, delta)
 }
 
-func (g statsdGauge) Set(value float64) {
-	g <- fmt.Sprintf("%f|g", value)
+func (g *statsdGauge) Set(value float64) {
+	g.g <- fmt.Sprintf("%f|g", value)
 }
 
 // NewCallbackGauge emits values in the statsd protocol to the passed writer.
@@ -94,7 +110,10 @@ func emitEvery(d time.Duration, callback func() float64) <-chan string {
 	return c
 }
 
-type statsdHistogram chan string
+type statsdHistogram struct {
+	key string
+	h   chan string
+}
 
 // NewHistogram returns a Histogram that emits observations in the statsd
 // protocol to the passed writer. Observations are buffered for the reporting
@@ -114,15 +133,25 @@ type statsdHistogram chan string
 //
 // TODO: support for sampling.
 func NewHistogram(w io.Writer, key string, reportInterval time.Duration) metrics.Histogram {
-	h := make(chan string)
-	go fwd(w, key, reportInterval, h)
-	return statsdHistogram(h)
+	h := &statsdHistogram{
+		key: key,
+		h:   make(chan string),
+	}
+	go fwd(w, key, reportInterval, h.h)
+	return h
 }
 
-func (h statsdHistogram) With(metrics.Field) metrics.Histogram { return h }
+func (h *statsdHistogram) Name() string { return h.key }
 
-func (h statsdHistogram) Observe(value int64) {
-	h <- fmt.Sprintf("%d|ms", value)
+func (h *statsdHistogram) With(metrics.Field) metrics.Histogram { return h }
+
+func (h *statsdHistogram) Observe(value int64) {
+	h.h <- fmt.Sprintf("%d|ms", value)
+}
+
+func (h *statsdHistogram) Distribution() []metrics.Bucket {
+	// TODO(pb): no way to do this without introducing e.g. codahale/hdrhistogram
+	return []metrics.Bucket{}
 }
 
 var tick = time.Tick

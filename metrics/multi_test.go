@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -18,10 +17,12 @@ import (
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/expvar"
 	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/go-kit/kit/metrics/teststat"
 )
 
 func TestMultiWith(t *testing.T) {
 	c := metrics.NewMultiCounter(
+		"multifoo",
 		expvar.NewCounter("foo"),
 		prometheus.NewCounter(stdprometheus.CounterOpts{
 			Namespace: "test",
@@ -47,6 +48,7 @@ func TestMultiWith(t *testing.T) {
 
 func TestMultiCounter(t *testing.T) {
 	metrics.NewMultiCounter(
+		"multialpha",
 		expvar.NewCounter("alpha"),
 		prometheus.NewCounter(stdprometheus.CounterOpts{
 			Namespace: "test",
@@ -71,6 +73,7 @@ func TestMultiCounter(t *testing.T) {
 
 func TestMultiGauge(t *testing.T) {
 	g := metrics.NewMultiGauge(
+		"multidelta",
 		expvar.NewGauge("delta"),
 		prometheus.NewGauge(stdprometheus.GaugeOpts{
 			Namespace: "test",
@@ -111,6 +114,7 @@ func TestMultiGauge(t *testing.T) {
 func TestMultiHistogram(t *testing.T) {
 	quantiles := []int{50, 90, 99}
 	h := metrics.NewMultiHistogram(
+		"multiomicron",
 		expvar.NewHistogram("omicron", 0, 100, 3, quantiles...),
 		prometheus.NewSummary(stdprometheus.SummaryOpts{
 			Namespace: "test",
@@ -121,17 +125,9 @@ func TestMultiHistogram(t *testing.T) {
 	)
 
 	const seed, mean, stdev int64 = 123, 50, 10
-	populateNormalHistogram(t, h, seed, mean, stdev)
+	teststat.PopulateNormalHistogram(t, h, seed, mean, stdev)
 	assertExpvarNormalHistogram(t, "omicron", mean, stdev, quantiles)
 	assertPrometheusNormalHistogram(t, `test_multi_histogram_nu`, mean, stdev)
-}
-
-func populateNormalHistogram(t *testing.T, h metrics.Histogram, seed int64, mean, stdev int64) {
-	rand.Seed(seed)
-	for i := 0; i < 1234; i++ {
-		sample := int64(rand.NormFloat64()*float64(stdev) + float64(mean))
-		h.Observe(sample)
-	}
 }
 
 func assertExpvarNormalHistogram(t *testing.T, metricName string, mean, stdev int64, quantiles []int) {

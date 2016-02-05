@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/expvar"
+	"github.com/go-kit/kit/metrics/teststat"
 )
 
 func TestScaledHistogram(t *testing.T) {
@@ -19,7 +20,7 @@ func TestScaledHistogram(t *testing.T) {
 	h = metrics.NewScaledHistogram(h, scale)
 	h = h.With(metrics.Field{Key: "a", Value: "b"})
 
-	const seed, mean, stdev = 333, 500, 100          // input values
-	populateNormalHistogram(t, h, seed, mean, stdev) // will be scaled down
+	const seed, mean, stdev = 333, 500, 100                   // input values
+	teststat.PopulateNormalHistogram(t, h, seed, mean, stdev) // will be scaled down
 	assertExpvarNormalHistogram(t, metricName, mean/scale, stdev/scale, quantiles)
 }
