@@ -17,7 +17,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"time"
+
+	"sync/atomic"
 
 	"github.com/go-kit/kit/metrics"
 )
@@ -54,8 +57,9 @@ func (c *statsdCounter) With(metrics.Field) metrics.Counter { return c }
 func (c *statsdCounter) Add(delta uint64) { c.c <- fmt.Sprintf("%d|c", delta) }
 
 type statsdGauge struct {
-	key string
-	g   chan string
+	key       string
+	lastValue uint64 // math.Float64frombits
+	g         chan string
 }
 
 // NewGauge returns a Gauge that emits values in the statsd protocol to the
@@ -87,7 +91,12 @@ func (g *statsdGauge) Add(delta float64) {
 }
 
 func (g *statsdGauge) Set(value float64) {
+	atomic.StoreUint64(&g.lastValue, math.Float64bits(value))
 	g.g <- fmt.Sprintf("%f|g", value)
+}
+
+func (g *statsdGauge) Get() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&g.lastValue))
 }
 
 // NewCallbackGauge emits values in the statsd protocol to the passed writer.
@@ -149,9 +158,9 @@ func (h *statsdHistogram) Observe(value int64) {
 	h.h <- fmt.Sprintf("%d|ms", value)
 }
 
-func (h *statsdHistogram) Distribution() []metrics.Bucket {
+func (h *statsdHistogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
 	// TODO(pb): no way to do this without introducing e.g. codahale/hdrhistogram
-	return []metrics.Bucket{}
+	return []metrics.Bucket{}, []metrics.Quantile{}
 }
 
 var tick = time.Tick

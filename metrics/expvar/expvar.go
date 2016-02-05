@@ -19,6 +19,7 @@ package expvar
 import (
 	"expvar"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -65,6 +66,7 @@ func (g *gauge) Name() string                     { return g.name }
 func (g *gauge) With(metrics.Field) metrics.Gauge { return g }
 func (g *gauge) Add(delta float64)                { g.v.Add(delta) }
 func (g *gauge) Set(value float64)                { g.v.Set(value) }
+func (g *gauge) Get() float64                     { return mustParseFloat64(g.v.String()) }
 
 // PublishCallbackGauge publishes a Gauge as an expvar with the given name,
 // whose value is determined at collect time by the passed callback function.
@@ -126,8 +128,8 @@ func (h *histogram) Observe(value int64) {
 	}
 }
 
-func (h *histogram) Distribution() []metrics.Bucket {
-	bars := h.hist.Current.Distribution()
+func (h *histogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
+	bars := h.hist.Merge().Distribution()
 	buckets := make([]metrics.Bucket, len(bars))
 	for i, bar := range bars {
 		buckets[i] = metrics.Bucket{
@@ -136,7 +138,15 @@ func (h *histogram) Distribution() []metrics.Bucket {
 			Count: bar.Count,
 		}
 	}
-	return buckets
+	quantiles := make([]metrics.Quantile, 0, len(h.gauges))
+	for quantile, gauge := range h.gauges {
+		quantiles = append(quantiles, metrics.Quantile{
+			Quantile: quantile,
+			Value:    int64(gauge.Get()),
+		})
+	}
+	sort.Sort(quantileSlice(quantiles))
+	return buckets, quantiles
 }
 
 func (h *histogram) rotateLoop(d time.Duration) {
@@ -146,3 +156,17 @@ func (h *histogram) rotateLoop(d time.Duration) {
 		h.mu.Unlock()
 	}
 }
+
+func mustParseFloat64(s string) float64 {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+type quantileSlice []metrics.Quantile
+
+func (a quantileSlice) Len() int           { return len(a) }
+func (a quantileSlice) Less(i, j int) bool { return a[i].Quantile < a[j].Quantile }
+func (a quantileSlice) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
