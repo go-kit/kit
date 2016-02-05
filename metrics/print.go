@@ -35,5 +35,5 @@ func PrintDistribution(w io.Writer, name string, buckets []Bucket) {
 		}
 	}
 
-	tw.Flush() // to buf
+	tw.Flush()
 }
