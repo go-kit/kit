@@ -70,6 +70,10 @@ func (g multiGauge) Add(delta float64) {
 	}
 }
 
+func (g multiGauge) Get() float64 {
+	panic("cannot call Get on a MultiGauge")
+}
+
 type multiHistogram struct {
 	name string
 	a    []Histogram
@@ -102,6 +106,7 @@ func (h multiHistogram) Observe(value int64) {
 	}
 }
 
-func (h multiHistogram) Distribution() []Bucket {
-	return []Bucket{} // TODO(pb): can this be statistically valid?
+func (h multiHistogram) Distribution() ([]Bucket, []Quantile) {
+	// TODO(pb): there may be a way to do this
+	panic("cannot call Distribution on a MultiHistogram")
 }

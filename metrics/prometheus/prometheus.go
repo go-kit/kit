@@ -86,6 +86,11 @@ func (g prometheusGauge) Add(delta float64) {
 	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Add(delta)
 }
 
+func (g prometheusGauge) Get() float64 {
+	// TODO(pb): see https://github.com/prometheus/client_golang/issues/58
+	return 0.0
+}
+
 // RegisterCallbackGauge registers a Gauge with Prometheus whose value is
 // determined at collect time by the passed callback function. The callback
 // determines the value, and fields are ignored, so RegisterCallbackGauge
@@ -129,9 +134,9 @@ func (s prometheusSummary) Observe(value int64) {
 	s.SummaryVec.With(prometheus.Labels(s.Pairs)).Observe(float64(value))
 }
 
-func (s prometheusSummary) Distribution() []metrics.Bucket {
+func (s prometheusSummary) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
 	// TODO(pb): see https://github.com/prometheus/client_golang/issues/58
-	return []metrics.Bucket{}
+	return []metrics.Bucket{}, []metrics.Quantile{}
 }
 
 type prometheusHistogram struct {
@@ -169,9 +174,9 @@ func (h prometheusHistogram) Observe(value int64) {
 	h.HistogramVec.With(prometheus.Labels(h.Pairs)).Observe(float64(value))
 }
 
-func (h prometheusHistogram) Distribution() []metrics.Bucket {
+func (h prometheusHistogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
 	// TODO(pb): see https://github.com/prometheus/client_golang/issues/58
-	return []metrics.Bucket{}
+	return []metrics.Bucket{}, []metrics.Quantile{}
 }
 
 func pairsFrom(fieldKeys []string) map[string]string {

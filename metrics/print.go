@@ -13,8 +13,11 @@ const (
 
 // PrintDistribution writes a human-readable graph of the distribution to the
 // passed writer.
-func PrintDistribution(w io.Writer, name string, buckets []Bucket) {
-	fmt.Fprintf(w, "name: %v\n", name)
+func PrintDistribution(w io.Writer, h Histogram) {
+	buckets, quantiles := h.Distribution()
+
+	fmt.Fprintf(w, "name: %v\n", h.Name())
+	fmt.Fprintf(w, "quantiles: %v\n", quantiles)
 
 	var total float64
 	for _, bucket := range buckets {

@@ -21,6 +21,7 @@ type Gauge interface {
 	With(Field) Gauge
 	Set(value float64)
 	Add(delta float64)
+	Get() float64
 }
 
 // Histogram tracks the distribution of a stream of values (e.g. the number of
@@ -30,7 +31,7 @@ type Histogram interface {
 	Name() string
 	With(Field) Histogram
 	Observe(value int64)
-	Distribution() []Bucket
+	Distribution() ([]Bucket, []Quantile)
 }
 
 // Field is a key/value pair associated with an observation for a specific
@@ -45,4 +46,10 @@ type Bucket struct {
 	From  int64
 	To    int64
 	Count int64
+}
+
+// Quantile is a pair of quantile (0..100) and its observed maximum value.
+type Quantile struct {
+	Quantile int // 0..100
+	Value    int64
 }
