@@ -14,6 +14,8 @@
 // sophisticated expvar.Values. For example, a Counter could be implemented as
 // a map, representing a tree of key/value pairs whose leaves were the actual
 // expvar.Ints.
+//
+// Histogram observation count is exported as a counter called name + "_count"
 package expvar
 
 import (
@@ -33,6 +35,8 @@ type counter struct {
 	v    *expvar.Int
 }
 
+func (c counter) String() string { return fmt.Sprintf("%v", c.v) }
+
 // NewCounter returns a new Counter backed by an expvar with the given name.
 // Fields are ignored.
 func NewCounter(name string) metrics.Counter {
@@ -50,6 +54,8 @@ type gauge struct {
 	name string
 	v    *expvar.Float
 }
+
+func (g gauge) String() string { return fmt.Sprintf("%v", g.v) }
 
 // NewGauge returns a new Gauge backed by an expvar with the given name. It
 // should be updated manually; for a callback-based approach, see
@@ -83,7 +89,43 @@ type histogram struct {
 	hist *hdrhistogram.WindowedHistogram
 
 	name   string
+	count  metrics.Counter
 	gauges map[int]metrics.Gauge
+}
+
+// Name returns the name of the histogram
+func (h *histogram) Name() string {
+	return h.name
+}
+
+// Print out nonzero bars of the histogram as a csv with normalized probability and a crude bar graph
+func (h histogram) String() string {
+	var total float64
+	d := h.hist.Merge().Distribution()
+	max := 0.0
+	for _, b := range d {
+		c := float64(b.Count)
+		total += c
+		if c > max {
+			max = c
+		}
+	}
+	max = max / total // max probability
+	f := "%8v,%8v,%8v,%7v, %v\n"
+	bs := "####################################################################################################"
+	flbs := float64(len(bs)) - 1.0 // -1.0 to avoid running off the end of the slice index
+	axis := "|"
+	s := fmt.Sprintf(f, "From", "To", "Count", "Prob", "Bar")
+	for _, b := range d {
+		if b.Count > 0 {
+			p := float64(b.Count) / total
+			s += fmt.Sprintf(f, b.From, b.To, b.Count, fmt.Sprintf("%0.4f", p), axis+bs[:int(p*flbs/max)])
+			axis = "|"
+		} else {
+			axis = ":" // show that some bars were skipped
+		}
+	}
+	return fmt.Sprintf("name: %v\ncount: %v\ngauges: %v\n%v\n", h.name, h.count, h.gauges, s)
 }
 
 // NewHistogram is taken from http://github.com/codahale/metrics. It returns a
@@ -103,6 +145,7 @@ func NewHistogram(name string, minValue, maxValue int64, sigfigs int, quantiles 
 	h := &histogram{
 		hist:   hdrhistogram.NewWindowed(5, minValue, maxValue, sigfigs),
 		name:   name,
+		count:  NewCounter(name + "_count"),
 		gauges: gauges,
 	}
 	go h.rotateLoop(1 * time.Minute)
@@ -115,6 +158,7 @@ func (h *histogram) With(metrics.Field) metrics.Histogram { return h }
 func (h *histogram) Observe(value int64) {
 	h.mu.Lock()
 	err := h.hist.Current.RecordValue(value)
+	h.count.Add(1)
 	h.mu.Unlock()
 
 	if err != nil {
