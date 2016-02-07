@@ -56,7 +56,7 @@ func (s *inmemService) PostProfile(ctx context.Context, p Profile) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	if _, ok := s.m[p.ID]; ok {
-		return errAlreadyExists
+		return errAlreadyExists // POST = create, don't overwrite
 	}
 	s.m[p.ID] = p
 	return nil
@@ -78,15 +78,37 @@ func (s *inmemService) PutProfile(ctx context.Context, id string, p Profile) err
 	}
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	if _, ok := s.m[id]; ok {
-		return errAlreadyExists
-	}
-	s.m[id] = p
+	s.m[id] = p // PUT = create or update
 	return nil
 }
 
 func (s *inmemService) PatchProfile(ctx context.Context, id string, p Profile) error {
-	return s.PutProfile(ctx, id, p) // perhaps more granular behavior is needed here
+	if p.ID != "" && id != p.ID {
+		return errInconsistentIDs
+	}
+
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	existing, ok := s.m[id]
+	if !ok {
+		return errNotFound // PATCH = update existing, don't create
+	}
+
+	// We assume that it's not possible to PATCH the ID, and that it's not
+	// possible to PATCH any field to its zero value. That is, the zero value
+	// means not specified. The way around this is to use e.g. Name *string in
+	// the Profile definition. But since this is just a demonstrative example,
+	// I'm leaving that out.
+
+	if p.Name != "" {
+		existing.Name = p.Name
+	}
+	if len(p.Addresses) > 0 {
+		existing.Addresses = p.Addresses
+	}
+	s.m[id] = existing
+	return nil
 }
 
 func (s *inmemService) DeleteProfile(ctx context.Context, id string) error {
