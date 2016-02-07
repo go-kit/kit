@@ -53,9 +53,9 @@ for simple JSON over HTTP. If your organization uses a fully-featured
 transport, bindings are typically provided by the Go library for the
 transport, and there's not much for Go kit to do. In those cases, see the
 examples to understand how to write adapters for your endpoints. For now, see
-the [addsvc][addsvc] to understand how transport bindings work. We'll soon
-have specific examples for Thrift, gRPC, net/rpc, and JSON over HTTP. Avro and
-JSON/RPC support is planned.
+the [addsvc][addsvc] to understand how transport bindings work. We have
+specific examples for Thrift, gRPC, net/rpc, and JSON over HTTP. JSON/RPC and
+Swagger support is planned.
 
 [transport]: https://github.com/go-kit/kit/tree/master/transport
 [addsvc]: https://github.com/go-kit/kit/tree/master/examples/addsvc
