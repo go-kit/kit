@@ -6,9 +6,11 @@ import (
 	"strconv"
 
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/transport/grpc"
 )
 
 // In Zipkin, "spans are considered to start and stop with the client." The
@@ -27,6 +29,10 @@ const (
 	traceIDHTTPHeader      = "X-B3-TraceId"
 	spanIDHTTPHeader       = "X-B3-SpanId"
 	parentSpanIDHTTPHeader = "X-B3-ParentSpanId"
+	// gRPC keys are always lowercase
+	traceIDGRPCKey      = "x-b3-traceid"
+	spanIDGRPCKey       = "x-b3-spanid"
+	parentSpanIDGRPCKey = "x-b3-parentspanid"
 
 	// ClientSend is the annotation value used to mark a client sending a
 	// request to a server.
@@ -98,6 +104,16 @@ func ToContext(newSpan NewSpanFunc, logger log.Logger) func(ctx context.Context,
 	}
 }
 
+// ToGRPCContext returns a function that satisfies transport/grpc.BeforeFunc. It
+// takes a Zipkin span from the incoming GRPC request, and saves it in the
+// request context. It's designed to be wired into a server's GRPC transport
+// Before stack. The logger is used to report errors.
+func ToGRPCContext(newSpan NewSpanFunc, logger log.Logger) func(ctx context.Context, md *metadata.MD) context.Context {
+	return func(ctx context.Context, md *metadata.MD) context.Context {
+		return context.WithValue(ctx, SpanContextKey, fromGRPC(newSpan, *md, logger))
+	}
+}
+
 // ToRequest returns a function that satisfies transport/http.BeforeFunc. It
 // takes a Zipkin span from the context, and injects it into the HTTP request.
 // It's designed to be wired into a client's HTTP transport Before stack. It's
@@ -117,6 +133,33 @@ func ToRequest(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) c
 		}
 		if id := span.ParentSpanID(); id > 0 {
 			r.Header.Set(parentSpanIDHTTPHeader, strconv.FormatInt(id, 16))
+		}
+		return ctx
+	}
+}
+
+// ToGRPCRequest returns a function that satisfies transport/grpc.BeforeFunc. It
+// takes a Zipkin span from the context, and injects it into the GRPC context.
+// It's designed to be wired into a client's GRPC transport Before stack. It's
+// expected that AnnotateClient has already ensured the span in the context is
+// a child/client span.
+func ToGRPCRequest(newSpan NewSpanFunc) func(ctx context.Context, md *metadata.MD) context.Context {
+	return func(ctx context.Context, md *metadata.MD) context.Context {
+		span, ok := fromContext(ctx)
+		if !ok {
+			span = newSpan(newID(), newID(), 0)
+		}
+		if id := span.TraceID(); id > 0 {
+			key, value := grpc.EncodeKeyValue(traceIDGRPCKey, strconv.FormatInt(id, 16))
+			(*md)[key] = append((*md)[key], value)
+		}
+		if id := span.SpanID(); id > 0 {
+			key, value := grpc.EncodeKeyValue(spanIDGRPCKey, strconv.FormatInt(id, 16))
+			(*md)[key] = append((*md)[key], value)
+		}
+		if id := span.ParentSpanID(); id > 0 {
+			key, value := grpc.EncodeKeyValue(parentSpanIDGRPCKey, strconv.FormatInt(id, 16))
+			(*md)[key] = append((*md)[key], value)
 		}
 		return ctx
 	}
@@ -149,6 +192,49 @@ func fromHTTP(newSpan NewSpanFunc, r *http.Request, logger log.Logger) *Span {
 	parentSpanID, err := strconv.ParseInt(parentSpanIDStr, 16, 64)
 	if err != nil {
 		logger.Log(parentSpanIDHTTPHeader, parentSpanIDStr, "err", err) // abnormal
+		parentSpanID = 0                                                // the only way to deal with it
+	}
+	return newSpan(traceID, spanID, parentSpanID)
+}
+
+func fromGRPC(newSpan NewSpanFunc, md metadata.MD, logger log.Logger) *Span {
+	traceIDSlc := md[traceIDGRPCKey]
+	pos := len(traceIDSlc) - 1
+	if pos < 0 {
+		return newSpan(newID(), newID(), 0) // normal; just make a new one
+	}
+	traceID, err := strconv.ParseInt(traceIDSlc[pos], 16, 64)
+	if err != nil {
+		logger.Log(traceIDHTTPHeader, traceIDSlc, "err", err)
+		return newSpan(newID(), newID(), 0)
+	}
+	spanIDSlc := md[spanIDGRPCKey]
+	pos = len(spanIDSlc) - 1
+	if pos < 0 {
+		spanIDSlc = make([]string, 1)
+		pos = 0
+	}
+	if spanIDSlc[pos] == "" {
+		logger.Log("msg", "trace ID without span ID")   // abnormal
+		spanIDSlc[pos] = strconv.FormatInt(newID(), 64) // deal with it
+	}
+	spanID, err := strconv.ParseInt(spanIDSlc[len(spanIDSlc)-1], 16, 64)
+	if err != nil {
+		logger.Log(spanIDHTTPHeader, spanIDSlc, "err", err) // abnormal
+		spanID = newID()                                    // deal with it
+	}
+	parentSpanIDSlc := md[parentSpanIDGRPCKey]
+	pos = len(parentSpanIDSlc) - 1
+	if pos < 0 {
+		parentSpanIDSlc = make([]string, 1)
+		pos = 0
+	}
+	if parentSpanIDSlc[pos] == "" {
+		parentSpanIDSlc[pos] = "0" // normal
+	}
+	parentSpanID, err := strconv.ParseInt(parentSpanIDSlc[pos], 16, 64)
+	if err != nil {
+		logger.Log(parentSpanIDHTTPHeader, parentSpanIDSlc, "err", err) // abnormal
 		parentSpanID = 0                                                // the only way to deal with it
 	}
 	return newSpan(traceID, spanID, parentSpanID)
