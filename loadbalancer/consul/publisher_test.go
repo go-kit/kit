@@ -12,7 +12,7 @@ import (
 )
 
 var consulState = []*consul.ServiceEntry{
-	&consul.ServiceEntry{
+	{
 		Node: &consul.Node{
 			Address: "10.0.0.0",
 			Node:    "app00.local",
@@ -27,7 +27,7 @@ var consulState = []*consul.ServiceEntry{
 			},
 		},
 	},
-	&consul.ServiceEntry{
+	{
 		Node: &consul.Node{
 			Address: "10.0.0.1",
 			Node:    "app01.local",
@@ -42,7 +42,7 @@ var consulState = []*consul.ServiceEntry{
 			},
 		},
 	},
-	&consul.ServiceEntry{
+	{
 		Node: &consul.Node{
 			Address: "10.0.0.1",
 			Node:    "app01.local",
