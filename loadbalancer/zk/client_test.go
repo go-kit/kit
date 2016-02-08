@@ -25,9 +25,9 @@ func TestNewClient(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error, got nil")
 	}
-	calledEventHandler := false
+	calledEventHandler := make(chan struct{})
 	eventHandler := func(event stdzk.Event) {
-		calledEventHandler = true
+		close(calledEventHandler)
 	}
 	c, err = NewClient(
 		[]string{"localhost"},
@@ -58,11 +58,11 @@ func TestNewClient(t *testing.T) {
 	if want, have := payload, clientImpl.rootNodePayload; bytes.Compare(want[0], have[0]) != 0 || bytes.Compare(want[1], have[1]) != 0 {
 		t.Errorf("want %s, have %s", want, have)
 	}
-	// Allow EventHandler to be called
-	time.Sleep(1 * time.Millisecond)
 
-	if want, have := true, calledEventHandler; want != have {
-		t.Errorf("want %t, have %t", want, have)
+	select {
+	case <-calledEventHandler:
+	case <-time.After(100 * time.Millisecond):
+		t.Errorf("event handler never called")
 	}
 }
 
