@@ -5,7 +5,7 @@ in large organizations. We solve common problems in distributed systems, so
 you can focus on your business logic.
 
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
-- Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](http://bit.ly/go-slack-signup))
+- Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](https://gophersinvite.herokuapp.com/))
 
 ## Documentation
 
@@ -166,13 +166,13 @@ availability issues, Go kit doesn't vendor its own dependencies, and doesn't
 recommend use of third-party import proxies.
 
 There are several tools which make vendoring easier, including [gb][],
-[govendor][], and [Godep][]. And Go kit uses a variety of continuous
+[govendor][], and [godep][]. And Go kit uses a variety of continuous
 integration providers to find and fix compatibility problems as soon as they
 occur.
 
 [gb]: http://getgb.io
 [govendor]: https://github.com/kardianos/govendor
-[Godep]: https://github.com/tools/godep
+[godep]: https://github.com/tools/godep
 
 ## API stability policy
 
