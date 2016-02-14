@@ -132,8 +132,7 @@ func (s *Span) Encode() *zipkincore.Span {
 		TraceId: s.traceID,
 		Name:    s.methodName,
 		Id:      s.spanID,
-		// BinaryAnnotations: []*zipkincore.BinaryAnnotation{}, // TODO
-		Debug: true, // TODO
+		Debug:   true, // TODO
 	}
 
 	if s.parentSpanID != 0 {
