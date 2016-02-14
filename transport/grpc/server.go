@@ -39,7 +39,6 @@ func NewServer(
 		e:   e,
 		dec: dec,
 		enc: enc,
-		//		errorEncoder: defaultErrorEncoder,
 		logger: log.NewNopLogger(),
 	}
 	for _, option := range options {

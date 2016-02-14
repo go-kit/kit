@@ -65,8 +65,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		}
 		ctx = metadata.NewContext(ctx, *md)
 
-		err = grpc.Invoke(ctx, c.method, req, c.grpcReply, c.client)
-		if err != nil {
+		if err = grpc.Invoke(ctx, c.method, req, c.grpcReply, c.client); err != nil {
 			return nil, fmt.Errorf("Invoke: %v", err)
 		}
 
@@ -74,7 +73,6 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		if err != nil {
 			return nil, fmt.Errorf("Decode: %v", err)
 		}
-
 		return response, nil
 	}
 }

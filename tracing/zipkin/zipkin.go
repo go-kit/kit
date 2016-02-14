@@ -218,7 +218,7 @@ func fromGRPC(newSpan NewSpanFunc, md metadata.MD, logger log.Logger) *Span {
 		logger.Log("msg", "trace ID without span ID")   // abnormal
 		spanIDSlc[pos] = strconv.FormatInt(newID(), 64) // deal with it
 	}
-	spanID, err := strconv.ParseInt(spanIDSlc[len(spanIDSlc)-1], 16, 64)
+	spanID, err := strconv.ParseInt(spanIDSlc[pos], 16, 64)
 	if err != nil {
 		logger.Log(spanIDHTTPHeader, spanIDSlc, "err", err) // abnormal
 		spanID = newID()                                    // deal with it
