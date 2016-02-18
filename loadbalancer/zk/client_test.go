@@ -25,9 +25,14 @@ func TestNewClient(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error, got nil")
 	}
+	hasFired := false
 	calledEventHandler := make(chan struct{})
 	eventHandler := func(event stdzk.Event) {
-		close(calledEventHandler)
+		if !hasFired {
+			// test is successful if this function has fired at least once
+			hasFired = true
+			close(calledEventHandler)
+		}
 	}
 	c, err = NewClient(
 		[]string{"localhost"},
