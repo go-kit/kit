@@ -44,7 +44,8 @@ func testFailingEndpoint(t *testing.T, breaker endpoint.Middleware, primeWith in
 
 	// Adding the sleep due to https://github.com/afex/hystrix-go/issues/41
 	// Increasing the sleep due to https://github.com/go-kit/kit/issues/169
-	time.Sleep(5 * time.Millisecond)
+	// And increasing again for the same reason.
+	time.Sleep(50 * time.Millisecond)
 
 	// But the rest should be blocked by an open circuit.
 	for i := 0; i < 10; i++ {
