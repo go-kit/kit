@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
@@ -60,6 +61,50 @@ func TestToContext(t *testing.T) {
 	}
 }
 
+func TestToGRPCContext(t *testing.T) {
+	const (
+		hostport           = "5.5.5.5:5555"
+		serviceName        = "foo-service"
+		methodName         = "foo-method"
+		traceID      int64 = 12
+		spanID       int64 = 34
+		parentSpanID int64 = 56
+	)
+
+	md := metadata.MD{
+		"x-b3-traceid":      []string{strconv.FormatInt(traceID, 16)},
+		"x-b3-spanid":       []string{strconv.FormatInt(spanID, 16)},
+		"x-b3-parentspanid": []string{strconv.FormatInt(parentSpanID, 16)},
+	}
+
+	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
+	toContext := zipkin.ToGRPCContext(newSpan, log.NewLogfmtLogger(ioutil.Discard))
+
+	ctx := toContext(context.Background(), &md)
+	val := ctx.Value(zipkin.SpanContextKey)
+	if val == nil {
+		t.Fatalf("%s returned no value", zipkin.SpanContextKey)
+	}
+	span, ok := val.(*zipkin.Span)
+	if !ok {
+		t.Fatalf("%s was not a Span object", zipkin.SpanContextKey)
+	}
+
+	for want, haveFunc := range map[int64]func() int64{
+		traceID:      span.TraceID,
+		spanID:       span.SpanID,
+		parentSpanID: span.ParentSpanID,
+	} {
+		if have := haveFunc(); want != have {
+			name := runtime.FuncForPC(reflect.ValueOf(haveFunc).Pointer()).Name()
+			name = strings.Split(name, "·")[0]
+			toks := strings.Split(name, ".")
+			name = toks[len(toks)-1]
+			t.Errorf("%s: want %d, have %d", name, want, have)
+		}
+	}
+}
+
 func TestToRequest(t *testing.T) {
 	const (
 		hostport           = "5.5.5.5:5555"
@@ -82,6 +127,33 @@ func TestToRequest(t *testing.T) {
 		"X-B3-ParentSpanId": parentSpanID,
 	} {
 		if want, have := strconv.FormatInt(wantInt, 16), r.Header.Get(header); want != have {
+			t.Errorf("%s: want %q, have %q", header, want, have)
+		}
+	}
+}
+
+func TestToGRPCRequest(t *testing.T) {
+	const (
+		hostport           = "5.5.5.5:5555"
+		serviceName        = "foo-service"
+		methodName         = "foo-method"
+		traceID      int64 = 20
+		spanID       int64 = 40
+		parentSpanID int64 = 90
+	)
+
+	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
+	span := newSpan(traceID, spanID, parentSpanID)
+	ctx := context.WithValue(context.Background(), zipkin.SpanContextKey, span)
+	md := &metadata.MD{}
+	ctx = zipkin.ToGRPCRequest(newSpan)(ctx, md)
+
+	for header, wantInt := range map[string]int64{
+		"x-b3-traceid":      traceID,
+		"x-b3-spanid":       spanID,
+		"x-b3-parentspanid": parentSpanID,
+	} {
+		if want, have := strconv.FormatInt(wantInt, 16), (*md)[header][0]; want != have {
 			t.Errorf("%s: want %q, have %q", header, want, have)
 		}
 	}
