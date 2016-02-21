@@ -13,7 +13,14 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-func testFailingEndpoint(t *testing.T, breaker endpoint.Middleware, primeWith int, shouldPass func(int) bool, openCircuitError string) {
+func testFailingEndpoint(
+	t *testing.T,
+	breaker endpoint.Middleware,
+	primeWith int,
+	shouldPass func(int) bool,
+	requestDelay time.Duration,
+	openCircuitError string,
+) {
 	_, file, line, _ := runtime.Caller(1)
 	caller := fmt.Sprintf("%s:%d", filepath.Base(file), line)
 
@@ -28,6 +35,7 @@ func testFailingEndpoint(t *testing.T, breaker endpoint.Middleware, primeWith in
 		if _, err := e(context.Background(), struct{}{}); err != nil {
 			t.Fatalf("%s: during priming, got error: %v", caller, err)
 		}
+		time.Sleep(requestDelay)
 	}
 
 	// Switch the endpoint to start throwing errors.
@@ -39,19 +47,16 @@ func testFailingEndpoint(t *testing.T, breaker endpoint.Middleware, primeWith in
 		if _, err := e(context.Background(), struct{}{}); err != m.err {
 			t.Fatalf("%s: want %v, have %v", caller, m.err, err)
 		}
+		time.Sleep(requestDelay)
 	}
 	thru := m.thru
-
-	// Adding the sleep due to https://github.com/afex/hystrix-go/issues/41
-	// Increasing the sleep due to https://github.com/go-kit/kit/issues/169
-	// And increasing again for the same reason.
-	time.Sleep(50 * time.Millisecond)
 
 	// But the rest should be blocked by an open circuit.
 	for i := 0; i < 10; i++ {
 		if _, err := e(context.Background(), struct{}{}); err.Error() != openCircuitError {
 			t.Fatalf("%s: want %q, have %q", caller, openCircuitError, err.Error())
 		}
+		time.Sleep(requestDelay)
 	}
 
 	// Make sure none of those got through.

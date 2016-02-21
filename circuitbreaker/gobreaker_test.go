@@ -15,5 +15,5 @@ func TestGobreaker(t *testing.T) {
 		shouldPass       = func(n int) bool { return n <= 5 } // https://github.com/sony/gobreaker/blob/bfa846d/gobreaker.go#L76
 		circuitOpenError = "circuit breaker is open"
 	)
-	testFailingEndpoint(t, breaker, primeWith, shouldPass, circuitOpenError)
+	testFailingEndpoint(t, breaker, primeWith, shouldPass, 0, circuitOpenError)
 }
