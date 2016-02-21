@@ -33,7 +33,7 @@ func SetResponseHeader(key, val string) ResponseFunc {
 }
 
 // SetRequestHeader returns a RequestFunc that sets the specified metadata
-// key-value pair..
+// key-value pair.
 func SetRequestHeader(key, val string) RequestFunc {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		key, val := EncodeKeyValue(key, val)
