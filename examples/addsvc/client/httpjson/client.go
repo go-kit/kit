@@ -20,12 +20,14 @@ func New(ctx context.Context, baseurl *url.URL, logger log.Logger, c *http.Clien
 	if err != nil {
 		panic(err)
 	}
+	sumURL.Path = "/sum"
+
 	concatURL, err := url.Parse(baseurl.String())
 	if err != nil {
 		panic(err)
 	}
-	sumURL.Path = "/sum"
 	concatURL.Path = "/concat"
+
 	return client{
 		Context: ctx,
 		Logger:  logger,
@@ -34,12 +36,14 @@ func New(ctx context.Context, baseurl *url.URL, logger log.Logger, c *http.Clien
 			sumURL,
 			server.EncodeSumRequest,
 			server.DecodeSumResponse,
+			httptransport.SetClient(c),
 		).Endpoint(),
 		concat: httptransport.NewClient(
 			"GET",
 			concatURL,
 			server.EncodeConcatRequest,
 			server.DecodeConcatResponse,
+			httptransport.SetClient(c),
 		).Endpoint(),
 	}
 }
@@ -54,7 +58,7 @@ type client struct {
 func (c client) Sum(a, b int) int {
 	response, err := c.sum(c.Context, server.SumRequest{A: a, B: b})
 	if err != nil {
-		_ = c.Logger.Log("err", err)
+		c.Logger.Log("err", err)
 		return 0
 	}
 	return response.(server.SumResponse).V
@@ -63,7 +67,7 @@ func (c client) Sum(a, b int) int {
 func (c client) Concat(a, b string) string {
 	response, err := c.concat(c.Context, server.ConcatRequest{A: a, B: b})
 	if err != nil {
-		_ = c.Logger.Log("err", err)
+		c.Logger.Log("err", err)
 		return ""
 	}
 	return response.(server.ConcatResponse).V
