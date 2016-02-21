@@ -1,6 +1,9 @@
 language: go
 
+script: go test -race -v ./...
+
 go:
     - 1.4.2
-    - 1.5
+    - 1.5.3
+    - 1.6
     - tip

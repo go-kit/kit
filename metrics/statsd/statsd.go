@@ -42,11 +42,17 @@ type statsdCounter struct {
 //
 // TODO: support for sampling.
 func NewCounter(w io.Writer, key string, reportInterval time.Duration) metrics.Counter {
+	return NewCounterTick(w, key, time.Tick(reportInterval))
+}
+
+// NewCounterTick is the same as NewCounter, but allows the user to pass in a
+// ticker channel instead of invoking time.Tick.
+func NewCounterTick(w io.Writer, key string, reportTicker <-chan time.Time) metrics.Counter {
 	c := &statsdCounter{
 		key: key,
 		c:   make(chan string),
 	}
-	go fwd(w, key, reportInterval, c.c)
+	go fwd(w, key, reportTicker, c.c)
 	return c
 }
 
@@ -69,11 +75,17 @@ type statsdGauge struct {
 //
 // TODO: support for sampling.
 func NewGauge(w io.Writer, key string, reportInterval time.Duration) metrics.Gauge {
+	return NewGaugeTick(w, key, time.Tick(reportInterval))
+}
+
+// NewGaugeTick is the same as NewGauge, but allows the user to pass in a ticker
+// channel instead of invoking time.Tick.
+func NewGaugeTick(w io.Writer, key string, reportTicker <-chan time.Time) metrics.Gauge {
 	g := &statsdGauge{
 		key: key,
 		g:   make(chan string),
 	}
-	go fwd(w, key, reportInterval, g.g)
+	go fwd(w, key, reportTicker, g.g)
 	return g
 }
 
@@ -106,13 +118,20 @@ func (g *statsdGauge) Get() float64 {
 // same. The callback determines the value, and fields are ignored, so
 // NewCallbackGauge returns nothing.
 func NewCallbackGauge(w io.Writer, key string, reportInterval, scrapeInterval time.Duration, callback func() float64) {
-	go fwd(w, key, reportInterval, emitEvery(scrapeInterval, callback))
+	NewCallbackGaugeTick(w, key, time.Tick(reportInterval), time.Tick(scrapeInterval), callback)
 }
 
-func emitEvery(d time.Duration, callback func() float64) <-chan string {
+// NewCallbackGaugeTick is the same as NewCallbackGauge, but allows the user to
+// pass in ticker channels instead of durations to control report and scrape
+// intervals.
+func NewCallbackGaugeTick(w io.Writer, key string, reportTicker, scrapeTicker <-chan time.Time, callback func() float64) {
+	go fwd(w, key, reportTicker, emitEvery(scrapeTicker, callback))
+}
+
+func emitEvery(emitTicker <-chan time.Time, callback func() float64) <-chan string {
 	c := make(chan string)
 	go func() {
-		for range tick(d) {
+		for range emitTicker {
 			c <- fmt.Sprintf("%f|g", callback())
 		}
 	}()
@@ -142,11 +161,17 @@ type statsdHistogram struct {
 //
 // TODO: support for sampling.
 func NewHistogram(w io.Writer, key string, reportInterval time.Duration) metrics.Histogram {
+	return NewHistogramTick(w, key, time.Tick(reportInterval))
+}
+
+// NewHistogramTick is the same as NewHistogram, but allows the user to pass a
+// ticker channel instead of invoking time.Tick.
+func NewHistogramTick(w io.Writer, key string, reportTicker <-chan time.Time) metrics.Histogram {
 	h := &statsdHistogram{
 		key: key,
 		h:   make(chan string),
 	}
-	go fwd(w, key, reportInterval, h.h)
+	go fwd(w, key, reportTicker, h.h)
 	return h
 }
 
@@ -163,11 +188,8 @@ func (h *statsdHistogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) 
 	return []metrics.Bucket{}, []metrics.Quantile{}
 }
 
-var tick = time.Tick
-
-func fwd(w io.Writer, key string, reportInterval time.Duration, c <-chan string) {
+func fwd(w io.Writer, key string, reportTicker <-chan time.Time, c <-chan string) {
 	buf := &bytes.Buffer{}
-	tick := tick(reportInterval)
 	for {
 		select {
 		case s := <-c:
@@ -176,7 +198,7 @@ func fwd(w io.Writer, key string, reportInterval time.Duration, c <-chan string)
 				flush(w, buf)
 			}
 
-		case <-tick:
+		case <-reportTicker:
 			flush(w, buf)
 		}
 	}

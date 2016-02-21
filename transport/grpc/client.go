@@ -22,8 +22,16 @@ type Client struct {
 	before      []RequestFunc
 }
 
-// NewClient returns a
-func NewClient(cc *grpc.ClientConn, serviceName string, method string, enc EncodeRequestFunc, dec DecodeResponseFunc, grpcReply interface{}, options ...ClientOption) *Client {
+// NewClient constructs a usable Client for a single remote endpoint.
+func NewClient(
+	cc *grpc.ClientConn,
+	serviceName string,
+	method string,
+	enc EncodeRequestFunc,
+	dec DecodeResponseFunc,
+	grpcReply interface{},
+	options ...ClientOption,
+) *Client {
 	c := &Client{
 		client:    cc,
 		method:    fmt.Sprintf("/pb.%s/%s", serviceName, method),

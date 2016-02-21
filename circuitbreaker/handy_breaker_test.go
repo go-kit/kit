@@ -16,5 +16,5 @@ func TestHandyBreaker(t *testing.T) {
 		shouldPass       = func(n int) bool { return (float64(n) / float64(primeWith+n)) <= failureRatio }
 		openCircuitError = handybreaker.ErrCircuitOpen.Error()
 	)
-	testFailingEndpoint(t, breaker, primeWith, shouldPass, openCircuitError)
+	testFailingEndpoint(t, breaker, primeWith, shouldPass, 0, openCircuitError)
 }

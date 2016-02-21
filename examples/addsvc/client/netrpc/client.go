@@ -20,7 +20,7 @@ type client struct {
 func (c client) Sum(a, b int) int {
 	var reply server.SumResponse
 	if err := c.Client.Call("addsvc.Sum", server.SumRequest{A: a, B: b}, &reply); err != nil {
-		_ = c.Logger.Log("err", err)
+		c.Logger.Log("err", err)
 		return 0
 	}
 	return reply.V
@@ -29,7 +29,7 @@ func (c client) Sum(a, b int) int {
 func (c client) Concat(a, b string) string {
 	var reply server.ConcatResponse
 	if err := c.Client.Call("addsvc.Concat", server.ConcatRequest{A: a, B: b}, &reply); err != nil {
-		_ = c.Logger.Log("err", err)
+		c.Logger.Log("err", err)
 		return ""
 	}
 	return reply.V
