@@ -22,8 +22,14 @@ type Client struct {
 	bufferedStream bool
 }
 
-// NewClient returns a
-func NewClient(method string, tgt *url.URL, enc EncodeRequestFunc, dec DecodeResponseFunc, options ...ClientOption) *Client {
+// NewClient constructs a usable Client for a single remote endpoint.
+func NewClient(
+	method string,
+	tgt *url.URL,
+	enc EncodeRequestFunc,
+	dec DecodeResponseFunc,
+	options ...ClientOption,
+) *Client {
 	c := &Client{
 		client:         http.DefaultClient,
 		method:         method,
