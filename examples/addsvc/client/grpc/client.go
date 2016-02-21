@@ -42,7 +42,7 @@ func (c client) Sum(a, b int) int {
 	}
 	reply, err := c.AddClient.Sum(c.Context, request)
 	if err != nil {
-		_ = c.Logger.Log("err", err) // Without an error return parameter, we can't do anything else...
+		c.Logger.Log("err", err) // Without an error return parameter, we can't do anything else...
 		return 0
 	}
 	return int(reply.V)
@@ -55,7 +55,7 @@ func (c client) Concat(a, b string) string {
 	}
 	reply, err := c.AddClient.Concat(c.Context, request)
 	if err != nil {
-		_ = c.Logger.Log("err", err)
+		c.Logger.Log("err", err)
 		return ""
 	}
 	return reply.V

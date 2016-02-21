@@ -21,7 +21,7 @@ type loggingMiddleware struct {
 
 func (m loggingMiddleware) Sum(a, b int) (v int) {
 	defer func(begin time.Time) {
-		_ = m.Logger.Log(
+		m.Logger.Log(
 			"method", "sum",
 			"a", a,
 			"b", b,
@@ -35,7 +35,7 @@ func (m loggingMiddleware) Sum(a, b int) (v int) {
 
 func (m loggingMiddleware) Concat(a, b string) (v string) {
 	defer func(begin time.Time) {
-		_ = m.Logger.Log(
+		m.Logger.Log(
 			"method", "concat",
 			"a", a,
 			"b", b,
