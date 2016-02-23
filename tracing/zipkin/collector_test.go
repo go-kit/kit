@@ -7,7 +7,7 @@ import (
 	"github.com/go-kit/kit/tracing/zipkin"
 )
 
-var s *zipkin.Span = zipkin.NewSpan("203.0.113.10:1234", "service1", "avg", 123, 456, 0)
+var s = zipkin.NewSpan("203.0.113.10:1234", "service1", "avg", 123, 456, 0)
 
 func TestNopCollector(t *testing.T) {
 	c := zipkin.NopCollector{}
@@ -32,6 +32,7 @@ func (c *stubCollector) Collect(*zipkin.Span) error {
 	}
 	return nil
 }
+
 func (c *stubCollector) Close() error {
 	c.closed = true
 	if c.errid != 0 {
@@ -47,14 +48,28 @@ func TestMultiCollector(t *testing.T) {
 		&stubCollector{errid: 2},
 	}
 	err := cs.Collect(s)
-	wanted := "error 1; error 2"
-	if err == nil || err.Error() != wanted {
-		t.Errorf("errors not propagated. got %v, wanted %s", err, wanted)
+	if err == nil {
+		t.Fatal("wanted error, got none")
+	}
+	if want, have := "error 1; error 2", err.Error(); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+	collectionError := err.(zipkin.CollectionError).GetErrors()
+	if want, have := 3, len(collectionError); want != have {
+		t.Fatalf("want %d, have %d", want, have)
+	}
+	if want, have := cs[0].Collect(s).Error(), collectionError[0].Error(); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+	if want, have := cs[1].Collect(s), collectionError[1]; want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+	if want, have := cs[2].Collect(s).Error(), collectionError[2].Error(); want != have {
+		t.Errorf("want %q, have %q", want, have)
 	}
 
 	for _, c := range cs {
-		sc := c.(*stubCollector)
-		if !sc.collected {
+		if !c.(*stubCollector).collected {
 			t.Error("collect not called")
 		}
 	}
@@ -67,14 +82,15 @@ func TestMultiCollectorClose(t *testing.T) {
 		&stubCollector{errid: 2},
 	}
 	err := cs.Close()
-	wanted := "error 1; error 2"
-	if err == nil || err.Error() != wanted {
-		t.Errorf("errors not propagated. got %v, wanted %s", err, wanted)
+	if err == nil {
+		t.Fatal("wanted error, got none")
+	}
+	if want, have := "error 1; error 2", err.Error(); want != have {
+		t.Errorf("want %q, have %q", want, have)
 	}
 
 	for _, c := range cs {
-		sc := c.(*stubCollector)
-		if !sc.closed {
+		if !c.(*stubCollector).closed {
 			t.Error("close not called")
 		}
 	}

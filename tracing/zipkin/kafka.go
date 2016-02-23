@@ -7,6 +7,9 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+// KafkaTopic sets the Kafka topic our Collector will publish on. The
+// default topic for zipkin-receiver-kafka is "zipkin", see:
+// https://github.com/openzipkin/zipkin/tree/master/zipkin-receiver-kafka
 var KafkaTopic = "zipkin"
 
 // KafkaCollector implements Collector by forwarding spans to a Kafka
@@ -69,6 +72,7 @@ func (c *KafkaCollector) Collect(s *Span) error {
 	return nil
 }
 
+// Close implements Collector.
 func (c *KafkaCollector) Close() error {
 	return c.producer.Close()
 }
