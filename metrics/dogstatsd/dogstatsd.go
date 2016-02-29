@@ -237,12 +237,12 @@ func applyTags(value string, tags []metrics.Field) string {
 		for _, t := range tags {
 			switch tagsString {
 			case "":
-				tagsString = fmt.Sprintf("%s:%s", t.Key, t.Value)
+				tagsString = t.Key + ":" + t.Value
 			default:
-				tagsString = fmt.Sprintf("%s,%s:%s", tagsString, t.Key, t.Value)
+				tagsString = tagsString + "," + t.Key + ":" + t.Value
 			}
 		}
-		value = fmt.Sprintf("%s|#%s", value, tagsString)
+		value = value + "|#" + tagsString
 	}
 	return value
 }
