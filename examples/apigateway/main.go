@@ -3,12 +3,17 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+	stdlog "log"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"golang.org/x/net/context"
 
@@ -17,7 +22,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/loadbalancer/consul"
-	klog "github.com/go-kit/kit/log"
+	log "github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 
 	"github.com/hashicorp/consul/api"
@@ -26,21 +31,59 @@ import (
 var (
 	discoveryClient consul.Client
 	ctx             = context.Background()
+	logger          log.Logger
 )
 
 func main() {
+	fs := flag.NewFlagSet("", flag.ExitOnError)
+	var (
+		httpAddr   = fs.String("http.addr", ":8000", "Address for HTTP (JSON) server")
+		consulAddr = fs.String("consul.addr", "", "Consul agent address")
+	)
+	flag.Usage = fs.Usage
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err)
+		os.Exit(1)
+	}
 
+	// log
+	logger = log.NewLogfmtLogger(os.Stderr)
+	logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC).With("caller", log.DefaultCaller)
+	stdlog.SetFlags(0)                             // flags are handled by Go kit's logger
+	stdlog.SetOutput(log.NewStdlibAdapter(logger)) // redirect anything using stdlib log to us
+
+	// errors
+	errc := make(chan error)
+	go func() {
+		errc <- interrupt()
+	}()
+
+	// consul
 	consulConfig := api.DefaultConfig()
+	if len(*consulAddr) > 0 {
+		consulConfig.Address = *consulAddr
+	}
 	consulClient, err := api.NewClient(consulConfig)
 	if err != nil {
-		log.Fatal(err)
+		logger.Log("fatal", err)
 	}
 	discoveryClient = consul.NewClient(consulClient)
 
-	r := mux.NewRouter()
-	r.HandleFunc("/api/{service}/{method}", apiGateway)
+	// apigateway
+	go func() {
+		r := mux.NewRouter()
+		r.HandleFunc("/api/{service}/{method}", apiGateway)
+		errc <- http.ListenAndServe(*httpAddr, r)
+	}()
 
-	http.ListenAndServe(":8000", r)
+	// wait for interrupt/error
+	logger.Log("fatal", <-errc)
+}
+
+func interrupt() error {
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	return fmt.Errorf("%s", <-c)
 }
 
 func apiGateway(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +92,7 @@ func apiGateway(w http.ResponseWriter, r *http.Request) {
 	method := vars["method"]
 	e, err := getEndpoint(service, method)
 	if err != nil {
-		log.Print(err)
+		logger.Log("error", err)
 		return
 	}
 
@@ -57,19 +100,22 @@ func apiGateway(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	err = dec.Decode(&val)
 	if err != nil {
-		log.Print(err)
+		logger.Log("warning", err)
+		fmt.Fprint(w, err)
 		return
 	}
 
 	resp, err := e(ctx, val)
 	if err != nil {
-		log.Print(err)
+		logger.Log("warning", err)
+		fmt.Fprint(w, err)
 		return
 	}
 	enc := json.NewEncoder(w)
 	err = enc.Encode(resp)
 	if err != nil {
-		log.Print(err)
+		logger.Log("warning", err)
+		fmt.Fprint(w, err)
 		return
 	}
 }
@@ -85,7 +131,8 @@ func getEndpoint(se string, method string) (endpoint.Endpoint, error) {
 		}
 	}
 
-	publisher, err := consul.NewPublisher(discoveryClient, factory(ctx, method), klog.NewLogfmtLogger(&klog.StdlibWriter{}), se)
+	publisher, err := consul.NewPublisher(discoveryClient, factory(ctx, method), log.NewLogfmtLogger(&log.StdlibWriter{}), se)
+	publisher.Endpoints()
 	if err != nil {
 		return nil, err
 	}
@@ -129,10 +176,8 @@ func makeProxy(ctx context.Context, service, method string) endpoint.Endpoint {
 }
 
 func encodeRequest(r *http.Request, request interface{}) error {
-	log.Printf("encode req: %v", request)
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(request); err != nil {
-		log.Print(err)
 		return err
 	}
 	r.Body = ioutil.NopCloser(&buf)
