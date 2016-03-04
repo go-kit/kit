@@ -119,7 +119,7 @@ func TestHTTPClientBufferedStream(t *testing.T) {
 	b := make([]byte, len(testbody))
 	_, err = response.Body.Read(b)
 	if want, have := io.EOF, err; have != want {
-		t.Fatal("want %q, have %q", want, have)
+		t.Fatalf("want %q, have %q", want, have)
 	}
 	if want, have := testbody, string(b); want != have {
 		t.Errorf("want %q, have %q", want, have)

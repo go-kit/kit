@@ -33,7 +33,7 @@ func NewPublisher(c Client, path string, f loadbalancer.Factory, logger log.Logg
 		return nil, err
 	}
 
-	// intial node retrieval and cache fill
+	// initial node retrieval and cache fill
 	instances, eventc, err := p.client.GetEntries(p.path)
 	if err != nil {
 		logger.Log("path", p.path, "msg", "failed to retrieve entries", "err", err)

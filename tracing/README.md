@@ -30,7 +30,7 @@ download and run the [Vagrant] image like this from the command line:
 mkdir zipkin
 cd zipkin
 vagrant init bas303/zipkin
-vagrant-up --provider virtualbox
+vagrant up --provider virtualbox
 ```
 
 [Zipkin]: http://zipkin.io/
