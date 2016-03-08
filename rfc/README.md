@@ -16,5 +16,8 @@ At this stage of the project, RFC ratification will be done by me (Peter
 Bourgon). Once we reach a usable MVP, i.e. semantic version 1.0.0, I hope we'll
 transition to a more community-driven governance model.
 
-For questions and free-form discussion, please use IRC or the mailing list.
+For questions and free-form discussion, please use
+
+- Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
+- Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](https://gophersinvite.herokuapp.com/))
 
