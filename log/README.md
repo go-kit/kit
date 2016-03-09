@@ -6,7 +6,11 @@ It can be used for both typical application log events, and log-structured data 
 
 ## Rationale
 
-TODO
+Logging is an important piece in almost any application, but it's a fundamental piece in distributed applications.
+
+Logs allow to track the system activity allowing to know the operations, errors, unlikely results, etc., which have happened at a specific time, with the possibility to be analyzed in the future for identifying system errors, security issues and so on.
+
+Structure logging allows to register discrete fields in addition to information messages, facilitating their process and storage, aiming to ease their post analysis.
 
 ## Usage
 
@@ -65,7 +69,7 @@ import (
 func main() {
 	logger := kitlog.NewJSONLogger(os.Stdout)
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger))
-	
+
 	stdlog.Print("I sure like pie")
 }
 ```
