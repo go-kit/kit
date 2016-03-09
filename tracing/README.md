@@ -5,7 +5,7 @@ An implementation exists for [Zipkin][]; [Appdash][] support is planned.
 
 [Dapper]: http://research.google.com/pubs/pub36356.html
 [Zipkin]: https://blog.twitter.com/2012/distributed-systems-tracing-with-zipkin
-[Appdash]: https://sourcegraph.com/blog/117580140734
+[Appdash]: https://github.com/sourcegraph/appdash
 
 ## Rationale
 
