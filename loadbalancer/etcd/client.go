@@ -46,7 +46,6 @@ func NewClient(ctx context.Context, machines []string, options *ClientOptions) (
 		err      error
 		caCertCt []byte
 		tlsCert  tls.Certificate
-		//options  *ClientOptions
 	)
 	if options == nil {
 		options = &ClientOptions{
@@ -58,8 +57,6 @@ func NewClient(ctx context.Context, machines []string, options *ClientOptions) (
 			HeaderTimeoutPerRequest: 100 * time.Second,
 		}
 	}
-
-	//log.Println("")
 
 	if options.Cert != "" && options.Key != "" {
 
@@ -78,7 +75,6 @@ func NewClient(ctx context.Context, machines []string, options *ClientOptions) (
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{tlsCert},
 			RootCAs:      caCertPool,
-			//			InsecureSkipVerify: true,
 		}
 
 		transport := &http.Transport{
@@ -103,7 +99,6 @@ func NewClient(ctx context.Context, machines []string, options *ClientOptions) (
 		}
 		c = etcd.NewKeysAPI(ce)
 	} else {
-		//		c = etcd.NewClient(machines)
 		cfg := etcd.Config{
 			Endpoints:               machines,
 			Transport:               etcd.DefaultTransport,
