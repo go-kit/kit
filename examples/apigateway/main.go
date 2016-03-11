@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -28,12 +29,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-var (
-	discoveryClient consul.Client
-	ctx             = context.Background()
-	logger          log.Logger
-)
-
 func main() {
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	var (
@@ -47,7 +42,7 @@ func main() {
 	}
 
 	// log
-	logger = log.NewLogfmtLogger(os.Stderr)
+	logger := log.NewLogfmtLogger(os.Stderr)
 	logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC).With("caller", log.DefaultCaller)
 	stdlog.SetFlags(0)                             // flags are handled by Go kit's logger
 	stdlog.SetOutput(log.NewStdlibAdapter(logger)) // redirect anything using stdlib log to us
@@ -67,40 +62,51 @@ func main() {
 	if err != nil {
 		logger.Log("fatal", err)
 	}
-	discoveryClient = consul.NewClient(consulClient)
+	discoveryClient := consul.NewClient(consulClient)
 
-	// discover service stringsvc
-	uppercase, err := consul.NewPublisher(discoveryClient, routeFactory(ctx, "uppercase"), logger, "stringsvc")
-	if err != nil {
-		logger.Log("fatal", err)
-	}
-	count, err := consul.NewPublisher(discoveryClient, routeFactory(ctx, "count"), logger, "stringsvc")
-	if err != nil {
-		logger.Log("fatal", err)
-	}
+	ctx := context.Background()
 
-	// discover service addsvc
-	addsvcSum, err := consul.NewPublisher(discoveryClient, factoryAddsvc(ctx, logger, makeSumEndpoint), logger, "addsvc")
-	if err != nil {
-		logger.Log("fatal", err)
-	}
-	addsvcConcat, err := consul.NewPublisher(discoveryClient, factoryAddsvc(ctx, logger, makeConcatEndpoint), logger, "addsvc")
-	if err != nil {
-		logger.Log("fatal", err)
+	// service definitions
+	serviceDefs := []*ServiceDef{}
+	serviceDefs = append(serviceDefs, &ServiceDef{
+		Name: "addsvc",
+		Endpoints: map[string]loadbalancer.Factory{
+			"/api/addsvc/concat": factoryAddsvc(ctx, logger, makeConcatEndpoint),
+			"/api/addsvc/sum":    factoryAddsvc(ctx, logger, makeSumEndpoint),
+		},
+	})
+	serviceDefs = append(serviceDefs, &ServiceDef{
+		Name: "stringsvc",
+		Endpoints: map[string]loadbalancer.Factory{
+			"/api/stringsvc/uppercase": routeFactory(ctx, "uppercase"),
+			"/api/stringsvc/count":     routeFactory(ctx, "count"),
+		},
+	})
+
+	// discover instances and register endpoints
+	r := mux.NewRouter()
+	for _, def := range serviceDefs {
+		for path, e := range def.Endpoints {
+			pub, err := consul.NewPublisher(discoveryClient, e, logger, def.Name)
+			if err != nil {
+				logger.Log("fatal", err)
+			}
+			r.HandleFunc(path, makeHandler(ctx, loadbalancer.NewRoundRobin(pub), logger))
+		}
 	}
 
 	// apigateway
 	go func() {
-		r := mux.NewRouter()
-		r.HandleFunc("/api/addsvc/sum", makeSumHandler(ctx, loadbalancer.NewRoundRobin(addsvcSum)))
-		r.HandleFunc("/api/addsvc/concat", makeConcatHandler(ctx, loadbalancer.NewRoundRobin(addsvcConcat)))
-		r.HandleFunc("/api/stringsvc/uppercase", factoryPassHandler(loadbalancer.NewRoundRobin(uppercase), logger))
-		r.HandleFunc("/api/stringsvc/count", factoryPassHandler(loadbalancer.NewRoundRobin(count), logger))
 		errc <- http.ListenAndServe(*httpAddr, r)
 	}()
 
 	// wait for interrupt/error
 	logger.Log("fatal", <-errc)
+}
+
+type ServiceDef struct {
+	Name      string
+	Endpoints map[string]loadbalancer.Factory
 }
 
 func interrupt() error {
@@ -109,49 +115,24 @@ func interrupt() error {
 	return fmt.Errorf("%s", <-c)
 }
 
-func makeSumHandler(ctx context.Context, lb loadbalancer.LoadBalancer) http.HandlerFunc {
+func makeHandler(ctx context.Context, lb loadbalancer.LoadBalancer, logger log.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		sumReq, err := server.DecodeSumRequest(r)
-		if err != nil {
-			logger.Log("error", err)
-			return
-		}
 		e, err := lb.Endpoint()
 		if err != nil {
 			logger.Log("error", err)
 			return
 		}
-		sumResp, err := e(ctx, sumReq)
+		resp, err := e(ctx, r.Body)
 		if err != nil {
 			logger.Log("error", err)
 			return
 		}
-		err = server.EncodeSumResponse(w, sumResp)
-		if err != nil {
-			logger.Log("error", err)
+		b, ok := resp.([]byte)
+		if !ok {
+			logger.Log("error", "endpoint response is not of type []byte")
 			return
 		}
-	}
-}
-
-func makeConcatHandler(ctx context.Context, lb loadbalancer.LoadBalancer) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		concatReq, err := server.DecodeConcatRequest(r)
-		if err != nil {
-			logger.Log("error", err)
-			return
-		}
-		e, err := lb.Endpoint()
-		if err != nil {
-			logger.Log("error", err)
-			return
-		}
-		concatResp, err := e(ctx, concatReq)
-		if err != nil {
-			logger.Log("error", err)
-			return
-		}
-		err = server.EncodeConcatResponse(w, concatResp)
+		_, err = w.Write(b)
 		if err != nil {
 			logger.Log("error", err)
 			return
@@ -173,17 +154,25 @@ func factoryAddsvc(ctx context.Context, logger log.Logger, maker func(server.Add
 
 func makeSumEndpoint(svc server.AddService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(server.SumRequest)
+		r := request.(io.Reader)
+		var req server.SumRequest
+		if err := json.NewDecoder(r).Decode(&req); err != nil {
+			return nil, err
+		}
 		v := svc.Sum(req.A, req.B)
-		return server.SumResponse{V: v}, nil
+		return json.Marshal(v)
 	}
 }
 
 func makeConcatEndpoint(svc server.AddService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(server.ConcatRequest)
+		r := request.(io.Reader)
+		var req server.ConcatRequest
+		if err := json.NewDecoder(r).Decode(&req); err != nil {
+			return nil, err
+		}
 		v := svc.Concat(req.A, req.B)
-		return server.ConcatResponse{V: v}, nil
+		return json.Marshal(v)
 	}
 }
 
@@ -211,27 +200,4 @@ func passEncode(r *http.Request, request interface{}) error {
 
 func passDecode(r *http.Response) (interface{}, error) {
 	return ioutil.ReadAll(r.Body)
-}
-
-func factoryPassHandler(lb loadbalancer.LoadBalancer, logger log.Logger) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		e, err := lb.Endpoint()
-		if err != nil {
-			logger.Log("error", err)
-			return
-		}
-		resp, err := e(ctx, r.Body)
-		if err != nil {
-			logger.Log("warning", err)
-			fmt.Fprint(w, err)
-			return
-		}
-		b := resp.([]byte)
-		_, err = w.Write(b)
-		if err != nil {
-			logger.Log("warning", err)
-			fmt.Fprint(w, err)
-			return
-		}
-	}
 }
