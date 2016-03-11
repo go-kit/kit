@@ -19,6 +19,7 @@ package expvar
 import (
 	"expvar"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -29,34 +30,43 @@ import (
 )
 
 type counter struct {
-	v *expvar.Int
+	name string
+	v    *expvar.Int
 }
 
 // NewCounter returns a new Counter backed by an expvar with the given name.
 // Fields are ignored.
 func NewCounter(name string) metrics.Counter {
-	return &counter{expvar.NewInt(name)}
+	return &counter{
+		name: name,
+		v:    expvar.NewInt(name),
+	}
 }
 
+func (c *counter) Name() string                       { return c.name }
 func (c *counter) With(metrics.Field) metrics.Counter { return c }
 func (c *counter) Add(delta uint64)                   { c.v.Add(int64(delta)) }
 
 type gauge struct {
-	v *expvar.Float
+	name string
+	v    *expvar.Float
 }
 
 // NewGauge returns a new Gauge backed by an expvar with the given name. It
 // should be updated manually; for a callback-based approach, see
 // PublishCallbackGauge. Fields are ignored.
 func NewGauge(name string) metrics.Gauge {
-	return &gauge{expvar.NewFloat(name)}
+	return &gauge{
+		name: name,
+		v:    expvar.NewFloat(name),
+	}
 }
 
+func (g *gauge) Name() string                     { return g.name }
 func (g *gauge) With(metrics.Field) metrics.Gauge { return g }
-
-func (g *gauge) Add(delta float64) { g.v.Add(delta) }
-
-func (g *gauge) Set(value float64) { g.v.Set(value) }
+func (g *gauge) Add(delta float64)                { g.v.Add(delta) }
+func (g *gauge) Set(value float64)                { g.v.Set(value) }
+func (g *gauge) Get() float64                     { return mustParseFloat64(g.v.String()) }
 
 // PublishCallbackGauge publishes a Gauge as an expvar with the given name,
 // whose value is determined at collect time by the passed callback function.
@@ -101,6 +111,7 @@ func NewHistogram(name string, minValue, maxValue int64, sigfigs int, quantiles 
 	return h
 }
 
+func (h *histogram) Name() string                         { return h.name }
 func (h *histogram) With(metrics.Field) metrics.Histogram { return h }
 
 func (h *histogram) Observe(value int64) {
@@ -117,6 +128,27 @@ func (h *histogram) Observe(value int64) {
 	}
 }
 
+func (h *histogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
+	bars := h.hist.Merge().Distribution()
+	buckets := make([]metrics.Bucket, len(bars))
+	for i, bar := range bars {
+		buckets[i] = metrics.Bucket{
+			From:  bar.From,
+			To:    bar.To,
+			Count: bar.Count,
+		}
+	}
+	quantiles := make([]metrics.Quantile, 0, len(h.gauges))
+	for quantile, gauge := range h.gauges {
+		quantiles = append(quantiles, metrics.Quantile{
+			Quantile: quantile,
+			Value:    int64(gauge.Get()),
+		})
+	}
+	sort.Sort(quantileSlice(quantiles))
+	return buckets, quantiles
+}
+
 func (h *histogram) rotateLoop(d time.Duration) {
 	for range time.Tick(d) {
 		h.mu.Lock()
@@ -124,3 +156,17 @@ func (h *histogram) rotateLoop(d time.Duration) {
 		h.mu.Unlock()
 	}
 }
+
+func mustParseFloat64(s string) float64 {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+type quantileSlice []metrics.Quantile
+
+func (a quantileSlice) Len() int           { return len(a) }
+func (a quantileSlice) Less(i, j int) bool { return a[i].Quantile < a[j].Quantile }
+func (a quantileSlice) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }

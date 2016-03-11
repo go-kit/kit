@@ -12,7 +12,7 @@ import (
 
 func TestHistogramQuantiles(t *testing.T) {
 	var (
-		name      = "test_histogram"
+		name      = "test_histogram_quantiles"
 		quantiles = []int{50, 90, 95, 99}
 		h         = expvar.NewHistogram(name, 0, 100, 3, quantiles...).With(metrics.Field{Key: "ignored", Value: "field"})
 	)

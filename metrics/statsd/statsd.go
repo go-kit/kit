@@ -17,7 +17,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"time"
+
+	"sync/atomic"
 
 	"github.com/go-kit/kit/metrics"
 )
@@ -27,7 +30,10 @@ import (
 
 const maxBufferSize = 1400 // bytes
 
-type statsdCounter chan string
+type statsdCounter struct {
+	key string
+	c   chan string
+}
 
 // NewCounter returns a Counter that emits observations in the statsd protocol
 // to the passed writer. Observations are buffered for the report interval or
@@ -36,16 +42,31 @@ type statsdCounter chan string
 //
 // TODO: support for sampling.
 func NewCounter(w io.Writer, key string, reportInterval time.Duration) metrics.Counter {
-	c := make(chan string)
-	go fwd(w, key, reportInterval, c)
-	return statsdCounter(c)
+	return NewCounterTick(w, key, time.Tick(reportInterval))
 }
 
-func (c statsdCounter) With(metrics.Field) metrics.Counter { return c }
+// NewCounterTick is the same as NewCounter, but allows the user to pass in a
+// ticker channel instead of invoking time.Tick.
+func NewCounterTick(w io.Writer, key string, reportTicker <-chan time.Time) metrics.Counter {
+	c := &statsdCounter{
+		key: key,
+		c:   make(chan string),
+	}
+	go fwd(w, key, reportTicker, c.c)
+	return c
+}
 
-func (c statsdCounter) Add(delta uint64) { c <- fmt.Sprintf("%d|c", delta) }
+func (c *statsdCounter) Name() string { return c.key }
 
-type statsdGauge chan string
+func (c *statsdCounter) With(metrics.Field) metrics.Counter { return c }
+
+func (c *statsdCounter) Add(delta uint64) { c.c <- fmt.Sprintf("%d|c", delta) }
+
+type statsdGauge struct {
+	key       string
+	lastValue uint64 // math.Float64frombits
+	g         chan string
+}
 
 // NewGauge returns a Gauge that emits values in the statsd protocol to the
 // passed writer. Values are buffered for the report interval or until the
@@ -54,24 +75,40 @@ type statsdGauge chan string
 //
 // TODO: support for sampling.
 func NewGauge(w io.Writer, key string, reportInterval time.Duration) metrics.Gauge {
-	g := make(chan string)
-	go fwd(w, key, reportInterval, g)
-	return statsdGauge(g)
+	return NewGaugeTick(w, key, time.Tick(reportInterval))
 }
 
-func (g statsdGauge) With(metrics.Field) metrics.Gauge { return g }
+// NewGaugeTick is the same as NewGauge, but allows the user to pass in a ticker
+// channel instead of invoking time.Tick.
+func NewGaugeTick(w io.Writer, key string, reportTicker <-chan time.Time) metrics.Gauge {
+	g := &statsdGauge{
+		key: key,
+		g:   make(chan string),
+	}
+	go fwd(w, key, reportTicker, g.g)
+	return g
+}
 
-func (g statsdGauge) Add(delta float64) {
+func (g *statsdGauge) Name() string { return g.key }
+
+func (g *statsdGauge) With(metrics.Field) metrics.Gauge { return g }
+
+func (g *statsdGauge) Add(delta float64) {
 	// https://github.com/etsy/statsd/blob/master/docs/metric_types.md#gauges
 	sign := "+"
 	if delta < 0 {
 		sign, delta = "-", -delta
 	}
-	g <- fmt.Sprintf("%s%f|g", sign, delta)
+	g.g <- fmt.Sprintf("%s%f|g", sign, delta)
 }
 
-func (g statsdGauge) Set(value float64) {
-	g <- fmt.Sprintf("%f|g", value)
+func (g *statsdGauge) Set(value float64) {
+	atomic.StoreUint64(&g.lastValue, math.Float64bits(value))
+	g.g <- fmt.Sprintf("%f|g", value)
+}
+
+func (g *statsdGauge) Get() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&g.lastValue))
 }
 
 // NewCallbackGauge emits values in the statsd protocol to the passed writer.
@@ -81,20 +118,30 @@ func (g statsdGauge) Set(value float64) {
 // same. The callback determines the value, and fields are ignored, so
 // NewCallbackGauge returns nothing.
 func NewCallbackGauge(w io.Writer, key string, reportInterval, scrapeInterval time.Duration, callback func() float64) {
-	go fwd(w, key, reportInterval, emitEvery(scrapeInterval, callback))
+	NewCallbackGaugeTick(w, key, time.Tick(reportInterval), time.Tick(scrapeInterval), callback)
 }
 
-func emitEvery(d time.Duration, callback func() float64) <-chan string {
+// NewCallbackGaugeTick is the same as NewCallbackGauge, but allows the user to
+// pass in ticker channels instead of durations to control report and scrape
+// intervals.
+func NewCallbackGaugeTick(w io.Writer, key string, reportTicker, scrapeTicker <-chan time.Time, callback func() float64) {
+	go fwd(w, key, reportTicker, emitEvery(scrapeTicker, callback))
+}
+
+func emitEvery(emitTicker <-chan time.Time, callback func() float64) <-chan string {
 	c := make(chan string)
 	go func() {
-		for range tick(d) {
+		for range emitTicker {
 			c <- fmt.Sprintf("%f|g", callback())
 		}
 	}()
 	return c
 }
 
-type statsdHistogram chan string
+type statsdHistogram struct {
+	key string
+	h   chan string
+}
 
 // NewHistogram returns a Histogram that emits observations in the statsd
 // protocol to the passed writer. Observations are buffered for the reporting
@@ -114,22 +161,35 @@ type statsdHistogram chan string
 //
 // TODO: support for sampling.
 func NewHistogram(w io.Writer, key string, reportInterval time.Duration) metrics.Histogram {
-	h := make(chan string)
-	go fwd(w, key, reportInterval, h)
-	return statsdHistogram(h)
+	return NewHistogramTick(w, key, time.Tick(reportInterval))
 }
 
-func (h statsdHistogram) With(metrics.Field) metrics.Histogram { return h }
-
-func (h statsdHistogram) Observe(value int64) {
-	h <- fmt.Sprintf("%d|ms", value)
+// NewHistogramTick is the same as NewHistogram, but allows the user to pass a
+// ticker channel instead of invoking time.Tick.
+func NewHistogramTick(w io.Writer, key string, reportTicker <-chan time.Time) metrics.Histogram {
+	h := &statsdHistogram{
+		key: key,
+		h:   make(chan string),
+	}
+	go fwd(w, key, reportTicker, h.h)
+	return h
 }
 
-var tick = time.Tick
+func (h *statsdHistogram) Name() string { return h.key }
 
-func fwd(w io.Writer, key string, reportInterval time.Duration, c <-chan string) {
+func (h *statsdHistogram) With(metrics.Field) metrics.Histogram { return h }
+
+func (h *statsdHistogram) Observe(value int64) {
+	h.h <- fmt.Sprintf("%d|ms", value)
+}
+
+func (h *statsdHistogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
+	// TODO(pb): no way to do this without introducing e.g. codahale/hdrhistogram
+	return []metrics.Bucket{}, []metrics.Quantile{}
+}
+
+func fwd(w io.Writer, key string, reportTicker <-chan time.Time, c <-chan string) {
 	buf := &bytes.Buffer{}
-	tick := tick(reportInterval)
 	for {
 		select {
 		case s := <-c:
@@ -138,7 +198,7 @@ func fwd(w io.Writer, key string, reportInterval time.Duration, c <-chan string)
 				flush(w, buf)
 			}
 
-		case <-tick:
+		case <-reportTicker:
 			flush(w, buf)
 		}
 	}

@@ -1,8 +1,9 @@
-package statsd
+package dogstatsd
 
 import (
 	"bytes"
 	"fmt"
+	"github.com/go-kit/kit/metrics"
 	"strings"
 	"sync"
 	"testing"
@@ -12,12 +13,15 @@ import (
 func TestCounter(t *testing.T) {
 	buf := &syncbuf{buf: &bytes.Buffer{}}
 	reportc := make(chan time.Time)
-	c := NewCounterTick(buf, "test_statsd_counter", reportc)
+	tags := []metrics.Field{}
+	c := NewCounterTick(buf, "test_statsd_counter", reportc, tags)
 
 	c.Add(1)
-	c.Add(2)
+	c.With(metrics.Field{"foo", "bar"}).Add(2)
+	c.With(metrics.Field{"foo", "bar"}).With(metrics.Field{"abc", "123"}).Add(2)
+	c.Add(3)
 
-	want, have := "test_statsd_counter:1|c\ntest_statsd_counter:2|c\n", ""
+	want, have := "test_statsd_counter:1|c\ntest_statsd_counter:2|c|#foo:bar\ntest_statsd_counter:2|c|#foo:bar,abc:123\ntest_statsd_counter:3|c\n", ""
 	by(t, 100*time.Millisecond, func() bool {
 		have = buf.String()
 		return want == have
@@ -29,7 +33,8 @@ func TestCounter(t *testing.T) {
 func TestGauge(t *testing.T) {
 	buf := &syncbuf{buf: &bytes.Buffer{}}
 	reportc := make(chan time.Time)
-	g := NewGaugeTick(buf, "test_statsd_gauge", reportc)
+	tags := []metrics.Field{}
+	g := NewGaugeTick(buf, "test_statsd_gauge", reportc, tags)
 
 	delta := 1.0
 	g.Add(delta)
@@ -44,9 +49,9 @@ func TestGauge(t *testing.T) {
 
 	buf.Reset()
 	delta = -2.0
-	g.Add(delta)
+	g.With(metrics.Field{"foo", "bar"}).Add(delta)
 
-	want, have = fmt.Sprintf("test_statsd_gauge:%f|g\n", delta), ""
+	want, have = fmt.Sprintf("test_statsd_gauge:%f|g|#foo:bar\n", delta), ""
 	by(t, 100*time.Millisecond, func() bool {
 		have = buf.String()
 		return want == have
@@ -56,9 +61,9 @@ func TestGauge(t *testing.T) {
 
 	buf.Reset()
 	value := 3.0
-	g.Set(value)
+	g.With(metrics.Field{"foo", "bar"}).With(metrics.Field{"abc", "123"}).Set(value)
 
-	want, have = fmt.Sprintf("test_statsd_gauge:%f|g\n", value), ""
+	want, have = fmt.Sprintf("test_statsd_gauge:%f|g|#foo:bar,abc:123\n", value), ""
 	by(t, 100*time.Millisecond, func() bool {
 		have = buf.String()
 		return want == have
@@ -96,11 +101,13 @@ func TestCallbackGauge(t *testing.T) {
 func TestHistogram(t *testing.T) {
 	buf := &syncbuf{buf: &bytes.Buffer{}}
 	reportc := make(chan time.Time)
-	h := NewHistogramTick(buf, "test_statsd_histogram", reportc)
+	tags := []metrics.Field{}
+	h := NewHistogramTick(buf, "test_statsd_histogram", reportc, tags)
 
 	h.Observe(123)
+	h.With(metrics.Field{"foo", "bar"}).Observe(456)
 
-	want, have := "test_statsd_histogram:123|ms\n", ""
+	want, have := "test_statsd_histogram:123|ms\ntest_statsd_histogram:456|ms|#foo:bar\n", ""
 	by(t, 100*time.Millisecond, func() bool {
 		have = buf.String()
 		return want == have

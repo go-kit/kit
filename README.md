@@ -1,11 +1,11 @@
-# Go kit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit) [![Coverage Status](https://coveralls.io/repos/go-kit/kit/badge.svg?branch=master&service=github)](https://coveralls.io/github/go-kit/kit?branch=master)
+# Go kit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=svg)](https://circleci.com/gh/go-kit/kit) [![Drone.io](https://drone.io/github.com/go-kit/kit/status.png)](https://drone.io/github.com/go-kit/kit/latest) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit) [![Coverage Status](https://coveralls.io/repos/go-kit/kit/badge.svg?branch=master&service=github)](https://coveralls.io/github/go-kit/kit?branch=master) [![Go Report Card](https://goreportcard.com/badge/go-kit/kit)](https://goreportcard.com/report/go-kit/kit)
 
 **Go kit** is a **distributed programming toolkit** for building microservices
 in large organizations. We solve common problems in distributed systems, so
 you can focus on your business logic.
 
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
-- Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](http://bit.ly/go-slack-signup))
+- Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](https://gophersinvite.herokuapp.com/))
 
 ## Documentation
 
@@ -53,9 +53,9 @@ for simple JSON over HTTP. If your organization uses a fully-featured
 transport, bindings are typically provided by the Go library for the
 transport, and there's not much for Go kit to do. In those cases, see the
 examples to understand how to write adapters for your endpoints. For now, see
-the [addsvc][addsvc] to understand how transport bindings work. We'll soon
-have specific examples for Thrift, gRPC, net/rpc, and JSON over HTTP. Avro and
-JSON/RPC support is planned.
+the [addsvc][addsvc] to understand how transport bindings work. We have
+specific examples for Thrift, gRPC, net/rpc, and JSON over HTTP. JSON/RPC and
+Swagger support is planned.
 
 [transport]: https://github.com/go-kit/kit/tree/master/transport
 [addsvc]: https://github.com/go-kit/kit/tree/master/examples/addsvc
@@ -166,13 +166,13 @@ availability issues, Go kit doesn't vendor its own dependencies, and doesn't
 recommend use of third-party import proxies.
 
 There are several tools which make vendoring easier, including [gb][],
-[govendor][], and [Godep][]. And Go kit uses a variety of continuous
+[govendor][], and [godep][]. And Go kit uses a variety of continuous
 integration providers to find and fix compatibility problems as soon as they
 occur.
 
 [gb]: http://getgb.io
 [govendor]: https://github.com/kardianos/govendor
-[Godep]: https://github.com/tools/godep
+[godep]: https://github.com/tools/godep
 
 ## API stability policy
 

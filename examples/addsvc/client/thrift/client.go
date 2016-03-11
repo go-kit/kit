@@ -19,7 +19,7 @@ type client struct {
 func (c client) Sum(a, b int) int {
 	reply, err := c.AddServiceClient.Sum(int64(a), int64(b))
 	if err != nil {
-		_ = c.Logger.Log("err", err)
+		c.Logger.Log("err", err)
 		return 0
 	}
 	return int(reply.Value)
@@ -28,7 +28,7 @@ func (c client) Sum(a, b int) int {
 func (c client) Concat(a, b string) string {
 	reply, err := c.AddServiceClient.Concat(a, b)
 	if err != nil {
-		_ = c.Logger.Log("err", err)
+		c.Logger.Log("err", err)
 		return ""
 	}
 	return reply.Value

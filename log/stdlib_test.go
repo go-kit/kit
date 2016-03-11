@@ -74,121 +74,121 @@ func TestStdLibAdapterExtraction(t *testing.T) {
 
 func TestStdlibAdapterSubexps(t *testing.T) {
 	for input, wantMap := range map[string]map[string]string{
-		"hello world": map[string]string{
+		"hello world": {
 			"date": "",
 			"time": "",
 			"file": "",
 			"msg":  "hello world",
 		},
-		"2009/01/23: hello world": map[string]string{
+		"2009/01/23: hello world": {
 			"date": "2009/01/23",
 			"time": "",
 			"file": "",
 			"msg":  "hello world",
 		},
-		"2009/01/23 01:23:23: hello world": map[string]string{
+		"2009/01/23 01:23:23: hello world": {
 			"date": "2009/01/23",
 			"time": "01:23:23",
 			"file": "",
 			"msg":  "hello world",
 		},
-		"01:23:23: hello world": map[string]string{
+		"01:23:23: hello world": {
 			"date": "",
 			"time": "01:23:23",
 			"file": "",
 			"msg":  "hello world",
 		},
-		"2009/01/23 01:23:23.123123: hello world": map[string]string{
+		"2009/01/23 01:23:23.123123: hello world": {
 			"date": "2009/01/23",
 			"time": "01:23:23.123123",
 			"file": "",
 			"msg":  "hello world",
 		},
-		"2009/01/23 01:23:23.123123 /a/b/c/d.go:23: hello world": map[string]string{
+		"2009/01/23 01:23:23.123123 /a/b/c/d.go:23: hello world": {
 			"date": "2009/01/23",
 			"time": "01:23:23.123123",
 			"file": "/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
-		"01:23:23.123123 /a/b/c/d.go:23: hello world": map[string]string{
+		"01:23:23.123123 /a/b/c/d.go:23: hello world": {
 			"date": "",
 			"time": "01:23:23.123123",
 			"file": "/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
-		"2009/01/23 01:23:23 /a/b/c/d.go:23: hello world": map[string]string{
+		"2009/01/23 01:23:23 /a/b/c/d.go:23: hello world": {
 			"date": "2009/01/23",
 			"time": "01:23:23",
 			"file": "/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
-		"2009/01/23 /a/b/c/d.go:23: hello world": map[string]string{
+		"2009/01/23 /a/b/c/d.go:23: hello world": {
 			"date": "2009/01/23",
 			"time": "",
 			"file": "/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
-		"/a/b/c/d.go:23: hello world": map[string]string{
+		"/a/b/c/d.go:23: hello world": {
 			"date": "",
 			"time": "",
 			"file": "/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
-		"2009/01/23 01:23:23.123123 C:/a/b/c/d.go:23: hello world": map[string]string{
+		"2009/01/23 01:23:23.123123 C:/a/b/c/d.go:23: hello world": {
 			"date": "2009/01/23",
 			"time": "01:23:23.123123",
 			"file": "C:/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
-		"01:23:23.123123 C:/a/b/c/d.go:23: hello world": map[string]string{
+		"01:23:23.123123 C:/a/b/c/d.go:23: hello world": {
 			"date": "",
 			"time": "01:23:23.123123",
 			"file": "C:/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
-		"2009/01/23 01:23:23 C:/a/b/c/d.go:23: hello world": map[string]string{
+		"2009/01/23 01:23:23 C:/a/b/c/d.go:23: hello world": {
 			"date": "2009/01/23",
 			"time": "01:23:23",
 			"file": "C:/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
-		"2009/01/23 C:/a/b/c/d.go:23: hello world": map[string]string{
+		"2009/01/23 C:/a/b/c/d.go:23: hello world": {
 			"date": "2009/01/23",
 			"time": "",
 			"file": "C:/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
-		"C:/a/b/c/d.go:23: hello world": map[string]string{
+		"C:/a/b/c/d.go:23: hello world": {
 			"date": "",
 			"time": "",
 			"file": "C:/a/b/c/d.go:23",
 			"msg":  "hello world",
 		},
-		"2009/01/23 01:23:23.123123 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": map[string]string{
+		"2009/01/23 01:23:23.123123 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": {
 			"date": "2009/01/23",
 			"time": "01:23:23.123123",
 			"file": "C:/a/b/c/d.go:23",
 			"msg":  ":.;<>_#{[]}\"\\",
 		},
-		"01:23:23.123123 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": map[string]string{
+		"01:23:23.123123 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": {
 			"date": "",
 			"time": "01:23:23.123123",
 			"file": "C:/a/b/c/d.go:23",
 			"msg":  ":.;<>_#{[]}\"\\",
 		},
-		"2009/01/23 01:23:23 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": map[string]string{
+		"2009/01/23 01:23:23 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": {
 			"date": "2009/01/23",
 			"time": "01:23:23",
 			"file": "C:/a/b/c/d.go:23",
 			"msg":  ":.;<>_#{[]}\"\\",
 		},
-		"2009/01/23 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": map[string]string{
+		"2009/01/23 C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": {
 			"date": "2009/01/23",
 			"time": "",
 			"file": "C:/a/b/c/d.go:23",
 			"msg":  ":.;<>_#{[]}\"\\",
 		},
-		"C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": map[string]string{
+		"C:/a/b/c/d.go:23: :.;<>_#{[]}\"\\": {
 			"date": "",
 			"time": "",
 			"file": "C:/a/b/c/d.go:23",

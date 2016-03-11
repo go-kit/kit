@@ -1,19 +1,18 @@
 package circuitbreaker_test
 
 import (
+	"io/ioutil"
 	stdlog "log"
-	"os"
 	"testing"
+	"time"
 
 	"github.com/afex/hystrix-go/hystrix"
 
 	"github.com/go-kit/kit/circuitbreaker"
-	kitlog "github.com/go-kit/kit/log"
 )
 
 func TestHystrix(t *testing.T) {
-	logger := kitlog.NewLogfmtLogger(os.Stderr)
-	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger))
+	stdlog.SetOutput(ioutil.Discard)
 
 	const (
 		commandName   = "my-endpoint"
@@ -31,5 +30,11 @@ func TestHystrix(t *testing.T) {
 		shouldPass       = func(n int) bool { return (float64(n) / float64(primeWith+n)) <= (float64(errorPercent-1) / 100.0) }
 		openCircuitError = hystrix.ErrCircuitOpen.Error()
 	)
-	testFailingEndpoint(t, breaker, primeWith, shouldPass, openCircuitError)
+
+	// hystrix-go uses buffered channels to receive reports on request success/failure,
+	// and so is basically impossible to test deterministically. We have to make sure
+	// the report buffer is emptied, by injecting a sleep between each invocation.
+	requestDelay := 5 * time.Millisecond
+
+	testFailingEndpoint(t, breaker, primeWith, shouldPass, requestDelay, openCircuitError)
 }

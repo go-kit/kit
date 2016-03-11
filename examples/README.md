@@ -673,7 +673,11 @@ It's fully logged, instrumented, and uses Zipkin request tracing.
 It also demonstrates how to create and use client packages.
 It's a good example of a fully-featured Go kit service.
 
+### profilesvc
+
+[profilesvc](https://github.com/go-kit/kit/blob/master/examples/profilesvc)
+demonstrates how to use Go kit to build a REST-ish microservice.
+
 ### apigateway
 
-The next example in the works is an API gateway.
-Track issue #91 for progress.
+Track [issue #202](https://github.com/go-kit/kit/issues/202) for progress.

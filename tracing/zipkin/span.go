@@ -26,8 +26,8 @@ type Span struct {
 	spanID       int64
 	parentSpanID int64
 
-	annotations []annotation
-	//binaryAnnotations []BinaryAnnotation // TODO
+	annotations       []annotation
+	binaryAnnotations []binaryAnnotation
 }
 
 // NewSpan returns a new Span, which can be annotated and collected by a
@@ -94,6 +94,26 @@ func (s *Span) Annotate(value string) {
 	s.AnnotateDuration(value, 0)
 }
 
+// AnnotateBinary annotates the span with a key and a byte value.
+func (s *Span) AnnotateBinary(key string, value []byte) {
+	s.binaryAnnotations = append(s.binaryAnnotations, binaryAnnotation{
+		key:            key,
+		value:          value,
+		annotationType: zipkincore.AnnotationType_BYTES,
+		host:           s.host,
+	})
+}
+
+// AnnotateString annotates the span with a key and a string value.
+func (s *Span) AnnotateString(key, value string) {
+	s.binaryAnnotations = append(s.binaryAnnotations, binaryAnnotation{
+		key:            key,
+		value:          []byte(value),
+		annotationType: zipkincore.AnnotationType_STRING,
+		host:           s.host,
+	})
+}
+
 // AnnotateDuration annotates the span with the given value and duration.
 func (s *Span) AnnotateDuration(value string, duration time.Duration) {
 	s.annotations = append(s.annotations, annotation{
@@ -109,16 +129,17 @@ func (s *Span) Encode() *zipkincore.Span {
 	// TODO lots of garbage here. We can improve by preallocating e.g. the
 	// Thrift stuff into an encoder struct, owned by the ScribeCollector.
 	zs := zipkincore.Span{
-		TraceId:           s.traceID,
-		Name:              s.methodName,
-		Id:                s.spanID,
-		BinaryAnnotations: []*zipkincore.BinaryAnnotation{}, // TODO
-		Debug:             true,                             // TODO
+		TraceId: s.traceID,
+		Name:    s.methodName,
+		Id:      s.spanID,
+		Debug:   true, // TODO
 	}
+
 	if s.parentSpanID != 0 {
 		zs.ParentId = new(int64)
 		(*zs.ParentId) = s.parentSpanID
 	}
+
 	zs.Annotations = make([]*zipkincore.Annotation, len(s.annotations))
 	for i, a := range s.annotations {
 		zs.Annotations[i] = &zipkincore.Annotation{
@@ -126,11 +147,23 @@ func (s *Span) Encode() *zipkincore.Span {
 			Value:     a.value,
 			Host:      a.host,
 		}
+
 		if a.duration > 0 {
 			zs.Annotations[i].Duration = new(int32)
 			*(zs.Annotations[i].Duration) = int32(a.duration / time.Microsecond)
 		}
 	}
+
+	zs.BinaryAnnotations = make([]*zipkincore.BinaryAnnotation, len(s.binaryAnnotations))
+	for i, a := range s.binaryAnnotations {
+		zs.BinaryAnnotations[i] = &zipkincore.BinaryAnnotation{
+			Key:            a.key,
+			Value:          a.value,
+			AnnotationType: a.annotationType,
+			Host:           a.host,
+		}
+	}
+
 	return &zs
 }
 
@@ -139,4 +172,11 @@ type annotation struct {
 	value     string
 	duration  time.Duration // optional
 	host      *zipkincore.Endpoint
+}
+
+type binaryAnnotation struct {
+	key            string
+	value          []byte
+	annotationType zipkincore.AnnotationType
+	host           *zipkincore.Endpoint
 }

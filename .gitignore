@@ -1,5 +1,6 @@
 examples/addsvc/addsvc
 examples/addsvc/client/client
+examples/profilesvc/profilesvc
 examples/stringsvc1/stringsvc1
 examples/stringsvc2/stringsvc2
 examples/stringsvc3/stringsvc3
