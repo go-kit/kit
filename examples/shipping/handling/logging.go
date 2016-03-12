@@ -14,7 +14,7 @@ type loggingService struct {
 	Service
 }
 
-// NewLoggingService ...
+// NewLoggingService returns a new instance of a logging Service.
 func NewLoggingService(logger log.Logger, s Service) Service {
 	return &loggingService{logger, s}
 }

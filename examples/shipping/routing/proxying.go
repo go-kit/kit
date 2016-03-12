@@ -52,10 +52,10 @@ func (s proxyService) FetchRoutesForSpecification(rs cargo.RouteSpecification) [
 	return itineraries
 }
 
-// ServiceMiddleware ...
+// ServiceMiddleware defines a middleware for a routing service.
 type ServiceMiddleware func(Service) Service
 
-// NewProxyingMiddleware ...
+// NewProxyingMiddleware returns a new instance of a proxying middleware.
 func NewProxyingMiddleware(proxyURL string, ctx context.Context) ServiceMiddleware {
 	return func(next Service) Service {
 		var e endpoint.Endpoint
