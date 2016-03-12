@@ -1,8 +1,9 @@
 package tracking
 
 import (
-	"github.com/go-kit/kit/endpoint"
 	"golang.org/x/net/context"
+
+	"github.com/go-kit/kit/endpoint"
 )
 
 type trackCargoRequest struct {
