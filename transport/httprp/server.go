@@ -9,9 +9,8 @@ import (
 )
 
 // RequestFunc may take information from an HTTP request and put it into a
-// request context. In Servers, BeforeFuncs are executed prior to invoking the
-// endpoint. In Clients, BeforeFuncs are executed after creating the request
-// but prior to invoking the HTTP client.
+// request context. BeforeFuncs are executed prior to invoking the
+// endpoint.
 type RequestFunc func(context.Context, *http.Request) context.Context
 
 // Server wraps an endpoint and implements http.Handler.
@@ -22,16 +21,18 @@ type Server struct {
 	errorEncoder func(w http.ResponseWriter, err error)
 }
 
-// NewServer constructs a new server, which implements http.Server and wraps
-// the provided endpoint.
+// NewServer constructs a new server that implements http.Server and will proxy
+// requests to the given base URL using its scheme, host, and base path.
+// If the target's path is "/base" and the incoming request was for "/dir",
+// the target request will be for /base/dir.
 func NewServer(
 	ctx context.Context,
-	target *url.URL,
+	baseURL *url.URL,
 	options ...ServerOption,
 ) *Server {
 	s := &Server{
 		ctx:   ctx,
-		proxy: httputil.NewSingleHostReverseProxy(target),
+		proxy: httputil.NewSingleHostReverseProxy(baseURL),
 	}
 	for _, option := range options {
 		option(s)
