@@ -187,8 +187,6 @@ type errorer interface {
 // encode errors from business-logic
 func encodeError(w http.ResponseWriter, err error) {
 	switch err {
-	case nil:
-		w.WriteHeader(http.StatusOK)
 	case cargo.ErrUnknown:
 		w.WriteHeader(http.StatusNotFound)
 	case ErrInvalidArgument:
