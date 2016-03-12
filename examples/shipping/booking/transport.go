@@ -194,6 +194,7 @@ func encodeError(w http.ResponseWriter, err error) {
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": err.Error(),
 	})
