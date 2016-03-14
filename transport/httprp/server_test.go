@@ -40,9 +40,14 @@ func TestServerHappyPathSingleServer(t *testing.T) {
 }
 
 func TestServerHappyPathSingleServerWithServerOptions(t *testing.T) {
+	const (
+		headerKey = "X-TEST-HEADER"
+		headerVal = "go-kit-proxy"
+	)
+
 	originServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if want, have := "go-kit-proxy", r.Header.Get("X-TEST-HEADER"); want != have {
+			if want, have := headerVal, r.Header.Get(headerKey); want != have {
 				t.Errorf("want %d, have %d", want, have)
 			}
 
@@ -56,7 +61,7 @@ func TestServerHappyPathSingleServerWithServerOptions(t *testing.T) {
 		context.Background(),
 		originURL,
 		httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context {
-			r.Header.Add("X-TEST-HEADER", "go-kit-proxy")
+			r.Header.Add(headerKey, headerVal)
 			return ctx
 		}),
 	)
