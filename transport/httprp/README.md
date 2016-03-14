@@ -4,7 +4,7 @@
 
 ## Rationale
 
-HTTP server applications often associated multiple handlers with a single HTTP listener, each handler differentiated by the request URI and/or HTTP method.  Handlers that perform business-logic in the app can implement the `Endpoint` interface and be exposed using the `package transport/http` server.  Handlers that need to proxy the request to another HTTP endpoint can do so with this package by simply specifying the base URL to forward the request to.
+HTTP server applications often associate multiple handlers with a single HTTP listener, each handler differentiated by the request URI and/or HTTP method.  Handlers that perform business-logic in the app can implement the `Endpoint` interface and be exposed using the `package transport/http` server.  Handlers that need to proxy the request to another HTTP endpoint can do so with this package by simply specifying the base URL to forward the request to.
 
 ## Usage
 
