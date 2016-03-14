@@ -13,7 +13,7 @@ import (
 // endpoint.
 type RequestFunc func(context.Context, *http.Request) context.Context
 
-// Server wraps an endpoint and implements http.Handler.
+// Server is a proxying request handler.
 type Server struct {
 	ctx          context.Context
 	proxy        http.Handler
