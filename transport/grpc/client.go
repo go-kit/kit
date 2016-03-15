@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"fmt"
+	"reflect"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -18,7 +19,7 @@ type Client struct {
 	method      string
 	enc         EncodeRequestFunc
 	dec         DecodeResponseFunc
-	grpcReply   interface{}
+	grpcReply   reflect.Type
 	before      []RequestFunc
 }
 
@@ -33,12 +34,16 @@ func NewClient(
 	options ...ClientOption,
 ) *Client {
 	c := &Client{
-		client:    cc,
-		method:    fmt.Sprintf("/pb.%s/%s", serviceName, method),
-		enc:       enc,
-		dec:       dec,
-		grpcReply: grpcReply,
-		before:    []RequestFunc{},
+		client: cc,
+		method: fmt.Sprintf("/pb.%s/%s", serviceName, method),
+		enc:    enc,
+		dec:    dec,
+		grpcReply: reflect.TypeOf(
+			reflect.Indirect(
+				reflect.ValueOf(grpcReply),
+			).Interface(),
+		),
+		before: []RequestFunc{},
 	}
 	for _, option := range options {
 		option(c)
@@ -73,11 +78,12 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		}
 		ctx = metadata.NewContext(ctx, *md)
 
-		if err = grpc.Invoke(ctx, c.method, req, c.grpcReply, c.client); err != nil {
+		grpcReply := reflect.New(c.grpcReply).Interface()
+		if err = grpc.Invoke(ctx, c.method, req, grpcReply, c.client); err != nil {
 			return nil, fmt.Errorf("Invoke: %v", err)
 		}
 
-		response, err := c.dec(ctx, c.grpcReply)
+		response, err := c.dec(ctx, grpcReply)
 		if err != nil {
 			return nil, fmt.Errorf("Decode: %v", err)
 		}
