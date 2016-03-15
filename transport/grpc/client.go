@@ -38,6 +38,10 @@ func NewClient(
 		method: fmt.Sprintf("/pb.%s/%s", serviceName, method),
 		enc:    enc,
 		dec:    dec,
+		// We are using reflect.Indirect here to allow both reply structs and
+		// pointers to these reply structs. New consumers of the client should
+		// use structs directly, while existing consumers will not break if they
+		// remain to use pointers to structs.
 		grpcReply: reflect.TypeOf(
 			reflect.Indirect(
 				reflect.ValueOf(grpcReply),
