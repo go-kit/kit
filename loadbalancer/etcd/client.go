@@ -22,8 +22,8 @@ type Client interface {
 }
 
 type client struct {
-	etcd.KeysAPI
-	Ctx context.Context
+	keysAPI etcd.KeysAPI
+	ctx     context.Context
 }
 
 type ClientOptions struct {
@@ -106,7 +106,7 @@ func NewClient(ctx context.Context, machines []string, options *ClientOptions) (
 
 // GetEntries implements the etcd Client interface.
 func (c *client) GetEntries(key string) ([]string, error) {
-	resp, err := c.Get(c.Ctx, key, &etcd.GetOptions{Recursive: true})
+	resp, err := c.keysAPI.Get(c.ctx, key, &etcd.GetOptions{Recursive: true})
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +120,9 @@ func (c *client) GetEntries(key string) ([]string, error) {
 
 // WatchPrefix implements the etcd Client interface.
 func (c *client) WatchPrefix(prefix string, responseChan chan *etcd.Response) {
-	watch := c.Watcher(prefix, &etcd.WatcherOptions{AfterIndex: 0, Recursive: true})
+	watch := c.keysAPI.Watcher(prefix, &etcd.WatcherOptions{AfterIndex: 0, Recursive: true})
 	for {
-		res, err := watch.Next(c.Ctx)
+		res, err := watch.Next(c.ctx)
 		if err != nil {
 			return
 		}
