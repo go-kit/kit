@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	stdetcd "github.com/coreos/go-etcd/etcd"
+	stdetcd "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
