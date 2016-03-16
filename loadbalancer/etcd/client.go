@@ -14,7 +14,6 @@ import (
 
 // Client is a wrapper arround the etcd client.
 type Client interface {
-
 	// GetEntries will query the given prefix in etcd and returns a set of entries.
 	GetEntries(prefix string) ([]string, error)
 	// WatchPrefix starts watching every change for given prefix in etcd. When an
@@ -48,18 +47,10 @@ func NewClient(ctx context.Context, machines []string, options *ClientOptions) (
 		tlsCert  tls.Certificate
 	)
 	if options == nil {
-		options = &ClientOptions{
-			Cert:                    "",
-			Key:                     "",
-			CaCert:                  "",
-			DialTimeout:             100 * time.Second,
-			DialKeepAline:           100 * time.Second,
-			HeaderTimeoutPerRequest: 100 * time.Second,
-		}
+		options = &ClientOptions{}
 	}
 
 	if options.Cert != "" && options.Key != "" {
-
 		tlsCert, err = tls.LoadX509KeyPair(options.Cert, options.Key)
 		if err != nil {
 			return nil, err
