@@ -219,7 +219,7 @@ func decodeDeleteAddressRequest(r *stdhttp.Request) (request interface{}, err er
 // errorer is implemented by all concrete response types. It allows us to
 // change the HTTP response code without needing to trigger an endpoint
 // (transport-level) error. For more information, read the big comment in
-// endpoint.go.
+// endpoints.go.
 type errorer interface {
 	error() error
 }
@@ -239,6 +239,9 @@ func encodeResponse(w stdhttp.ResponseWriter, response interface{}) error {
 }
 
 func encodeError(w stdhttp.ResponseWriter, err error) {
+	if err == nil {
+		panic("encodeError with nil error")
+	}
 	w.WriteHeader(codeFrom(err))
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": err.Error(),
@@ -247,8 +250,6 @@ func encodeError(w stdhttp.ResponseWriter, err error) {
 
 func codeFrom(err error) int {
 	switch err {
-	case nil:
-		return stdhttp.StatusOK
 	case errNotFound:
 		return stdhttp.StatusNotFound
 	case errAlreadyExists, errInconsistentIDs:

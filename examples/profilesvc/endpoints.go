@@ -41,15 +41,16 @@ type postProfileResponse struct {
 
 func (r postProfileResponse) error() error { return r.Err }
 
-// Regarding errors returned from service methods, we have two options. We can
-// return the error via the endpoint itself. That makes certain things a
-// little bit easier, like providing non-200 HTTP responses to the client. But
-// Go kit assumes that endpoint errors are (or may be treated as) transport-
-// level errors. For example, an endpoint error will count against a circuit
-// breaker error count. Therefore, it's almost certainly better to return
-// service method (business logic) errors in the response object. This means
-// we have to do a bit more work in the HTTP response encoder to detect e.g. a
-// not-found error and provide a proper HTTP status code.
+// Regarding errors returned from service (business logic) methods, we have two
+// options. We could return the error via the endpoint itself. That makes
+// certain things a little bit easier, like providing non-200 HTTP responses to
+// the client. But Go kit assumes that endpoint errors are (or may be treated
+// as) transport-domain errors. For example, an endpoint error will count
+// against a circuit breaker error count. Therefore, it's almost certainly
+// better to return service (business logic) errors in the response object. This
+// means we have to do a bit more work in the HTTP response encoder to detect
+// e.g. a not-found error and provide a proper HTTP status code. That work is
+// done with the errorer interface, in transport.go.
 
 func makePostProfileEndpoint(s ProfileService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
