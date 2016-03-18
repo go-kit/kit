@@ -11,11 +11,6 @@ import (
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
 )
 
-var (
-	// SpanContextKey represents the Span in the request context.
-	SpanContextKey = "Zipkin-Span"
-)
-
 // A Span is a named collection of annotations. It represents meaningful
 // information about a single method call, i.e. a single request against a
 // service. Clients should annotate the span, and submit it when the request

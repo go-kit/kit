@@ -3,7 +3,6 @@ package zipkin
 import (
 	"encoding/base64"
 	"fmt"
-	"math"
 	"math/rand"
 	"net"
 	"time"
@@ -13,6 +12,11 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/scribe"
 )
+
+const defaultScribeCategory = "zipkin"
+
+// defaultBatchInterval in seconds
+const defaultBatchInterval = 1
 
 // ScribeCollector implements Collector by forwarding spans to a Scribe
 // service, in batches.
@@ -25,9 +29,10 @@ type ScribeCollector struct {
 	nextSend      time.Time
 	batchInterval time.Duration
 	batchSize     int
-	sampleRate    float64
-	sampleSalt    int64
+	shouldSample  Sampler
 	logger        log.Logger
+	category      string
+	quit          chan struct{}
 }
 
 // NewScribeCollector returns a new Scribe-backed Collector. addr should be a
@@ -42,23 +47,23 @@ func NewScribeCollector(addr string, timeout time.Duration, options ...ScribeOpt
 	if err != nil {
 		return nil, err
 	}
-	defaultBatchInterval := time.Second
 	c := &ScribeCollector{
 		client:        client,
 		factory:       factory,
 		spanc:         make(chan *Span),
 		sendc:         make(chan struct{}),
 		batch:         []*scribe.LogEntry{},
-		nextSend:      time.Now().Add(defaultBatchInterval),
-		batchInterval: defaultBatchInterval,
+		batchInterval: defaultBatchInterval * time.Second,
 		batchSize:     100,
-		sampleRate:    1.0,
-		sampleSalt:    rand.Int63(),
+		shouldSample:  SampleRate(1.0, rand.Int63()),
 		logger:        log.NewNopLogger(),
+		category:      defaultScribeCategory,
+		quit:          make(chan struct{}),
 	}
 	for _, option := range options {
 		option(c)
 	}
+	c.nextSend = time.Now().Add(c.batchInterval)
 	go c.loop()
 	return c, nil
 }
@@ -69,8 +74,9 @@ func (c *ScribeCollector) Collect(s *Span) error {
 	return nil // accepted
 }
 
+// Close implements Collector.
 func (c *ScribeCollector) Close() error {
-	// TODO Close the underlying transport here?
+	close(c.quit)
 	return nil
 }
 
@@ -80,12 +86,12 @@ func (c *ScribeCollector) loop() {
 	for {
 		select {
 		case span := <-c.spanc:
-			if !shouldSample(span.traceID, c.sampleSalt, c.sampleRate) {
+			if !c.shouldSample(span.traceID) {
 				continue
 			}
 			c.batch = append(c.batch, &scribe.LogEntry{
-				Category: "zipkin", // TODO parameterize?
-				Message:  serialize(span),
+				Category: c.category,
+				Message:  scribeSerialize(span),
 			})
 			if len(c.batch) >= c.batchSize {
 				go c.sendNow()
@@ -102,6 +108,8 @@ func (c *ScribeCollector) loop() {
 				c.logger.Log("err", err.Error())
 			}
 			c.batch = c.batch[:0]
+		case <-c.quit:
+			return
 		}
 	}
 }
@@ -145,8 +153,8 @@ func ScribeBatchInterval(d time.Duration) ScribeOption {
 // ScribeSampleRate sets the sample rate used to determine if a trace will be
 // sent to the collector. By default, the sample rate is 1.0, i.e. all traces
 // are sent.
-func ScribeSampleRate(f float64) ScribeOption {
-	return func(s *ScribeCollector) { s.sampleRate = f }
+func ScribeSampleRate(sr Sampler) ScribeOption {
+	return func(s *ScribeCollector) { s.shouldSample = sr }
 }
 
 // ScribeLogger sets the logger used to report errors in the collection
@@ -154,6 +162,11 @@ func ScribeSampleRate(f float64) ScribeOption {
 // anywhere. It's important to set this option in a production service.
 func ScribeLogger(logger log.Logger) ScribeOption {
 	return func(s *ScribeCollector) { s.logger = logger }
+}
+
+// ScribeCategory sets the Scribe category used to transmit the spans.
+func ScribeCategory(category string) ScribeOption {
+	return func(s *ScribeCollector) { s.category = category }
 }
 
 func scribeClientFactory(addr string, timeout time.Duration) func() (scribe.Scribe, error) {
@@ -174,21 +187,11 @@ func scribeClientFactory(addr string, timeout time.Duration) func() (scribe.Scri
 	}
 }
 
-func serialize(s *Span) string {
+func scribeSerialize(s *Span) string {
 	t := thrift.NewTMemoryBuffer()
 	p := thrift.NewTBinaryProtocolTransport(t)
 	if err := s.Encode().Write(p); err != nil {
 		panic(err)
 	}
 	return base64.StdEncoding.EncodeToString(t.Buffer.Bytes())
-}
-
-func shouldSample(id int64, salt int64, rate float64) bool {
-	if rate <= 0 {
-		return false
-	}
-	if rate >= 1.0 {
-		return true
-	}
-	return int64(math.Abs(float64(id^salt)))%10000 < int64(rate*10000)
 }
