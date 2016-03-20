@@ -173,7 +173,7 @@ func main() {
 			return
 		}
 		s := grpc.NewServer() // uses its own, internal context
-		pb.RegisterAddServer(s, grpcBinding{svc})
+		pb.RegisterAddServer(s, newGRPCBinding(root, svc))
 		transportLogger.Log("addr", *grpcAddr)
 		errc <- s.Serve(ln)
 	}()
