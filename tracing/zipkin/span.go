@@ -48,19 +48,28 @@ func makeEndpoint(hostport, serviceName string) *zipkincore.Endpoint {
 	if err != nil {
 		return nil
 	}
-	addrs, err := net.LookupIP(host)
-	if err != nil {
-		return nil
-	}
-	if len(addrs) <= 0 {
-		return nil
-	}
 	portInt, err := strconv.ParseInt(port, 10, 16)
 	if err != nil {
 		return nil
 	}
+	addrs, err := net.LookupIP(host)
+	if err != nil {
+		return nil
+	}
+	// we need the first IPv4 address.
+	var addr net.IP
+	for i := range addrs {
+		addr = addrs[i].To4()
+		if addr != nil {
+			break
+		}
+	}
+	if addr == nil {
+		// none of the returned addresses is IPv4.
+		return nil
+	}
 	endpoint := zipkincore.NewEndpoint()
-	endpoint.Ipv4 = (int32)(binary.BigEndian.Uint32(addrs[0].To4()))
+	endpoint.Ipv4 = (int32)(binary.BigEndian.Uint32(addr))
 	endpoint.Port = int16(portInt)
 	endpoint.ServiceName = serviceName
 	return endpoint
