@@ -53,7 +53,7 @@ func main() {
 	var svc server.AddService
 	switch *transport {
 	case "grpc":
-		cc, err := grpc.Dial(*grpcAddr)
+		cc, err := grpc.Dial(*grpcAddr, grpc.WithInsecure())
 		if err != nil {
 			logger.Log("err", err)
 			os.Exit(1)

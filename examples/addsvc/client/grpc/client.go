@@ -4,20 +4,28 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/examples/addsvc/pb"
 	"github.com/go-kit/kit/examples/addsvc/server"
 	"github.com/go-kit/kit/log"
+	grpctransport "github.com/go-kit/kit/transport/grpc"
 )
 
 // New returns an AddService that's backed by the provided ClientConn.
 func New(ctx context.Context, cc *grpc.ClientConn, logger log.Logger) server.AddService {
-	return client{ctx, pb.NewAddClient(cc), logger}
+	return client{
+		Context: ctx,
+		Logger:  logger,
+		sum:     grpctransport.NewClient(cc, "Add", "sum", encodeSumRequest, decodeSumResponse, pb.SumReply{}).Endpoint(),
+		concat:  grpctransport.NewClient(cc, "Add", "concat", encodeConcatRequest, decodeConcatResponse, pb.ConcatReply{}).Endpoint(),
+	}
 }
 
 type client struct {
 	context.Context
-	pb.AddClient
 	log.Logger
+	sum    endpoint.Endpoint
+	concat endpoint.Endpoint
 }
 
 // TODO(pb): If your service interface methods don't return an error, we have
@@ -36,27 +44,31 @@ type client struct {
 //   important.
 
 func (c client) Sum(a, b int) int {
-	request := &pb.SumRequest{
-		A: int64(a),
-		B: int64(b),
+	request := &server.SumRequest{
+		A: a,
+		B: b,
 	}
-	reply, err := c.AddClient.Sum(c.Context, request)
+	reply, err := c.sum(c.Context, request)
 	if err != nil {
 		c.Logger.Log("err", err) // Without an error return parameter, we can't do anything else...
 		return 0
 	}
-	return int(reply.V)
+
+	r := reply.(server.SumResponse)
+	return r.V
 }
 
 func (c client) Concat(a, b string) string {
-	request := &pb.ConcatRequest{
+	request := &server.ConcatRequest{
 		A: a,
 		B: b,
 	}
-	reply, err := c.AddClient.Concat(c.Context, request)
+	reply, err := c.concat(c.Context, request)
 	if err != nil {
-		c.Logger.Log("err", err)
+		c.Logger.Log("err", err) // Without an error return parameter, we can't do anything else...
 		return ""
 	}
-	return reply.V
+
+	r := reply.(server.ConcatResponse)
+	return r.V
 }
