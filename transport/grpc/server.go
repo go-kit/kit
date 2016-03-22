@@ -35,10 +35,10 @@ func NewServer(
 	options ...ServerOption,
 ) *Server {
 	s := &Server{
-		ctx: ctx,
-		e:   e,
-		dec: dec,
-		enc: enc,
+		ctx:    ctx,
+		e:      e,
+		dec:    dec,
+		enc:    enc,
 		logger: log.NewNopLogger(),
 	}
 	for _, option := range options {

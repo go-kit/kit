@@ -17,7 +17,7 @@ type Middleware func(Endpoint) Endpoint
 // received from an endpoint.
 var ErrBadCast = errors.New("bad cast")
 
-// ContextCanceled indicates the request context was canceled.
+// ErrContextCanceled indicates the request context was canceled.
 var ErrContextCanceled = errors.New("context canceled")
 
 // Chain is a helper function for composing middlewares. Requests will

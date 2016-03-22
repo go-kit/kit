@@ -2,16 +2,13 @@ package zipkin
 
 import (
 	"encoding/binary"
+	"fmt"
+	"math"
 	"net"
 	"strconv"
 	"time"
 
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
-)
-
-var (
-	// SpanContextKey represents the Span in the request context.
-	SpanContextKey = "Zipkin-Span"
 )
 
 // A Span is a named collection of annotations. It represents meaningful
@@ -51,19 +48,28 @@ func makeEndpoint(hostport, serviceName string) *zipkincore.Endpoint {
 	if err != nil {
 		return nil
 	}
-	addrs, err := net.LookupIP(host)
-	if err != nil {
-		return nil
-	}
-	if len(addrs) <= 0 {
-		return nil
-	}
 	portInt, err := strconv.ParseInt(port, 10, 16)
 	if err != nil {
 		return nil
 	}
+	addrs, err := net.LookupIP(host)
+	if err != nil {
+		return nil
+	}
+	// we need the first IPv4 address.
+	var addr net.IP
+	for i := range addrs {
+		addr = addrs[i].To4()
+		if addr != nil {
+			break
+		}
+	}
+	if addr == nil {
+		// none of the returned addresses is IPv4.
+		return nil
+	}
 	endpoint := zipkincore.NewEndpoint()
-	binary.LittleEndian.PutUint32(addrs[0], (uint32)(endpoint.Ipv4))
+	endpoint.Ipv4 = (int32)(binary.BigEndian.Uint32(addr))
 	endpoint.Port = int16(portInt)
 	endpoint.ServiceName = serviceName
 	return endpoint
@@ -94,12 +100,89 @@ func (s *Span) Annotate(value string) {
 	s.AnnotateDuration(value, 0)
 }
 
-// AnnotateBinary annotates the span with a key and a byte value.
-func (s *Span) AnnotateBinary(key string, value []byte) {
+// AnnotateBinary annotates the span with a key and a value that will be []byte
+// encoded.
+func (s *Span) AnnotateBinary(key string, value interface{}) {
+	var a zipkincore.AnnotationType
+	var b []byte
+	// We are not using zipkincore.AnnotationType_I16 for types that could fit
+	// as reporting on it seems to be broken on the zipkin web interface
+	// (however, we can properly extract the number from zipkin storage
+	// directly). int64 has issues with negative numbers but seems ok for
+	// positive numbers needing more than 32 bit.
+	switch v := value.(type) {
+	case bool:
+		a = zipkincore.AnnotationType_BOOL
+		b = []byte("\x00")
+		if v {
+			b = []byte("\x01")
+		}
+	case []byte:
+		a = zipkincore.AnnotationType_BYTES
+		b = v
+	case byte:
+		a = zipkincore.AnnotationType_I32
+		b = make([]byte, 4)
+		binary.BigEndian.PutUint32(b, uint32(v))
+	case int8:
+		a = zipkincore.AnnotationType_I32
+		b = make([]byte, 4)
+		binary.BigEndian.PutUint32(b, uint32(v))
+	case int16:
+		a = zipkincore.AnnotationType_I32
+		b = make([]byte, 4)
+		binary.BigEndian.PutUint32(b, uint32(v))
+	case uint16:
+		a = zipkincore.AnnotationType_I32
+		b = make([]byte, 4)
+		binary.BigEndian.PutUint32(b, uint32(v))
+	case int32:
+		a = zipkincore.AnnotationType_I32
+		b = make([]byte, 4)
+		binary.BigEndian.PutUint32(b, uint32(v))
+	case uint32:
+		a = zipkincore.AnnotationType_I32
+		b = make([]byte, 4)
+		binary.BigEndian.PutUint32(b, uint32(v))
+	case int64:
+		a = zipkincore.AnnotationType_I64
+		b = make([]byte, 8)
+		binary.BigEndian.PutUint64(b, uint64(v))
+	case int:
+		a = zipkincore.AnnotationType_I32
+		b = make([]byte, 8)
+		binary.BigEndian.PutUint32(b, uint32(v))
+	case uint:
+		a = zipkincore.AnnotationType_I32
+		b = make([]byte, 8)
+		binary.BigEndian.PutUint32(b, uint32(v))
+	case uint64:
+		a = zipkincore.AnnotationType_I64
+		b = make([]byte, 8)
+		binary.BigEndian.PutUint64(b, uint64(v))
+	case float32:
+		a = zipkincore.AnnotationType_DOUBLE
+		b = make([]byte, 8)
+		bits := math.Float64bits(float64(v))
+		binary.BigEndian.PutUint64(b, bits)
+	case float64:
+		a = zipkincore.AnnotationType_DOUBLE
+		b = make([]byte, 8)
+		bits := math.Float64bits(v)
+		binary.BigEndian.PutUint64(b, bits)
+	case string:
+		a = zipkincore.AnnotationType_STRING
+		b = []byte(v)
+	default:
+		// we have no handler for type's value, but let's get a string
+		// representation of it.
+		a = zipkincore.AnnotationType_STRING
+		b = []byte(fmt.Sprintf("%+v", value))
+	}
 	s.binaryAnnotations = append(s.binaryAnnotations, binaryAnnotation{
 		key:            key,
-		value:          value,
-		annotationType: zipkincore.AnnotationType_BYTES,
+		value:          b,
+		annotationType: a,
 		host:           s.host,
 	})
 }

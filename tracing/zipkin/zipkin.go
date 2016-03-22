@@ -25,6 +25,9 @@ import (
 // • https://gist.github.com/yoavaa/3478d3a0df666f21a98c
 
 const (
+	// SpanContextKey holds the key used to store Zipkin spans in the context.
+	SpanContextKey = "Zipkin-Span"
+
 	// https://github.com/racker/tryfer#headers
 	traceIDHTTPHeader      = "X-B3-TraceId"
 	spanIDHTTPHeader       = "X-B3-SpanId"

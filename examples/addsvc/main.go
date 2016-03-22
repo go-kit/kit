@@ -256,3 +256,5 @@ func (c loggingCollector) Collect(s *zipkin.Span) error {
 	)
 	return nil
 }
+
+func (c loggingCollector) Close() error { return nil }

@@ -12,7 +12,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Client is a wrapper arround the etcd client.
+// Client is a wrapper around the etcd client.
 type Client interface {
 	// GetEntries will query the given prefix in etcd and returns a set of entries.
 	GetEntries(prefix string) ([]string, error)

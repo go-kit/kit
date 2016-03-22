@@ -2,7 +2,7 @@ package zipkin
 
 import "testing"
 
-func TestShouldSample(t *testing.T) {
+func TestSampleRate(t *testing.T) {
 	type triple struct {
 		id, salt int64
 		rate     float64
@@ -24,7 +24,8 @@ func TestShouldSample(t *testing.T) {
 		triple{999, 0, 0.99}:     true,
 		triple{9999, 0, 0.99}:    false,
 	} {
-		if have := shouldSample(input.id, input.salt, input.rate); want != have {
+		sampler := SampleRate(input.rate, input.salt)
+		if have := sampler(input.id); want != have {
 			t.Errorf("%#+v: want %v, have %v", input, want, have)
 		}
 	}
