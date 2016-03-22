@@ -9,7 +9,7 @@ import (
 
 func makeSumEndpoint(svc server.AddService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(server.SumRequest)
+		req := request.(*server.SumRequest)
 		v := svc.Sum(req.A, req.B)
 		return server.SumResponse{V: v}, nil
 	}
@@ -17,7 +17,7 @@ func makeSumEndpoint(svc server.AddService) endpoint.Endpoint {
 
 func makeConcatEndpoint(svc server.AddService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(server.ConcatRequest)
+		req := request.(*server.ConcatRequest)
 		v := svc.Concat(req.A, req.B)
 		return server.ConcatResponse{V: v}, nil
 	}
