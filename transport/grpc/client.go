@@ -24,6 +24,8 @@ type Client struct {
 }
 
 // NewClient constructs a usable Client for a single remote endpoint.
+// Pass an zero-value Protobuf message of the RPC response type as
+// the grpcReply argument.
 func NewClient(
 	cc *grpc.ClientConn,
 	serviceName string,
