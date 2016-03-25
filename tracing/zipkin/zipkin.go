@@ -61,7 +61,7 @@ const (
 func AnnotateServer(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
-			span, ok := fromContext(ctx)
+			span, ok := FromContext(ctx)
 			if !ok {
 				span = newSpan(newID(), newID(), 0)
 				ctx = context.WithValue(ctx, SpanContextKey, span)
@@ -82,7 +82,7 @@ func AnnotateClient(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			var clientSpan *Span
-			parentSpan, ok := fromContext(ctx)
+			parentSpan, ok := FromContext(ctx)
 			if ok {
 				clientSpan = newSpan(parentSpan.TraceID(), newID(), parentSpan.SpanID())
 			} else {
@@ -124,7 +124,7 @@ func ToGRPCContext(newSpan NewSpanFunc, logger log.Logger) func(ctx context.Cont
 // a child/client span.
 func ToRequest(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) context.Context {
 	return func(ctx context.Context, r *http.Request) context.Context {
-		span, ok := fromContext(ctx)
+		span, ok := FromContext(ctx)
 		if !ok {
 			span = newSpan(newID(), newID(), 0)
 		}
@@ -148,7 +148,7 @@ func ToRequest(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) c
 // a child/client span.
 func ToGRPCRequest(newSpan NewSpanFunc) func(ctx context.Context, md *metadata.MD) context.Context {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
-		span, ok := fromContext(ctx)
+		span, ok := FromContext(ctx)
 		if !ok {
 			span = newSpan(newID(), newID(), 0)
 		}
@@ -243,7 +243,11 @@ func fromGRPC(newSpan NewSpanFunc, md metadata.MD, logger log.Logger) *Span {
 	return newSpan(traceID, spanID, parentSpanID)
 }
 
-func fromContext(ctx context.Context) (*Span, bool) {
+// FromContext extracts an existing Zipkin span if it is stored in the provided
+// context. If you add context.Context as the first parameter in your service
+// methods you can annotate spans from within business logic. Typical use case
+// is to AnnotateDuration on interaction with resources like databases.
+func FromContext(ctx context.Context) (*Span, bool) {
 	val := ctx.Value(SpanContextKey)
 	if val == nil {
 		return nil, false
