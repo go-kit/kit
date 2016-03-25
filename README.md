@@ -127,7 +127,7 @@ in the large. Go kit is a set of packages and best practices, leveraging years
 of production experience, and providing a comprehensive, robust, and trustable
 platform for organizations of any size.
 
-In short, Go kit brings Go to the modern enterprise.
+In short, Go kit makes Go a viable choice for business-domain microservices.
 
 For more details, see
  [the motivating blog post](http://peter.bourgon.org/go-kit/) and
@@ -144,44 +144,32 @@ See also the
 
 ## Non-goals
 
-- Supporting messaging patterns other than RPC (in the initial release) — MPI, pub/sub, CQRS, etc.
-- Re-implementing functionality that can be provided by wrapping existing packages
-- Having opinions on deployment, orchestration, process supervision, etc.
-- Having opinions on configuration passing — flags, env vars, files, etc.
+- Supporting messaging patterns other than RPC (for now) — e.g. MPI, pub/sub, CQRS, etc.
+- Re-implementing functionality that can be provided by adapting existing software
+- Having opinions on operational concerns: deployment, configuration, process supervision, orchestration, etc.
 
 ## Contributing
 
-Please see [CONTRIBUTING.md]. Thank you, [contributors]!
+Please see [CONTRIBUTING.md][]. Thank you, [contributors][]!
 
 [CONTRIBUTING.md]: /CONTRIBUTING.md
 [contributors]: https://github.com/go-kit/kit/graphs/contributors
 
 ## Dependency management
 
-Go kit is a library, designed to be imported into a binary package. Vendoring
-is currently the best way for binary package authors to ensure reliable,
-reproducible builds.  Therefore, we strongly recommend our users use vendoring
-for all of their dependencies, including Go kit.   To avoid compatibility and
-availability issues, Go kit doesn't vendor its own dependencies, and doesn't
-recommend use of third-party import proxies.
+Go kit is a library, designed to be imported into a binary package.
+Vendoring is currently the best way for binary package authors to ensure reliable, reproducible builds.
+Therefore, we strongly recommend our users use vendoring for all of their dependencies, including Go kit.   
+To avoid compatibility and availability issues, Go kit doesn't vendor its own dependencies, and doesn't recommend use of third-party import proxies.
 
-There are several tools which make vendoring easier, including [gb][],
-[govendor][], and [godep][]. And Go kit uses a variety of continuous
-integration providers to find and fix compatibility problems as soon as they
-occur.
+There are several tools which make vendoring easier, including [gb][], [glide][], [gvt][], [govendor][], and [vendetta][].
+In addition, Go kit uses a variety of continuous integration providers to find and fix compatibility problems as soon as they occur.
 
 [gb]: http://getgb.io
+[glide]: https://github.com/Masterminds/glide
+[gvt]: https://github.com/FiloSottile/gvt
 [govendor]: https://github.com/kardianos/govendor
-[godep]: https://github.com/tools/godep
-
-## API stability policy
-
-The Go kit project depends on code maintained by others.
-This includes the Go standard library and sub-repositories and other external libraries.
-The Go language and standard library provide stability guarantees, but the other external libraries typically do not.
-[The API Stability RFC](https://github.com/go-kit/kit/tree/master/rfc/rfc007-api-stability.md)
- proposes a standard policy for package authors to advertise API stability.
-The Go kit project prefers to depend on code that abides the API stability policy.
+[vendetta]: https://github.com/dpw/vendetta
 
 ## Related projects
 
@@ -230,3 +218,4 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 - [Architecting for the Cloud](http://fr.slideshare.net/stonse/architecting-for-the-cloud-using-netflixoss-codemash-workshop-29852233) — Netflix
 - [Dapper, a Large-Scale Distributed Systems Tracing Infrastructure](http://research.google.com/pubs/pub36356.html) — Google
 - [Your Server as a Function](http://monkey.org/~marius/funsrv.pdf) (PDF) — Twitter
+
