@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
-	"gopkg.in/logfmt.v0"
+	"github.com/go-logfmt/logfmt"
 )
 
 func TestLogfmtLogger(t *testing.T) {
