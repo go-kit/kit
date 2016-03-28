@@ -18,10 +18,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/consul/api"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 
 	"github.com/go-kit/kit/endpoint"
-	addsvc "github.com/go-kit/kit/examples/addsvc/client/grpc"
+	"github.com/go-kit/kit/examples/addsvc/client/grpc"
 	"github.com/go-kit/kit/examples/addsvc/server"
 	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/loadbalancer/consul"
@@ -78,8 +77,8 @@ func main() {
 		factory loadbalancer.Factory
 	}{
 		"addsvc": {
-			{path: "/api/addsvc/concat", factory: addsvcGRPCFactory(ctx, makeConcatEndpoint, logger)},
-			{path: "/api/addsvc/sum", factory: addsvcGRPCFactory(ctx, makeSumEndpoint, logger)},
+			{path: "/api/addsvc/concat", factory: grpc.ConcatEndpointFactory},
+			{path: "/api/addsvc/sum", factory: grpc.SumEndpointFactory},
 		},
 		"stringsvc": {
 			{path: "/api/stringsvc/uppercase", factory: httpFactory(ctx, "GET", "uppercase/")},
@@ -130,18 +129,6 @@ func makeHandler(ctx context.Context, e endpoint.Endpoint, logger log.Logger) ht
 			logger.Log("err", err)
 			return
 		}
-	}
-}
-
-func addsvcGRPCFactory(ctx context.Context, makeEndpoint func(server.AddService) endpoint.Endpoint, logger log.Logger) loadbalancer.Factory {
-	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
-		var e endpoint.Endpoint
-		conn, err := grpc.Dial(instance, grpc.WithInsecure())
-		if err != nil {
-			return e, nil, err
-		}
-		svc := addsvc.New(ctx, conn, logger)
-		return makeEndpoint(svc), nil, nil
 	}
 }
 

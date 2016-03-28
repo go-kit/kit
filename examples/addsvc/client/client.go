@@ -1,23 +1,20 @@
-package grpc
+package main
 
 import (
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/examples/addsvc/pb"
 	"github.com/go-kit/kit/examples/addsvc/server"
 	"github.com/go-kit/kit/log"
-	grpctransport "github.com/go-kit/kit/transport/grpc"
 )
 
-// New returns an AddService that's backed by the provided ClientConn.
-func New(ctx context.Context, cc *grpc.ClientConn, logger log.Logger) server.AddService {
+// NewClient returns an AddService that's backed by the provided Endpoints
+func newClient(ctx context.Context, sumEndpoint endpoint.Endpoint, concatEndpoint endpoint.Endpoint, logger log.Logger) server.AddService {
 	return client{
 		Context: ctx,
 		Logger:  logger,
-		sum:     grpctransport.NewClient(cc, "Add", "sum", encodeSumRequest, decodeSumResponse, pb.SumReply{}).Endpoint(),
-		concat:  grpctransport.NewClient(cc, "Add", "concat", encodeConcatRequest, decodeConcatResponse, pb.ConcatReply{}).Endpoint(),
+		sum:     sumEndpoint,
+		concat:  concatEndpoint,
 	}
 }
 
@@ -44,7 +41,7 @@ type client struct {
 //   important.
 
 func (c client) Sum(a, b int) int {
-	request := &server.SumRequest{
+	request := server.SumRequest{
 		A: a,
 		B: b,
 	}
@@ -59,7 +56,7 @@ func (c client) Sum(a, b int) int {
 }
 
 func (c client) Concat(a, b string) string {
-	request := &server.ConcatRequest{
+	request := server.ConcatRequest{
 		A: a,
 		B: b,
 	}

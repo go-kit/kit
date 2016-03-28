@@ -13,7 +13,7 @@ import (
 func DecodeSumRequest(r *http.Request) (interface{}, error) {
 	var request SumRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
-	return request, err
+	return &request, err
 }
 
 // EncodeSumResponse encodes the response to the provided HTTP response
@@ -29,7 +29,7 @@ func EncodeSumResponse(w http.ResponseWriter, response interface{}) error {
 func DecodeConcatRequest(r *http.Request) (interface{}, error) {
 	var request ConcatRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
-	return request, err
+	return &request, err
 }
 
 // EncodeConcatResponse encodes the response to the provided HTTP response
