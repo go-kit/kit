@@ -61,6 +61,44 @@ func TestToContext(t *testing.T) {
 	}
 }
 
+func TestFromContext(t *testing.T) {
+	const (
+		hostport           = "5.5.5.5:5555"
+		serviceName        = "foo-service"
+		methodName         = "foo-method"
+		traceID      int64 = 14
+		spanID       int64 = 36
+		parentSpanID int64 = 58
+	)
+
+	ctx := context.WithValue(
+		context.Background(),
+		zipkin.SpanContextKey,
+		zipkin.NewSpan(hostport, serviceName, methodName, traceID, spanID, parentSpanID),
+	)
+
+	span, ok := zipkin.FromContext(ctx)
+	if !ok {
+		t.Fatalf("expected a context value in %q", zipkin.SpanContextKey)
+	}
+	if span == nil {
+		t.Fatal("expected a Zipkin span object")
+	}
+	for want, haveFunc := range map[int64]func() int64{
+		traceID:      span.TraceID,
+		spanID:       span.SpanID,
+		parentSpanID: span.ParentSpanID,
+	} {
+		if have := haveFunc(); want != have {
+			name := runtime.FuncForPC(reflect.ValueOf(haveFunc).Pointer()).Name()
+			name = strings.Split(name, "·")[0]
+			toks := strings.Split(name, ".")
+			name = toks[len(toks)-1]
+			t.Errorf("%s: want %d, have %d", name, want, have)
+		}
+	}
+}
+
 func TestToGRPCContext(t *testing.T) {
 	const (
 		hostport           = "5.5.5.5:5555"
