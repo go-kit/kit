@@ -3,7 +3,7 @@ package log
 import (
 	"io"
 
-	"gopkg.in/logfmt.v0"
+	"github.com/go-logfmt/logfmt"
 )
 
 type logfmtLogger struct {
