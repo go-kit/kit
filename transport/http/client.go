@@ -74,11 +74,11 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		req, err := http.NewRequest(c.method, c.tgt.String(), nil)
 		if err != nil {
-			return nil, Err{"NewRequest", err}
+			return nil, TransportError{DomainNewRequest, err}
 		}
 
 		if err = c.enc(req, request); err != nil {
-			return nil, Err{"Encode", err}
+			return nil, TransportError{DomainEncode, err}
 		}
 
 		for _, f := range c.before {
@@ -87,7 +87,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		resp, err := ctxhttp.Do(ctx, c.client, req)
 		if err != nil {
-			return nil, Err{"Do", err}
+			return nil, TransportError{DomainDo, err}
 		}
 		if !c.bufferedStream {
 			defer resp.Body.Close()
@@ -95,7 +95,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		response, err := c.dec(resp)
 		if err != nil {
-			return nil, Err{"Decode", err}
+			return nil, TransportError{DomainDecode, err}
 		}
 
 		return response, nil

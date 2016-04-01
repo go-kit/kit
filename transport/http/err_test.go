@@ -5,23 +5,18 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"testing"
 
 	"golang.org/x/net/context"
 
-	transporthttp "github.com/go-kit/kit/transport/http"
-
-	"testing"
+	httptransport "github.com/go-kit/kit/transport/http"
 )
 
 func TestClientEndpointEncodeError(t *testing.T) {
 	var (
 		sampleErr = errors.New("Oh no, an error")
-		enc       = func(r *http.Request, request interface{}) error {
-			return sampleErr
-		}
-		dec = func(r *http.Response) (response interface{}, err error) {
-			return nil, nil
-		}
+		enc       = func(r *http.Request, request interface{}) error { return sampleErr }
+		dec       = func(r *http.Response) (response interface{}, err error) { return nil, nil }
 	)
 
 	u := &url.URL{
@@ -30,7 +25,7 @@ func TestClientEndpointEncodeError(t *testing.T) {
 		Path:   "/does/not/matter",
 	}
 
-	c := transporthttp.NewClient(
+	c := httptransport.NewClient(
 		"GET",
 		u,
 		enc,
@@ -39,25 +34,22 @@ func TestClientEndpointEncodeError(t *testing.T) {
 
 	_, err := c.Endpoint()(context.Background(), nil)
 	if err == nil {
-		t.Log("err == nil")
-		t.Fail()
+		t.Error("err == nil")
 	}
 
-	e, ok := err.(transporthttp.Err)
+	e, ok := err.(httptransport.Err)
 	if !ok {
-		t.Log("err is not of type github.com/go-kit/kit/transport/http.Err")
-		t.Fail()
+		t.Error("err is not of type github.com/go-kit/kit/transport/http.Err")
 	}
 
-	if e.Err != sampleErr {
-		t.Logf("e.Err != sampleErr, %s vs %s", e.Err, sampleErr)
-		t.Fail()
+	if want, have := sampleErr, e.Err; want != have {
+		t.Error("want %v, have %v", want, have)
 	}
 }
 
 func ExampleErrOutput() {
 	sampleErr := errors.New("Oh no, an error")
-	err := transporthttp.Err{"Do", sampleErr}
+	err := httptransport.Err{"Do", sampleErr}
 	fmt.Println(err)
 	// Output:
 	// Do: Oh no, an error
