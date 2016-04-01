@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 
@@ -75,11 +74,11 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		req, err := http.NewRequest(c.method, c.tgt.String(), nil)
 		if err != nil {
-			return nil, fmt.Errorf("NewRequest: %v", err)
+			return nil, Err{"NewRequest", err}
 		}
 
 		if err = c.enc(req, request); err != nil {
-			return nil, fmt.Errorf("Encode: %v", err)
+			return nil, Err{"Encode", err}
 		}
 
 		for _, f := range c.before {
@@ -88,7 +87,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		resp, err := ctxhttp.Do(ctx, c.client, req)
 		if err != nil {
-			return nil, fmt.Errorf("Do: %v", err)
+			return nil, Err{"Do", err}
 		}
 		if !c.bufferedStream {
 			defer resp.Body.Close()
@@ -96,7 +95,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		response, err := c.dec(resp)
 		if err != nil {
-			return nil, fmt.Errorf("Decode: %v", err)
+			return nil, Err{"Decode", err}
 		}
 
 		return response, nil
