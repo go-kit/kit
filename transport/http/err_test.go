@@ -39,11 +39,11 @@ func TestClientEndpointEncodeError(t *testing.T) {
 
 	e, ok := err.(httptransport.TransportError)
 	if !ok {
-		t.Error("err is not of type github.com/go-kit/kit/transport/http.Err")
+		t.Fatal("err is not of type github.com/go-kit/kit/transport/http.Err")
 	}
 
 	if want, have := sampleErr, e.Err; want != have {
-		t.Error("want %v, have %v", want, have)
+		t.Errorf("want %v, have %v", want, have)
 	}
 }
 
