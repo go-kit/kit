@@ -37,7 +37,7 @@ func TestClientEndpointEncodeError(t *testing.T) {
 		t.Error("err == nil")
 	}
 
-	e, ok := err.(httptransport.Err)
+	e, ok := err.(httptransport.TransportError)
 	if !ok {
 		t.Error("err is not of type github.com/go-kit/kit/transport/http.Err")
 	}
@@ -49,7 +49,7 @@ func TestClientEndpointEncodeError(t *testing.T) {
 
 func ExampleErrOutput() {
 	sampleErr := errors.New("Oh no, an error")
-	err := httptransport.Err{"Do", sampleErr}
+	err := httptransport.TransportError{"Do", sampleErr}
 	fmt.Println(err)
 	// Output:
 	// Do: Oh no, an error

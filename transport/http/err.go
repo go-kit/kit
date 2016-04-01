@@ -37,6 +37,6 @@ type TransportError struct {
 }
 
 // Error implements the error interface
-func (e Err) Error() string {
+func (e TransportError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Domain, e.Err)
 }
