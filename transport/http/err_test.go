@@ -34,7 +34,7 @@ func TestClientEndpointEncodeError(t *testing.T) {
 
 	_, err := c.Endpoint()(context.Background(), nil)
 	if err == nil {
-		t.Error("err == nil")
+		t.Fatal("err == nil")
 	}
 
 	e, ok := err.(httptransport.TransportError)
@@ -43,7 +43,7 @@ func TestClientEndpointEncodeError(t *testing.T) {
 	}
 
 	if want, have := sampleErr, e.Err; want != have {
-		t.Errorf("want %v, have %v", want, have)
+		t.Fatalf("want %v, have %v", want, have)
 	}
 }
 
