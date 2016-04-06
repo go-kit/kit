@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
-	"gopkg.in/stack.v1"
+	"github.com/go-stack/stack"
 )
 
 func TestContext(t *testing.T) {
