@@ -3,7 +3,7 @@ package log
 import (
 	"time"
 
-	"gopkg.in/stack.v1"
+	"github.com/go-stack/stack"
 )
 
 // A Valuer generates a log value. When passed to Context.With in a value
