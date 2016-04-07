@@ -24,15 +24,15 @@ func encodeConcatRequest(ctx context.Context, request interface{}) (interface{},
 }
 
 func decodeSumResponse(ctx context.Context, response interface{}) (interface{}, error) {
-	resp := response.(pb.SumReply)
-	return &server.SumResponse{
+	resp := response.(*pb.SumReply)
+	return server.SumResponse{
 		V: int(resp.V),
 	}, nil
 }
 
 func decodeConcatResponse(ctx context.Context, response interface{}) (interface{}, error) {
-	resp := response.(pb.ConcatReply)
-	return &server.ConcatResponse{
+	resp := response.(*pb.ConcatReply)
+	return server.ConcatResponse{
 		V: resp.V,
 	}, nil
 }

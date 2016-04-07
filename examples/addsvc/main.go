@@ -221,7 +221,7 @@ func main() {
 			errc <- err
 			return
 		}
-		transportLogger := log.NewContext(logger).With("transport", "net/rpc")
+		transportLogger := log.NewContext(logger).With("transport", "thrift")
 		transportLogger.Log("addr", *thriftAddr)
 		errc <- thrift.NewTSimpleServer4(
 			thriftadd.NewAddServiceProcessor(thriftBinding{svc}),
