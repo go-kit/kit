@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This script updates each non-stdlib, non-gokit dependency to its most recent
+# This script updates each non-stdlib, non-Go-kit dependency to its most recent
 # commit. It can be invoked to aid in debugging after a dependency-related
 # failure on continuous integration.
 
