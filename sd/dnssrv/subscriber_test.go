@@ -36,6 +36,7 @@ func TestRefresh(t *testing.T) {
 	}
 
 	subscriber := NewSubscriberDetailed(name, ticker, lookup, factory, log.NewNopLogger())
+	defer subscriber.Stop()
 
 	// First lookup, empty
 	services, err := subscriber.Services()

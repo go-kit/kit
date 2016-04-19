@@ -92,12 +92,6 @@ func (c *Cache) Services() ([]service.Service, error) {
 	return services, nil
 }
 
-func (c *Cache) len() int {
-	c.mtx.RLock()
-	defer c.mtx.RUnlock()
-	return len(c.cache)
-}
-
 type instanceService struct {
 	instance string
 	service  service.Service

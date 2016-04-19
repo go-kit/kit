@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"errors"
 	"io"
 	"testing"
 	"time"
@@ -29,7 +30,11 @@ func TestCache(t *testing.T) {
 	case <-time.After(time.Millisecond):
 		t.Logf("no closures yet, good")
 	}
-	if want, have := 2, cache.len(); want != have {
+	services, err := cache.Services()
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 2, len(services); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
@@ -43,7 +48,11 @@ func TestCache(t *testing.T) {
 	case <-time.After(time.Millisecond):
 		t.Logf("no closures yet, good")
 	}
-	if want, have := 2, cache.len(); want != have {
+	services, err = cache.Services()
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 2, len(services); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
@@ -57,7 +66,11 @@ func TestCache(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		t.Errorf("didn't close the deleted instance in time")
 	}
-	if want, have := 1, cache.len(); want != have {
+	services, err = cache.Services()
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 1, len(services); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
@@ -70,9 +83,29 @@ func TestCache(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		t.Errorf("didn't close the deleted instance in time")
 	}
-	if want, have := 0, cache.len(); want != have {
+	services, err = cache.Services()
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 0, len(services); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
+}
+
+func TestBadFactory(t *testing.T) {
+	cache := New(func(string) (service.Service, io.Closer, error) {
+		return nil, nil, errors.New("bad factory")
+	}, log.NewNopLogger())
+
+	cache.Update([]string{"foo:1234", "bar:5678"})
+	services, err := cache.Services()
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 0, len(services); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
 }
 
 type closer chan struct{}
