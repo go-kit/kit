@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/kit/service"
 )
 
 func TestRoundRobin(t *testing.T) {
@@ -19,10 +20,10 @@ func TestRoundRobin(t *testing.T) {
 			func(context.Context, interface{}) (interface{}, error) { counts[1]++; return struct{}{}, nil },
 			func(context.Context, interface{}) (interface{}, error) { counts[2]++; return struct{}{}, nil },
 		}
-		services = []sd.Service{
-			sd.StaticService{method: endpoints[0]},
-			sd.StaticService{method: endpoints[1]},
-			sd.StaticService{method: endpoints[2]},
+		services = []service.Service{
+			service.Fixed{method: endpoints[0]},
+			service.Fixed{method: endpoints[1]},
+			service.Fixed{method: endpoints[2]},
 		}
 	)
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/kit/service"
 	"golang.org/x/net/context"
 )
 
@@ -14,7 +15,7 @@ func TestRandom(t *testing.T) {
 		n          = 7
 		method     = "hello"
 		endpoints  = make([]endpoint.Endpoint, n)
-		services   = make([]sd.Service, n)
+		services   = make([]service.Service, n)
 		counts     = make([]int, n)
 		seed       = int64(12345)
 		iterations = 1000000
@@ -25,7 +26,7 @@ func TestRandom(t *testing.T) {
 	for i := 0; i < n; i++ {
 		i0 := i
 		endpoints[i] = func(context.Context, interface{}) (interface{}, error) { counts[i0]++; return struct{}{}, nil }
-		services[i] = sd.StaticService{method: endpoints[i0]}
+		services[i] = service.Fixed{method: endpoints[i0]}
 	}
 
 	subscriber := sd.StaticSubscriber(services)

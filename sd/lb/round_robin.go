@@ -4,6 +4,7 @@ import (
 	"sync/atomic"
 
 	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/kit/service"
 )
 
 // NewRoundRobin returns a load balancer that returns services in sequence.
@@ -19,7 +20,7 @@ type roundRobin struct {
 	c uint64
 }
 
-func (rr *roundRobin) Service() (sd.Service, error) {
+func (rr *roundRobin) Service() (service.Service, error) {
 	services, err := rr.s.Services()
 	if err != nil {
 		return nil, err

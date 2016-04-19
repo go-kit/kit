@@ -8,6 +8,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/kit/sd/internal/cache"
+	"github.com/go-kit/kit/service"
 )
 
 // Subscriber yields services taken from the named DNS SRV record. The name is
@@ -82,7 +83,7 @@ func (p *Subscriber) loop(t *time.Ticker, lookup Lookup) {
 }
 
 // Services implements the Subscriber interface.
-func (p *Subscriber) Services() ([]sd.Service, error) {
+func (p *Subscriber) Services() ([]service.Service, error) {
 	return p.cache.Services()
 }
 

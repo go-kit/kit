@@ -4,6 +4,7 @@ import (
 	"math/rand"
 
 	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/kit/service"
 )
 
 // NewRandom returns a load balancer that selects services randomly.
@@ -19,7 +20,7 @@ type random struct {
 	r *rand.Rand
 }
 
-func (r *random) Service() (sd.Service, error) {
+func (r *random) Service() (service.Service, error) {
 	services, err := r.s.Services()
 	if err != nil {
 		return nil, err

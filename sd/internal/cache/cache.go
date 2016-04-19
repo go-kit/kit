@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/kit/service"
 )
 
 // Cache collects the most recent set of services from a service discovery
@@ -19,7 +20,7 @@ type Cache struct {
 }
 
 type serviceCloser struct {
-	sd.Service
+	service.Service
 	io.Closer
 }
 
@@ -72,7 +73,7 @@ func (c *Cache) Update(instances []string) {
 
 // Services yields the current set of services, ordered lexicographically by the
 // corresponding instance string.
-func (c *Cache) Services() ([]sd.Service, error) {
+func (c *Cache) Services() ([]service.Service, error) {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
 
@@ -83,7 +84,7 @@ func (c *Cache) Services() ([]sd.Service, error) {
 
 	sort.Sort(byInstance(slice))
 
-	services := make([]sd.Service, len(slice))
+	services := make([]service.Service, len(slice))
 	for i := range slice {
 		services[i] = slice[i].service
 	}
@@ -99,7 +100,7 @@ func (c *Cache) len() int {
 
 type instanceService struct {
 	instance string
-	service  sd.Service
+	service  service.Service
 }
 
 type byInstance []instanceService

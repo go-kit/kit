@@ -6,16 +6,16 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/kit/service"
 )
 
 func TestCache(t *testing.T) {
 	var (
-		svc   = sd.StaticService{}
+		svc   = service.Fixed{}
 		ca    = make(closer)
 		cb    = make(closer)
 		c     = map[string]io.Closer{"a": ca, "b": cb}
-		f     = func(instance string) (sd.Service, io.Closer, error) { return svc, c[instance], nil }
+		f     = func(instance string) (service.Service, io.Closer, error) { return svc, c[instance], nil }
 		cache = New(f, log.NewNopLogger())
 	)
 

@@ -31,3 +31,6 @@ func Chain(outer Middleware, others ...Middleware) Middleware {
 		return outer(next)
 	}
 }
+
+// Nop is a no-op endpoint.
+func Nop(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
