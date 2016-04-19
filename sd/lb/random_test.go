@@ -29,7 +29,7 @@ func TestRandom(t *testing.T) {
 		services[i] = service.Fixed{method: endpoints[i0]}
 	}
 
-	subscriber := sd.StaticSubscriber(services)
+	subscriber := sd.FixedSubscriber(services)
 	balancer := NewRandom(subscriber, seed)
 
 	for i := 0; i < iterations; i++ {
@@ -47,7 +47,7 @@ func TestRandom(t *testing.T) {
 }
 
 func TestRandomNoEndpoints(t *testing.T) {
-	subscriber := sd.StaticSubscriber{}
+	subscriber := sd.FixedSubscriber{}
 	balancer := NewRandom(subscriber, 1415926)
 	_, err := balancer.Service()
 	if want, have := ErrNoServices, err; want != have {

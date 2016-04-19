@@ -27,7 +27,7 @@ func TestRoundRobin(t *testing.T) {
 		}
 	)
 
-	subscriber := sd.StaticSubscriber(services)
+	subscriber := sd.FixedSubscriber(services)
 	balancer := NewRoundRobin(subscriber)
 
 	for i, want := range [][]int{
@@ -55,7 +55,7 @@ func TestRoundRobin(t *testing.T) {
 }
 
 func TestRoundRobinNoEndpoints(t *testing.T) {
-	subscriber := sd.StaticSubscriber{}
+	subscriber := sd.FixedSubscriber{}
 	balancer := NewRoundRobin(subscriber)
 	_, err := balancer.Service()
 	if want, have := ErrNoServices, err; want != have {
