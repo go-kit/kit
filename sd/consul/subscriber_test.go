@@ -1,15 +1,12 @@
 package consul
 
 import (
-	"io"
 	"testing"
 
 	consul "github.com/hashicorp/consul/api"
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/service"
 )
 
 var consulState = []*consul.ServiceEntry{
@@ -155,50 +152,4 @@ func TestSubscriberAddressOverride(t *testing.T) {
 	if want, have := "10.0.0.10:9000", response.(string); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
-}
-
-type testClient struct {
-	entries []*consul.ServiceEntry
-}
-
-func newTestClient(entries []*consul.ServiceEntry) Client {
-	if entries == nil {
-		entries = []*consul.ServiceEntry{}
-	}
-	return &testClient{
-		entries: entries,
-	}
-}
-
-func (c *testClient) Service(service, tag string, opts *consul.QueryOptions) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
-	es := []*consul.ServiceEntry{}
-
-	for _, e := range c.entries {
-		if e.Service.Service != service {
-			continue
-		}
-		if tag != "" {
-			tagMap := map[string]struct{}{}
-
-			for _, t := range e.Service.Tags {
-				tagMap[t] = struct{}{}
-			}
-
-			if _, ok := tagMap[tag]; !ok {
-				continue
-			}
-		}
-
-		es = append(es, e)
-	}
-
-	return es, &consul.QueryMeta{}, nil
-}
-
-func testFactory(instance string) (service.Service, io.Closer, error) {
-	return service.Func(func(method string) (endpoint.Endpoint, error) {
-		return func(context.Context, interface{}) (interface{}, error) {
-			return instance, nil
-		}, nil
-	}), nil, nil
 }
