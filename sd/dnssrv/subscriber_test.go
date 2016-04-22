@@ -60,6 +60,12 @@ func TestRefresh(t *testing.T) {
 		&net.SRV{Target: "1.0.0.3", Port: 1003},
 	}
 	tickc <- time.Now()
+
+	// There is a race condition where the subscriber.Services call below
+	// invokes the cache before it is updated by the tick above.
+	// TODO(pb): solve by running the read through the loop goroutine.
+	time.Sleep(100 * time.Millisecond)
+
 	services, err = subscriber.Services()
 	if err != nil {
 		t.Error(err)
