@@ -19,8 +19,13 @@ func TestNoCertificateClient(t *testing.T) {
 
 func TestNoMachines(t *testing.T) {
 	context := context.Background()
+	ops := &kitetcd.ClientOptions{
+		Key:    "./test_certs/host.key",
+		Cert:   "./test_certs/host.crt",
+		CaCert: "./test_certs/rootCA.crt",
+	}
 
-	_, err := kitetcd.NewClient(context, []string{}, nil)
+	_, err := kitetcd.NewClient(context, []string{}, ops)
 	if err == nil {
 		t.Fatalf("should return error if no machines provided")
 	}
