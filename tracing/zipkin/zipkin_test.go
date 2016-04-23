@@ -26,12 +26,14 @@ func TestToContext(t *testing.T) {
 		traceID      int64 = 12
 		spanID       int64 = 34
 		parentSpanID int64 = 56
+		sampled            = "1"
 	)
 
 	r, _ := http.NewRequest("GET", "https://best.horse", nil)
 	r.Header.Set("X-B3-TraceId", strconv.FormatInt(traceID, 16))
 	r.Header.Set("X-B3-SpanId", strconv.FormatInt(spanID, 16))
 	r.Header.Set("X-B3-ParentSpanId", strconv.FormatInt(parentSpanID, 16))
+	r.Header.Set("X-B3-Sampled", sampled)
 
 	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
 	toContext := zipkin.ToContext(newSpan, log.NewLogfmtLogger(ioutil.Discard))
@@ -59,6 +61,9 @@ func TestToContext(t *testing.T) {
 			t.Errorf("%s: want %d, have %d", name, want, have)
 		}
 	}
+	if want, have := true, span.IsSampled(); want != have {
+		t.Errorf("IsSampled: want %v, have %v", want, have)
+	}
 }
 
 func TestFromContext(t *testing.T) {
@@ -71,10 +76,12 @@ func TestFromContext(t *testing.T) {
 		parentSpanID int64 = 58
 	)
 
+	newSpan := zipkin.NewSpan(hostport, serviceName, methodName, traceID, spanID, parentSpanID)
+	newSpan.Sample()
 	ctx := context.WithValue(
 		context.Background(),
 		zipkin.SpanContextKey,
-		zipkin.NewSpan(hostport, serviceName, methodName, traceID, spanID, parentSpanID),
+		newSpan,
 	)
 
 	span, ok := zipkin.FromContext(ctx)
@@ -97,6 +104,9 @@ func TestFromContext(t *testing.T) {
 			t.Errorf("%s: want %d, have %d", name, want, have)
 		}
 	}
+	if want, have := true, span.IsSampled(); want != have {
+		t.Errorf("IsSampled: want %v, have %v", want, have)
+	}
 }
 
 func TestToGRPCContext(t *testing.T) {
@@ -113,6 +123,7 @@ func TestToGRPCContext(t *testing.T) {
 		"x-b3-traceid":      []string{strconv.FormatInt(traceID, 16)},
 		"x-b3-spanid":       []string{strconv.FormatInt(spanID, 16)},
 		"x-b3-parentspanid": []string{strconv.FormatInt(parentSpanID, 16)},
+		"x-b3-sampled":      []string{"1"},
 	}
 
 	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
@@ -141,6 +152,9 @@ func TestToGRPCContext(t *testing.T) {
 			t.Errorf("%s: want %d, have %d", name, want, have)
 		}
 	}
+	if want, have := true, span.IsSampled(); want != have {
+		t.Errorf("IsSampled: want %v, have %v", want, have)
+	}
 }
 
 func TestToRequest(t *testing.T) {
@@ -151,10 +165,12 @@ func TestToRequest(t *testing.T) {
 		traceID      int64 = 20
 		spanID       int64 = 40
 		parentSpanID int64 = 90
+		sampled            = "1"
 	)
 
 	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
 	span := newSpan(traceID, spanID, parentSpanID)
+	span.Sample()
 	ctx := context.WithValue(context.Background(), zipkin.SpanContextKey, span)
 	r, _ := http.NewRequest("GET", "https://best.horse", nil)
 	ctx = zipkin.ToRequest(newSpan)(ctx, r)
@@ -168,6 +184,9 @@ func TestToRequest(t *testing.T) {
 			t.Errorf("%s: want %q, have %q", header, want, have)
 		}
 	}
+	if want, have := sampled, r.Header.Get("X-B3-Sampled"); want != have {
+		t.Errorf("X-B3-Sampled: want %q, have %q", want, have)
+	}
 }
 
 func TestToGRPCRequest(t *testing.T) {
@@ -178,10 +197,12 @@ func TestToGRPCRequest(t *testing.T) {
 		traceID      int64 = 20
 		spanID       int64 = 40
 		parentSpanID int64 = 90
+		sampled            = "1"
 	)
 
 	newSpan := zipkin.MakeNewSpanFunc(hostport, serviceName, methodName)
 	span := newSpan(traceID, spanID, parentSpanID)
+	span.Sample()
 	ctx := context.WithValue(context.Background(), zipkin.SpanContextKey, span)
 	md := &metadata.MD{}
 	ctx = zipkin.ToGRPCRequest(newSpan)(ctx, md)
@@ -195,6 +216,10 @@ func TestToGRPCRequest(t *testing.T) {
 			t.Errorf("%s: want %q, have %q", header, want, have)
 		}
 	}
+	if want, have := sampled, (*md)["x-b3-sampled"][0]; want != have {
+		t.Errorf("x-b3-sampled: want %q, have %q", want, have)
+	}
+
 }
 
 func TestAnnotateServer(t *testing.T) {
@@ -246,6 +271,10 @@ func (c *countingCollector) Collect(s *zipkin.Span) error {
 		c.annotations = append(c.annotations, annotation.GetValue())
 	}
 	return nil
+}
+
+func (c *countingCollector) ShouldSample(s *zipkin.Span) bool {
+	return true
 }
 
 func (c *countingCollector) Close() error {

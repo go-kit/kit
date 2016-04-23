@@ -1,0 +1,76 @@
+ # This file uses the version 2 docker-compose file format, described here:
+# https://docs.docker.com/compose/compose-file/#version-2
+#
+# It runs the zipkin-cassandra, zipkin-collector, zipkin-query, zipkin-web, and
+# zookeeper-exhibitor containers.
+#
+# On linux you probably want to start this composition like this:
+#
+#   HOSTNAME=localhost docker-compose -f docker-compose-zipkin.yml up
+#
+# On OS X you will probably start like this:
+#
+#   HOSTNAME=default docker-compose -f docker-compose-zipkin.yml up
+
+version: '2'
+services:
+  cassandra:
+    image: openzipkin/zipkin-cassandra:1.39.4
+    network_mode: host
+
+  zookeeper:
+    image: mbabineau/zookeeper-exhibitor:latest
+    network_mode: host
+    environment:
+      HOSTNAME: ${HOSTNAME}
+
+  kafka:
+    image: wurstmeister/kafka
+    network_mode: host
+    environment:
+      KAFKA_CREATE_TOPICS: "zipkin:1:1"
+      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 60000
+      KAFKA_ADVERTISED_PORT: 9092
+      KAFKA_ADVERTISED_HOST_NAME: ${HOSTNAME}
+      KAFKA_ZOOKEEPER_CONNECT: ${HOSTNAME}:2181
+    depends_on:
+      - zookeeper
+
+  collector:
+    image: openzipkin/zipkin-collector:1.39.4
+    network_mode: host
+    environment:
+      STORAGE_TYPE: cassandra
+      TRANSPORT_TYPE: kafka
+      CASSANDRA_CONTACT_POINTS: ${HOSTNAME}
+      KAFKA_ZOOKEEPER: ${HOSTNAME}:2181
+      METADATA_BROKER_LIST: ${HOSTNAME}:9092
+    depends_on:
+      - cassandra
+      - kafka
+
+  query:
+    image: openzipkin/zipkin-query:1.39.4
+    network_mode: host
+    environment:
+      STORAGE_TYPE: cassandra
+      TRANSPORT_TYPE: kafka
+      CASSANDRA_CONTACT_POINTS: ${HOSTNAME}
+      KAFKA_ZOOKEEPER: ${HOSTNAME}:2181
+      METADATA_BROKER_LIST: ${HOSTNAME}:9092
+    depends_on:
+      - cassandra
+      - kafka
+
+  web:
+    image: openzipkin/zipkin-web:1.39.4
+    network_mode: host
+    environment:
+      TRANSPORT_TYPE: kafka
+      KAFKA_ZOOKEEPER: ${HOSTNAME}:2181
+      METADATA_BROKER_LIST: ${HOSTNAME}:9092
+      QUERY_PORT_9411_TCP_ADDR: ${HOSTNAME}
+      ROOTURL: http://${HOSTNAME}:8080
+    depends_on:
+      - cassandra
+      - kafka

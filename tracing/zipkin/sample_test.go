@@ -1,6 +1,10 @@
-package zipkin
+package zipkin_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/go-kit/kit/tracing/zipkin"
+)
 
 func TestSampleRate(t *testing.T) {
 	type triple struct {
@@ -24,7 +28,7 @@ func TestSampleRate(t *testing.T) {
 		triple{999, 0, 0.99}:     true,
 		triple{9999, 0, 0.99}:    false,
 	} {
-		sampler := SampleRate(input.rate, input.salt)
+		sampler := zipkin.SampleRate(input.rate, input.salt)
 		if have := sampler(input.id); want != have {
 			t.Errorf("%#+v: want %v, have %v", input, want, have)
 		}

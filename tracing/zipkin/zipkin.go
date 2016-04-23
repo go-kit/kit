@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/transport/grpc"
 )
 
 // In Zipkin, "spans are considered to start and stop with the client." The
@@ -32,10 +31,13 @@ const (
 	traceIDHTTPHeader      = "X-B3-TraceId"
 	spanIDHTTPHeader       = "X-B3-SpanId"
 	parentSpanIDHTTPHeader = "X-B3-ParentSpanId"
+	sampledHTTPHeader      = "X-B3-Sampled"
+
 	// gRPC keys are always lowercase
 	traceIDGRPCKey      = "x-b3-traceid"
 	spanIDGRPCKey       = "x-b3-spanid"
 	parentSpanIDGRPCKey = "x-b3-parentspanid"
+	sampledGRPCKey      = "x-b3-sampled"
 
 	// ClientSend is the annotation value used to mark a client sending a
 	// request to a server.
@@ -52,6 +54,15 @@ const (
 	// ClientReceive is the annotation value used to mark a client's receipt
 	// of a completed request from a server.
 	ClientReceive = "cr"
+
+	// ServerAddress allows to annotate the server endpoint in case the server
+	// side trace is not instrumented as with resources like caches and
+	// databases.
+	ServerAddress = "sa"
+
+	// ClientAddress allows to annotate the client origin in case the client was
+	// forwarded by a proxy which does not instrument itself.
+	ClientAddress = "ca"
 )
 
 // AnnotateServer returns a server.Middleware that extracts a span from the
@@ -63,9 +74,11 @@ func AnnotateServer(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			span, ok := FromContext(ctx)
 			if !ok {
-				span = newSpan(newID(), newID(), 0)
+				traceID := newID()
+				span = newSpan(traceID, traceID, 0)
 				ctx = context.WithValue(ctx, SpanContextKey, span)
 			}
+			c.ShouldSample(span)
 			span.Annotate(ServerReceive)
 			defer func() { span.Annotate(ServerSend); c.Collect(span) }()
 			return next(ctx, request)
@@ -85,8 +98,15 @@ func AnnotateClient(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
 			parentSpan, ok := FromContext(ctx)
 			if ok {
 				clientSpan = newSpan(parentSpan.TraceID(), newID(), parentSpan.SpanID())
+				clientSpan.runSampler = false
+				clientSpan.sampled = c.ShouldSample(parentSpan)
 			} else {
-				clientSpan = newSpan(newID(), newID(), 0)
+				// Abnormal operation. Traces should always start server side.
+				// We create a root span but annotate with a warning.
+				traceID := newID()
+				clientSpan = newSpan(traceID, traceID, 0)
+				c.ShouldSample(clientSpan)
+				clientSpan.AnnotateBinary("warning", "missing server side trace")
 			}
 			ctx = context.WithValue(ctx, SpanContextKey, clientSpan)                    // set
 			defer func() { ctx = context.WithValue(ctx, SpanContextKey, parentSpan) }() // reset
@@ -103,7 +123,11 @@ func AnnotateClient(newSpan NewSpanFunc, c Collector) endpoint.Middleware {
 // Before stack. The logger is used to report errors.
 func ToContext(newSpan NewSpanFunc, logger log.Logger) func(ctx context.Context, r *http.Request) context.Context {
 	return func(ctx context.Context, r *http.Request) context.Context {
-		return context.WithValue(ctx, SpanContextKey, fromHTTP(newSpan, r, logger))
+		span := fromHTTP(newSpan, r, logger)
+		if span == nil {
+			return ctx
+		}
+		return context.WithValue(ctx, SpanContextKey, span)
 	}
 }
 
@@ -113,7 +137,11 @@ func ToContext(newSpan NewSpanFunc, logger log.Logger) func(ctx context.Context,
 // Before stack. The logger is used to report errors.
 func ToGRPCContext(newSpan NewSpanFunc, logger log.Logger) func(ctx context.Context, md *metadata.MD) context.Context {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
-		return context.WithValue(ctx, SpanContextKey, fromGRPC(newSpan, *md, logger))
+		span := fromGRPC(newSpan, *md, logger)
+		if span == nil {
+			return ctx
+		}
+		return context.WithValue(ctx, SpanContextKey, span)
 	}
 }
 
@@ -126,7 +154,7 @@ func ToRequest(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) c
 	return func(ctx context.Context, r *http.Request) context.Context {
 		span, ok := FromContext(ctx)
 		if !ok {
-			span = newSpan(newID(), newID(), 0)
+			return ctx
 		}
 		if id := span.TraceID(); id > 0 {
 			r.Header.Set(traceIDHTTPHeader, strconv.FormatInt(id, 16))
@@ -136,6 +164,11 @@ func ToRequest(newSpan NewSpanFunc) func(ctx context.Context, r *http.Request) c
 		}
 		if id := span.ParentSpanID(); id > 0 {
 			r.Header.Set(parentSpanIDHTTPHeader, strconv.FormatInt(id, 16))
+		}
+		if span.IsSampled() {
+			r.Header.Set(sampledHTTPHeader, "1")
+		} else {
+			r.Header.Set(sampledHTTPHeader, "0")
 		}
 		return ctx
 	}
@@ -150,19 +183,21 @@ func ToGRPCRequest(newSpan NewSpanFunc) func(ctx context.Context, md *metadata.M
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		span, ok := FromContext(ctx)
 		if !ok {
-			span = newSpan(newID(), newID(), 0)
+			return ctx
 		}
 		if id := span.TraceID(); id > 0 {
-			key, value := grpc.EncodeKeyValue(traceIDGRPCKey, strconv.FormatInt(id, 16))
-			(*md)[key] = append((*md)[key], value)
+			(*md)[traceIDGRPCKey] = append((*md)[traceIDGRPCKey], strconv.FormatInt(id, 16))
 		}
 		if id := span.SpanID(); id > 0 {
-			key, value := grpc.EncodeKeyValue(spanIDGRPCKey, strconv.FormatInt(id, 16))
-			(*md)[key] = append((*md)[key], value)
+			(*md)[spanIDGRPCKey] = append((*md)[spanIDGRPCKey], strconv.FormatInt(id, 16))
 		}
 		if id := span.ParentSpanID(); id > 0 {
-			key, value := grpc.EncodeKeyValue(parentSpanIDGRPCKey, strconv.FormatInt(id, 16))
-			(*md)[key] = append((*md)[key], value)
+			(*md)[parentSpanIDGRPCKey] = append((*md)[parentSpanIDGRPCKey], strconv.FormatInt(id, 16))
+		}
+		if span.IsSampled() {
+			(*md)[sampledGRPCKey] = append((*md)[sampledGRPCKey], "1")
+		} else {
+			(*md)[sampledGRPCKey] = append((*md)[sampledGRPCKey], "0")
 		}
 		return ctx
 	}
@@ -171,12 +206,12 @@ func ToGRPCRequest(newSpan NewSpanFunc) func(ctx context.Context, md *metadata.M
 func fromHTTP(newSpan NewSpanFunc, r *http.Request, logger log.Logger) *Span {
 	traceIDStr := r.Header.Get(traceIDHTTPHeader)
 	if traceIDStr == "" {
-		return newSpan(newID(), newID(), 0) // normal; just make a new one
+		return nil
 	}
 	traceID, err := strconv.ParseInt(traceIDStr, 16, 64)
 	if err != nil {
-		logger.Log(traceIDHTTPHeader, traceIDStr, "err", err)
-		return newSpan(newID(), newID(), 0)
+		logger.Log("msg", "invalid trace id found, ignoring trace", "err", err)
+		return nil
 	}
 	spanIDStr := r.Header.Get(spanIDHTTPHeader)
 	if spanIDStr == "" {
@@ -197,19 +232,31 @@ func fromHTTP(newSpan NewSpanFunc, r *http.Request, logger log.Logger) *Span {
 		logger.Log(parentSpanIDHTTPHeader, parentSpanIDStr, "err", err) // abnormal
 		parentSpanID = 0                                                // the only way to deal with it
 	}
-	return newSpan(traceID, spanID, parentSpanID)
+	span := newSpan(traceID, spanID, parentSpanID)
+	switch r.Header.Get(sampledHTTPHeader) {
+	case "0":
+		span.runSampler = false
+		span.sampled = false
+	case "1":
+		span.runSampler = false
+		span.sampled = true
+	default:
+		// we don't know if the upstream trace was sampled. use our sampler
+		span.runSampler = true
+	}
+	return span
 }
 
 func fromGRPC(newSpan NewSpanFunc, md metadata.MD, logger log.Logger) *Span {
 	traceIDSlc := md[traceIDGRPCKey]
 	pos := len(traceIDSlc) - 1
 	if pos < 0 {
-		return newSpan(newID(), newID(), 0) // normal; just make a new one
+		return nil
 	}
 	traceID, err := strconv.ParseInt(traceIDSlc[pos], 16, 64)
 	if err != nil {
-		logger.Log(traceIDHTTPHeader, traceIDSlc, "err", err)
-		return newSpan(newID(), newID(), 0)
+		logger.Log("msg", "invalid trace id found, ignoring trace", "err", err)
+		return nil
 	}
 	spanIDSlc := md[spanIDGRPCKey]
 	pos = len(spanIDSlc) - 1
@@ -240,7 +287,25 @@ func fromGRPC(newSpan NewSpanFunc, md metadata.MD, logger log.Logger) *Span {
 		logger.Log(parentSpanIDHTTPHeader, parentSpanIDSlc, "err", err) // abnormal
 		parentSpanID = 0                                                // the only way to deal with it
 	}
-	return newSpan(traceID, spanID, parentSpanID)
+	span := newSpan(traceID, spanID, parentSpanID)
+	var sampledHdr string
+	sampledSlc := md[sampledGRPCKey]
+	pos = len(sampledSlc) - 1
+	if pos >= 0 {
+		sampledHdr = sampledSlc[pos]
+	}
+	switch sampledHdr {
+	case "0":
+		span.runSampler = false
+		span.sampled = false
+	case "1":
+		span.runSampler = false
+		span.sampled = true
+	default:
+		// we don't know if the upstream trace was sampled. use our sampler
+		span.runSampler = true
+	}
+	return span
 }
 
 // FromContext extracts an existing Zipkin span if it is stored in the provided
