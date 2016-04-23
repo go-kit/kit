@@ -84,7 +84,7 @@ func (p *Subscriber) loop(t *time.Ticker, lookup Lookup) {
 
 // Services implements the Subscriber interface.
 func (p *Subscriber) Services() ([]service.Service, error) {
-	return p.cache.Services()
+	return p.cache.Services(), nil
 }
 
 func (p *Subscriber) resolve(lookup Lookup) ([]string, error) {

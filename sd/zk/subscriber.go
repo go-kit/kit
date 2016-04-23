@@ -16,7 +16,7 @@ type Subscriber struct {
 	path   string
 	cache  *cache.Cache
 	logger log.Logger
-	quit   chan struct{}
+	quitc  chan struct{}
 }
 
 var _ sd.Subscriber = &Subscriber{}
@@ -29,7 +29,7 @@ func NewSubscriber(c Client, path string, factory sd.Factory, logger log.Logger)
 		path:   path,
 		cache:  cache.New(factory, logger),
 		logger: logger,
-		quit:   make(chan struct{}),
+		quitc:  make(chan struct{}),
 	}
 
 	err := s.client.CreateParentNodes(s.path)
@@ -69,7 +69,7 @@ func (s *Subscriber) loop(eventc <-chan zk.Event) {
 			s.logger.Log("path", s.path, "instances", len(instances))
 			s.cache.Update(instances)
 
-		case <-s.quit:
+		case <-s.quitc:
 			return
 		}
 	}
@@ -77,10 +77,10 @@ func (s *Subscriber) loop(eventc <-chan zk.Event) {
 
 // Services implements the Subscriber interface.
 func (s *Subscriber) Services() ([]service.Service, error) {
-	return s.cache.Services()
+	return s.cache.Services(), nil
 }
 
 // Stop terminates the Subscriber.
 func (s *Subscriber) Stop() {
-	close(s.quit)
+	close(s.quitc)
 }

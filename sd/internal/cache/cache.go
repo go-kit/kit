@@ -73,7 +73,7 @@ func (c *Cache) Update(instances []string) {
 
 // Services yields the current set of services, ordered lexicographically by the
 // corresponding instance string.
-func (c *Cache) Services() ([]service.Service, error) {
+func (c *Cache) Services() []service.Service {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
 
@@ -89,7 +89,7 @@ func (c *Cache) Services() ([]service.Service, error) {
 		services[i] = slice[i].service
 	}
 
-	return services, nil
+	return services
 }
 
 type instanceService struct {

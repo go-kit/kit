@@ -57,7 +57,7 @@ func NewSubscriber(client Client, factory sd.Factory, logger log.Logger, service
 
 // Services implements the Subscriber interface.
 func (s *Subscriber) Services() ([]service.Service, error) {
-	return s.cache.Services()
+	return s.cache.Services(), nil
 }
 
 // Stop terminates the subscriber.
