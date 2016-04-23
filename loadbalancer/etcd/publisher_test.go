@@ -50,7 +50,7 @@ func TestPublisher(t *testing.T) {
 	if _, err := p.Endpoints(); err != nil {
 		t.Fatal(err)
 	}
-	// give loop a shot before stop
+	// wait for the loop before stop
 	time.Sleep(time.Millisecond)
 }
 
