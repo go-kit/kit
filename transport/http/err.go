@@ -19,7 +19,7 @@ const (
 	// execution phase of the request.
 	DomainDo = "Do"
 
-	// DomainDecode represents an error that has occured at the Decode
+	// DomainDecode represents an error that has occurred at the Decode
 	// phase of the request.
 	DomainDecode = "Decode"
 )
