@@ -8,21 +8,12 @@ import (
 
 import "testing"
 
-type MockKeysAPI struct {
-	getErr   error
-	watchErr error
-}
-
-func (mock *MockKeysAPI) Get() (*etcd.Response, error) {
-	return &etcd.Response{}, mock.getErr
-}
-
 func TestNoCertificateClient(t *testing.T) {
 	context := context.Background()
 
 	_, err := kitetcd.NewClient(context, []string{"http://localhost:2379"}, nil)
 	if err != nil {
-		t.Fatalf("failed to create new client %v", err)
+		t.Fatalf("failed to create new client with default transport %v", err)
 	}
 }
 
@@ -42,6 +33,7 @@ func TestWrongCert(t *testing.T) {
 		Cert:   "boom",
 		CaCert: "./test_certs/rootCA.crt",
 	}
+
 	_, err := kitetcd.NewClient(context, []string{"http://localhost:2379"}, ops)
 	if err == nil {
 		t.Fatalf("should return an error if Certificate is corrupted")
@@ -55,6 +47,7 @@ func TestWrongCaCert(t *testing.T) {
 		Cert:   "./test_certs/host.crt",
 		CaCert: "boom",
 	}
+
 	_, err := kitetcd.NewClient(context, []string{"http://localhost:2379"}, ops)
 	if err == nil {
 		t.Fatalf("should return an error if CA Certificate is corrupted")
@@ -68,15 +61,18 @@ func TestNewClient(t *testing.T) {
 		Cert:   "./test_certs/host.crt",
 		CaCert: "./test_certs/rootCA.crt",
 	}
+
 	c, err := kitetcd.NewClient(context, []string{"http://localhost:2379"}, ops)
 	if err != nil {
 		t.Fatalf("failed to create new client %v", err)
 	}
+
 	_, err = c.GetEntries("key")
 	if err.Error() != etcd.ErrClusterUnavailable.Error() {
 		t.Fatalf("unexpected error %v", err)
 	}
+
 	ch := make(chan *etcd.Response)
-	// should fail but no idea how to check it
+	// should fail but no idea how to check it explicitly
 	c.WatchPrefix("foo", ch)
 }
