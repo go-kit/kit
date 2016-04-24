@@ -14,8 +14,7 @@ or Windows you probably need to set the hostname environment variable to the
 hostname of the VM running the docker containers.
 
 ```sh
-git clone https://github.com/basvanbeek/docker-zipkin.git
-cd docker-zipkin
+cd tracing/zipkin/_docker
 HOSTNAME=localhost docker-compose -f docker-compose-zipkin.yml up
 ```
 
