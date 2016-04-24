@@ -33,11 +33,10 @@ func TestScribeCollector(t *testing.T) {
 		spanID       = int64(456)
 		parentSpanID = int64(0)
 		value        = "foo"
-		duration     = 42 * time.Millisecond
 	)
 
 	span := zipkin.NewSpan("1.2.3.4:1234", serviceName, methodName, traceID, spanID, parentSpanID)
-	span.AnnotateDuration("foo", 42*time.Millisecond)
+	span.Annotate("foo")
 	if err := c.Collect(span); err != nil {
 		t.Errorf("error during collection: %v", err)
 	}
@@ -79,9 +78,6 @@ func TestScribeCollector(t *testing.T) {
 	gotAnnotation := gotSpan.GetAnnotations()[0]
 	if want, have := value, gotAnnotation.GetValue(); want != have {
 		t.Errorf("want %q, have %q", want, have)
-	}
-	if want, have := duration, time.Duration(gotAnnotation.GetDuration())*time.Microsecond; want != have {
-		t.Errorf("want %s, have %s", want, have)
 	}
 }
 

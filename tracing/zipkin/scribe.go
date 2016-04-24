@@ -70,8 +70,19 @@ func NewScribeCollector(addr string, timeout time.Duration, options ...ScribeOpt
 
 // Collect implements Collector.
 func (c *ScribeCollector) Collect(s *Span) error {
-	c.spanc <- s
+	if c.ShouldSample(s) || s.debug {
+		c.spanc <- s
+	}
 	return nil // accepted
+}
+
+// ShouldSample implements Collector.
+func (c *ScribeCollector) ShouldSample(s *Span) bool {
+	if !s.sampled && s.runSampler {
+		s.runSampler = false
+		s.sampled = c.shouldSample(s.TraceID())
+	}
+	return s.sampled
 }
 
 // Close implements Collector.
@@ -86,9 +97,6 @@ func (c *ScribeCollector) loop() {
 	for {
 		select {
 		case span := <-c.spanc:
-			if !c.shouldSample(span.traceID) {
-				continue
-			}
 			c.batch = append(c.batch, &scribe.LogEntry{
 				Category: c.category,
 				Message:  scribeSerialize(span),

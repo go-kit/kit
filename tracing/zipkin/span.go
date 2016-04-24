@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/go-kit/kit/tracing/zipkin/_thrift/gen-go/zipkincore"
 )
 
@@ -25,6 +27,10 @@ type Span struct {
 
 	annotations       []annotation
 	binaryAnnotations []binaryAnnotation
+
+	debug      bool
+	sampled    bool
+	runSampler bool
 }
 
 // NewSpan returns a new Span, which can be annotated and collected by a
@@ -37,6 +43,7 @@ func NewSpan(hostport, serviceName, methodName string, traceID, spanID, parentSp
 		traceID:      traceID,
 		spanID:       spanID,
 		parentSpanID: parentSpanID,
+		runSampler:   true,
 	}
 }
 
@@ -95,9 +102,23 @@ func (s *Span) SpanID() int64 { return s.spanID }
 // It may be zero.
 func (s *Span) ParentSpanID() int64 { return s.parentSpanID }
 
+// Sample forces sampling of this span.
+func (s *Span) Sample() {
+	s.sampled = true
+}
+
+// SetDebug forces debug mode on this span.
+func (s *Span) SetDebug() {
+	s.debug = true
+}
+
 // Annotate annotates the span with the given value.
 func (s *Span) Annotate(value string) {
-	s.AnnotateDuration(value, 0)
+	s.annotations = append(s.annotations, annotation{
+		timestamp: time.Now(),
+		value:     value,
+		host:      s.host,
+	})
 }
 
 // AnnotateBinary annotates the span with a key and a value that will be []byte
@@ -188,6 +209,7 @@ func (s *Span) AnnotateBinary(key string, value interface{}) {
 }
 
 // AnnotateString annotates the span with a key and a string value.
+// Deprecated: use AnnotateBinary instead.
 func (s *Span) AnnotateString(key, value string) {
 	s.binaryAnnotations = append(s.binaryAnnotations, binaryAnnotation{
 		key:            key,
@@ -197,14 +219,77 @@ func (s *Span) AnnotateString(key, value string) {
 	})
 }
 
-// AnnotateDuration annotates the span with the given value and duration.
-func (s *Span) AnnotateDuration(value string, duration time.Duration) {
-	s.annotations = append(s.annotations, annotation{
-		timestamp: time.Now(),
-		value:     value,
-		duration:  duration,
-		host:      s.host,
-	})
+// SpanOption sets an optional parameter for Spans.
+type SpanOption func(s *Span)
+
+// ServerAddr will create a ServerAddr annotation with its own zipkin Endpoint
+// when used with NewChildSpan. This is typically used when the NewChildSpan is
+// used to annotate non Zipkin aware resources like databases and caches.
+func ServerAddr(hostport, serviceName string) SpanOption {
+	return func(s *Span) {
+		e := makeEndpoint(hostport, serviceName)
+		if e != nil {
+			host := s.host
+			s.host = e                            // set temporary Endpoint
+			s.AnnotateBinary(ServerAddress, true) // use
+			s.host = host                         // reset
+		}
+	}
+}
+
+// Host will update the default zipkin Endpoint of the Span it is used with.
+func Host(hostport, serviceName string) SpanOption {
+	return func(s *Span) {
+		e := makeEndpoint(hostport, serviceName)
+		if e != nil {
+			s.host = e // update
+		}
+	}
+}
+
+// Debug will set the Span to debug mode forcing Samplers to pass the Span.
+func Debug(debug bool) SpanOption {
+	return func(s *Span) {
+		s.debug = debug
+	}
+}
+
+// CollectFunc will collect the span created with NewChildSpan.
+type CollectFunc func()
+
+// NewChildSpan returns a new child Span of a parent Span extracted from the
+// passed context. It can be used to annotate resources like databases, caches,
+// etc. and treat them as if they are a regular service. For tracing client
+// endpoints use AnnotateClient instead.
+func NewChildSpan(ctx context.Context, collector Collector, methodName string, options ...SpanOption) (*Span, CollectFunc) {
+	span, ok := FromContext(ctx)
+	if !ok {
+		return nil, func() {}
+	}
+	childSpan := &Span{
+		host:         span.host,
+		methodName:   methodName,
+		traceID:      span.traceID,
+		spanID:       newID(),
+		parentSpanID: span.spanID,
+	}
+	childSpan.Annotate(ClientSend)
+	for _, option := range options {
+		option(childSpan)
+	}
+	collectFunc := func() {
+		if childSpan != nil {
+			childSpan.Annotate(ClientReceive)
+			collector.Collect(childSpan)
+			childSpan = nil
+		}
+	}
+	return childSpan, collectFunc
+}
+
+// IsSampled returns if the span is set to be sampled.
+func (s *Span) IsSampled() bool {
+	return s.sampled
 }
 
 // Encode creates a Thrift Span from the gokit Span.
@@ -215,7 +300,7 @@ func (s *Span) Encode() *zipkincore.Span {
 		TraceId: s.traceID,
 		Name:    s.methodName,
 		Id:      s.spanID,
-		Debug:   true, // TODO
+		Debug:   s.debug,
 	}
 
 	if s.parentSpanID != 0 {
@@ -229,11 +314,6 @@ func (s *Span) Encode() *zipkincore.Span {
 			Timestamp: a.timestamp.UnixNano() / 1e3,
 			Value:     a.value,
 			Host:      a.host,
-		}
-
-		if a.duration > 0 {
-			zs.Annotations[i].Duration = new(int32)
-			*(zs.Annotations[i].Duration) = int32(a.duration / time.Microsecond)
 		}
 	}
 
@@ -253,7 +333,6 @@ func (s *Span) Encode() *zipkincore.Span {
 type annotation struct {
 	timestamp time.Time
 	value     string
-	duration  time.Duration // optional
 	host      *zipkincore.Endpoint
 }
 

@@ -84,7 +84,7 @@ func (c *KafkaCollector) logErrors() {
 
 // Collect implements Collector.
 func (c *KafkaCollector) Collect(s *Span) error {
-	if c.shouldSample(s.traceID) {
+	if c.ShouldSample(s) || s.debug {
 		c.producer.Input() <- &sarama.ProducerMessage{
 			Topic: c.topic,
 			Key:   nil,
@@ -92,6 +92,15 @@ func (c *KafkaCollector) Collect(s *Span) error {
 		}
 	}
 	return nil
+}
+
+// ShouldSample implements Collector.
+func (c *KafkaCollector) ShouldSample(s *Span) bool {
+	if !s.sampled && s.runSampler {
+		s.runSampler = false
+		s.sampled = c.shouldSample(s.TraceID())
+	}
+	return s.sampled
 }
 
 // Close implements Collector.

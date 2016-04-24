@@ -33,6 +33,8 @@ func (c *stubCollector) Collect(*zipkin.Span) error {
 	return nil
 }
 
+func (c *stubCollector) ShouldSample(*zipkin.Span) bool { return true }
+
 func (c *stubCollector) Close() error {
 	c.closed = true
 	if c.errid != 0 {

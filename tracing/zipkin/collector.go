@@ -6,6 +6,7 @@ import "strings"
 // remote endpoints.
 type Collector interface {
 	Collect(*Span) error
+	ShouldSample(*Span) bool
 	Close() error
 }
 
@@ -14,6 +15,9 @@ type NopCollector struct{}
 
 // Collect implements Collector.
 func (NopCollector) Collect(*Span) error { return nil }
+
+// ShouldSample implements Collector.
+func (n NopCollector) ShouldSample(span *Span) bool { return false }
 
 // Close implements Collector.
 func (NopCollector) Close() error { return nil }
@@ -25,6 +29,9 @@ type MultiCollector []Collector
 func (c MultiCollector) Collect(s *Span) error {
 	return c.aggregateErrors(func(coll Collector) error { return coll.Collect(s) })
 }
+
+// ShouldSample implements Collector.
+func (c MultiCollector) ShouldSample(s *Span) bool { return false }
 
 // Close implements Collector.
 func (c MultiCollector) Close() error {
