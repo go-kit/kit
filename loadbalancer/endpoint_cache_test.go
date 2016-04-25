@@ -69,3 +69,24 @@ func TestEndpointCache(t *testing.T) {
 type closer chan struct{}
 
 func (c closer) Close() error { close(c); return nil }
+
+func BenchmarkEndpoints(b *testing.B) {
+	var (
+		e  = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
+		ca = make(closer)
+		cb = make(closer)
+		c  = map[string]io.Closer{"a": ca, "b": cb}
+		f  = func(s string) (endpoint.Endpoint, io.Closer, error) { return e, c[s], nil }
+		ec = loadbalancer.NewEndpointCache(f, log.NewNopLogger())
+	)
+
+	b.ReportAllocs()
+
+	ec.Replace([]string{"a", "b"})
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			ec.Endpoints()
+		}
+	})
+}

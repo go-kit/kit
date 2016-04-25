@@ -2,7 +2,9 @@ package loadbalancer
 
 import (
 	"io"
+	"sort"
 	"sync"
+	"sync/atomic"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
@@ -19,9 +21,10 @@ import (
 //
 // EndpointCache is designed to be used in your publisher implementation.
 type EndpointCache struct {
-	mtx    sync.RWMutex
+	mtx    sync.Mutex
 	f      Factory
 	m      map[string]endpointCloser
+	cache  atomic.Value //[]endpoint.Endpoint
 	logger log.Logger
 }
 
@@ -29,11 +32,15 @@ type EndpointCache struct {
 // strings will be converted to endpoints via the provided factory function.
 // The logger is used to log errors.
 func NewEndpointCache(f Factory, logger log.Logger) *EndpointCache {
-	return &EndpointCache{
+	endpointCache := &EndpointCache{
 		f:      f,
 		m:      map[string]endpointCloser{},
 		logger: log.NewContext(logger).With("component", "Endpoint Cache"),
 	}
+
+	endpointCache.cache.Store(make([]endpoint.Endpoint, 0))
+
+	return endpointCache
 }
 
 type endpointCloser struct {
@@ -49,12 +56,13 @@ func (t *EndpointCache) Replace(instances []string) {
 	defer t.mtx.Unlock()
 
 	// Produce the current set of endpoints.
-	m := make(map[string]endpointCloser, len(instances))
+	oldMap := t.m
+	t.m = make(map[string]endpointCloser, len(instances))
 	for _, instance := range instances {
 		// If it already exists, just copy it over.
-		if ec, ok := t.m[instance]; ok {
-			m[instance] = ec
-			delete(t.m, instance)
+		if ec, ok := oldMap[instance]; ok {
+			t.m[instance] = ec
+			delete(oldMap, instance)
 			continue
 		}
 
@@ -64,28 +72,41 @@ func (t *EndpointCache) Replace(instances []string) {
 			t.logger.Log("instance", instance, "err", err)
 			continue
 		}
-		m[instance] = endpointCloser{endpoint, closer}
+		t.m[instance] = endpointCloser{endpoint, closer}
 	}
 
+	t.refreshCache()
+
 	// Close any leftover endpoints.
-	for _, ec := range t.m {
+	for _, ec := range oldMap {
 		if ec.Closer != nil {
 			ec.Closer.Close()
 		}
 	}
+}
 
-	// Swap and GC.
-	t.m = m
+func (t *EndpointCache) refreshCache() {
+	var (
+		length    = len(t.m)
+		instances = make([]string, 0, length)
+		newCache  = make([]endpoint.Endpoint, 0, length)
+	)
+
+	for instance, _ := range t.m {
+		instances = append(instances, instance)
+	}
+	// Sort the instances for ensuring that Endpoints are returned into the same order if no modified.
+	sort.Strings(instances)
+
+	for _, instance := range instances {
+		newCache = append(newCache, t.m[instance].Endpoint)
+	}
+
+	t.cache.Store(newCache)
 }
 
 // Endpoints returns the current set of endpoints in undefined order. Satisfies
 // Publisher interface.
 func (t *EndpointCache) Endpoints() ([]endpoint.Endpoint, error) {
-	t.mtx.RLock()
-	defer t.mtx.RUnlock()
-	a := make([]endpoint.Endpoint, 0, len(t.m))
-	for _, ec := range t.m {
-		a = append(a, ec.Endpoint)
-	}
-	return a, nil
+	return t.cache.Load().([]endpoint.Endpoint), nil
 }
