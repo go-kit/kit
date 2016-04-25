@@ -272,6 +272,9 @@ func NewChildSpan(ctx context.Context, collector Collector, methodName string, o
 		traceID:      span.traceID,
 		spanID:       newID(),
 		parentSpanID: span.spanID,
+		debug:        span.debug,
+		sampled:      span.sampled,
+		runSampler:   span.runSampler,
 	}
 	childSpan.Annotate(ClientSend)
 	for _, option := range options {
