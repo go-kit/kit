@@ -17,7 +17,7 @@ type Server struct {
 	enc          EncodeResponseFunc
 	before       []RequestFunc
 	after        []ResponseFunc
-	errorEncoder func(w http.ResponseWriter, err error)
+	errorEncoder ErrorEncoder
 	logger       log.Logger
 }
 
@@ -64,8 +64,8 @@ func ServerAfter(after ...ResponseFunc) ServerOption {
 // use this to provide custom error formatting and response codes. By default,
 // errors will be written as plain text with an appropriate, if generic,
 // status code.
-func ServerErrorEncoder(f func(w http.ResponseWriter, err error)) ServerOption {
-	return func(s *Server) { s.errorEncoder = f }
+func ServerErrorEncoder(ee ErrorEncoder) ServerOption {
+	return func(s *Server) { s.errorEncoder = ee }
 }
 
 // ServerErrorLogger is used to log non-terminal errors. By default, no errors
@@ -86,14 +86,14 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	request, err := s.dec(r)
 	if err != nil {
 		s.logger.Log("err", err)
-		s.errorEncoder(w, BadRequestError{err})
+		s.errorEncoder(ctx, TransportError{Domain: DomainDecode, Err: err}, w)
 		return
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
 		s.logger.Log("err", err)
-		s.errorEncoder(w, err)
+		s.errorEncoder(ctx, TransportError{Domain: DomainDo, Err: err}, w)
 		return
 	}
 
@@ -103,26 +103,26 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.enc(w, response); err != nil {
 		s.logger.Log("err", err)
-		s.errorEncoder(w, err)
+		s.errorEncoder(ctx, TransportError{Domain: DomainEncode, Err: err}, w)
 		return
 	}
 }
 
-func defaultErrorEncoder(w http.ResponseWriter, err error) {
-	switch err.(type) {
-	case BadRequestError:
-		http.Error(w, err.Error(), http.StatusBadRequest)
+// ErrorEncoder is a function that's responsible for encoding an error to the ResponseWriter.
+type ErrorEncoder func(ctx context.Context, err error, w http.ResponseWriter)
+
+func defaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
+	switch e := err.(type) {
+	case TransportError:
+		switch e.Domain {
+		case DomainDecode:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case DomainDo:
+			http.Error(w, err.Error(), http.StatusServiceUnavailable) // too aggressive?
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-}
-
-// BadRequestError is an error in decoding the request.
-type BadRequestError struct {
-	Err error
-}
-
-// Error implements the error interface.
-func (err BadRequestError) Error() string {
-	return err.Err.Error()
 }

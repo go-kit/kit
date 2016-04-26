@@ -49,7 +49,7 @@ func TestClientEndpointEncodeError(t *testing.T) {
 
 func ExampleErrOutput() {
 	sampleErr := errors.New("Oh no, an error")
-	err := httptransport.TransportError{"Do", sampleErr}
+	err := httptransport.TransportError{Domain: httptransport.DomainDo, Err: sampleErr}
 	fmt.Println(err)
 	// Output:
 	// Do: Oh no, an error
