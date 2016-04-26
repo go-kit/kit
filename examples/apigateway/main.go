@@ -173,12 +173,12 @@ func httpFactory(ctx context.Context, method, path string) loadbalancer.Factory 
 	}
 }
 
-func passEncode(r *http.Request, request interface{}) error {
+func passEncode(_ context.Context, r *http.Request, request interface{}) error {
 	r.Body = request.(io.ReadCloser)
 	return nil
 }
 
-func passDecode(r *http.Response) (interface{}, error) {
+func passDecode(_ context.Context, r *http.Response) (interface{}, error) {
 	return ioutil.ReadAll(r.Body)
 }
 

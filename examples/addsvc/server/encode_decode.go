@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+
+	"golang.org/x/net/context"
 )
 
 // DecodeSumRequest decodes the request from the provided HTTP request, simply
 // by JSON decoding from the request body. It's designed to be used in
 // transport/http.Server.
-func DecodeSumRequest(r *http.Request) (interface{}, error) {
+func DecodeSumRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var request SumRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	return &request, err
@@ -19,14 +21,14 @@ func DecodeSumRequest(r *http.Request) (interface{}, error) {
 // EncodeSumResponse encodes the response to the provided HTTP response
 // writer, simply by JSON encoding to the writer. It's designed to be used in
 // transport/http.Server.
-func EncodeSumResponse(w http.ResponseWriter, response interface{}) error {
+func EncodeSumResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
 
 // DecodeConcatRequest decodes the request from the provided HTTP request,
 // simply by JSON decoding from the request body. It's designed to be used in
 // transport/http.Server.
-func DecodeConcatRequest(r *http.Request) (interface{}, error) {
+func DecodeConcatRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var request ConcatRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	return &request, err
@@ -35,14 +37,14 @@ func DecodeConcatRequest(r *http.Request) (interface{}, error) {
 // EncodeConcatResponse encodes the response to the provided HTTP response
 // writer, simply by JSON encoding to the writer. It's designed to be used in
 // transport/http.Server.
-func EncodeConcatResponse(w http.ResponseWriter, response interface{}) error {
+func EncodeConcatResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
 
 // EncodeSumRequest encodes the request to the provided HTTP request, simply
 // by JSON encoding to the request body. It's designed to be used in
 // transport/http.Client.
-func EncodeSumRequest(r *http.Request, request interface{}) error {
+func EncodeSumRequest(_ context.Context, r *http.Request, request interface{}) error {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(request); err != nil {
 		return err
@@ -54,7 +56,7 @@ func EncodeSumRequest(r *http.Request, request interface{}) error {
 // DecodeSumResponse decodes the response from the provided HTTP response,
 // simply by JSON decoding from the response body. It's designed to be used in
 // transport/http.Client.
-func DecodeSumResponse(resp *http.Response) (interface{}, error) {
+func DecodeSumResponse(_ context.Context, resp *http.Response) (interface{}, error) {
 	var response SumResponse
 	err := json.NewDecoder(resp.Body).Decode(&response)
 	return response, err
@@ -63,7 +65,7 @@ func DecodeSumResponse(resp *http.Response) (interface{}, error) {
 // EncodeConcatRequest encodes the request to the provided HTTP request,
 // simply by JSON encoding to the request body. It's designed to be used in
 // transport/http.Client.
-func EncodeConcatRequest(r *http.Request, request interface{}) error {
+func EncodeConcatRequest(_ context.Context, r *http.Request, request interface{}) error {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(request); err != nil {
 		return err
@@ -75,7 +77,7 @@ func EncodeConcatRequest(r *http.Request, request interface{}) error {
 // DecodeConcatResponse decodes the response from the provided HTTP response,
 // simply by JSON decoding from the response body. It's designed to be used in
 // transport/http.Client.
-func DecodeConcatResponse(resp *http.Response) (interface{}, error) {
+func DecodeConcatResponse(_ context.Context, resp *http.Response) (interface{}, error) {
 	var response ConcatResponse
 	err := json.NewDecoder(resp.Body).Decode(&response)
 	return response, err

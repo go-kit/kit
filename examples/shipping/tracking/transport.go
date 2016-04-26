@@ -35,7 +35,7 @@ func MakeHandler(ctx context.Context, ts Service, logger kitlog.Logger) http.Han
 	return r
 }
 
-func decodeTrackCargoRequest(r *http.Request) (interface{}, error) {
+func decodeTrackCargoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -44,9 +44,9 @@ func decodeTrackCargoRequest(r *http.Request) (interface{}, error) {
 	return trackCargoRequest{ID: id}, nil
 }
 
-func encodeResponse(w http.ResponseWriter, response interface{}) error {
+func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	if e, ok := response.(errorer); ok && e.error() != nil {
-		encodeError(w, e.error())
+		encodeError(ctx, e.error(), w)
 		return nil
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -58,7 +58,7 @@ type errorer interface {
 }
 
 // encode errors from business-logic
-func encodeError(w http.ResponseWriter, err error) {
+func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	switch err {
 	case cargo.ErrUnknown:
 		w.WriteHeader(http.StatusNotFound)

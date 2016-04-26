@@ -15,8 +15,8 @@ import (
 func TestClientEndpointEncodeError(t *testing.T) {
 	var (
 		sampleErr = errors.New("Oh no, an error")
-		enc       = func(r *http.Request, request interface{}) error { return sampleErr }
-		dec       = func(r *http.Response) (response interface{}, err error) { return nil, nil }
+		enc       = func(context.Context, *http.Request, interface{}) error { return sampleErr }
+		dec       = func(context.Context, *http.Response) (interface{}, error) { return nil, nil }
 	)
 
 	u := &url.URL{

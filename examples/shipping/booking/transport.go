@@ -88,7 +88,7 @@ func MakeHandler(ctx context.Context, bs Service, logger kitlog.Logger) http.Han
 
 var errBadRoute = errors.New("bad route")
 
-func decodeBookCargoRequest(r *http.Request) (interface{}, error) {
+func decodeBookCargoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var body struct {
 		Origin          string    `json:"origin"`
 		Destination     string    `json:"destination"`
@@ -106,7 +106,7 @@ func decodeBookCargoRequest(r *http.Request) (interface{}, error) {
 	}, nil
 }
 
-func decodeLoadCargoRequest(r *http.Request) (interface{}, error) {
+func decodeLoadCargoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -115,7 +115,7 @@ func decodeLoadCargoRequest(r *http.Request) (interface{}, error) {
 	return loadCargoRequest{ID: cargo.TrackingID(id)}, nil
 }
 
-func decodeRequestRoutesRequest(r *http.Request) (interface{}, error) {
+func decodeRequestRoutesRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -124,7 +124,7 @@ func decodeRequestRoutesRequest(r *http.Request) (interface{}, error) {
 	return requestRoutesRequest{ID: cargo.TrackingID(id)}, nil
 }
 
-func decodeAssignToRouteRequest(r *http.Request) (interface{}, error) {
+func decodeAssignToRouteRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -142,7 +142,7 @@ func decodeAssignToRouteRequest(r *http.Request) (interface{}, error) {
 	}, nil
 }
 
-func decodeChangeDestinationRequest(r *http.Request) (interface{}, error) {
+func decodeChangeDestinationRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -163,17 +163,17 @@ func decodeChangeDestinationRequest(r *http.Request) (interface{}, error) {
 	}, nil
 }
 
-func decodeListCargosRequest(r *http.Request) (interface{}, error) {
+func decodeListCargosRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return listCargosRequest{}, nil
 }
 
-func decodeListLocationsRequest(r *http.Request) (interface{}, error) {
+func decodeListLocationsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	return listLocationsRequest{}, nil
 }
 
-func encodeResponse(w http.ResponseWriter, response interface{}) error {
+func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	if e, ok := response.(errorer); ok && e.error() != nil {
-		encodeError(w, e.error())
+		encodeError(ctx, e.error(), w)
 		return nil
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -185,7 +185,7 @@ type errorer interface {
 }
 
 // encode errors from business-logic
-func encodeError(w http.ResponseWriter, err error) {
+func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	switch err {
 	case cargo.ErrUnknown:
 		w.WriteHeader(http.StatusNotFound)

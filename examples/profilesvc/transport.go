@@ -101,7 +101,7 @@ func makeHandler(ctx context.Context, s ProfileService, logger kitlog.Logger) st
 	return r
 }
 
-func decodePostProfileRequest(r *stdhttp.Request) (request interface{}, err error) {
+func decodePostProfileRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
 	var req postProfileRequest
 	if e := json.NewDecoder(r.Body).Decode(&req.Profile); e != nil {
 		return nil, e
@@ -109,7 +109,7 @@ func decodePostProfileRequest(r *stdhttp.Request) (request interface{}, err erro
 	return req, nil
 }
 
-func decodeGetProfileRequest(r *stdhttp.Request) (request interface{}, err error) {
+func decodeGetProfileRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -118,7 +118,7 @@ func decodeGetProfileRequest(r *stdhttp.Request) (request interface{}, err error
 	return getProfileRequest{ID: id}, nil
 }
 
-func decodePutProfileRequest(r *stdhttp.Request) (request interface{}, err error) {
+func decodePutProfileRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -134,7 +134,7 @@ func decodePutProfileRequest(r *stdhttp.Request) (request interface{}, err error
 	}, nil
 }
 
-func decodePatchProfileRequest(r *stdhttp.Request) (request interface{}, err error) {
+func decodePatchProfileRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -150,7 +150,7 @@ func decodePatchProfileRequest(r *stdhttp.Request) (request interface{}, err err
 	}, nil
 }
 
-func decodeDeleteProfileRequest(r *stdhttp.Request) (request interface{}, err error) {
+func decodeDeleteProfileRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -159,7 +159,7 @@ func decodeDeleteProfileRequest(r *stdhttp.Request) (request interface{}, err er
 	return deleteProfileRequest{ID: id}, nil
 }
 
-func decodeGetAddressesRequest(r *stdhttp.Request) (request interface{}, err error) {
+func decodeGetAddressesRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -168,7 +168,7 @@ func decodeGetAddressesRequest(r *stdhttp.Request) (request interface{}, err err
 	return getAddressesRequest{ProfileID: id}, nil
 }
 
-func decodeGetAddressRequest(r *stdhttp.Request) (request interface{}, err error) {
+func decodeGetAddressRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -184,7 +184,7 @@ func decodeGetAddressRequest(r *stdhttp.Request) (request interface{}, err error
 	}, nil
 }
 
-func decodePostAddressRequest(r *stdhttp.Request) (request interface{}, err error) {
+func decodePostAddressRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -200,7 +200,7 @@ func decodePostAddressRequest(r *stdhttp.Request) (request interface{}, err erro
 	}, nil
 }
 
-func decodeDeleteAddressRequest(r *stdhttp.Request) (request interface{}, err error) {
+func decodeDeleteAddressRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -228,17 +228,17 @@ type errorer interface {
 // client. I chose to do it this way because I didn't know if something more
 // specific was necessary. It's certainly possible to specialize on a
 // per-response (per-method) basis.
-func encodeResponse(w stdhttp.ResponseWriter, response interface{}) error {
+func encodeResponse(ctx context.Context, w stdhttp.ResponseWriter, response interface{}) error {
 	if e, ok := response.(errorer); ok && e.error() != nil {
 		// Not a Go kit transport error, but a business-logic error.
 		// Provide those as HTTP errors.
-		encodeError(w, e.error())
+		encodeError(ctx, e.error(), w)
 		return nil
 	}
 	return json.NewEncoder(w).Encode(response)
 }
 
-func encodeError(w stdhttp.ResponseWriter, err error) {
+func encodeError(_ context.Context, err error, w stdhttp.ResponseWriter) {
 	if err == nil {
 		panic("encodeError with nil error")
 	}
@@ -255,8 +255,15 @@ func codeFrom(err error) int {
 	case errAlreadyExists, errInconsistentIDs:
 		return stdhttp.StatusBadRequest
 	default:
-		if _, ok := err.(kithttp.BadRequestError); ok {
-			return stdhttp.StatusBadRequest
+		if e, ok := err.(kithttp.TransportError); ok {
+			switch e.Domain {
+			case kithttp.DomainDecode:
+				return stdhttp.StatusBadRequest
+			case kithttp.DomainDo:
+				return stdhttp.StatusServiceUnavailable
+			default:
+				return stdhttp.StatusInternalServerError
+			}
 		}
 		return stdhttp.StatusInternalServerError
 	}

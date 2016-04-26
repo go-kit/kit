@@ -16,8 +16,8 @@ func TestServerBadDecode(t *testing.T) {
 	handler := httptransport.NewServer(
 		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
-		func(*http.Request) (interface{}, error) { return struct{}{}, errors.New("dang") },
-		func(http.ResponseWriter, interface{}) error { return nil },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, errors.New("dang") },
+		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
 	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -31,8 +31,8 @@ func TestServerBadEndpoint(t *testing.T) {
 	handler := httptransport.NewServer(
 		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errors.New("dang") },
-		func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		func(http.ResponseWriter, interface{}) error { return nil },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
 	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -46,8 +46,8 @@ func TestServerBadEncode(t *testing.T) {
 	handler := httptransport.NewServer(
 		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
-		func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		func(http.ResponseWriter, interface{}) error { return errors.New("dang") },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		func(context.Context, http.ResponseWriter, interface{}) error { return errors.New("dang") },
 	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -68,8 +68,8 @@ func TestServerErrorEncoder(t *testing.T) {
 	handler := httptransport.NewServer(
 		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errTeapot },
-		func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		func(http.ResponseWriter, interface{}) error { return nil },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
 		httptransport.ServerErrorEncoder(func(_ context.Context, err error, w http.ResponseWriter) { w.WriteHeader(code(err)) }),
 	)
 	server := httptest.NewServer(handler)
@@ -100,8 +100,8 @@ func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) 
 		handler       = httptransport.NewServer(
 			ctx,
 			endpoint,
-			func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-			func(http.ResponseWriter, interface{}) error { return nil },
+			func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+			func(context.Context, http.ResponseWriter, interface{}) error { return nil },
 			httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context { return ctx }),
 			httptransport.ServerAfter(func(ctx context.Context, w http.ResponseWriter) { return }),
 		)

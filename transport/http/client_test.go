@@ -21,8 +21,8 @@ type TestResponse struct {
 func TestHTTPClient(t *testing.T) {
 	var (
 		testbody = "testbody"
-		encode   = func(*http.Request, interface{}) error { return nil }
-		decode   = func(r *http.Response) (interface{}, error) {
+		encode   = func(context.Context, *http.Request, interface{}) error { return nil }
+		decode   = func(_ context.Context, r *http.Response) (interface{}, error) {
 			buffer := make([]byte, len(testbody))
 			r.Body.Read(buffer)
 			return TestResponse{r.Body, string(buffer)}, nil
@@ -85,8 +85,8 @@ func TestHTTPClient(t *testing.T) {
 func TestHTTPClientBufferedStream(t *testing.T) {
 	var (
 		testbody = "testbody"
-		encode   = func(*http.Request, interface{}) error { return nil }
-		decode   = func(r *http.Response) (interface{}, error) {
+		encode   = func(context.Context, *http.Request, interface{}) error { return nil }
+		decode   = func(_ context.Context, r *http.Response) (interface{}, error) {
 			return TestResponse{r.Body, ""}, nil
 		}
 	)

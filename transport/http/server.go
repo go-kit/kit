@@ -83,7 +83,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx = f(ctx, r)
 	}
 
-	request, err := s.dec(r)
+	request, err := s.dec(ctx, r)
 	if err != nil {
 		s.logger.Log("err", err)
 		s.errorEncoder(ctx, TransportError{Domain: DomainDecode, Err: err}, w)
@@ -101,7 +101,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f(ctx, w)
 	}
 
-	if err := s.enc(w, response); err != nil {
+	if err := s.enc(ctx, w, response); err != nil {
 		s.logger.Log("err", err)
 		s.errorEncoder(ctx, TransportError{Domain: DomainEncode, Err: err}, w)
 		return
