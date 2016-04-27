@@ -86,14 +86,14 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	request, err := s.dec(ctx, r)
 	if err != nil {
 		s.logger.Log("err", err)
-		s.errorEncoder(ctx, TransportError{Domain: DomainDecode, Err: err}, w)
+		s.errorEncoder(ctx, Error{Domain: DomainDecode, Err: err}, w)
 		return
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
 		s.logger.Log("err", err)
-		s.errorEncoder(ctx, TransportError{Domain: DomainDo, Err: err}, w)
+		s.errorEncoder(ctx, Error{Domain: DomainDo, Err: err}, w)
 		return
 	}
 
@@ -103,17 +103,23 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.enc(ctx, w, response); err != nil {
 		s.logger.Log("err", err)
-		s.errorEncoder(ctx, TransportError{Domain: DomainEncode, Err: err}, w)
+		s.errorEncoder(ctx, Error{Domain: DomainEncode, Err: err}, w)
 		return
 	}
 }
 
-// ErrorEncoder is a function that's responsible for encoding an error to the ResponseWriter.
+// ErrorEncoder is responsible for encoding an error to the ResponseWriter.
+//
+// In the server implementation, only kit/transport/http.Error values are ever
+// passed to this function, so you might be tempted to have this function take
+// one of those directly. But, users are encouraged to use custom ErrorEncoders
+// to encode all HTTP errors to their clients, and so may want to pass and check
+// for their own error types. See the example shipping/handling service.
 type ErrorEncoder func(ctx context.Context, err error, w http.ResponseWriter)
 
 func defaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	switch e := err.(type) {
-	case TransportError:
+	case Error:
 		switch e.Domain {
 		case DomainDecode:
 			http.Error(w, err.Error(), http.StatusBadRequest)

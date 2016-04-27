@@ -60,7 +60,7 @@ func TestServerBadEncode(t *testing.T) {
 func TestServerErrorEncoder(t *testing.T) {
 	errTeapot := errors.New("teapot")
 	code := func(err error) int {
-		if e, ok := err.(httptransport.TransportError); ok && e.Err == errTeapot {
+		if e, ok := err.(httptransport.Error); ok && e.Err == errTeapot {
 			return http.StatusTeapot
 		}
 		return http.StatusInternalServerError

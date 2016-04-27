@@ -18,8 +18,8 @@ const (
 	DomainDecode = "Decode"
 )
 
-// TransportError is an error that occurred at some phase within the transport.
-type TransportError struct {
+// Error is an error that occurred at some phase within the transport.
+type Error struct {
 	// Domain is the phase in which the error was generated.
 	Domain string
 
@@ -28,6 +28,6 @@ type TransportError struct {
 }
 
 // Error implements the error interface.
-func (e TransportError) Error() string {
+func (e Error) Error() string {
 	return fmt.Sprintf("%s: %s", e.Domain, e.Err)
 }

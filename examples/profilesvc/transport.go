@@ -255,7 +255,7 @@ func codeFrom(err error) int {
 	case errAlreadyExists, errInconsistentIDs:
 		return stdhttp.StatusBadRequest
 	default:
-		if e, ok := err.(kithttp.TransportError); ok {
+		if e, ok := err.(kithttp.Error); ok {
 			switch e.Domain {
 			case kithttp.DomainDecode:
 				return stdhttp.StatusBadRequest
