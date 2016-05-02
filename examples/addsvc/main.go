@@ -15,9 +15,14 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	kitot "github.com/go-kit/kit/tracing/opentracing"
+	"github.com/lightstep/lightstep-tracer-go"
+	"github.com/opentracing/opentracing-go"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
+	appdashot "github.com/sourcegraph/appdash/opentracing"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"sourcegraph.com/sourcegraph/appdash"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/examples/addsvc/pb"
@@ -36,17 +41,18 @@ func main() {
 	// of glog. So, we define a new flag set, to keep those domains distinct.
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	var (
-		debugAddr           = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
-		httpAddr            = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
-		grpcAddr            = fs.String("grpc.addr", ":8002", "Address for gRPC server")
-		netrpcAddr          = fs.String("netrpc.addr", ":8003", "Address for net/rpc server")
-		thriftAddr          = fs.String("thrift.addr", ":8004", "Address for Thrift server")
-		thriftProtocol      = fs.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
-		thriftBufferSize    = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
-		thriftFramed        = fs.Bool("thrift.framed", false, "true to enable framing")
-		zipkinHostPort      = fs.String("zipkin.host.port", "my.service.domain:12345", "Zipkin host:port")
-		zipkinServiceName   = fs.String("zipkin.service.name", "addsvc", "Zipkin service name")
-		zipkinCollectorAddr = fs.String("zipkin.collector.addr", "", "Zipkin Kafka collector address (empty will log spans)")
+		debugAddr        = fs.String("debug.addr", ":8000", "Address for HTTP debug/instrumentation server")
+		httpAddr         = fs.String("http.addr", ":8001", "Address for HTTP (JSON) server")
+		grpcAddr         = fs.String("grpc.addr", ":8002", "Address for gRPC server")
+		netrpcAddr       = fs.String("netrpc.addr", ":8003", "Address for net/rpc server")
+		thriftAddr       = fs.String("thrift.addr", ":8004", "Address for Thrift server")
+		thriftProtocol   = fs.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
+		thriftBufferSize = fs.Int("thrift.buffer.size", 0, "0 for unbuffered")
+		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
+
+		// Supported OpenTracing backends
+		appdashHostport      = fs.String("appdash_hostport", "", "Enable Appdash tracing via an Appdash server host:port")
+		lightstepAccessToken = fs.String("lightstep_access_token", "", "Enable LightStep tracing via a LightStep access token")
 	)
 	flag.Usage = fs.Usage // only show our flags
 	if err := fs.Parse(os.Args[1:]); err != nil {
@@ -78,20 +84,22 @@ func main() {
 		))
 	}
 
-	// package tracing
-	var collector zipkin.Collector
+	// Set up OpenTracing
+	var tracer opentracing.Tracer
 	{
-		zipkinLogger := log.NewContext(logger).With("component", "zipkin")
-		collector = loggingCollector{zipkinLogger} // TODO(pb)
-		if *zipkinCollectorAddr != "" {
-			var err error
-			if collector, err = zipkin.NewKafkaCollector(
-				[]string{*zipkinCollectorAddr},
-				zipkin.KafkaLogger(zipkinLogger),
-			); err != nil {
-				zipkinLogger.Log("err", err)
-				os.Exit(1)
+		if len(*appdashHostport) > 0 {
+			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashHostport))
+		}
+		if len(*lightstepAccessToken) > 0 {
+			if tracer != nil {
+				panic("Attempted to configure multiple OpenTracing implementations")
 			}
+			tracer = lightstep.NewTracer(lightstep.Options{
+				AccessToken: *lightstepAccessToken,
+			})
+		}
+		if tracer == nil {
+			tracer = opentracing.GlobalTracer() // the noop tracer
 		}
 	}
 
@@ -123,35 +131,30 @@ func main() {
 	go func() {
 		var (
 			transportLogger = log.NewContext(logger).With("transport", "HTTP/JSON")
-			tracingLogger   = log.NewContext(transportLogger).With("component", "tracing")
-			newSumSpan      = zipkin.MakeNewSpanFunc(*zipkinHostPort, *zipkinServiceName, "sum")
-			newConcatSpan   = zipkin.MakeNewSpanFunc(*zipkinHostPort, *zipkinServiceName, "concat")
-			traceSum        = zipkin.ToContext(newSumSpan, tracingLogger)
-			traceConcat     = zipkin.ToContext(newConcatSpan, tracingLogger)
 			mux             = http.NewServeMux()
 			sum, concat     endpoint.Endpoint
 		)
 
 		sum = makeSumEndpoint(svc)
-		sum = zipkin.AnnotateServer(newSumSpan, collector)(sum)
+		sum = kitot.TraceServer(tracer, "sum")(sum)
 		mux.Handle("/sum", httptransport.NewServer(
 			root,
 			sum,
 			server.DecodeSumRequest,
 			server.EncodeSumResponse,
-			httptransport.ServerBefore(traceSum),
 			httptransport.ServerErrorLogger(transportLogger),
+			httptransport.ServerBefore(kitot.FromHTTPRequest(tracer, "sum")),
 		))
 
 		concat = makeConcatEndpoint(svc)
-		concat = zipkin.AnnotateServer(newConcatSpan, collector)(concat)
+		concat = kitot.TraceServer(tracer, "concat")(concat)
 		mux.Handle("/concat", httptransport.NewServer(
 			root,
 			concat,
 			server.DecodeConcatRequest,
 			server.EncodeConcatResponse,
-			httptransport.ServerBefore(traceConcat),
 			httptransport.ServerErrorLogger(transportLogger),
+			httptransport.ServerBefore(kitot.FromHTTPRequest(tracer, "concat")),
 		))
 
 		transportLogger.Log("addr", *httpAddr)
@@ -167,7 +170,7 @@ func main() {
 			return
 		}
 		s := grpc.NewServer() // uses its own, internal context
-		pb.RegisterAddServer(s, newGRPCBinding(root, svc))
+		pb.RegisterAddServer(s, newGRPCBinding(root, tracer, svc))
 		transportLogger.Log("addr", *grpcAddr)
 		errc <- s.Serve(ln)
 	}()

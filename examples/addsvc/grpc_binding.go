@@ -6,17 +6,31 @@ import (
 	"github.com/go-kit/kit/examples/addsvc/pb"
 	"github.com/go-kit/kit/examples/addsvc/server"
 	servergrpc "github.com/go-kit/kit/examples/addsvc/server/grpc"
+	kitot "github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/kit/transport/grpc"
+	"github.com/opentracing/opentracing-go"
 )
 
 type grpcBinding struct {
 	sum, concat grpc.Handler
 }
 
-func newGRPCBinding(ctx context.Context, svc server.AddService) grpcBinding {
+func newGRPCBinding(ctx context.Context, tracer opentracing.Tracer, svc server.AddService) grpcBinding {
 	return grpcBinding{
-		sum:    grpc.NewServer(ctx, makeSumEndpoint(svc), servergrpc.DecodeSumRequest, servergrpc.EncodeSumResponse),
-		concat: grpc.NewServer(ctx, makeConcatEndpoint(svc), servergrpc.DecodeConcatRequest, servergrpc.EncodeConcatResponse),
+		sum: grpc.NewServer(
+			ctx,
+			kitot.TraceServer(tracer, "sum")(makeSumEndpoint(svc)),
+			servergrpc.DecodeSumRequest,
+			servergrpc.EncodeSumResponse,
+			grpc.ServerBefore(kitot.FromGRPCRequest(tracer, "")),
+		),
+		concat: grpc.NewServer(
+			ctx,
+			kitot.TraceServer(tracer, "concat")(makeConcatEndpoint(svc)),
+			servergrpc.DecodeConcatRequest,
+			servergrpc.EncodeConcatResponse,
+			grpc.ServerBefore(kitot.FromGRPCRequest(tracer, "")),
+		),
 	}
 }
 
