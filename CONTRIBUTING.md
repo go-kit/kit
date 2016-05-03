@@ -1,6 +1,6 @@
 # Contributing
 
-First, thank you for contributing! We love and encourge pull requests from everyone.
+First, thank you for contributing! We love and encourage pull requests from everyone.
 
 At this stage, we're still developing the initial drafts of all of the packages, using an
 [RFC workflow](https://github.com/go-kit/kit/tree/master/rfc).
