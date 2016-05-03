@@ -15,8 +15,8 @@ import (
 func TestClientEndpointEncodeError(t *testing.T) {
 	var (
 		sampleErr = errors.New("Oh no, an error")
-		enc       = func(r *http.Request, request interface{}) error { return sampleErr }
-		dec       = func(r *http.Response) (response interface{}, err error) { return nil, nil }
+		enc       = func(context.Context, *http.Request, interface{}) error { return sampleErr }
+		dec       = func(context.Context, *http.Response) (interface{}, error) { return nil, nil }
 	)
 
 	u := &url.URL{
@@ -37,9 +37,9 @@ func TestClientEndpointEncodeError(t *testing.T) {
 		t.Fatal("err == nil")
 	}
 
-	e, ok := err.(httptransport.TransportError)
+	e, ok := err.(httptransport.Error)
 	if !ok {
-		t.Fatal("err is not of type github.com/go-kit/kit/transport/http.Err")
+		t.Fatal("err is not of type github.com/go-kit/kit/transport/http.Error")
 	}
 
 	if want, have := sampleErr, e.Err; want != have {
@@ -48,9 +48,9 @@ func TestClientEndpointEncodeError(t *testing.T) {
 }
 
 func ExampleErrOutput() {
-	sampleErr := errors.New("Oh no, an error")
-	err := httptransport.TransportError{"Do", sampleErr}
+	sampleErr := errors.New("oh no, an error")
+	err := httptransport.Error{Domain: httptransport.DomainDo, Err: sampleErr}
 	fmt.Println(err)
 	// Output:
-	// Do: Oh no, an error
+	// Do: oh no, an error
 }

@@ -17,7 +17,7 @@ type Server struct {
 	enc          EncodeResponseFunc
 	before       []RequestFunc
 	after        []ResponseFunc
-	errorEncoder func(w http.ResponseWriter, err error)
+	errorEncoder ErrorEncoder
 	logger       log.Logger
 }
 
@@ -64,8 +64,8 @@ func ServerAfter(after ...ResponseFunc) ServerOption {
 // use this to provide custom error formatting and response codes. By default,
 // errors will be written as plain text with an appropriate, if generic,
 // status code.
-func ServerErrorEncoder(f func(w http.ResponseWriter, err error)) ServerOption {
-	return func(s *Server) { s.errorEncoder = f }
+func ServerErrorEncoder(ee ErrorEncoder) ServerOption {
+	return func(s *Server) { s.errorEncoder = ee }
 }
 
 // ServerErrorLogger is used to log non-terminal errors. By default, no errors
@@ -83,17 +83,17 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx = f(ctx, r)
 	}
 
-	request, err := s.dec(r)
+	request, err := s.dec(ctx, r)
 	if err != nil {
 		s.logger.Log("err", err)
-		s.errorEncoder(w, BadRequestError{err})
+		s.errorEncoder(ctx, Error{Domain: DomainDecode, Err: err}, w)
 		return
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
 		s.logger.Log("err", err)
-		s.errorEncoder(w, err)
+		s.errorEncoder(ctx, Error{Domain: DomainDo, Err: err}, w)
 		return
 	}
 
@@ -101,28 +101,34 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f(ctx, w)
 	}
 
-	if err := s.enc(w, response); err != nil {
+	if err := s.enc(ctx, w, response); err != nil {
 		s.logger.Log("err", err)
-		s.errorEncoder(w, err)
+		s.errorEncoder(ctx, Error{Domain: DomainEncode, Err: err}, w)
 		return
 	}
 }
 
-func defaultErrorEncoder(w http.ResponseWriter, err error) {
-	switch err.(type) {
-	case BadRequestError:
-		http.Error(w, err.Error(), http.StatusBadRequest)
+// ErrorEncoder is responsible for encoding an error to the ResponseWriter.
+//
+// In the server implementation, only kit/transport/http.Error values are ever
+// passed to this function, so you might be tempted to have this function take
+// one of those directly. But, users are encouraged to use custom ErrorEncoders
+// to encode all HTTP errors to their clients, and so may want to pass and check
+// for their own error types. See the example shipping/handling service.
+type ErrorEncoder func(ctx context.Context, err error, w http.ResponseWriter)
+
+func defaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
+	switch e := err.(type) {
+	case Error:
+		switch e.Domain {
+		case DomainDecode:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case DomainDo:
+			http.Error(w, err.Error(), http.StatusServiceUnavailable) // too aggressive?
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-}
-
-// BadRequestError is an error in decoding the request.
-type BadRequestError struct {
-	Err error
-}
-
-// Error implements the error interface.
-func (err BadRequestError) Error() string {
-	return err.Err.Error()
 }

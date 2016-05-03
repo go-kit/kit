@@ -97,7 +97,7 @@ func makeFetchRoutesEndpoint(ctx context.Context, instance string) endpoint.Endp
 	).Endpoint()
 }
 
-func decodeFetchRoutesResponse(resp *http.Response) (interface{}, error) {
+func decodeFetchRoutesResponse(_ context.Context, resp *http.Response) (interface{}, error) {
 	var response fetchRoutesResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func decodeFetchRoutesResponse(resp *http.Response) (interface{}, error) {
 	return response, nil
 }
 
-func encodeFetchRoutesRequest(r *http.Request, request interface{}) error {
+func encodeFetchRoutesRequest(_ context.Context, r *http.Request, request interface{}) error {
 	req := request.(fetchRoutesRequest)
 
 	vals := r.URL.Query()

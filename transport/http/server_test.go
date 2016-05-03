@@ -16,8 +16,8 @@ func TestServerBadDecode(t *testing.T) {
 	handler := httptransport.NewServer(
 		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
-		func(*http.Request) (interface{}, error) { return struct{}{}, errors.New("dang") },
-		func(http.ResponseWriter, interface{}) error { return nil },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, errors.New("dang") },
+		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
 	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -31,13 +31,13 @@ func TestServerBadEndpoint(t *testing.T) {
 	handler := httptransport.NewServer(
 		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errors.New("dang") },
-		func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		func(http.ResponseWriter, interface{}) error { return nil },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
 	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Get(server.URL)
-	if want, have := http.StatusInternalServerError, resp.StatusCode; want != have {
+	if want, have := http.StatusServiceUnavailable, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
@@ -46,8 +46,8 @@ func TestServerBadEncode(t *testing.T) {
 	handler := httptransport.NewServer(
 		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
-		func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		func(http.ResponseWriter, interface{}) error { return errors.New("dang") },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		func(context.Context, http.ResponseWriter, interface{}) error { return errors.New("dang") },
 	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -60,7 +60,7 @@ func TestServerBadEncode(t *testing.T) {
 func TestServerErrorEncoder(t *testing.T) {
 	errTeapot := errors.New("teapot")
 	code := func(err error) int {
-		if err == errTeapot {
+		if e, ok := err.(httptransport.Error); ok && e.Err == errTeapot {
 			return http.StatusTeapot
 		}
 		return http.StatusInternalServerError
@@ -68,9 +68,9 @@ func TestServerErrorEncoder(t *testing.T) {
 	handler := httptransport.NewServer(
 		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errTeapot },
-		func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-		func(http.ResponseWriter, interface{}) error { return nil },
-		httptransport.ServerErrorEncoder(func(w http.ResponseWriter, err error) { w.WriteHeader(code(err)) }),
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
+		httptransport.ServerErrorEncoder(func(_ context.Context, err error, w http.ResponseWriter) { w.WriteHeader(code(err)) }),
 	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -100,8 +100,8 @@ func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) 
 		handler       = httptransport.NewServer(
 			ctx,
 			endpoint,
-			func(*http.Request) (interface{}, error) { return struct{}{}, nil },
-			func(http.ResponseWriter, interface{}) error { return nil },
+			func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+			func(context.Context, http.ResponseWriter, interface{}) error { return nil },
 			httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context { return ctx }),
 			httptransport.ServerAfter(func(ctx context.Context, w http.ResponseWriter) { return }),
 		)
@@ -117,21 +117,4 @@ func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) 
 		response <- resp
 	}()
 	return cancelfn, func() { stepch <- true }, response
-}
-
-type testBadRequestError struct {
-	code int
-}
-
-func (err testBadRequestError) Error() string {
-	return "Bad Request"
-}
-
-func TestBadRequestError(t *testing.T) {
-	inner := testBadRequestError{1234}
-	var outer error = httptransport.BadRequestError{Err: inner}
-	err := outer.(httptransport.BadRequestError)
-	if want, have := inner, err.Err; want != have {
-		t.Errorf("want %#v, have %#v", want, have)
-	}
 }

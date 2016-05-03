@@ -74,7 +74,7 @@ func makeCountEndpoint(svc StringService) endpoint.Endpoint {
 	}
 }
 
-func decodeUppercaseRequest(r *http.Request) (interface{}, error) {
+func decodeUppercaseRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var request uppercaseRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func decodeUppercaseRequest(r *http.Request) (interface{}, error) {
 	return request, nil
 }
 
-func decodeCountRequest(r *http.Request) (interface{}, error) {
+func decodeCountRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var request countRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func decodeCountRequest(r *http.Request) (interface{}, error) {
 	return request, nil
 }
 
-func encodeResponse(w http.ResponseWriter, response interface{}) error {
+func encodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
 
