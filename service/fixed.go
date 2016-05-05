@@ -2,7 +2,7 @@ package service
 
 import "github.com/go-kit/kit/endpoint"
 
-// Fixed yields a fixed set of endpoints.
+// Fixed is a service that yields a fixed set of endpoints.
 type Fixed map[string]endpoint.Endpoint
 
 // Endpoint implements Service.
