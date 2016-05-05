@@ -1,7 +1,6 @@
 package consul
 
 import (
-	"bytes"
 	"testing"
 
 	stdconsul "github.com/hashicorp/consul/api"
@@ -11,18 +10,18 @@ import (
 
 func TestPublisher(t *testing.T) {
 	client := newTestClient([]*stdconsul.ServiceEntry{})
-	var buf bytes.Buffer
-	p := NewPublisher(client, testRegistration, log.NewLogfmtLogger(&buf))
-
-	p.Publish()
-	if want, have := 0, buf.Len(); want != have {
-		t.Error(buf.String())
+	p := NewPublisher(client, testRegistration, log.NewNopLogger())
+	if want, have := 0, len(client.entries); want != have {
+		t.Errorf("want %d, have %d", want, have)
 	}
 
-	buf.Reset()
+	p.Publish()
+	if want, have := 1, len(client.entries); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
 
 	p.Unpublish()
-	if want, have := 0, buf.Len(); want != have {
-		t.Error(buf.String())
+	if want, have := 0, len(client.entries); want != have {
+		t.Errorf("want %d, have %d", want, have)
 	}
 }

@@ -13,17 +13,63 @@ import (
 	"github.com/go-kit/kit/service"
 )
 
+func TestClientRegistration(t *testing.T) {
+	c := newTestClient(nil)
+
+	services, _, err := c.Service(testRegistration.Name, "", true, &stdconsul.QueryOptions{})
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 0, len(services); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	if err := c.Register(testRegistration); err != nil {
+		t.Error(err)
+	}
+
+	if err := c.Register(testRegistration); err == nil {
+		t.Errorf("want error, have %v", err)
+	}
+
+	services, _, err = c.Service(testRegistration.Name, "", true, &stdconsul.QueryOptions{})
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 1, len(services); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	if err := c.Deregister(testRegistration); err != nil {
+		t.Error(err)
+	}
+
+	if err := c.Deregister(testRegistration); err == nil {
+		t.Errorf("want error, have %v", err)
+	}
+
+	services, _, err = c.Service(testRegistration.Name, "", true, &stdconsul.QueryOptions{})
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 0, len(services); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+}
+
 type testClient struct {
 	entries []*stdconsul.ServiceEntry
 }
 
-func newTestClient(entries []*stdconsul.ServiceEntry) Client {
+func newTestClient(entries []*stdconsul.ServiceEntry) *testClient {
 	return &testClient{
 		entries: entries,
 	}
 }
 
-func (c *testClient) Service(service, tag string, opts *stdconsul.QueryOptions) ([]*stdconsul.ServiceEntry, *stdconsul.QueryMeta, error) {
+var _ Client = &testClient{}
+
+func (c *testClient) Service(service, tag string, _ bool, opts *stdconsul.QueryOptions) ([]*stdconsul.ServiceEntry, *stdconsul.QueryMeta, error) {
 	var results []*stdconsul.ServiceEntry
 
 	for _, entry := range c.entries {
@@ -48,8 +94,8 @@ func (c *testClient) Service(service, tag string, opts *stdconsul.QueryOptions) 
 	return results, &stdconsul.QueryMeta{}, nil
 }
 
-func (c *testClient) Register(registration *stdconsul.CatalogRegistration) error {
-	toAdd := registration2entry(registration)
+func (c *testClient) Register(r *stdconsul.AgentServiceRegistration) error {
+	toAdd := registration2entry(r)
 
 	for _, entry := range c.entries {
 		if reflect.DeepEqual(*entry, *toAdd) {
@@ -61,8 +107,8 @@ func (c *testClient) Register(registration *stdconsul.CatalogRegistration) error
 	return nil
 }
 
-func (c *testClient) Deregister(registration *stdconsul.CatalogRegistration) error {
-	toDelete := registration2entry(registration)
+func (c *testClient) Deregister(r *stdconsul.AgentServiceRegistration) error {
+	toDelete := registration2entry(r)
 
 	var newEntries []*stdconsul.ServiceEntry
 	for _, entry := range c.entries {
@@ -79,13 +125,19 @@ func (c *testClient) Deregister(registration *stdconsul.CatalogRegistration) err
 	return nil
 }
 
-func registration2entry(registration *stdconsul.CatalogRegistration) *stdconsul.ServiceEntry {
+func registration2entry(r *stdconsul.AgentServiceRegistration) *stdconsul.ServiceEntry {
 	return &stdconsul.ServiceEntry{
 		Node: &stdconsul.Node{
-			Node:    registration.Node,
-			Address: registration.Address,
+			Node:    "some-node",
+			Address: r.Address,
 		},
-		Service: registration.Service,
+		Service: &stdconsul.AgentService{
+			ID:      r.ID,
+			Service: r.Name,
+			Tags:    r.Tags,
+			Port:    r.Port,
+			Address: r.Address,
+		},
 		// Checks ignored
 	}
 }
@@ -98,59 +150,10 @@ func testFactory(instance string) (service.Service, io.Closer, error) {
 	}), nil, nil
 }
 
-var testRegistration = &stdconsul.CatalogRegistration{
-	Node:       "node",
-	Address:    "addr",
-	Datacenter: "dc",
-	Service: &stdconsul.AgentService{
-		ID:      "id",
-		Service: "service",
-		Tags:    []string{"a", "b"},
-		Port:    12345,
-		Address: "addr",
-	},
-}
-
-func TestClientRegistration(t *testing.T) {
-	c := newTestClient(nil)
-
-	services, _, err := c.Service(testRegistration.Service.Service, "", &stdconsul.QueryOptions{})
-	if err != nil {
-		t.Error(err)
-	}
-	if want, have := 0, len(services); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-
-	if err := c.Register(testRegistration); err != nil {
-		t.Error(err)
-	}
-
-	if err := c.Register(testRegistration); err == nil {
-		t.Errorf("want error, have %v", err)
-	}
-
-	services, _, err = c.Service(testRegistration.Service.Service, "", &stdconsul.QueryOptions{})
-	if err != nil {
-		t.Error(err)
-	}
-	if want, have := 1, len(services); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-
-	if err := c.Deregister(testRegistration); err != nil {
-		t.Error(err)
-	}
-
-	if err := c.Deregister(testRegistration); err == nil {
-		t.Errorf("want error, have %v", err)
-	}
-
-	services, _, err = c.Service(testRegistration.Service.Service, "", &stdconsul.QueryOptions{})
-	if err != nil {
-		t.Error(err)
-	}
-	if want, have := 0, len(services); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
+var testRegistration = &stdconsul.AgentServiceRegistration{
+	ID:      "my-id",
+	Name:    "my-name",
+	Tags:    []string{"my-tag-1", "my-tag-2"},
+	Port:    12345,
+	Address: "my-address",
 }
