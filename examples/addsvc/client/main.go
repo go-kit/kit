@@ -85,8 +85,8 @@ func main() {
 	switch *transport {
 	case "grpc":
 		instances = strings.Split(*grpcAddrs, ",")
-		sumFactory = grpcclient.NewSumEndpointFactory(tracer)
-		concatFactory = grpcclient.NewConcatEndpointFactory(tracer)
+		sumFactory = grpcclient.MakeSumEndpointFactory(tracer)
+		concatFactory = grpcclient.MakeConcatEndpointFactory(tracer)
 
 	case "httpjson":
 		instances = strings.Split(*httpAddrs, ",")
@@ -95,8 +95,8 @@ func main() {
 				instances[i] = "http://" + rawurl
 			}
 		}
-		sumFactory = httpjsonclient.NewSumEndpointFactory(tracer)
-		concatFactory = httpjsonclient.NewConcatEndpointFactory(tracer)
+		sumFactory = httpjsonclient.MakeSumEndpointFactory(tracer)
+		concatFactory = httpjsonclient.MakeConcatEndpointFactory(tracer)
 
 	case "netrpc":
 		instances = strings.Split(*netrpcAddrs, ",")

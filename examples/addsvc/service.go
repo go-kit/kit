@@ -10,9 +10,7 @@ import (
 
 type pureAddService struct{}
 
-func (pureAddService) Sum(a, b int) int {
-	return a + b
-}
+func (pureAddService) Sum(a, b int) int { return a + b }
 
 func (pureAddService) Concat(a, b string) string { return a + b }
 

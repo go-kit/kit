@@ -13,9 +13,10 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
-// SumEndpointFactory transforms GRPC host:port strings into Endpoints that call the Sum method on a GRPC server
+// MakeSumEndpointFactory returns a loadbalancer.Factory that transforms GRPC
+// host:port strings into Endpoints that call the Sum method on a GRPC server
 // at that address.
-func NewSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
+func MakeSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		cc, err := grpc.Dial(instance, grpc.WithInsecure())
 		return grpctransport.NewClient(
@@ -30,9 +31,10 @@ func NewSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 	}
 }
 
-// ConcatEndpointFactory transforms GRPC host:port strings into Endpoints that call the Concat method on a GRPC server
-// at that address.
-func NewConcatEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
+// MakeConcatEndpointFactory returns a loadbalancer.Factory that transforms
+// GRPC host:port strings into Endpoints that call the Concat method on a GRPC
+// server at that address.
+func MakeConcatEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		cc, err := grpc.Dial(instance, grpc.WithInsecure())
 		return grpctransport.NewClient(

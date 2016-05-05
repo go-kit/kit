@@ -12,11 +12,11 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
-// SumEndpointFactory generates a Factory that transforms an http url into an
-// Endpoint.
+// MakeSumEndpointFactory generates a Factory that transforms an http url into
+// an Endpoint.
 //
 // The path of the url is reset to /sum.
-func NewSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
+func MakeSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		sumURL, err := url.Parse(instance)
 		if err != nil {
@@ -37,11 +37,11 @@ func NewSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 	}
 }
 
-// NewConcatEndpointFactory generates a Factory that transforms an http url
+// MakeConcatEndpointFactory generates a Factory that transforms an http url
 // into an Endpoint.
 //
 // The path of the url is reset to /concat.
-func NewConcatEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
+func MakeConcatEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		concatURL, err := url.Parse(instance)
 		if err != nil {

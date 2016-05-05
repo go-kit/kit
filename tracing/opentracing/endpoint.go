@@ -3,6 +3,7 @@ package opentracing
 import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/opentracing/opentracing-go"
+	otext "github.com/opentracing/opentracing-go/ext"
 	"golang.org/x/net/context"
 )
 
@@ -21,7 +22,7 @@ func TraceServer(tracer opentracing.Tracer, operationName string) endpoint.Middl
 			} else {
 				serverSpan.SetOperationName(operationName)
 			}
-			serverSpan.SetTag("span.kind", "server")
+			otext.SpanKind.Set(serverSpan, otext.SpanKindRPCServer)
 			ctx = opentracing.ContextWithSpan(ctx, serverSpan)
 			defer serverSpan.Finish()
 			return next(ctx, request)
@@ -39,7 +40,7 @@ func TraceClient(tracer opentracing.Tracer, operationName string) endpoint.Middl
 				OperationName: operationName,
 				Parent:        parentSpan, // may be nil
 			})
-			clientSpan.SetTag("span.kind", "client")
+			otext.SpanKind.Set(clientSpan, otext.SpanKindRPCClient)
 			ctx = opentracing.ContextWithSpan(ctx, clientSpan)
 			defer clientSpan.Finish()
 			return next(ctx, request)

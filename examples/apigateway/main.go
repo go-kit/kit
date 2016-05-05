@@ -78,8 +78,8 @@ func main() {
 		factory loadbalancer.Factory
 	}{
 		"addsvc": {
-			{path: "/api/addsvc/concat", factory: grpc.NewConcatEndpointFactory(opentracing.GlobalTracer())},
-			{path: "/api/addsvc/sum", factory: grpc.NewSumEndpointFactory(opentracing.GlobalTracer())},
+			{path: "/api/addsvc/concat", factory: grpc.MakeConcatEndpointFactory(opentracing.GlobalTracer())},
+			{path: "/api/addsvc/sum", factory: grpc.MakeSumEndpointFactory(opentracing.GlobalTracer())},
 		},
 		"stringsvc": {
 			{path: "/api/stringsvc/uppercase", factory: httpFactory(ctx, "GET", "uppercase/")},
