@@ -1,6 +1,7 @@
 package opentracing
 
 import (
+	"github.com/go-kit/kit/log"
 	"github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
@@ -9,11 +10,16 @@ import (
 // ToGRPCRequest returns a grpc RequestFunc that injects an OpenTracing Span
 // found in `ctx` into the grpc Metadata. If no such Span can be found, the
 // RequestFunc is a noop.
-func ToGRPCRequest(tracer opentracing.Tracer) func(ctx context.Context, md *metadata.MD) context.Context {
+//
+// The logger is used to report errors and may be nil.
+func ToGRPCRequest(tracer opentracing.Tracer, logger log.Logger) func(ctx context.Context, md *metadata.MD) context.Context {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		if span := opentracing.SpanFromContext(ctx); span != nil {
 			// There's nothing we can do with an error here.
-			_ = tracer.Inject(span, opentracing.TextMap, metadataReaderWriter{md})
+			err := tracer.Inject(span, opentracing.TextMap, metadataReaderWriter{md})
+			if err != nil && logger != nil {
+				logger.Log("msg", "Inject failed", "err", err)
+			}
 		}
 		return ctx
 	}
@@ -24,10 +30,15 @@ func ToGRPCRequest(tracer opentracing.Tracer) func(ctx context.Context, md *meta
 // `operationName` accordingly. If no trace could be found in `req`, the Span
 // will be a trace root. The Span is incorporated in the returned Context and
 // can be retrieved with opentracing.SpanFromContext(ctx).
-func FromGRPCRequest(tracer opentracing.Tracer, operationName string) func(ctx context.Context, md *metadata.MD) context.Context {
+//
+// The logger is used to report errors and may be nil.
+func FromGRPCRequest(tracer opentracing.Tracer, operationName string, logger log.Logger) func(ctx context.Context, md *metadata.MD) context.Context {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		span, err := tracer.Join(operationName, opentracing.TextMap, metadataReaderWriter{md})
-		if err != nil || span == nil {
+		if err != nil && logger != nil {
+			logger.Log("msg", "Join failed", "err", err)
+		}
+		if span == nil {
 			span = tracer.StartSpan(operationName)
 		}
 		return opentracing.ContextWithSpan(ctx, span)

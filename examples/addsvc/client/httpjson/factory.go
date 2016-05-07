@@ -7,6 +7,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/examples/addsvc/server"
 	"github.com/go-kit/kit/loadbalancer"
+	"github.com/go-kit/kit/log"
 	kitot "github.com/go-kit/kit/tracing/opentracing"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/opentracing/opentracing-go"
@@ -16,7 +17,7 @@ import (
 // an Endpoint.
 //
 // The path of the url is reset to /sum.
-func MakeSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
+func MakeSumEndpointFactory(tracer opentracing.Tracer, tracingLogger log.Logger) loadbalancer.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		sumURL, err := url.Parse(instance)
 		if err != nil {
@@ -30,7 +31,7 @@ func MakeSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 			server.EncodeSumRequest,
 			server.DecodeSumResponse,
 			httptransport.SetClient(nil),
-			httptransport.SetClientBefore(kitot.ToHTTPRequest(tracer)),
+			httptransport.SetClientBefore(kitot.ToHTTPRequest(tracer, tracingLogger)),
 		)
 
 		return client.Endpoint(), nil, nil
@@ -41,7 +42,7 @@ func MakeSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 // into an Endpoint.
 //
 // The path of the url is reset to /concat.
-func MakeConcatEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
+func MakeConcatEndpointFactory(tracer opentracing.Tracer, tracingLogger log.Logger) loadbalancer.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		concatURL, err := url.Parse(instance)
 		if err != nil {
@@ -55,7 +56,7 @@ func MakeConcatEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 			server.EncodeConcatRequest,
 			server.DecodeConcatResponse,
 			httptransport.SetClient(nil),
-			httptransport.SetClientBefore(kitot.ToHTTPRequest(tracer)),
+			httptransport.SetClientBefore(kitot.ToHTTPRequest(tracer, tracingLogger)),
 		)
 
 		return client.Endpoint(), nil, nil

@@ -18,9 +18,10 @@ func TestTraceGRPCRequestRoundtrip(t *testing.T) {
 	// Initialize the ctx with a Span to inject.
 	beforeSpan := tracer.StartSpan("to_inject").(*mocktracer.MockSpan)
 	defer beforeSpan.Finish()
+	beforeSpan.SetBaggageItem("baggage", "check")
 	beforeCtx := opentracing.ContextWithSpan(context.Background(), beforeSpan)
 
-	var toGRPCFunc grpc.RequestFunc = kitot.ToGRPCRequest(tracer)
+	var toGRPCFunc grpc.RequestFunc = kitot.ToGRPCRequest(tracer, nil)
 	md := metadata.Pairs()
 	// Call the RequestFunc.
 	afterCtx := toGRPCFunc(beforeCtx, &md)
@@ -37,7 +38,7 @@ func TestTraceGRPCRequestRoundtrip(t *testing.T) {
 	}
 
 	// Use FromGRPCRequest to verify that we can join with the trace given MD.
-	var fromGRPCFunc grpc.RequestFunc = kitot.FromGRPCRequest(tracer, "joined")
+	var fromGRPCFunc grpc.RequestFunc = kitot.FromGRPCRequest(tracer, "joined", nil)
 	joinCtx := fromGRPCFunc(afterCtx, &md)
 	joinedSpan := opentracing.SpanFromContext(joinCtx).(*mocktracer.MockSpan)
 
@@ -50,6 +51,9 @@ func TestTraceGRPCRequestRoundtrip(t *testing.T) {
 		t.Errorf("Want ParentID %q, have %q", want, have)
 	}
 	if want, have := "joined", joinedSpan.OperationName; want != have {
+		t.Errorf("Want %q, have %q", want, have)
+	}
+	if want, have := "check", joinedSpan.BaggageItem("baggage"); want != have {
 		t.Errorf("Want %q, have %q", want, have)
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/examples/addsvc/pb"
 	"github.com/go-kit/kit/loadbalancer"
+	"github.com/go-kit/kit/log"
 	kitot "github.com/go-kit/kit/tracing/opentracing"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"github.com/opentracing/opentracing-go"
@@ -16,7 +17,7 @@ import (
 // MakeSumEndpointFactory returns a loadbalancer.Factory that transforms GRPC
 // host:port strings into Endpoints that call the Sum method on a GRPC server
 // at that address.
-func MakeSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
+func MakeSumEndpointFactory(tracer opentracing.Tracer, tracingLogger log.Logger) loadbalancer.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		cc, err := grpc.Dial(instance, grpc.WithInsecure())
 		return grpctransport.NewClient(
@@ -26,7 +27,7 @@ func MakeSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 			encodeSumRequest,
 			decodeSumResponse,
 			pb.SumReply{},
-			grpctransport.SetClientBefore(kitot.ToGRPCRequest(tracer)),
+			grpctransport.SetClientBefore(kitot.ToGRPCRequest(tracer, tracingLogger)),
 		).Endpoint(), cc, err
 	}
 }
@@ -34,7 +35,7 @@ func MakeSumEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 // MakeConcatEndpointFactory returns a loadbalancer.Factory that transforms
 // GRPC host:port strings into Endpoints that call the Concat method on a GRPC
 // server at that address.
-func MakeConcatEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
+func MakeConcatEndpointFactory(tracer opentracing.Tracer, tracingLogger log.Logger) loadbalancer.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		cc, err := grpc.Dial(instance, grpc.WithInsecure())
 		return grpctransport.NewClient(
@@ -44,7 +45,7 @@ func MakeConcatEndpointFactory(tracer opentracing.Tracer) loadbalancer.Factory {
 			encodeConcatRequest,
 			decodeConcatResponse,
 			pb.ConcatReply{},
-			grpctransport.SetClientBefore(kitot.ToGRPCRequest(tracer)),
+			grpctransport.SetClientBefore(kitot.ToGRPCRequest(tracer, tracingLogger)),
 		).Endpoint(), cc, err
 	}
 }

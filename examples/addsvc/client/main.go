@@ -38,8 +38,8 @@ func main() {
 		thriftFramed     = flag.Bool("thrift.framed", false, "true to enable framing")
 
 		// Two OpenTracing backends (to demonstrate how they can be interchanged):
-		appdashHostport      = flag.String("appdash_hostport", "", "Enable Appdash tracing via an Appdash server host:port")
-		lightstepAccessToken = flag.String("lightstep_access_token", "", "Enable LightStep tracing via a LightStep access token")
+		appdashAddr          = flag.String("appdash.addr", "", "Enable Appdash tracing via an Appdash server host:port")
+		lightstepAccessToken = flag.String("lightstep.token", "", "Enable LightStep tracing via a LightStep access token")
 	)
 	flag.Parse()
 	if len(os.Args) < 4 {
@@ -57,23 +57,23 @@ func main() {
 	logger = log.NewLogfmtLogger(os.Stdout)
 	logger = log.NewContext(logger).With("caller", log.DefaultCaller)
 	logger = log.NewContext(logger).With("transport", *transport)
+	tracingLogger := log.NewContext(logger).With("component", "tracing")
 
 	// Set up OpenTracing
 	var tracer opentracing.Tracer
 	{
-		if len(*appdashHostport) > 0 {
-			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashHostport))
-		}
-		if len(*lightstepAccessToken) > 0 {
-			if tracer != nil {
-				panic("Attempted to configure multiple OpenTracing implementations")
-			}
+		switch {
+		case *appdashAddr != "" && *lightstepAccessToken == "":
+			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
+		case *appdashAddr == "" && *lightstepAccessToken != "":
 			tracer = lightstep.NewTracer(lightstep.Options{
 				AccessToken: *lightstepAccessToken,
 			})
-		}
-		if tracer == nil {
-			tracer = opentracing.GlobalTracer() // the noop tracer
+			defer lightstep.FlushLightStepTracer(tracer)
+		case *appdashAddr == "" && *lightstepAccessToken == "":
+			tracer = opentracing.GlobalTracer() // no-op
+		default:
+			panic("specify either -appdash.addr or -lightstep.access.token, not both")
 		}
 	}
 
@@ -85,8 +85,8 @@ func main() {
 	switch *transport {
 	case "grpc":
 		instances = strings.Split(*grpcAddrs, ",")
-		sumFactory = grpcclient.MakeSumEndpointFactory(tracer)
-		concatFactory = grpcclient.MakeConcatEndpointFactory(tracer)
+		sumFactory = grpcclient.MakeSumEndpointFactory(tracer, tracingLogger)
+		concatFactory = grpcclient.MakeConcatEndpointFactory(tracer, tracingLogger)
 
 	case "httpjson":
 		instances = strings.Split(*httpAddrs, ",")
@@ -95,8 +95,8 @@ func main() {
 				instances[i] = "http://" + rawurl
 			}
 		}
-		sumFactory = httpjsonclient.MakeSumEndpointFactory(tracer)
-		concatFactory = httpjsonclient.MakeConcatEndpointFactory(tracer)
+		sumFactory = httpjsonclient.MakeSumEndpointFactory(tracer, tracingLogger)
+		concatFactory = httpjsonclient.MakeConcatEndpointFactory(tracer, tracingLogger)
 
 	case "netrpc":
 		instances = strings.Split(*netrpcAddrs, ",")
@@ -135,10 +135,6 @@ func main() {
 	default:
 		logger.Log("err", "invalid method "+method)
 		os.Exit(1)
-	}
-
-	if len(*lightstepAccessToken) > 0 {
-		lightstep.FlushLightStepTracer(tracer)
 	}
 }
 

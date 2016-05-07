@@ -17,9 +17,10 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	// Initialize the ctx with a Span to inject.
 	beforeSpan := tracer.StartSpan("to_inject").(*mocktracer.MockSpan)
 	defer beforeSpan.Finish()
+	beforeSpan.SetBaggageItem("baggage", "check")
 	beforeCtx := opentracing.ContextWithSpan(context.Background(), beforeSpan)
 
-	var toHTTPFunc kithttp.RequestFunc = kitot.ToHTTPRequest(tracer)
+	var toHTTPFunc kithttp.RequestFunc = kitot.ToHTTPRequest(tracer, nil)
 	req, _ := http.NewRequest("GET", "http://test.biz/url", nil)
 	// Call the RequestFunc.
 	afterCtx := toHTTPFunc(beforeCtx, req)
@@ -36,7 +37,7 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	}
 
 	// Use FromHTTPRequest to verify that we can join with the trace given a req.
-	var fromHTTPFunc kithttp.RequestFunc = kitot.FromHTTPRequest(tracer, "joined")
+	var fromHTTPFunc kithttp.RequestFunc = kitot.FromHTTPRequest(tracer, "joined", nil)
 	joinCtx := fromHTTPFunc(afterCtx, req)
 	joinedSpan := opentracing.SpanFromContext(joinCtx).(*mocktracer.MockSpan)
 
@@ -49,6 +50,9 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 		t.Errorf("Want ParentID %q, have %q", want, have)
 	}
 	if want, have := "joined", joinedSpan.OperationName; want != have {
+		t.Errorf("Want %q, have %q", want, have)
+	}
+	if want, have := "check", joinedSpan.BaggageItem("baggage"); want != have {
 		t.Errorf("Want %q, have %q", want, have)
 	}
 }

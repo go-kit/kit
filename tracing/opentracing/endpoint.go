@@ -22,9 +22,9 @@ func TraceServer(tracer opentracing.Tracer, operationName string) endpoint.Middl
 			} else {
 				serverSpan.SetOperationName(operationName)
 			}
+			defer serverSpan.Finish()
 			otext.SpanKind.Set(serverSpan, otext.SpanKindRPCServer)
 			ctx = opentracing.ContextWithSpan(ctx, serverSpan)
-			defer serverSpan.Finish()
 			return next(ctx, request)
 		}
 	}
@@ -40,9 +40,9 @@ func TraceClient(tracer opentracing.Tracer, operationName string) endpoint.Middl
 				OperationName: operationName,
 				Parent:        parentSpan, // may be nil
 			})
+			defer clientSpan.Finish()
 			otext.SpanKind.Set(clientSpan, otext.SpanKindRPCClient)
 			ctx = opentracing.ContextWithSpan(ctx, clientSpan)
-			defer clientSpan.Finish()
 			return next(ctx, request)
 		}
 	}

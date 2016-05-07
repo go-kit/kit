@@ -51,8 +51,8 @@ func main() {
 		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
 
 		// Supported OpenTracing backends
-		appdashHostport      = fs.String("appdash_hostport", "", "Enable Appdash tracing via an Appdash server host:port")
-		lightstepAccessToken = fs.String("lightstep_access_token", "", "Enable LightStep tracing via a LightStep access token")
+		appdashAddr          = fs.String("appdash.addr", "", "Enable Appdash tracing via an Appdash server host:port")
+		lightstepAccessToken = fs.String("lightstep.token", "", "Enable LightStep tracing via a LightStep access token")
 	)
 	flag.Usage = fs.Usage // only show our flags
 	if err := fs.Parse(os.Args[1:]); err != nil {
@@ -87,19 +87,18 @@ func main() {
 	// Set up OpenTracing
 	var tracer opentracing.Tracer
 	{
-		if len(*appdashHostport) > 0 {
-			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashHostport))
-		}
-		if len(*lightstepAccessToken) > 0 {
-			if tracer != nil {
-				panic("Attempted to configure multiple OpenTracing implementations")
-			}
+		switch {
+		case *appdashAddr != "" && *lightstepAccessToken == "":
+			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
+		case *appdashAddr == "" && *lightstepAccessToken != "":
 			tracer = lightstep.NewTracer(lightstep.Options{
 				AccessToken: *lightstepAccessToken,
 			})
-		}
-		if tracer == nil {
-			tracer = opentracing.GlobalTracer() // the noop tracer
+			defer lightstep.FlushLightStepTracer(tracer)
+		case *appdashAddr == "" && *lightstepAccessToken == "":
+			tracer = opentracing.GlobalTracer() // no-op
+		default:
+			panic("specify either -appdash.addr or -lightstep.access.token, not both")
 		}
 	}
 
@@ -131,6 +130,7 @@ func main() {
 	go func() {
 		var (
 			transportLogger = log.NewContext(logger).With("transport", "HTTP/JSON")
+			tracingLogger   = log.NewContext(transportLogger).With("component", "tracing")
 			mux             = http.NewServeMux()
 			sum, concat     endpoint.Endpoint
 		)
@@ -143,7 +143,7 @@ func main() {
 			server.DecodeSumRequest,
 			server.EncodeSumResponse,
 			httptransport.ServerErrorLogger(transportLogger),
-			httptransport.ServerBefore(kitot.FromHTTPRequest(tracer, "sum")),
+			httptransport.ServerBefore(kitot.FromHTTPRequest(tracer, "sum", tracingLogger)),
 		))
 
 		concat = makeConcatEndpoint(svc)
@@ -154,7 +154,7 @@ func main() {
 			server.DecodeConcatRequest,
 			server.EncodeConcatResponse,
 			httptransport.ServerErrorLogger(transportLogger),
-			httptransport.ServerBefore(kitot.FromHTTPRequest(tracer, "concat")),
+			httptransport.ServerBefore(kitot.FromHTTPRequest(tracer, "concat", tracingLogger)),
 		))
 
 		transportLogger.Log("addr", *httpAddr)
@@ -164,13 +164,14 @@ func main() {
 	// Transport: gRPC
 	go func() {
 		transportLogger := log.NewContext(logger).With("transport", "gRPC")
+		tracingLogger := log.NewContext(transportLogger).With("component", "tracing")
 		ln, err := net.Listen("tcp", *grpcAddr)
 		if err != nil {
 			errc <- err
 			return
 		}
 		s := grpc.NewServer() // uses its own, internal context
-		pb.RegisterAddServer(s, newGRPCBinding(root, tracer, svc))
+		pb.RegisterAddServer(s, newGRPCBinding(root, tracer, svc, tracingLogger))
 		transportLogger.Log("addr", *grpcAddr)
 		errc <- s.Serve(ln)
 	}()
