@@ -1,10 +1,30 @@
 package log
 
 import (
+	"bytes"
 	"io"
+	"sync"
 
 	"github.com/go-logfmt/logfmt"
 )
+
+type logfmtEncoder struct {
+	*logfmt.Encoder
+	buf bytes.Buffer
+}
+
+func (l *logfmtEncoder) Reset() {
+	l.Encoder.Reset()
+	l.buf.Reset()
+}
+
+var logfmtEncoderPool = sync.Pool{
+	New: func() interface{} {
+		var enc logfmtEncoder
+		enc.Encoder = logfmt.NewEncoder(&enc.buf)
+		return &enc
+	},
+}
 
 type logfmtLogger struct {
 	w io.Writer
@@ -18,16 +38,23 @@ func NewLogfmtLogger(w io.Writer) Logger {
 }
 
 func (l logfmtLogger) Log(keyvals ...interface{}) error {
-	// The Logger interface requires implementations to be safe for concurrent
-	// use by multiple goroutines. For this implementation that means making
-	// only one call to l.w.Write() for each call to Log. We first collect all
-	// of the bytes into b, and then call l.w.Write(b).
-	b, err := logfmt.MarshalKeyvals(keyvals...)
-	if err != nil {
+	enc := logfmtEncoderPool.Get().(*logfmtEncoder)
+	enc.Reset()
+	defer logfmtEncoderPool.Put(enc)
+
+	if err := enc.EncodeKeyvals(keyvals...); err != nil {
 		return err
 	}
-	b = append(b, '\n')
-	if _, err := l.w.Write(b); err != nil {
+
+	// Add newline to the end of the buffer
+	if err := enc.EndRecord(); err != nil {
+		return err
+	}
+
+	// The Logger interface requires implementations to be safe for concurrent
+	// use by multiple goroutines. For this implementation that means making
+	// only one call to l.w.Write() for each call to Log.
+	if _, err := l.w.Write(enc.buf.Bytes()); err != nil {
 		return err
 	}
 	return nil
