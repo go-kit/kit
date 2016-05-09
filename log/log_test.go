@@ -3,6 +3,7 @@ package log_test
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"sync"
 	"testing"
 
@@ -252,4 +253,19 @@ func TestSwapLogger(t *testing.T) {
 
 func TestSwapLoggerConcurrency(t *testing.T) {
 	testConcurrency(t, &log.SwapLogger{})
+}
+
+func TestSyncLogger(t *testing.T) {
+	var w io.Writer
+	w = &bytes.Buffer{}
+	logger := log.NewLogfmtLogger(w)
+	logger = log.NewSyncLogger(logger)
+	testConcurrency(t, logger)
+}
+
+func TestSyncWriter(t *testing.T) {
+	var w io.Writer
+	w = &bytes.Buffer{}
+	w = log.NewSyncWriter(w)
+	testConcurrency(t, log.NewLogfmtLogger(w))
 }
