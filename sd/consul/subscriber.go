@@ -90,6 +90,12 @@ func (s *Subscriber) getInstances(lastIndex uint64, interruptc chan struct{}) ([
 		tag = s.tags[0]
 	}
 
+	// Consul doesn't support more than one tag in its service query method.
+	// https://github.com/hashicorp/consul/issues/294
+	// Hashi suggest prepared queries, but they don't support blocking.
+	// https://www.consul.io/docs/agent/http/query.html#execute
+	// If we want blocking for efficiency, we must filter tags manually.
+
 	type response struct {
 		instances []string
 		index     uint64
