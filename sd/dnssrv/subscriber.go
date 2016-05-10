@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
-	"github.com/go-kit/kit/sd/internal/cache"
+	"github.com/go-kit/kit/sd/cache"
 	"github.com/go-kit/kit/service"
 )
 
