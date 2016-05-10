@@ -15,6 +15,7 @@ import (
 
 func TestIntegration(t *testing.T) {
 	// Connect to Consul.
+	// docker run -p 8500:8500 progrium/consul -server -bootstrap
 	consulAddr := os.Getenv("CONSUL_ADDRESS")
 	if consulAddr == "" {
 		t.Fatal("CONSUL_ADDRESS is not set")
