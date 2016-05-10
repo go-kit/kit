@@ -8,37 +8,37 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-// Publisher publishes service instance liveness information to Consul.
-type Publisher struct {
+// Registrar registers service instance liveness information to Consul.
+type Registrar struct {
 	client       Client
 	registration *stdconsul.AgentServiceRegistration
 	logger       log.Logger
 }
 
-// NewPublisher returns a Consul publisher acting on the provided catalog
+// NewRegistrar returns a Consul Registrar acting on the provided catalog
 // registration.
-func NewPublisher(client Client, r *stdconsul.AgentServiceRegistration, logger log.Logger) *Publisher {
-	return &Publisher{
+func NewRegistrar(client Client, r *stdconsul.AgentServiceRegistration, logger log.Logger) *Registrar {
+	return &Registrar{
 		client:       client,
 		registration: r,
 		logger:       log.NewContext(logger).With("service", r.Name, "tags", fmt.Sprint(r.Tags), "address", r.Address),
 	}
 }
 
-// Publish implements sd.Publisher interface.
-func (p *Publisher) Publish() {
+// Register implements sd.Registrar interface.
+func (p *Registrar) Register() {
 	if err := p.client.Register(p.registration); err != nil {
 		p.logger.Log("err", err)
 	} else {
-		p.logger.Log("action", "publish")
+		p.logger.Log("action", "register")
 	}
 }
 
-// Unpublish implements sd.Publisher interface.
-func (p *Publisher) Unpublish() {
+// Deregister implements sd.Registrar interface.
+func (p *Registrar) Deregister() {
 	if err := p.client.Deregister(p.registration); err != nil {
 		p.logger.Log("err", err)
 	} else {
-		p.logger.Log("action", "unpublish")
+		p.logger.Log("action", "deregister")
 	}
 }

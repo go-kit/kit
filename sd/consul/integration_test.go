@@ -67,10 +67,10 @@ func TestIntegration(t *testing.T) {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
-	// Build a publisher for r.
-	publisher := NewPublisher(client, r, log.NewContext(logger).With("component", "publisher"))
-	publisher.Publish()
-	defer publisher.Unpublish()
+	// Build a registrar for r.
+	registrar := NewRegistrar(client, r, log.NewContext(logger).With("component", "registrar"))
+	registrar.Register()
+	defer registrar.Deregister()
 
 	time.Sleep(time.Second)
 

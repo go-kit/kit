@@ -8,19 +8,19 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func TestPublisher(t *testing.T) {
+func TestRegistrar(t *testing.T) {
 	client := newTestClient([]*stdconsul.ServiceEntry{})
-	p := NewPublisher(client, testRegistration, log.NewNopLogger())
+	p := NewRegistrar(client, testRegistration, log.NewNopLogger())
 	if want, have := 0, len(client.entries); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
-	p.Publish()
+	p.Register()
 	if want, have := 1, len(client.entries); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
-	p.Unpublish()
+	p.Deregister()
 	if want, have := 0, len(client.entries); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
