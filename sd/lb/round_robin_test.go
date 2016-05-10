@@ -2,7 +2,10 @@ package lb
 
 import (
 	"reflect"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -61,4 +64,42 @@ func TestRoundRobinNoEndpoints(t *testing.T) {
 	if want, have := ErrNoServices, err; want != have {
 		t.Errorf("want %v, have %v", want, have)
 	}
+}
+
+func TestRoundRobinNoRace(t *testing.T) {
+	balancer := NewRoundRobin(sd.FixedSubscriber([]service.Service{
+		service.Fixed{"a": endpoint.Nop},
+		service.Fixed{"b": endpoint.Nop},
+		service.Fixed{"c": endpoint.Nop},
+	}))
+
+	var (
+		n     = 100
+		done  = make(chan struct{})
+		wg    sync.WaitGroup
+		count uint64
+	)
+
+	wg.Add(n)
+
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-done:
+					return
+				default:
+					_, _ = balancer.Service()
+					atomic.AddUint64(&count, 1)
+				}
+			}
+		}()
+	}
+
+	time.Sleep(time.Second)
+	close(done)
+	wg.Wait()
+
+	t.Logf("made %d calls", atomic.LoadUint64(&count))
 }

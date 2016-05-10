@@ -28,12 +28,7 @@ func (rr *roundRobin) Service() (service.Service, error) {
 	if len(services) <= 0 {
 		return nil, ErrNoServices
 	}
-	var old uint64
-	for {
-		old = atomic.LoadUint64(&rr.c)
-		if atomic.CompareAndSwapUint64(&rr.c, old, old+1) {
-			break
-		}
-	}
-	return services[old%uint64(len(services))], nil
+	old := atomic.AddUint64(&rr.c, 1) - 1
+	idx := old % uint64(len(services))
+	return services[idx], nil
 }
