@@ -3,13 +3,14 @@ package main
 import (
 	"golang.org/x/net/context"
 
+	"github.com/opentracing/opentracing-go"
+
 	"github.com/go-kit/kit/examples/addsvc/pb"
 	"github.com/go-kit/kit/examples/addsvc/server"
 	servergrpc "github.com/go-kit/kit/examples/addsvc/server/grpc"
 	"github.com/go-kit/kit/log"
 	kitot "github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/kit/transport/grpc"
-	"github.com/opentracing/opentracing-go"
 )
 
 type grpcBinding struct {

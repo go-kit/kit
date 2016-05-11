@@ -4,13 +4,14 @@ import (
 	"io"
 	"net/url"
 
+	"github.com/opentracing/opentracing-go"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/examples/addsvc/server"
 	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/log"
 	kitot "github.com/go-kit/kit/tracing/opentracing"
 	httptransport "github.com/go-kit/kit/transport/http"
-	"github.com/opentracing/opentracing-go"
 )
 
 // MakeSumEndpointFactory generates a Factory that transforms an http url into

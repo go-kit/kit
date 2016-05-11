@@ -1,10 +1,11 @@
 package opentracing
 
 import (
-	"github.com/go-kit/kit/log"
 	"github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/go-kit/kit/log"
 )
 
 // ToGRPCRequest returns a grpc RequestFunc that injects an OpenTracing Span

@@ -4,11 +4,12 @@ import (
 	"net/http"
 	"testing"
 
-	kitot "github.com/go-kit/kit/tracing/opentracing"
-	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"
 	"golang.org/x/net/context"
+
+	kitot "github.com/go-kit/kit/tracing/opentracing"
+	kithttp "github.com/go-kit/kit/transport/http"
 )
 
 func TestTraceHTTPRequestRoundtrip(t *testing.T) {

@@ -9,7 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lightstep/lightstep-tracer-go"
+	"github.com/opentracing/opentracing-go"
+	appdashot "github.com/sourcegraph/appdash/opentracing"
 	"golang.org/x/net/context"
+	"sourcegraph.com/sourcegraph/appdash"
 
 	"github.com/go-kit/kit/endpoint"
 	grpcclient "github.com/go-kit/kit/examples/addsvc/client/grpc"
@@ -20,10 +24,6 @@ import (
 	"github.com/go-kit/kit/loadbalancer/static"
 	"github.com/go-kit/kit/log"
 	kitot "github.com/go-kit/kit/tracing/opentracing"
-	"github.com/lightstep/lightstep-tracer-go"
-	"github.com/opentracing/opentracing-go"
-	appdashot "github.com/sourcegraph/appdash/opentracing"
-	"sourcegraph.com/sourcegraph/appdash"
 )
 
 func main() {

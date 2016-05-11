@@ -3,11 +3,12 @@ package opentracing_test
 import (
 	"testing"
 
-	"github.com/go-kit/kit/endpoint"
-	kitot "github.com/go-kit/kit/tracing/opentracing"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"
 	"golang.org/x/net/context"
+
+	"github.com/go-kit/kit/endpoint"
+	kitot "github.com/go-kit/kit/tracing/opentracing"
 )
 
 func TestTraceServer(t *testing.T) {

@@ -3,15 +3,15 @@ package grpc
 import (
 	"io"
 
+	kitot "github.com/go-kit/kit/tracing/opentracing"
+	"github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/examples/addsvc/pb"
 	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/log"
-	kitot "github.com/go-kit/kit/tracing/opentracing"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
-	"github.com/opentracing/opentracing-go"
 )
 
 // MakeSumEndpointFactory returns a loadbalancer.Factory that transforms GRPC

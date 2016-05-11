@@ -1,10 +1,11 @@
 package opentracing
 
 import (
-	"github.com/go-kit/kit/endpoint"
 	"github.com/opentracing/opentracing-go"
 	otext "github.com/opentracing/opentracing-go/ext"
 	"golang.org/x/net/context"
+
+	"github.com/go-kit/kit/endpoint"
 )
 
 // TraceServer returns a Middleware that wraps the `next` Endpoint in an
