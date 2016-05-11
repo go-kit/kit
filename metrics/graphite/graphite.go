@@ -12,9 +12,8 @@ import (
 	"net"
 	"sort"
 	"sync"
-	"time"
-
 	"sync/atomic"
+	"time"
 
 	"github.com/codahale/hdrhistogram"
 	"github.com/go-kit/kit/metrics"
