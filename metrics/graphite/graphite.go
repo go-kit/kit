@@ -21,7 +21,7 @@ import (
 )
 
 // Emitter will keep track of all metrics and, once started,
-// will emit the metrics via the Flush method to the given io.Writer.
+// will emit the metrics via the Flush method to the given address.
 type Emitter interface {
 	NewCounter(string) metrics.Counter
 	NewHistogram(string, int64, int64, int, ...int) metrics.Histogram
@@ -44,8 +44,8 @@ type emitter struct {
 
 // NewEmitter will return an Emitter that will prefix all
 // metrics names with the given prefix. Once started, it will attempt to create
-// a TCP connection with the given address and most metrics to the connection
-// in a Graphite-compatible format.
+// a TCP connection with the given address and periodically post metrics to the
+// connection in a Graphite-compatible format.
 func NewEmitter(addr *net.TCPAddr, prefix string) Emitter {
 	e := &emitter{
 		addr, prefix, &sync.Mutex{},
@@ -227,7 +227,7 @@ type windowedHistogram struct {
 	gauges map[int]metrics.Gauge
 }
 
-// NewWindowedHistogram is taken from http://github.com/codahale/metrics. It returns a
+// newWindowedHistogram is taken from http://github.com/codahale/metrics. It returns a
 // windowed HDR histogram which drops data older than five minutes.
 //
 // The histogram exposes metrics for each passed quantile as gauges. Users are expected
