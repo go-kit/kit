@@ -12,12 +12,16 @@ import (
 
 func TestHistogramQuantiles(t *testing.T) {
 	prefix := "prefix"
-	e := NewEmitter(nil, prefix)
+	e := NewEmitter("", true, prefix, nil)
 	var (
 		name      = "test_histogram_quantiles"
 		quantiles = []int{50, 90, 95, 99}
-		h         = e.NewHistogram(name, 0, 100, 3, quantiles...).With(metrics.Field{Key: "ignored", Value: "field"})
 	)
+	h, err := e.NewHistogram(name, 0, 100, 3, quantiles...)
+	if err != nil {
+		t.Fatalf("unable to create test histogram: ", err)
+	}
+	h = h.With(metrics.Field{Key: "ignored", Value: "field"})
 	const seed, mean, stdev int64 = 424242, 50, 10
 	teststat.PopulateNormalHistogram(t, h, seed, mean, stdev)
 
@@ -32,11 +36,11 @@ func TestCounter(t *testing.T) {
 		prefix = "prefix"
 		name   = "m"
 		value  = 123
-		e      = NewEmitter(nil, prefix)
+		e      = NewEmitter("", true, prefix, nil).(*emitter)
 		b      bytes.Buffer
 	)
 	e.NewCounter(name).With(metrics.Field{Key: "ignored", Value: "field"}).Add(uint64(value))
-	e.(*emitter).flush(&b)
+	e.flush(&b)
 	want := fmt.Sprintf("%s.%s.count %d", prefix, name, value)
 	payload := b.String()
 	if !strings.HasPrefix(payload, want) {
@@ -50,7 +54,7 @@ func TestGauge(t *testing.T) {
 		name   = "xyz"
 		value  = 54321
 		delta  = 12345
-		e      = NewEmitter(nil, prefix)
+		e      = NewEmitter("", true, prefix, nil)
 		b      bytes.Buffer
 		g      = e.NewGauge(name).With(metrics.Field{Key: "ignored", Value: "field"})
 	)
@@ -65,16 +69,4 @@ func TestGauge(t *testing.T) {
 	if !strings.HasPrefix(payload, want) {
 		t.Errorf("gauge %s want\n%s, have\n%s", name, want, payload)
 	}
-}
-
-func TestInvalidQuantile(t *testing.T) {
-	e := NewEmitter(nil, "")
-	defer func() {
-		if err := recover(); err == nil {
-			t.Errorf("expected panic, got none")
-		} else {
-			t.Logf("got expected panic: %v", err)
-		}
-	}()
-	e.NewHistogram("foo", 0.0, 100.0, 3, 50, 90, 95, 99, 101)
 }
