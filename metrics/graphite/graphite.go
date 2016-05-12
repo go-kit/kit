@@ -33,14 +33,17 @@ type Emitter interface {
 
 	Start(reportInvterval time.Duration) error
 	Flush()
+	Stop() error
 }
 
 type emitter struct {
 	prefix string
 
-	addr string
-	tcp  bool
-	conn net.Conn
+	addr  string
+	tcp   bool
+	conn  net.Conn
+	start sync.Once
+	stop  chan bool
 
 	mtx        sync.Mutex
 	counters   []*counter
@@ -59,6 +62,7 @@ func NewEmitter(addr string, tcp bool, metricsPrefix string, logger log.Logger) 
 	return &emitter{
 		addr:   addr,
 		tcp:    tcp,
+		stop:   make(chan bool),
 		prefix: metricsPrefix,
 		logger: logger,
 	}
@@ -150,16 +154,39 @@ func (e *emitter) dial() error {
 // Start will kick off a background goroutine to
 // call Flush once every interval.
 func (e *emitter) Start(interval time.Duration) error {
-	err := e.dial()
-	if err != nil {
-		return err
-	}
-	go func() {
-		for range time.Tick(interval) {
-			e.Flush()
+	var err error
+	e.start.Do(func() {
+		err = e.dial()
+		if err != nil {
+			return
 		}
-	}()
-	return nil
+		go func() {
+			t := time.Tick(interval)
+			for {
+				select {
+				case <-t:
+					e.Flush()
+				case <-e.stop:
+					return
+				}
+			}
+		}()
+	})
+	return err
+}
+
+// Stop will flush the current metrics and close the
+// current Graphite connection, if it exists.
+func (e *emitter) Stop() error {
+	if e.conn == nil {
+		return nil
+	}
+	// stop the ticking flush loop
+	e.stop <- true
+	// get one last flush in
+	e.Flush()
+	// close the connection
+	return e.conn.Close()
 }
 
 // Flush will attempt to create a connection with the given address
