@@ -27,7 +27,7 @@ func TestHistogramQuantiles(t *testing.T) {
 
 	// flush the current metrics into a buffer to examine
 	var b bytes.Buffer
-	e.(*emitter).flush(&b)
+	e.flush(&b)
 	teststat.AssertGraphiteNormalHistogram(t, prefix, name, mean, stdev, quantiles, b.String())
 }
 
@@ -36,7 +36,7 @@ func TestCounter(t *testing.T) {
 		prefix = "prefix"
 		name   = "m"
 		value  = 123
-		e      = NewEmitter("", true, prefix, nil).(*emitter)
+		e      = NewEmitter("", true, prefix, nil)
 		b      bytes.Buffer
 	)
 	e.NewCounter(name).With(metrics.Field{Key: "ignored", Value: "field"}).Add(uint64(value))
@@ -62,7 +62,7 @@ func TestGauge(t *testing.T) {
 	g.Set(float64(value))
 	g.Add(float64(delta))
 
-	e.(*emitter).flush(&b)
+	e.flush(&b)
 	payload := b.String()
 
 	want := fmt.Sprintf("%s.%s %d", prefix, name, value+delta)

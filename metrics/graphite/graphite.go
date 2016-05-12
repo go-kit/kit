@@ -25,18 +25,7 @@ import (
 
 // Emitter will keep track of all metrics and, once started,
 // will emit the metrics via the Flush method to the given address.
-type Emitter interface {
-	NewCounter(name string) metrics.Counter
-	NewHistogram(name string, min int64, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error)
-	NewTimeHistogram(name string, unit time.Duration, min int64, max int64, sigfigs int, quantiles ...int) (metrics.TimeHistogram, error)
-	NewGauge(name string) metrics.Gauge
-
-	Start(reportInvterval time.Duration) error
-	Flush()
-	Stop() error
-}
-
-type emitter struct {
+type Emitter struct {
 	prefix string
 
 	addr  string
@@ -58,8 +47,8 @@ type emitter struct {
 // a TCP or a UDP connection with the given address and periodically post
 // metrics to the connection in the Graphite plaintext protocol.
 // If the provided `tcp` parameter is false, a UDP connection will be used.
-func NewEmitter(addr string, tcp bool, metricsPrefix string, logger log.Logger) Emitter {
-	return &emitter{
+func NewEmitter(addr string, tcp bool, metricsPrefix string, logger log.Logger) *Emitter {
+	return &Emitter{
 		addr:   addr,
 		tcp:    tcp,
 		stop:   make(chan bool),
@@ -70,7 +59,7 @@ func NewEmitter(addr string, tcp bool, metricsPrefix string, logger log.Logger) 
 
 // NewCounter returns a Counter whose value will be periodically emitted in
 // a Graphite-compatible format once the Emitter is started. Fields are ignored.
-func (e *emitter) NewCounter(name string) metrics.Counter {
+func (e *Emitter) NewCounter(name string) metrics.Counter {
 	// only one flush at a time
 	c := &counter{name, 0}
 	e.mtx.Lock()
@@ -88,7 +77,7 @@ func (e *emitter) NewCounter(name string) metrics.Counter {
 //
 // The values of this histogram will be periodically emitted in a Graphite-compatible
 // format once the Emitter is started. Fields are ignored.
-func (e *emitter) NewHistogram(name string, minValue, maxValue int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
+func (e *Emitter) NewHistogram(name string, minValue, maxValue int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
 	gauges := map[int]metrics.Gauge{}
 	for _, quantile := range quantiles {
 		if quantile <= 0 || quantile >= 100 {
@@ -106,7 +95,7 @@ func (e *emitter) NewHistogram(name string, minValue, maxValue int64, sigfigs in
 
 // NewTimeHistogram returns a TimeHistogram wrapper around the windowed
 // HDR histrogram provided by this package.
-func (e *emitter) NewTimeHistogram(name string, unit time.Duration, minValue, maxValue int64, sigfigs int, quantiles ...int) (metrics.TimeHistogram, error) {
+func (e *Emitter) NewTimeHistogram(name string, unit time.Duration, minValue, maxValue int64, sigfigs int, quantiles ...int) (metrics.TimeHistogram, error) {
 	h, err := e.NewHistogram(name, minValue, maxValue, sigfigs, quantiles...)
 	if err != nil {
 		return nil, err
@@ -116,19 +105,19 @@ func (e *emitter) NewTimeHistogram(name string, unit time.Duration, minValue, ma
 
 // NewGauge returns a Gauge whose value will be periodically emitted in
 // a Graphite-compatible format once the Emitter is started. Fields are ignored.
-func (e *emitter) NewGauge(name string) metrics.Gauge {
+func (e *Emitter) NewGauge(name string) metrics.Gauge {
 	e.mtx.Lock()
 	defer e.mtx.Unlock()
 	return e.gauge(name)
 }
 
-func (e *emitter) gauge(name string) metrics.Gauge {
+func (e *Emitter) gauge(name string) metrics.Gauge {
 	g := &gauge{name, 0}
 	e.gauges = append(e.gauges, g)
 	return g
 }
 
-func (e *emitter) dial() error {
+func (e *Emitter) dial() error {
 	if e.tcp {
 		tAddr, err := net.ResolveTCPAddr("tcp", e.addr)
 		if err != nil {
@@ -153,7 +142,7 @@ func (e *emitter) dial() error {
 
 // Start will kick off a background goroutine to
 // call Flush once every interval.
-func (e *emitter) Start(interval time.Duration) error {
+func (e *Emitter) Start(interval time.Duration) error {
 	var err error
 	e.start.Do(func() {
 		err = e.dial()
@@ -177,7 +166,7 @@ func (e *emitter) Start(interval time.Duration) error {
 
 // Stop will flush the current metrics and close the
 // current Graphite connection, if it exists.
-func (e *emitter) Stop() error {
+func (e *Emitter) Stop() error {
 	if e.conn == nil {
 		return nil
 	}
@@ -193,14 +182,11 @@ func (e *emitter) Stop() error {
 	return err
 }
 
-// Flush will attempt to create a connection with the given address
-// and write the current metrics to it in the Graphite plaintext protocol.
-//
-// Users can call this method on process shutdown to ensure
-// the current metrics are pushed to Graphite.
-func (e *emitter) Flush() { e.flush(e.conn) }
+// Flush will write the current metrics to the Emitter's
+// connection in the Graphite plaintext protocol.
+func (e *Emitter) Flush() { e.flush(e.conn) }
 
-func (e *emitter) flush(conn io.Writer) {
+func (e *Emitter) flush(conn io.Writer) {
 	// only one flush at a time
 	e.mtx.Lock()
 	defer e.mtx.Unlock()
