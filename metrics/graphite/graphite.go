@@ -186,7 +186,11 @@ func (e *emitter) Stop() error {
 	// get one last flush in
 	e.Flush()
 	// close the connection
-	return e.conn.Close()
+	err := e.conn.Close()
+	// nil the conn to avoid problems
+	// if Stop() is called more than once.
+	e.conn = nil
+	return err
 }
 
 // Flush will attempt to create a connection with the given address
