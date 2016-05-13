@@ -175,18 +175,48 @@ func (e *Emitter) Stop() error {
 	return err
 }
 
+var (
+	RetryMax        = 10
+	RetryWait       = 2 * time.Millisecond
+	RetryMultiplier = 2
+)
+
 // Flush will write the current metrics to the Emitter's
 // connection in the Graphite plaintext protocol.
-func (e *Emitter) Flush() { e.flush(e.conn) }
-
-func (e *Emitter) flush(conn io.Writer) {
+func (e *Emitter) Flush() error {
 	// only one flush at a time
 	e.mtx.Lock()
 	defer e.mtx.Unlock()
 
+	// set the system up to perform a retry loop
+	var err error
+	wait := RetryWait
+	for i := 1; i <= RetryMax; i++ {
+		err = e.flush(e.conn)
+		if err == nil {
+			return nil
+		}
+		e.logger.Log(
+			"err", err,
+			"msg", fmt.Sprintf("unable to flush metrics on attempt %d, waiting %s", i, wait),
+		)
+		time.Sleep(wait)
+		wait = wait * time.Duration(RetryMultiplier)
+	}
+	// log if we were unable to emit metrics
+	if err != nil {
+		e.logger.Log(
+			"err", err,
+			"msg", fmt.Sprintf("unable to flush metrics after %d attempts. giving up.", RetryMax),
+		)
+	}
+	return err
+}
+
+func (e *Emitter) flush(conn io.Writer) error {
+
 	// buffer the writer and make sure to flush it
 	w := bufio.NewWriter(conn)
-	defer w.Flush()
 
 	// emit counter stats
 	for _, c := range e.counters {
@@ -208,6 +238,9 @@ func (e *Emitter) flush(conn io.Writer) {
 	for _, g := range e.gauges {
 		fmt.Fprintf(w, "%s.%s %.2f %d\n", e.prefix, g.Name(), g.Get(), time.Now().Unix())
 	}
+
+	// check for error
+	return w.Flush()
 }
 
 type counter struct {
