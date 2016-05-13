@@ -191,14 +191,20 @@ func (e *Emitter) Flush() error {
 	// set the system up to perform a retry loop
 	var err error
 	wait := RetryWait
-	for i := 1; i <= RetryMax; i++ {
+	for attempts := 1; ; attempts++ {
 		err = e.flush(e.conn)
+		// no error? return immediately.
 		if err == nil {
 			return nil
 		}
+		// we're at our last attempt? give up.
+		if attempts >= RetryMax {
+			break
+		}
+		// log, wait, and try again
 		e.logger.Log(
 			"err", err,
-			"msg", fmt.Sprintf("unable to flush metrics on attempt %d, waiting %s", i, wait),
+			"msg", fmt.Sprintf("unable to flush metrics on attempt %d, waiting %s", attempts, wait),
 		)
 		time.Sleep(wait)
 		wait = wait * time.Duration(RetryMultiplier)
