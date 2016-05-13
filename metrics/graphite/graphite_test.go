@@ -72,3 +72,9 @@ func TestGauge(t *testing.T) {
 		t.Errorf("gauge %s want\n%s, have\n%s", name, want, payload)
 	}
 }
+
+func TestEmitterStops(t *testing.T) {
+	e := NewEmitter("foo", "bar", "baz", time.Second, log.NewNopLogger())
+	time.Sleep(100 * time.Millisecond)
+	e.Stop()
+}
