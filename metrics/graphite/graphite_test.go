@@ -5,21 +5,23 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/teststat"
 )
 
 func TestHistogramQuantiles(t *testing.T) {
 	prefix := "prefix"
-	e := NewEmitter("", "", prefix, nil)
+	e := NewEmitter("", "", prefix, time.Second, log.NewNopLogger())
 	var (
 		name      = "test_histogram_quantiles"
 		quantiles = []int{50, 90, 95, 99}
 	)
 	h, err := e.NewHistogram(name, 0, 100, 3, quantiles...)
 	if err != nil {
-		t.Fatalf("unable to create test histogram: ", err)
+		t.Fatalf("unable to create test histogram: %v", err)
 	}
 	h = h.With(metrics.Field{Key: "ignored", Value: "field"})
 	const seed, mean, stdev int64 = 424242, 50, 10
@@ -36,7 +38,7 @@ func TestCounter(t *testing.T) {
 		prefix = "prefix"
 		name   = "m"
 		value  = 123
-		e      = NewEmitter("", "", prefix, nil)
+		e      = NewEmitter("", "", prefix, time.Second, log.NewNopLogger())
 		b      bytes.Buffer
 	)
 	e.NewCounter(name).With(metrics.Field{Key: "ignored", Value: "field"}).Add(uint64(value))
@@ -54,7 +56,7 @@ func TestGauge(t *testing.T) {
 		name   = "xyz"
 		value  = 54321
 		delta  = 12345
-		e      = NewEmitter("", "", prefix, nil)
+		e      = NewEmitter("", "", prefix, time.Second, log.NewNopLogger())
 		b      bytes.Buffer
 		g      = e.NewGauge(name).With(metrics.Field{Key: "ignored", Value: "field"})
 	)
