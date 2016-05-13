@@ -28,11 +28,11 @@ import (
 type Emitter struct {
 	prefix string
 
-	addr  string
-	tcp   bool
-	conn  net.Conn
-	start sync.Once
-	stop  chan bool
+	network, addr string
+	conn          net.Conn
+	dialer        Dialer
+	start         sync.Once
+	stop          chan bool
 
 	mtx        sync.Mutex
 	counters   []*counter
@@ -44,16 +44,24 @@ type Emitter struct {
 
 // NewEmitter will return an Emitter that will prefix all
 // metrics names with the given prefix. Once started, it will attempt to create
-// a TCP or a UDP connection with the given address and periodically post
+// a connection with the given network and address via `net.Dial` and periodically post
 // metrics to the connection in the Graphite plaintext protocol.
-// If the provided `tcp` parameter is false, a UDP connection will be used.
-func NewEmitter(addr string, tcp bool, metricsPrefix string, logger log.Logger) *Emitter {
+func NewEmitter(network, addr string, metricsPrefix string, logger log.Logger) *Emitter {
+	return NewEmitterDial(network, addr, net.Dial, metricsPrefix, logger)
+}
+
+// NewEmitter will return an Emitter that will prefix all
+// metrics names with the given prefix. Once started, it will attempt to create
+// a connection with the given network and address via the given Dialer and periodically post
+// metrics to the connection in the Graphite plaintext protocol.
+func NewEmitterDial(network, addr string, dialer Dialer, metricsPrefix string, logger log.Logger) *Emitter {
 	return &Emitter{
-		addr:   addr,
-		tcp:    tcp,
-		stop:   make(chan bool),
-		prefix: metricsPrefix,
-		logger: logger,
+		network: network,
+		addr:    addr,
+		dialer:  net.Dial,
+		stop:    make(chan bool),
+		prefix:  metricsPrefix,
+		logger:  logger,
 	}
 }
 
@@ -118,27 +126,12 @@ func (e *Emitter) gauge(name string) metrics.Gauge {
 }
 
 func (e *Emitter) dial() error {
-	if e.tcp {
-		tAddr, err := net.ResolveTCPAddr("tcp", e.addr)
-		if err != nil {
-			return err
-		}
-		e.conn, err = net.DialTCP("tcp", nil, tAddr)
-		if err != nil {
-			return err
-		}
-	} else {
-		uAddr, err := net.ResolveUDPAddr("udp", e.addr)
-		if err != nil {
-			return err
-		}
-		e.conn, err = net.DialUDP("udp", nil, uAddr)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	var err error
+	e.conn, err = e.dialer(e.network, e.addr)
+	return err
 }
+
+type Dialer func(network, addr string) (net.Conn, error)
 
 // Start will kick off a background goroutine to
 // call Flush once every interval.

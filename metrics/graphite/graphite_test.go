@@ -12,7 +12,7 @@ import (
 
 func TestHistogramQuantiles(t *testing.T) {
 	prefix := "prefix"
-	e := NewEmitter("", true, prefix, nil)
+	e := NewEmitter("", "", prefix, nil)
 	var (
 		name      = "test_histogram_quantiles"
 		quantiles = []int{50, 90, 95, 99}
@@ -36,7 +36,7 @@ func TestCounter(t *testing.T) {
 		prefix = "prefix"
 		name   = "m"
 		value  = 123
-		e      = NewEmitter("", true, prefix, nil)
+		e      = NewEmitter("", "", prefix, nil)
 		b      bytes.Buffer
 	)
 	e.NewCounter(name).With(metrics.Field{Key: "ignored", Value: "field"}).Add(uint64(value))
@@ -54,7 +54,7 @@ func TestGauge(t *testing.T) {
 		name   = "xyz"
 		value  = 54321
 		delta  = 12345
-		e      = NewEmitter("", true, prefix, nil)
+		e      = NewEmitter("", "", prefix, nil)
 		b      bytes.Buffer
 		g      = e.NewGauge(name).With(metrics.Field{Key: "ignored", Value: "field"})
 	)
