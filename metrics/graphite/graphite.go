@@ -1,9 +1,10 @@
 // Package graphite implements a Graphite backend for package metrics. Metrics
-// will be emitted to a Graphite server in the plaintext protocol
-// (http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol)
-// which looks like:
+// will be emitted to a Graphite server in the plaintext protocol which looks
+// like:
+//
 //   "<metric path> <metric value> <metric timestamp>"
 //
+// See http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol.
 // The current implementation ignores fields.
 package graphite
 
@@ -23,56 +24,47 @@ import (
 	"github.com/go-kit/kit/metrics"
 )
 
-// Emitter will keep track of all metrics and, once started,
-// will emit the metrics via the Flush method to the given address.
+// Emitter will keep track of all metrics and, once started, will emit the
+// metrics via the Flush method to the given address.
 type Emitter struct {
-	prefix string
-
-	network, addr string
-	conn          net.Conn
-	dialer        Dialer
-	start         sync.Once
-	stop          chan bool
-
 	mtx        sync.Mutex
+	prefix     string
+	mgr        *manager
 	counters   []*counter
 	histograms []*windowedHistogram
 	gauges     []*gauge
-
-	logger log.Logger
+	logger     log.Logger
+	quitc      chan chan struct{}
 }
 
-// NewEmitter will return an Emitter that will prefix all
-// metrics names with the given prefix. Once started, it will attempt to create
-// a connection with the given network and address via `net.Dial` and periodically post
-// metrics to the connection in the Graphite plaintext protocol.
-func NewEmitter(network, addr string, metricsPrefix string, logger log.Logger) *Emitter {
-	return NewEmitterDial(network, addr, net.Dial, metricsPrefix, logger)
+// NewEmitter will return an Emitter that will prefix all metrics names with the
+// given prefix. Once started, it will attempt to create a connection with the
+// given network and address via `net.Dial` and periodically post metrics to the
+// connection in the Graphite plaintext protocol.
+func NewEmitter(network, address string, metricsPrefix string, flushInterval time.Duration, logger log.Logger) *Emitter {
+	return NewEmitterDial(net.Dial, network, address, metricsPrefix, flushInterval, logger)
 }
 
-// NewEmitter will return an Emitter that will prefix all
-// metrics names with the given prefix. Once started, it will attempt to create
-// a connection with the given network and address via the given Dialer and periodically post
-// metrics to the connection in the Graphite plaintext protocol.
-func NewEmitterDial(network, addr string, dialer Dialer, metricsPrefix string, logger log.Logger) *Emitter {
-	return &Emitter{
-		network: network,
-		addr:    addr,
-		dialer:  net.Dial,
-		stop:    make(chan bool),
-		prefix:  metricsPrefix,
-		logger:  logger,
+// NewEmitterDial is the same as NewEmitter, but allows you to specify your own
+// Dialer function. This is primarily useful for tests.
+func NewEmitterDial(dialer Dialer, network, address string, metricsPrefix string, flushInterval time.Duration, logger log.Logger) *Emitter {
+	e := &Emitter{
+		prefix: metricsPrefix,
+		mgr:    newManager(dialer, network, address, time.After, logger),
+		logger: logger,
+		quitc:  make(chan chan struct{}),
 	}
+	go e.loop(flushInterval)
+	return e
 }
 
 // NewCounter returns a Counter whose value will be periodically emitted in
 // a Graphite-compatible format once the Emitter is started. Fields are ignored.
 func (e *Emitter) NewCounter(name string) metrics.Counter {
-	// only one flush at a time
-	c := &counter{name, 0}
 	e.mtx.Lock()
+	defer e.mtx.Unlock()
+	c := &counter{name, 0}
 	e.counters = append(e.counters, c)
-	e.mtx.Unlock()
 	return c
 }
 
@@ -80,11 +72,11 @@ func (e *Emitter) NewCounter(name string) metrics.Counter {
 // windowed HDR histogram which drops data older than five minutes.
 //
 // The histogram exposes metrics for each passed quantile as gauges. Quantiles
-// should be integers in the range 1..99. The gauge names are assigned by
-// using the passed name as a prefix and appending "_pNN" e.g. "_p50".
+// should be integers in the range 1..99. The gauge names are assigned by using
+// the passed name as a prefix and appending "_pNN" e.g. "_p50".
 //
-// The values of this histogram will be periodically emitted in a Graphite-compatible
-// format once the Emitter is started. Fields are ignored.
+// The values of this histogram will be periodically emitted in a
+// Graphite-compatible format once the Emitter is started. Fields are ignored.
 func (e *Emitter) NewHistogram(name string, minValue, maxValue int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
 	gauges := map[int]metrics.Gauge{}
 	for _, quantile := range quantiles {
@@ -96,13 +88,13 @@ func (e *Emitter) NewHistogram(name string, minValue, maxValue int64, sigfigs in
 	h := newWindowedHistogram(name, minValue, maxValue, sigfigs, gauges, e.logger)
 
 	e.mtx.Lock()
+	defer e.mtx.Unlock()
 	e.histograms = append(e.histograms, h)
-	e.mtx.Unlock()
 	return h, nil
 }
 
-// NewTimeHistogram returns a TimeHistogram wrapper around the windowed
-// HDR histrogram provided by this package.
+// NewTimeHistogram returns a TimeHistogram wrapper around the windowed HDR
+// histrogram provided by this package.
 func (e *Emitter) NewTimeHistogram(name string, unit time.Duration, minValue, maxValue int64, sigfigs int, quantiles ...int) (metrics.TimeHistogram, error) {
 	h, err := e.NewHistogram(name, minValue, maxValue, sigfigs, quantiles...)
 	if err != nil {
@@ -111,8 +103,8 @@ func (e *Emitter) NewTimeHistogram(name string, unit time.Duration, minValue, ma
 	return metrics.NewTimeHistogram(unit, h), nil
 }
 
-// NewGauge returns a Gauge whose value will be periodically emitted in
-// a Graphite-compatible format once the Emitter is started. Fields are ignored.
+// NewGauge returns a Gauge whose value will be periodically emitted in a
+// Graphite-compatible format once the Emitter is started. Fields are ignored.
 func (e *Emitter) NewGauge(name string) metrics.Gauge {
 	e.mtx.Lock()
 	defer e.mtx.Unlock()
@@ -125,111 +117,57 @@ func (e *Emitter) gauge(name string) metrics.Gauge {
 	return g
 }
 
-func (e *Emitter) dial() error {
-	var err error
-	e.conn, err = e.dialer(e.network, e.addr)
-	return err
-}
+func (e *Emitter) loop(d time.Duration) {
+	ticker := time.NewTicker(d)
+	defer ticker.Stop()
 
-type Dialer func(network, addr string) (net.Conn, error)
+	for {
+		select {
+		case <-ticker.C:
+			e.Flush()
 
-// Start will kick off a background goroutine to
-// call Flush once every interval.
-func (e *Emitter) Start(interval time.Duration) error {
-	var err error
-	e.start.Do(func() {
-		err = e.dial()
-		if err != nil {
+		case q := <-e.quitc:
+			e.Flush()
+			close(q)
 			return
 		}
-		go func() {
-			t := time.Tick(interval)
-			for {
-				select {
-				case <-t:
-					e.Flush()
-				case <-e.stop:
-					return
-				}
-			}
-		}()
-	})
-	return err
-}
-
-// Stop will flush the current metrics and close the
-// current Graphite connection, if it exists.
-func (e *Emitter) Stop() error {
-	if e.conn == nil {
-		return nil
 	}
-	// stop the ticking flush loop
-	e.stop <- true
-	// get one last flush in
-	e.Flush()
-	// close the connection
-	err := e.conn.Close()
-	// nil the conn to avoid problems
-	// if Stop() is called more than once.
-	e.conn = nil
-	return err
 }
 
-var (
-	RetryMax        = 10
-	RetryWait       = 2 * time.Millisecond
-	RetryMultiplier = 2
-)
+// Stop will flush the current metrics and close the active connection. Calling
+// stop more than once is a programmer error.
+func (e *Emitter) Stop() {
+	q := make(chan struct{})
+	e.quitc <- q
+	<-q
+}
 
-// Flush will write the current metrics to the Emitter's
-// connection in the Graphite plaintext protocol.
-func (e *Emitter) Flush() error {
-	// only one flush at a time
-	e.mtx.Lock()
+// Flush will write the current metrics to the Emitter's connection in the
+// Graphite plaintext protocol.
+func (e *Emitter) Flush() {
+	e.mtx.Lock() // one flush at a time
 	defer e.mtx.Unlock()
 
-	// set the system up to perform a retry loop
-	var err error
-	wait := RetryWait
-	for attempts := 1; ; attempts++ {
-		err = e.flush(e.conn)
-		// no error? return immediately.
-		if err == nil {
-			return nil
-		}
-		// we're at our last attempt? give up.
-		if attempts >= RetryMax {
-			break
-		}
-		// log, wait, and try again
-		e.logger.Log(
-			"err", err,
-			"msg", fmt.Sprintf("unable to flush metrics on attempt %d, waiting %s", attempts, wait),
-		)
-		time.Sleep(wait)
-		wait = wait * time.Duration(RetryMultiplier)
+	conn := e.mgr.take()
+	if conn == nil {
+		e.logger.Log("during", "flush", "err", "connection unavailable")
+		return
 	}
-	// log if we were unable to emit metrics
+
+	err := e.flush(conn)
 	if err != nil {
-		e.logger.Log(
-			"err", err,
-			"msg", fmt.Sprintf("unable to flush metrics after %d attempts. giving up.", RetryMax),
-		)
+		e.logger.Log("during", "flush", "err", err)
 	}
-	return err
+	e.mgr.put(err)
 }
 
 func (e *Emitter) flush(conn io.Writer) error {
-
-	// buffer the writer and make sure to flush it
 	w := bufio.NewWriter(conn)
 
-	// emit counter stats
 	for _, c := range e.counters {
 		fmt.Fprintf(w, "%s.%s.count %d %d\n", e.prefix, c.Name(), c.count, time.Now().Unix())
 	}
 
-	// emit histogram specific stats
 	for _, h := range e.histograms {
 		hist := h.hist.Merge()
 		now := time.Now().Unix()
@@ -240,12 +178,10 @@ func (e *Emitter) flush(conn io.Writer) error {
 		fmt.Fprintf(w, "%s.%s.std-dev %.2f %d\n", e.prefix, h.Name(), hist.StdDev(), now)
 	}
 
-	// emit gauge stats (which can include some histogram quantiles)
 	for _, g := range e.gauges {
 		fmt.Fprintf(w, "%s.%s %.2f %d\n", e.prefix, g.Name(), g.Get(), time.Now().Unix())
 	}
 
-	// check for error
 	return w.Flush()
 }
 
@@ -296,12 +232,12 @@ type windowedHistogram struct {
 	logger log.Logger
 }
 
-// newWindowedHistogram is taken from http://github.com/codahale/metrics. It returns a
-// windowed HDR histogram which drops data older than five minutes.
+// newWindowedHistogram is taken from http://github.com/codahale/metrics. It
+// returns a windowed HDR histogram which drops data older than five minutes.
 //
-// The histogram exposes metrics for each passed quantile as gauges. Users are expected
-// to provide their own set of Gauges for quantiles to make this Histogram work across multiple
-// metrics providers.
+// The histogram exposes metrics for each passed quantile as gauges. Users are
+// expected to provide their own set of Gauges for quantiles to make this
+// Histogram work across multiple metrics providers.
 func newWindowedHistogram(name string, minValue, maxValue int64, sigfigs int, quantiles map[int]metrics.Gauge, logger log.Logger) *windowedHistogram {
 	h := &windowedHistogram{
 		hist:   hdrhistogram.NewWindowed(5, minValue, maxValue, sigfigs),
@@ -313,7 +249,8 @@ func newWindowedHistogram(name string, minValue, maxValue int64, sigfigs int, qu
 	return h
 }
 
-func (h *windowedHistogram) Name() string                         { return h.name }
+func (h *windowedHistogram) Name() string { return h.name }
+
 func (h *windowedHistogram) With(metrics.Field) metrics.Histogram { return h }
 
 func (h *windowedHistogram) Observe(value int64) {
