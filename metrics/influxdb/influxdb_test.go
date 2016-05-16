@@ -2,6 +2,7 @@ package influxdb_test
 
 import (
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ func TestInfluxdbCounter(t *testing.T) {
 	}
 
 	cl := &mockClient{}
+	cl.Add(3)
 	bp, _ := stdinflux.NewBatchPoints(stdinflux.BatchPointsConfig{
 		Database:  "testing",
 		Precision: "s",
@@ -37,6 +39,7 @@ func TestInfluxdbCounter(t *testing.T) {
 	counter.Add(3)
 
 	triggerChan <- time.Now()
+	cl.Wait()
 
 	for i := 0; i <= 2; i++ {
 		givenPoint := mockPoint{
@@ -61,6 +64,7 @@ func TestInfluxdbCounterWithTag(t *testing.T) {
 	}
 
 	cl := &mockClient{}
+	cl.Add(3)
 	bp, _ := stdinflux.NewBatchPoints(stdinflux.BatchPointsConfig{
 		Database:  "testing",
 		Precision: "s",
@@ -79,6 +83,7 @@ func TestInfluxdbCounterWithTag(t *testing.T) {
 	counter.Add(3)
 
 	triggerChan <- time.Now()
+	cl.Wait()
 
 	for i := 0; i <= 2; i++ {
 		givenPoint := mockPoint{
@@ -109,6 +114,7 @@ func comparePoint(t *testing.T, i int, expected mockPoint, given stdinflux.Point
 
 type mockClient struct {
 	Points []stdinflux.Point
+	sync.WaitGroup
 }
 
 func (m *mockClient) Ping(timeout time.Duration) (time.Duration, string, error) {
@@ -119,6 +125,7 @@ func (m *mockClient) Ping(timeout time.Duration) (time.Duration, string, error) 
 func (m *mockClient) Write(bp stdinflux.BatchPoints) error {
 	for _, p := range bp.Points() {
 		m.Points = append(m.Points, *p)
+		m.Done()
 	}
 
 	return nil
