@@ -11,7 +11,7 @@ import (
 	stdinflux "github.com/influxdata/influxdb/client/v2"
 )
 
-func TestInfluxdbCounter(t *testing.T) {
+func TestCounter(t *testing.T) {
 	expectedName := "test_counter"
 	expectedTags := map[string]string{}
 	expectedFields := []map[string]interface{}{
@@ -51,7 +51,7 @@ func TestInfluxdbCounter(t *testing.T) {
 	}
 }
 
-func TestInfluxdbCounterWithTag(t *testing.T) {
+func TestCounterWithTags(t *testing.T) {
 	expectedName := "test_counter"
 	expectedTags := map[string]string{
 		"key1": "value1",
@@ -96,19 +96,17 @@ func TestInfluxdbCounterWithTag(t *testing.T) {
 }
 
 func comparePoint(t *testing.T, i int, expected mockPoint, given stdinflux.Point) {
-	givenName := given.Name()
-	if givenName != expected.Name {
-		t.Errorf("Point %v invalid name, expected %v got %v", i, expected.Name, givenName)
+
+	if want, have := expected.Name, given.Name(); want != have {
+		t.Errorf("point %d: want %q, have %q", i, want, have)
 	}
 
-	tagsEqual := reflect.DeepEqual(expected.Tags, given.Tags())
-	if !tagsEqual {
-		t.Errorf("Point %v invalid tags, expected %v got %v", i, expected.Tags, given.Tags())
+	if want, have := expected.Tags, given.Tags(); !reflect.DeepEqual(want, have) {
+		t.Errorf("point %d: want %v, have %v", i, want, have)
 	}
 
-	fieldsEqual := reflect.DeepEqual(expected.Fields, given.Fields())
-	if !fieldsEqual {
-		t.Errorf("Point %v invalid fields, expected %v got %v", i, expected.Fields, given.Fields())
+	if want, have := expected.Fields, given.Fields(); !reflect.DeepEqual(want, have) {
+		t.Errorf("point %d: want %v, have %v", i, want, have)
 	}
 }
 
