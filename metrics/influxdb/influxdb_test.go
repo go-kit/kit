@@ -95,6 +95,90 @@ func TestCounterWithTags(t *testing.T) {
 	}
 }
 
+func TestGauge(t *testing.T) {
+	expectedName := "test_gauge"
+	expectedTags := map[string]string{}
+	expectedFields := []map[string]interface{}{
+		{"value": 2.1},
+		{"value": 1.0},
+		{"value": 10.5},
+	}
+
+	cl := &mockClient{}
+	cl.Add(3)
+	bp, _ := stdinflux.NewBatchPoints(stdinflux.BatchPointsConfig{
+		Database:  "testing",
+		Precision: "s",
+	})
+
+	tags := []metrics.Field{}
+	for key, value := range expectedTags {
+		tags = append(tags, metrics.Field{Key: key, Value: value})
+	}
+
+	triggerChan := make(chan time.Time)
+	counter := influxdb.NewGaugeTick(cl, bp, expectedName, tags, triggerChan)
+	counter.Add(2.1)
+	counter.Set(1)
+	counter.Add(9.5)
+
+	triggerChan <- time.Now()
+	cl.Wait()
+
+	for i := 0; i <= 2; i++ {
+		givenPoint := mockPoint{
+			Name:   expectedName,
+			Tags:   expectedTags,
+			Fields: expectedFields[i],
+		}
+		comparePoint(t, i, givenPoint, cl.Points[i])
+	}
+}
+
+func TestGaugeWithTags(t *testing.T) {
+	expectedName := "test_counter"
+	expectedTags := map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}
+	expectedFields := []map[string]interface{}{
+		{"value": 2.3},
+		{"Test": "Test", "value": 1.0},
+		{"Test": "Test", "value": 13.6},
+	}
+
+	cl := &mockClient{}
+	cl.Add(3)
+	bp, _ := stdinflux.NewBatchPoints(stdinflux.BatchPointsConfig{
+		Database:  "testing",
+		Precision: "s",
+	})
+
+	tags := []metrics.Field{}
+	for key, value := range expectedTags {
+		tags = append(tags, metrics.Field{Key: key, Value: value})
+	}
+
+	triggerChan := make(chan time.Time)
+	gauge := influxdb.NewGaugeTick(cl, bp, expectedName, tags, triggerChan)
+	gauge.Add(2.3)
+	gauge = gauge.With(metrics.Field{Key: "Test", Value: "Test"})
+	gauge.Set(1)
+	gauge.Add(12.6)
+
+	triggerChan <- time.Now()
+	cl.Wait()
+
+	for i := 0; i <= 2; i++ {
+		givenPoint := mockPoint{
+			Name:   expectedName,
+			Tags:   expectedTags,
+			Fields: expectedFields[i],
+		}
+		comparePoint(t, i, givenPoint, cl.Points[i])
+	}
+}
+
 func comparePoint(t *testing.T, i int, expected mockPoint, given stdinflux.Point) {
 
 	if want, have := expected.Name, given.Name(); want != have {
