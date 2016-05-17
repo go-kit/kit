@@ -24,7 +24,7 @@ import (
 
 const maxBufferSize = 1400 // bytes
 
-type dogstatsdCounter struct {
+type counter struct {
 	key  string
 	c    chan string
 	tags []metrics.Field
@@ -42,7 +42,7 @@ func NewCounter(w io.Writer, key string, reportInterval time.Duration, globalTag
 // NewCounterTick is the same as NewCounter, but allows the user to pass in a
 // ticker channel instead of invoking time.Tick.
 func NewCounterTick(w io.Writer, key string, reportTicker <-chan time.Time, tags []metrics.Field) metrics.Counter {
-	c := &dogstatsdCounter{
+	c := &counter{
 		key:  key,
 		c:    make(chan string),
 		tags: tags,
@@ -51,19 +51,19 @@ func NewCounterTick(w io.Writer, key string, reportTicker <-chan time.Time, tags
 	return c
 }
 
-func (c *dogstatsdCounter) Name() string { return c.key }
+func (c *counter) Name() string { return c.key }
 
-func (c *dogstatsdCounter) With(f metrics.Field) metrics.Counter {
-	return &dogstatsdCounter{
+func (c *counter) With(f metrics.Field) metrics.Counter {
+	return &counter{
 		key:  c.key,
 		c:    c.c,
 		tags: append(c.tags, f),
 	}
 }
 
-func (c *dogstatsdCounter) Add(delta uint64) { c.c <- applyTags(fmt.Sprintf("%d|c", delta), c.tags) }
+func (c *counter) Add(delta uint64) { c.c <- applyTags(fmt.Sprintf("%d|c", delta), c.tags) }
 
-type dogstatsdGauge struct {
+type gauge struct {
 	key       string
 	lastValue uint64 // math.Float64frombits
 	g         chan string
@@ -82,7 +82,7 @@ func NewGauge(w io.Writer, key string, reportInterval time.Duration, tags []metr
 // NewGaugeTick is the same as NewGauge, but allows the user to pass in a ticker
 // channel instead of invoking time.Tick.
 func NewGaugeTick(w io.Writer, key string, reportTicker <-chan time.Time, tags []metrics.Field) metrics.Gauge {
-	g := &dogstatsdGauge{
+	g := &gauge{
 		key:  key,
 		g:    make(chan string),
 		tags: tags,
@@ -91,10 +91,10 @@ func NewGaugeTick(w io.Writer, key string, reportTicker <-chan time.Time, tags [
 	return g
 }
 
-func (g *dogstatsdGauge) Name() string { return g.key }
+func (g *gauge) Name() string { return g.key }
 
-func (g *dogstatsdGauge) With(f metrics.Field) metrics.Gauge {
-	return &dogstatsdGauge{
+func (g *gauge) With(f metrics.Field) metrics.Gauge {
+	return &gauge{
 		key:       g.key,
 		lastValue: g.lastValue,
 		g:         g.g,
@@ -102,7 +102,7 @@ func (g *dogstatsdGauge) With(f metrics.Field) metrics.Gauge {
 	}
 }
 
-func (g *dogstatsdGauge) Add(delta float64) {
+func (g *gauge) Add(delta float64) {
 	// https://github.com/etsy/statsd/blob/master/docs/metric_types.md#gauges
 	sign := "+"
 	if delta < 0 {
@@ -111,12 +111,12 @@ func (g *dogstatsdGauge) Add(delta float64) {
 	g.g <- applyTags(fmt.Sprintf("%s%f|g", sign, delta), g.tags)
 }
 
-func (g *dogstatsdGauge) Set(value float64) {
+func (g *gauge) Set(value float64) {
 	atomic.StoreUint64(&g.lastValue, math.Float64bits(value))
 	g.g <- applyTags(fmt.Sprintf("%f|g", value), g.tags)
 }
 
-func (g *dogstatsdGauge) Get() float64 {
+func (g *gauge) Get() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&g.lastValue))
 }
 
@@ -147,7 +147,7 @@ func emitEvery(emitTicker <-chan time.Time, callback func() float64) <-chan stri
 	return c
 }
 
-type dogstatsdHistogram struct {
+type histogram struct {
 	key  string
 	h    chan string
 	tags []metrics.Field
@@ -177,7 +177,7 @@ func NewHistogram(w io.Writer, key string, reportInterval time.Duration, tags []
 // NewHistogramTick is the same as NewHistogram, but allows the user to pass a
 // ticker channel instead of invoking time.Tick.
 func NewHistogramTick(w io.Writer, key string, reportTicker <-chan time.Time, tags []metrics.Field) metrics.Histogram {
-	h := &dogstatsdHistogram{
+	h := &histogram{
 		key:  key,
 		h:    make(chan string),
 		tags: tags,
@@ -186,21 +186,21 @@ func NewHistogramTick(w io.Writer, key string, reportTicker <-chan time.Time, ta
 	return h
 }
 
-func (h *dogstatsdHistogram) Name() string { return h.key }
+func (h *histogram) Name() string { return h.key }
 
-func (h *dogstatsdHistogram) With(f metrics.Field) metrics.Histogram {
-	return &dogstatsdHistogram{
+func (h *histogram) With(f metrics.Field) metrics.Histogram {
+	return &histogram{
 		key:  h.key,
 		h:    h.h,
 		tags: append(h.tags, f),
 	}
 }
 
-func (h *dogstatsdHistogram) Observe(value int64) {
+func (h *histogram) Observe(value int64) {
 	h.h <- applyTags(fmt.Sprintf("%d|ms", value), h.tags)
 }
 
-func (h *dogstatsdHistogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
+func (h *histogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
 	// TODO(pb): no way to do this without introducing e.g. codahale/hdrhistogram
 	return []metrics.Bucket{}, []metrics.Quantile{}
 }

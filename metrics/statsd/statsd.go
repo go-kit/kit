@@ -30,7 +30,7 @@ import (
 
 const maxBufferSize = 1400 // bytes
 
-type statsdCounter struct {
+type counter struct {
 	key string
 	c   chan string
 }
@@ -48,7 +48,7 @@ func NewCounter(w io.Writer, key string, reportInterval time.Duration) metrics.C
 // NewCounterTick is the same as NewCounter, but allows the user to pass in a
 // ticker channel instead of invoking time.Tick.
 func NewCounterTick(w io.Writer, key string, reportTicker <-chan time.Time) metrics.Counter {
-	c := &statsdCounter{
+	c := &counter{
 		key: key,
 		c:   make(chan string),
 	}
@@ -56,13 +56,13 @@ func NewCounterTick(w io.Writer, key string, reportTicker <-chan time.Time) metr
 	return c
 }
 
-func (c *statsdCounter) Name() string { return c.key }
+func (c *counter) Name() string { return c.key }
 
-func (c *statsdCounter) With(metrics.Field) metrics.Counter { return c }
+func (c *counter) With(metrics.Field) metrics.Counter { return c }
 
-func (c *statsdCounter) Add(delta uint64) { c.c <- fmt.Sprintf("%d|c", delta) }
+func (c *counter) Add(delta uint64) { c.c <- fmt.Sprintf("%d|c", delta) }
 
-type statsdGauge struct {
+type gauge struct {
 	key       string
 	lastValue uint64 // math.Float64frombits
 	g         chan string
@@ -81,7 +81,7 @@ func NewGauge(w io.Writer, key string, reportInterval time.Duration) metrics.Gau
 // NewGaugeTick is the same as NewGauge, but allows the user to pass in a ticker
 // channel instead of invoking time.Tick.
 func NewGaugeTick(w io.Writer, key string, reportTicker <-chan time.Time) metrics.Gauge {
-	g := &statsdGauge{
+	g := &gauge{
 		key: key,
 		g:   make(chan string),
 	}
@@ -89,11 +89,11 @@ func NewGaugeTick(w io.Writer, key string, reportTicker <-chan time.Time) metric
 	return g
 }
 
-func (g *statsdGauge) Name() string { return g.key }
+func (g *gauge) Name() string { return g.key }
 
-func (g *statsdGauge) With(metrics.Field) metrics.Gauge { return g }
+func (g *gauge) With(metrics.Field) metrics.Gauge { return g }
 
-func (g *statsdGauge) Add(delta float64) {
+func (g *gauge) Add(delta float64) {
 	// https://github.com/etsy/statsd/blob/master/docs/metric_types.md#gauges
 	sign := "+"
 	if delta < 0 {
@@ -102,12 +102,12 @@ func (g *statsdGauge) Add(delta float64) {
 	g.g <- fmt.Sprintf("%s%f|g", sign, delta)
 }
 
-func (g *statsdGauge) Set(value float64) {
+func (g *gauge) Set(value float64) {
 	atomic.StoreUint64(&g.lastValue, math.Float64bits(value))
 	g.g <- fmt.Sprintf("%f|g", value)
 }
 
-func (g *statsdGauge) Get() float64 {
+func (g *gauge) Get() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&g.lastValue))
 }
 
@@ -138,7 +138,7 @@ func emitEvery(emitTicker <-chan time.Time, callback func() float64) <-chan stri
 	return c
 }
 
-type statsdHistogram struct {
+type histogram struct {
 	key string
 	h   chan string
 }
@@ -167,7 +167,7 @@ func NewHistogram(w io.Writer, key string, reportInterval time.Duration) metrics
 // NewHistogramTick is the same as NewHistogram, but allows the user to pass a
 // ticker channel instead of invoking time.Tick.
 func NewHistogramTick(w io.Writer, key string, reportTicker <-chan time.Time) metrics.Histogram {
-	h := &statsdHistogram{
+	h := &histogram{
 		key: key,
 		h:   make(chan string),
 	}
@@ -175,15 +175,15 @@ func NewHistogramTick(w io.Writer, key string, reportTicker <-chan time.Time) me
 	return h
 }
 
-func (h *statsdHistogram) Name() string { return h.key }
+func (h *histogram) Name() string { return h.key }
 
-func (h *statsdHistogram) With(metrics.Field) metrics.Histogram { return h }
+func (h *histogram) With(metrics.Field) metrics.Histogram { return h }
 
-func (h *statsdHistogram) Observe(value int64) {
+func (h *histogram) Observe(value int64) {
 	h.h <- fmt.Sprintf("%d|ms", value)
 }
 
-func (h *statsdHistogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
+func (h *histogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
 	// TODO(pb): no way to do this without introducing e.g. codahale/hdrhistogram
 	return []metrics.Bucket{}, []metrics.Quantile{}
 }
