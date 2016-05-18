@@ -179,6 +179,125 @@ func TestGaugeWithTags(t *testing.T) {
 	}
 }
 
+func TestHistogram(t *testing.T) {
+	expectedName := "test_histogram"
+	expectedTags := map[string]string{}
+	expectedFields := []map[string]map[string]interface{}{
+		{
+			"test_histogram_p50": {"value": 5.0},
+			"test_histogram_p90": {"value": 5.0},
+			"test_histogram_p95": {"value": 5.0},
+			"test_histogram_p99": {"value": 5.0},
+		},
+		{
+			"test_histogram_p50": {"Test": "Test", "value": 5.0},
+			"test_histogram_p90": {"Test": "Test", "value": 10.0},
+			"test_histogram_p95": {"Test": "Test", "value": 10.0},
+			"test_histogram_p99": {"Test": "Test", "value": 10.0},
+		},
+		{
+			"test_histogram_p50": {"Test": "Test", "value": 5.0},
+			"test_histogram_p90": {"Test": "Test", "value": 10.0},
+			"test_histogram_p95": {"Test": "Test", "value": 10.0},
+			"test_histogram_p99": {"Test": "Test", "value": 10.0},
+		},
+	}
+	quantiles := []int{50, 90, 95, 99}
+
+	cl := &mockClient{}
+	cl.Add(12)
+	bp, _ := stdinflux.NewBatchPoints(stdinflux.BatchPointsConfig{
+		Database:  "testing",
+		Precision: "s",
+	})
+
+	tags := []metrics.Field{}
+	for key, value := range expectedTags {
+		tags = append(tags, metrics.Field{Key: key, Value: value})
+	}
+
+	triggerChan := make(chan time.Time)
+	histogram := influxdb.NewHistogramTick(cl, bp, expectedName, tags, triggerChan, 0, 100, 3, quantiles...)
+	histogram.Observe(5)
+	histogram = histogram.With(metrics.Field{Key: "Test", Value: "Test"})
+	histogram.Observe(10)
+	histogram.Observe(4)
+	triggerChan <- time.Now()
+	cl.Wait()
+
+	for i := 0; i <= 11; i++ {
+		actualName := cl.Points[i].Name()
+		givenName := expectedName + actualName[len(actualName)-4:]
+		givenPoint := mockPoint{
+			Name:   givenName,
+			Tags:   expectedTags,
+			Fields: expectedFields[i/4][actualName],
+		}
+		comparePoint(t, i, givenPoint, cl.Points[i])
+	}
+}
+
+func TestHistogramWithTags(t *testing.T) {
+	expectedName := "test_histogram"
+	expectedTags := map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}
+	expectedFields := []map[string]map[string]interface{}{
+		{
+			"test_histogram_p50": {"value": 5.0},
+			"test_histogram_p90": {"value": 5.0},
+			"test_histogram_p95": {"value": 5.0},
+			"test_histogram_p99": {"value": 5.0},
+		},
+		{
+			"test_histogram_p50": {"Test": "Test", "value": 5.0},
+			"test_histogram_p90": {"Test": "Test", "value": 10.0},
+			"test_histogram_p95": {"Test": "Test", "value": 10.0},
+			"test_histogram_p99": {"Test": "Test", "value": 10.0},
+		},
+		{
+			"test_histogram_p50": {"Test": "Test", "value": 5.0},
+			"test_histogram_p90": {"Test": "Test", "value": 10.0},
+			"test_histogram_p95": {"Test": "Test", "value": 10.0},
+			"test_histogram_p99": {"Test": "Test", "value": 10.0},
+		},
+	}
+	quantiles := []int{50, 90, 95, 99}
+
+	cl := &mockClient{}
+	cl.Add(12)
+	bp, _ := stdinflux.NewBatchPoints(stdinflux.BatchPointsConfig{
+		Database:  "testing",
+		Precision: "s",
+	})
+
+	tags := []metrics.Field{}
+	for key, value := range expectedTags {
+		tags = append(tags, metrics.Field{Key: key, Value: value})
+	}
+
+	triggerChan := make(chan time.Time)
+	histogram := influxdb.NewHistogramTick(cl, bp, expectedName, tags, triggerChan, 0, 100, 3, quantiles...)
+	histogram.Observe(5)
+	histogram = histogram.With(metrics.Field{Key: "Test", Value: "Test"})
+	histogram.Observe(10)
+	histogram.Observe(4)
+	triggerChan <- time.Now()
+	cl.Wait()
+
+	for i := 0; i <= 11; i++ {
+		actualName := cl.Points[i].Name()
+		givenName := expectedName + actualName[len(actualName)-4:]
+		givenPoint := mockPoint{
+			Name:   givenName,
+			Tags:   expectedTags,
+			Fields: expectedFields[i/4][actualName],
+		}
+		comparePoint(t, i, givenPoint, cl.Points[i])
+	}
+}
+
 func comparePoint(t *testing.T, i int, expected mockPoint, given stdinflux.Point) {
 
 	if want, have := expected.Name, given.Name(); want != have {
