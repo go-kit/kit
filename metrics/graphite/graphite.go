@@ -9,11 +9,9 @@
 package graphite
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -24,167 +22,21 @@ import (
 	"github.com/go-kit/kit/metrics"
 )
 
-// Emitter will keep track of all metrics and, once started, will emit the
-// metrics via the Flush method to the given address.
-type Emitter struct {
-	mtx        sync.Mutex
-	prefix     string
-	mgr        *manager
-	counters   []*counter
-	histograms []*windowedHistogram
-	gauges     []*gauge
-	logger     log.Logger
-	quitc      chan chan struct{}
+// Newcounter will return a metrics.counter with the given name and a base
+// value of 0.
+func newCounter(name string) *counter {
+	return &counter{name, 0}
 }
 
-// NewEmitter will return an Emitter that will prefix all metrics names with the
-// given prefix. Once started, it will attempt to create a connection with the
-// given network and address via `net.Dial` and periodically post metrics to the
-// connection in the Graphite plaintext protocol.
-func NewEmitter(network, address string, metricsPrefix string, flushInterval time.Duration, logger log.Logger) *Emitter {
-	return NewEmitterDial(net.Dial, network, address, metricsPrefix, flushInterval, logger)
+// Newgauge will return a metrics.gauge with the given name and a starting
+// value of 0.
+func newGauge(name string) *gauge {
+	return &gauge{name, 0}
 }
 
-// NewEmitterDial is the same as NewEmitter, but allows you to specify your own
-// Dialer function. This is primarily useful for tests.
-func NewEmitterDial(dialer Dialer, network, address string, metricsPrefix string, flushInterval time.Duration, logger log.Logger) *Emitter {
-	e := &Emitter{
-		prefix: metricsPrefix,
-		mgr:    newManager(dialer, network, address, time.After, logger),
-		logger: logger,
-		quitc:  make(chan chan struct{}),
-	}
-	go e.loop(flushInterval)
-	return e
-}
-
-// NewCounter returns a Counter whose value will be periodically emitted in
-// a Graphite-compatible format once the Emitter is started. Fields are ignored.
-func (e *Emitter) NewCounter(name string) metrics.Counter {
-	e.mtx.Lock()
-	defer e.mtx.Unlock()
-	c := &counter{name, 0}
-	e.counters = append(e.counters, c)
-	return c
-}
-
-// NewHistogram is taken from http://github.com/codahale/metrics. It returns a
-// windowed HDR histogram which drops data older than five minutes.
-//
-// The histogram exposes metrics for each passed quantile as gauges. Quantiles
-// should be integers in the range 1..99. The gauge names are assigned by using
-// the passed name as a prefix and appending "_pNN" e.g. "_p50".
-//
-// The values of this histogram will be periodically emitted in a
-// Graphite-compatible format once the Emitter is started. Fields are ignored.
-func (e *Emitter) NewHistogram(name string, minValue, maxValue int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
-	gauges := map[int]metrics.Gauge{}
-	for _, quantile := range quantiles {
-		if quantile <= 0 || quantile >= 100 {
-			return nil, fmt.Errorf("invalid quantile %d", quantile)
-		}
-		gauges[quantile] = e.gauge(fmt.Sprintf("%s_p%02d", name, quantile))
-	}
-	h := newWindowedHistogram(name, minValue, maxValue, sigfigs, gauges, e.logger)
-
-	e.mtx.Lock()
-	defer e.mtx.Unlock()
-	e.histograms = append(e.histograms, h)
-	return h, nil
-}
-
-// NewTimeHistogram returns a TimeHistogram wrapper around the windowed HDR
-// histrogram provided by this package.
-func (e *Emitter) NewTimeHistogram(name string, unit time.Duration, minValue, maxValue int64, sigfigs int, quantiles ...int) (metrics.TimeHistogram, error) {
-	h, err := e.NewHistogram(name, minValue, maxValue, sigfigs, quantiles...)
-	if err != nil {
-		return nil, err
-	}
-	return metrics.NewTimeHistogram(unit, h), nil
-}
-
-// NewGauge returns a Gauge whose value will be periodically emitted in a
-// Graphite-compatible format once the Emitter is started. Fields are ignored.
-func (e *Emitter) NewGauge(name string) metrics.Gauge {
-	e.mtx.Lock()
-	defer e.mtx.Unlock()
-	return e.gauge(name)
-}
-
-func (e *Emitter) gauge(name string) metrics.Gauge {
-	g := &gauge{name, 0}
-	e.gauges = append(e.gauges, g)
-	return g
-}
-
-func (e *Emitter) loop(d time.Duration) {
-	ticker := time.NewTicker(d)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			e.Flush()
-
-		case q := <-e.quitc:
-			e.Flush()
-			close(q)
-			return
-		}
-	}
-}
-
-// Stop will flush the current metrics and close the active connection. Calling
-// stop more than once is a programmer error.
-func (e *Emitter) Stop() {
-	q := make(chan struct{})
-	e.quitc <- q
-	<-q
-}
-
-// Flush will write the current metrics to the Emitter's connection in the
-// Graphite plaintext protocol.
-func (e *Emitter) Flush() {
-	e.mtx.Lock() // one flush at a time
-	defer e.mtx.Unlock()
-
-	conn := e.mgr.take()
-	if conn == nil {
-		e.logger.Log("during", "flush", "err", "connection unavailable")
-		return
-	}
-
-	err := e.flush(conn)
-	if err != nil {
-		e.logger.Log("during", "flush", "err", err)
-	}
-	e.mgr.put(err)
-}
-
-func (e *Emitter) flush(conn io.Writer) error {
-	w := bufio.NewWriter(conn)
-
-	for _, c := range e.counters {
-		fmt.Fprintf(w, "%s.%s.count %d %d\n", e.prefix, c.Name(), c.count, time.Now().Unix())
-	}
-
-	for _, h := range e.histograms {
-		hist := h.hist.Merge()
-		now := time.Now().Unix()
-		fmt.Fprintf(w, "%s.%s.count %d %d\n", e.prefix, h.Name(), hist.TotalCount(), now)
-		fmt.Fprintf(w, "%s.%s.min %d %d\n", e.prefix, h.Name(), hist.Min(), now)
-		fmt.Fprintf(w, "%s.%s.max %d %d\n", e.prefix, h.Name(), hist.Max(), now)
-		fmt.Fprintf(w, "%s.%s.mean %.2f %d\n", e.prefix, h.Name(), hist.Mean(), now)
-		fmt.Fprintf(w, "%s.%s.std-dev %.2f %d\n", e.prefix, h.Name(), hist.StdDev(), now)
-	}
-
-	for _, g := range e.gauges {
-		fmt.Fprintf(w, "%s.%s %.2f %d\n", e.prefix, g.Name(), g.Get(), time.Now().Unix())
-	}
-
-	return w.Flush()
-}
-
+// counter implements the metrics.counter interface but also provides a
+// Flush method to emit the current counter values in the Graphite plaintext
+// protocol.
 type counter struct {
 	key   string
 	count uint64
@@ -192,10 +44,22 @@ type counter struct {
 
 func (c *counter) Name() string { return c.key }
 
+// With currently ignores fields.
 func (c *counter) With(metrics.Field) metrics.Counter { return c }
 
 func (c *counter) Add(delta uint64) { atomic.AddUint64(&c.count, delta) }
 
+func (c *counter) get() uint64 { return atomic.LoadUint64(&c.count) }
+
+// flush will emit the current counter value in the Graphite plaintext
+// protocol to the given io.Writer.
+func (c *counter) flush(conn io.Writer, prefix string) {
+	fmt.Fprintf(conn, "%s.count %d %d\n", prefix+c.Name(), c.get(), time.Now().Unix())
+}
+
+// gauge implements the metrics.gauge interface but also provides a
+// Flush method to emit the current counter values in the Graphite plaintext
+// protocol.
 type gauge struct {
 	key   string
 	value uint64 // math.Float64bits
@@ -203,6 +67,7 @@ type gauge struct {
 
 func (g *gauge) Name() string { return g.key }
 
+// With currently ignores fields.
 func (g *gauge) With(metrics.Field) metrics.Gauge { return g }
 
 func (g *gauge) Add(delta float64) {
@@ -223,6 +88,21 @@ func (g *gauge) Get() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&g.value))
 }
 
+// Flush will emit the current gauge value in the Graphite plaintext
+// protocol to the given io.Writer.
+func (g *gauge) flush(conn io.Writer, prefix string) {
+	fmt.Fprintf(conn, "%s %.2f %d\n", prefix+g.Name(), g.Get(), time.Now().Unix())
+}
+
+// windowedHistogram is taken from http://github.com/codahale/metrics. It
+// is a windowed HDR histogram which drops data older than five minutes.
+//
+// The histogram exposes metrics for each passed quantile as gauges. Quantiles
+// should be integers in the range 1..99. The gauge names are assigned by using
+// the passed name as a prefix and appending "_pNN" e.g. "_p50".
+//
+// The values of this histogram will be periodically emitted in a
+// Graphite-compatible format once the GraphiteProvider is started. Fields are ignored.
 type windowedHistogram struct {
 	mtx  sync.Mutex
 	hist *hdrhistogram.WindowedHistogram
@@ -232,12 +112,6 @@ type windowedHistogram struct {
 	logger log.Logger
 }
 
-// newWindowedHistogram is taken from http://github.com/codahale/metrics. It
-// returns a windowed HDR histogram which drops data older than five minutes.
-//
-// The histogram exposes metrics for each passed quantile as gauges. Users are
-// expected to provide their own set of Gauges for quantiles to make this
-// Histogram work across multiple metrics providers.
 func newWindowedHistogram(name string, minValue, maxValue int64, sigfigs int, quantiles map[int]metrics.Gauge, logger log.Logger) *windowedHistogram {
 	h := &windowedHistogram{
 		hist:   hdrhistogram.NewWindowed(5, minValue, maxValue, sigfigs),
@@ -287,6 +161,17 @@ func (h *windowedHistogram) Distribution() ([]metrics.Bucket, []metrics.Quantile
 	}
 	sort.Sort(quantileSlice(quantiles))
 	return buckets, quantiles
+}
+
+func (h *windowedHistogram) flush(conn io.Writer, prefix string) {
+	name := prefix + h.Name()
+	hist := h.hist.Merge()
+	now := time.Now().Unix()
+	fmt.Fprintf(conn, "%s.count %d %d\n", name, hist.TotalCount(), now)
+	fmt.Fprintf(conn, "%s.min %d %d\n", name, hist.Min(), now)
+	fmt.Fprintf(conn, "%s.max %d %d\n", name, hist.Max(), now)
+	fmt.Fprintf(conn, "%s.mean %.2f %d\n", name, hist.Mean(), now)
+	fmt.Fprintf(conn, "%s.std-dev %.2f %d\n", name, hist.StdDev(), now)
 }
 
 func (h *windowedHistogram) rotateLoop(d time.Duration) {

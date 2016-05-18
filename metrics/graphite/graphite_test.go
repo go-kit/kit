@@ -13,7 +13,7 @@ import (
 )
 
 func TestHistogramQuantiles(t *testing.T) {
-	prefix := "prefix"
+	prefix := "prefix."
 	e := NewEmitter("", "", prefix, time.Second, log.NewNopLogger())
 	var (
 		name      = "test_histogram_quantiles"
@@ -35,7 +35,7 @@ func TestHistogramQuantiles(t *testing.T) {
 
 func TestCounter(t *testing.T) {
 	var (
-		prefix = "prefix"
+		prefix = "prefix."
 		name   = "m"
 		value  = 123
 		e      = NewEmitter("", "", prefix, time.Second, log.NewNopLogger())
@@ -43,7 +43,7 @@ func TestCounter(t *testing.T) {
 	)
 	e.NewCounter(name).With(metrics.Field{Key: "ignored", Value: "field"}).Add(uint64(value))
 	e.flush(&b)
-	want := fmt.Sprintf("%s.%s.count %d", prefix, name, value)
+	want := fmt.Sprintf("%s%s.count %d", prefix, name, value)
 	payload := b.String()
 	if !strings.HasPrefix(payload, want) {
 		t.Errorf("counter %s want\n%s, have\n%s", name, want, payload)
@@ -52,7 +52,7 @@ func TestCounter(t *testing.T) {
 
 func TestGauge(t *testing.T) {
 	var (
-		prefix = "prefix"
+		prefix = "prefix."
 		name   = "xyz"
 		value  = 54321
 		delta  = 12345
@@ -67,7 +67,7 @@ func TestGauge(t *testing.T) {
 	e.flush(&b)
 	payload := b.String()
 
-	want := fmt.Sprintf("%s.%s %d", prefix, name, value+delta)
+	want := fmt.Sprintf("%s%s %d", prefix, name, value+delta)
 	if !strings.HasPrefix(payload, want) {
 		t.Errorf("gauge %s want\n%s, have\n%s", name, want, payload)
 	}

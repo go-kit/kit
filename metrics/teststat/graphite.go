@@ -14,7 +14,7 @@ func AssertGraphiteNormalHistogram(t *testing.T, prefix, metricName string, mean
 	// check for hdr histo data
 	wants := map[string]int64{"count": 1234, "min": 15, "max": 83}
 	for key, want := range wants {
-		re := regexp.MustCompile(fmt.Sprintf("%s.%s.%s (\\d*)", prefix, metricName, key))
+		re := regexp.MustCompile(fmt.Sprintf("%s%s.%s (\\d*)", prefix, metricName, key))
 		res := re.FindAllStringSubmatch(gPayload, 1)
 		if res == nil {
 			t.Error("did not find metrics log for", key, "in \n", gPayload)
@@ -42,7 +42,7 @@ func AssertGraphiteNormalHistogram(t *testing.T, prefix, metricName string, mean
 	}
 	// check for quantile gauges
 	for key, want := range wants {
-		re := regexp.MustCompile(fmt.Sprintf("%s.%s%s (\\d*\\.\\d*)", prefix, metricName, key))
+		re := regexp.MustCompile(fmt.Sprintf("%s%s%s (\\d*\\.\\d*)", prefix, metricName, key))
 		res := re.FindAllStringSubmatch(gPayload, 1)
 		if res == nil {
 			t.Errorf("did not find metrics log for %s", key)

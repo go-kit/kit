@@ -1,4 +1,4 @@
-package graphite
+package conn
 
 import (
 	"net"
@@ -13,11 +13,11 @@ type Dialer func(network, address string) (net.Conn, error)
 // time.After is a good default afterFunc.
 type afterFunc func(time.Duration) <-chan time.Time
 
-// manager manages a net.Conn. Clients should take the conn when they want to
+// Manager manages a net.Conn. Clients should take the conn when they want to
 // use it, and put back whatever error they receive from an e.g. Write. When a
 // non-nil error is put, the conn is invalidated and a new conn is established.
 // Connection failures are retried after an exponential backoff.
-type manager struct {
+type Manager struct {
 	dial    Dialer
 	network string
 	address string
@@ -28,8 +28,8 @@ type manager struct {
 	putc  chan error
 }
 
-func newManager(d Dialer, network, address string, after afterFunc, logger log.Logger) *manager {
-	m := &manager{
+func NewManager(d Dialer, network, address string, after afterFunc, logger log.Logger) *Manager {
+	m := &Manager{
 		dial:    d,
 		network: network,
 		address: address,
@@ -43,15 +43,15 @@ func newManager(d Dialer, network, address string, after afterFunc, logger log.L
 	return m
 }
 
-func (m *manager) take() net.Conn {
+func (m *Manager) Take() net.Conn {
 	return <-m.takec
 }
 
-func (m *manager) put(err error) {
+func (m *Manager) Put(err error) {
 	m.putc <- err
 }
 
-func (m *manager) loop() {
+func (m *Manager) loop() {
 	var (
 		conn       = dial(m.dial, m.network, m.address, m.logger) // may block slightly
 		connc      = make(chan net.Conn)

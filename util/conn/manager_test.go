@@ -1,4 +1,4 @@
-package graphite
+package conn
 
 import (
 	"errors"
@@ -17,11 +17,11 @@ func TestManager(t *testing.T) {
 		dialconn = &mockConn{}
 		dialerr  = error(nil)
 		dialer   = func(string, string) (net.Conn, error) { return dialconn, dialerr }
-		mgr      = newManager(dialer, "netw", "addr", after, log.NewNopLogger())
+		mgr      = NewManager(dialer, "netw", "addr", after, log.NewNopLogger())
 	)
 
 	// First conn should be fine.
-	conn := mgr.take()
+	conn := mgr.Take()
 	if conn == nil {
 		t.Fatal("nil conn")
 	}
@@ -35,11 +35,11 @@ func TestManager(t *testing.T) {
 	}
 
 	// Put an error to kill the conn.
-	mgr.put(errors.New("should kill the connection"))
+	mgr.Put(errors.New("should kill the connection"))
 
 	// First takes should fail.
 	for i := 0; i < 10; i++ {
-		if conn = mgr.take(); conn != nil {
+		if conn = mgr.Take(); conn != nil {
 			t.Fatalf("want nil conn, got real conn")
 		}
 	}
@@ -49,7 +49,7 @@ func TestManager(t *testing.T) {
 
 	// The dial should eventually succeed and yield a good conn.
 	if !within(100*time.Millisecond, func() bool {
-		conn = mgr.take()
+		conn = mgr.Take()
 		return conn != nil
 	}) {
 		t.Fatal("conn remained nil")
@@ -65,8 +65,8 @@ func TestManager(t *testing.T) {
 
 	// Dial starts failing.
 	dialconn, dialerr = nil, errors.New("oh noes")
-	mgr.put(errors.New("trigger that reconnect y'all"))
-	if conn = mgr.take(); conn != nil {
+	mgr.Put(errors.New("trigger that reconnect y'all"))
+	if conn = mgr.Take(); conn != nil {
 		t.Fatalf("want nil conn, got real conn")
 	}
 
@@ -84,7 +84,7 @@ func TestManager(t *testing.T) {
 
 	// The dial should never succeed.
 	if within(100*time.Millisecond, func() bool {
-		conn = mgr.take()
+		conn = mgr.Take()
 		return conn != nil
 	}) {
 		t.Fatal("eventually got a good conn, despite failing dialer")

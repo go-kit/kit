@@ -2,7 +2,6 @@ package provider
 
 import (
 	"errors"
-	"net"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -29,15 +28,15 @@ type Provider interface {
 // NewGraphiteProvider will return a Provider implementation that is a simple
 // wrapper around a graphite.Emitter. All metrics names will get prefixed
 // with the given value and data will be emitted once every interval.
-func NewGraphiteProvider(addr, net, prefix string, interval time.Duration, logger log.Logger) (Provider, error) {
+// If no network value is given, it will get defaulted to "udp".
+func NewGraphiteProvider(addr, network, prefix string, interval time.Duration, logger log.Logger) (Provider, error) {
 	if addr == "" {
 		return nil, errors.New("graphite server address is required")
 	}
-	if net == "" {
-		net = "udp"
+	if network == "" {
+		network = "udp"
 	}
-	// nop logger for now :\
-	e := graphite.NewEmitter(addr, net, prefix, interval, logger)
+	e := graphite.NewEmitter(addr, network, prefix, interval, logger)
 	return &graphiteProvider{Emitter: e}, nil
 }
 
@@ -45,68 +44,45 @@ type graphiteProvider struct {
 	*graphite.Emitter
 }
 
-// NewStatsdProvider will create a UDP connection for each metric
-// with the given address. All metrics will use the given interval
-// and, if a prefix is provided, it will be included in metric names
-// with this format:
-//    "prefix.name"
-func NewStatsdProvider(addr, prefix string, interval time.Duration, logger log.Logger) (Provider, error) {
-	return &statsdProvider{addr: addr, prefix: prefix, interval: interval}, nil
+// NewStatsdProvider will return a Provider implementation that is a simple
+// wrapper around a statsd.Emitter. All metrics names will get prefixed
+// with the given value and data will be emitted once every interval
+// or when the buffer has reached its max size.
+// If no network value is given, it will get defaulted to "udp".
+func NewStatsdProvider(addr, network, prefix string, interval time.Duration, logger log.Logger) (Provider, error) {
+	if addr == "" {
+		return nil, errors.New("statsd server address is required")
+	}
+	if network == "" {
+		network = "udp"
+	}
+	e := statsd.NewEmitter(addr, network, prefix, interval, logger)
+	return &statsdProvider{e: e}, nil
 }
 
 type statsdProvider struct {
-	addr string
-
-	interval time.Duration
-	prefix   string
-
-	logger log.Logger
-}
-
-func (s *statsdProvider) conn() (net.Conn, error) {
-	return net.Dial("udp", s.addr)
-}
-
-func (s *statsdProvider) pref(name string) string {
-	if len(s.prefix) > 0 {
-		return s.prefix + "." + name
-	}
-	return name
+	e *statsd.Emitter
 }
 
 func (s *statsdProvider) NewCounter(name string) metrics.Counter {
-	conn, err := s.conn()
-	if err != nil {
-		s.logger.Log("during", "new counter", "err", err)
-		return nil
-	}
-	return statsd.NewCounter(conn, s.pref(name), s.interval)
+	return s.e.NewCounter(name)
 }
 
 func (s *statsdProvider) NewHistogram(name string, min, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
-	conn, err := s.conn()
-	if err != nil {
-		return nil, err
-	}
-	return statsd.NewHistogram(conn, s.pref(name), s.interval), nil
+	return s.e.NewHistogram(name), nil
 }
 
 func (s *statsdProvider) NewGauge(name string) metrics.Gauge {
-	conn, err := s.conn()
-	if err != nil {
-		s.logger.Log("during", "new gauge", "err", err)
-		return nil
-	}
-	return statsd.NewGauge(conn, s.pref(name), s.interval)
+	return s.e.NewGauge(name)
 }
 
-// Stop is a no-op  (should we try to close the UDP connections here?)
-func (s *statsdProvider) Stop() {}
+// Stop will call the underlying statsd.Emitter's Stop method.
+func (s *statsdProvider) Stop() {
+	s.e.Stop()
+}
 
 // NewExpvarProvider is a very thin wrapper over the expvar package.
-// If a prefix is provided, it will be included in metric names with this
-// format:
-//    "prefix.name"
+// If a prefix is provided, it will prefix in metric names.
 func NewExpvarProvider(prefix string) Provider {
 	return &expvarProvider{prefix: prefix}
 }
@@ -116,10 +92,7 @@ type expvarProvider struct {
 }
 
 func (e *expvarProvider) pref(name string) string {
-	if len(e.prefix) > 0 {
-		return e.prefix + "." + name
-	}
-	return name
+	return e.prefix + name
 }
 
 func (e *expvarProvider) NewCounter(name string) metrics.Counter {
