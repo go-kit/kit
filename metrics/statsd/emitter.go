@@ -54,8 +54,7 @@ func NewEmitterDial(dialer conn.Dialer, network, address string, metricsPrefix s
 		keyVals: make(chan keyVal),
 		quitc:   make(chan chan struct{}),
 	}
-	var b bytes.Buffer
-	go e.loop(flushInterval, &b)
+	go e.loop(flushInterval)
 	return e
 }
 
@@ -64,8 +63,9 @@ func NewEmitterDial(dialer conn.Dialer, network, address string, metricsPrefix s
 // report interval or until the buffer exceeds a max packet size, whichever
 // comes first. Fields are ignored.
 func (e *Emitter) NewCounter(key string) metrics.Counter {
+	key = e.prefix + key
 	return &statsdCounter{
-		key: e.prefix + key,
+		key: key,
 		c:   stringToKeyVal(key, e.keyVals),
 	}
 }
@@ -88,8 +88,9 @@ func (e *Emitter) NewCounter(key string) metrics.Counter {
 //
 // TODO: support for sampling.
 func (e *Emitter) NewHistogram(key string) metrics.Histogram {
+	key = e.prefix + key
 	return &statsdHistogram{
-		key: e.prefix + key,
+		key: key,
 		h:   stringToKeyVal(key, e.keyVals),
 	}
 }
@@ -101,15 +102,17 @@ func (e *Emitter) NewHistogram(key string) metrics.Histogram {
 //
 // TODO: support for sampling
 func (e *Emitter) NewGauge(key string) metrics.Gauge {
+	key = e.prefix + key
 	return &statsdGauge{
-		key: e.prefix + key,
+		key: key,
 		g:   stringToKeyVal(key, e.keyVals),
 	}
 }
 
-func (e *Emitter) loop(d time.Duration, buf *bytes.Buffer) {
+func (e *Emitter) loop(d time.Duration) {
 	ticker := time.NewTicker(d)
 	defer ticker.Stop()
+	buf := &bytes.Buffer{}
 	for {
 		select {
 		case kv := <-e.keyVals:
@@ -150,5 +153,7 @@ func (e *Emitter) Flush(buf *bytes.Buffer) {
 	if err != nil {
 		e.logger.Log("during", "flush", "err", err)
 	}
+	buf.Reset()
+
 	e.mgr.Put(err)
 }
