@@ -64,7 +64,7 @@ func NewEmitterDial(dialer conn.Dialer, network, address string, metricsPrefix s
 // comes first. Fields are ignored.
 func (e *Emitter) NewCounter(key string) metrics.Counter {
 	key = e.prefix + key
-	return &statsdCounter{
+	return &counter{
 		key: key,
 		c:   stringToKeyVal(key, e.keyVals),
 	}
@@ -79,17 +79,17 @@ func (e *Emitter) NewCounter(key string) metrics.Counter {
 // milliseconds. If you observe in units of nanoseconds, you can make the
 // translation with a ScaledHistogram:
 //
-//    NewScaledHistogram(statsdHistogram, time.Millisecond)
+//    NewScaledHistogram(histogram, time.Millisecond)
 //
 // You can also enforce the constraint in a typesafe way with a millisecond
 // TimeHistogram:
 //
-//    NewTimeHistogram(statsdHistogram, time.Millisecond)
+//    NewTimeHistogram(histogram, time.Millisecond)
 //
 // TODO: support for sampling.
 func (e *Emitter) NewHistogram(key string) metrics.Histogram {
 	key = e.prefix + key
-	return &statsdHistogram{
+	return &histogram{
 		key: key,
 		h:   stringToKeyVal(key, e.keyVals),
 	}
@@ -103,7 +103,7 @@ func (e *Emitter) NewHistogram(key string) metrics.Histogram {
 // TODO: support for sampling
 func (e *Emitter) NewGauge(key string) metrics.Gauge {
 	key = e.prefix + key
-	return &statsdGauge{
+	return &gauge{
 		key: key,
 		g:   stringToKeyVal(key, e.keyVals),
 	}
