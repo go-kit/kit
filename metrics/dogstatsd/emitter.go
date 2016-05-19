@@ -12,7 +12,7 @@ import (
 )
 
 // Emitter is a struct to manage connections and orchestrate the emission of
-// metrics to a Statsd process.
+// metrics to a DogStatsd process.
 type Emitter struct {
 	prefix  string
 	keyVals chan keyVal
