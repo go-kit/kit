@@ -14,7 +14,7 @@ import (
 // PrometheusLabelValueUnknown.
 var PrometheusLabelValueUnknown = "unknown"
 
-type prometheusCounter struct {
+type counter struct {
 	*prometheus.CounterVec
 	name  string
 	Pairs map[string]string
@@ -29,28 +29,28 @@ func NewCounter(opts prometheus.CounterOpts, fieldKeys []string) metrics.Counter
 	for _, fieldName := range fieldKeys {
 		p[fieldName] = PrometheusLabelValueUnknown
 	}
-	return prometheusCounter{
+	return counter{
 		CounterVec: m,
 		name:       opts.Name,
 		Pairs:      p,
 	}
 }
 
-func (c prometheusCounter) Name() string { return c.name }
+func (c counter) Name() string { return c.name }
 
-func (c prometheusCounter) With(f metrics.Field) metrics.Counter {
-	return prometheusCounter{
+func (c counter) With(f metrics.Field) metrics.Counter {
+	return counter{
 		CounterVec: c.CounterVec,
 		name:       c.name,
 		Pairs:      merge(c.Pairs, f),
 	}
 }
 
-func (c prometheusCounter) Add(delta uint64) {
+func (c counter) Add(delta uint64) {
 	c.CounterVec.With(prometheus.Labels(c.Pairs)).Add(float64(delta))
 }
 
-type prometheusGauge struct {
+type gauge struct {
 	*prometheus.GaugeVec
 	name  string
 	Pairs map[string]string
@@ -61,32 +61,32 @@ type prometheusGauge struct {
 func NewGauge(opts prometheus.GaugeOpts, fieldKeys []string) metrics.Gauge {
 	m := prometheus.NewGaugeVec(opts, fieldKeys)
 	prometheus.MustRegister(m)
-	return prometheusGauge{
+	return gauge{
 		GaugeVec: m,
 		name:     opts.Name,
 		Pairs:    pairsFrom(fieldKeys),
 	}
 }
 
-func (g prometheusGauge) Name() string { return g.name }
+func (g gauge) Name() string { return g.name }
 
-func (g prometheusGauge) With(f metrics.Field) metrics.Gauge {
-	return prometheusGauge{
+func (g gauge) With(f metrics.Field) metrics.Gauge {
+	return gauge{
 		GaugeVec: g.GaugeVec,
 		name:     g.name,
 		Pairs:    merge(g.Pairs, f),
 	}
 }
 
-func (g prometheusGauge) Set(value float64) {
+func (g gauge) Set(value float64) {
 	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Set(value)
 }
 
-func (g prometheusGauge) Add(delta float64) {
+func (g gauge) Add(delta float64) {
 	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Add(delta)
 }
 
-func (g prometheusGauge) Get() float64 {
+func (g gauge) Get() float64 {
 	// TODO(pb): see https://github.com/prometheus/client_golang/issues/58
 	return 0.0
 }
@@ -99,7 +99,7 @@ func RegisterCallbackGauge(opts prometheus.GaugeOpts, callback func() float64) {
 	prometheus.MustRegister(prometheus.NewGaugeFunc(opts, callback))
 }
 
-type prometheusSummary struct {
+type summary struct {
 	*prometheus.SummaryVec
 	name  string
 	Pairs map[string]string
@@ -113,33 +113,33 @@ type prometheusSummary struct {
 func NewSummary(opts prometheus.SummaryOpts, fieldKeys []string) metrics.Histogram {
 	m := prometheus.NewSummaryVec(opts, fieldKeys)
 	prometheus.MustRegister(m)
-	return prometheusSummary{
+	return summary{
 		SummaryVec: m,
 		name:       opts.Name,
 		Pairs:      pairsFrom(fieldKeys),
 	}
 }
 
-func (s prometheusSummary) Name() string { return s.name }
+func (s summary) Name() string { return s.name }
 
-func (s prometheusSummary) With(f metrics.Field) metrics.Histogram {
-	return prometheusSummary{
+func (s summary) With(f metrics.Field) metrics.Histogram {
+	return summary{
 		SummaryVec: s.SummaryVec,
 		name:       s.name,
 		Pairs:      merge(s.Pairs, f),
 	}
 }
 
-func (s prometheusSummary) Observe(value int64) {
+func (s summary) Observe(value int64) {
 	s.SummaryVec.With(prometheus.Labels(s.Pairs)).Observe(float64(value))
 }
 
-func (s prometheusSummary) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
+func (s summary) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
 	// TODO(pb): see https://github.com/prometheus/client_golang/issues/58
 	return []metrics.Bucket{}, []metrics.Quantile{}
 }
 
-type prometheusHistogram struct {
+type histogram struct {
 	*prometheus.HistogramVec
 	name  string
 	Pairs map[string]string
@@ -153,28 +153,28 @@ type prometheusHistogram struct {
 func NewHistogram(opts prometheus.HistogramOpts, fieldKeys []string) metrics.Histogram {
 	m := prometheus.NewHistogramVec(opts, fieldKeys)
 	prometheus.MustRegister(m)
-	return prometheusHistogram{
+	return histogram{
 		HistogramVec: m,
 		name:         opts.Name,
 		Pairs:        pairsFrom(fieldKeys),
 	}
 }
 
-func (h prometheusHistogram) Name() string { return h.name }
+func (h histogram) Name() string { return h.name }
 
-func (h prometheusHistogram) With(f metrics.Field) metrics.Histogram {
-	return prometheusHistogram{
+func (h histogram) With(f metrics.Field) metrics.Histogram {
+	return histogram{
 		HistogramVec: h.HistogramVec,
 		name:         h.name,
 		Pairs:        merge(h.Pairs, f),
 	}
 }
 
-func (h prometheusHistogram) Observe(value int64) {
+func (h histogram) Observe(value int64) {
 	h.HistogramVec.With(prometheus.Labels(h.Pairs)).Observe(float64(value))
 }
 
-func (h prometheusHistogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
+func (h histogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
 	// TODO(pb): see https://github.com/prometheus/client_golang/issues/58
 	return []metrics.Bucket{}, []metrics.Quantile{}
 }

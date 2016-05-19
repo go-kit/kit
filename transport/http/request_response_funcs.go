@@ -7,8 +7,8 @@ import (
 )
 
 // RequestFunc may take information from an HTTP request and put it into a
-// request context. In Servers, BeforeFuncs are executed prior to invoking the
-// endpoint. In Clients, BeforeFuncs are executed after creating the request
+// request context. In Servers, RequestFuncs are executed prior to invoking the
+// endpoint. In Clients, RequestFuncs are executed after creating the request
 // but prior to invoking the HTTP client.
 type RequestFunc func(context.Context, *http.Request) context.Context
 

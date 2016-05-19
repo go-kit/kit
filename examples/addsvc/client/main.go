@@ -9,7 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lightstep/lightstep-tracer-go"
+	"github.com/opentracing/opentracing-go"
+	appdashot "github.com/sourcegraph/appdash/opentracing"
 	"golang.org/x/net/context"
+	"sourcegraph.com/sourcegraph/appdash"
 
 	"github.com/go-kit/kit/endpoint"
 	grpcclient "github.com/go-kit/kit/examples/addsvc/client/grpc"
@@ -19,6 +23,7 @@ import (
 	"github.com/go-kit/kit/loadbalancer"
 	"github.com/go-kit/kit/loadbalancer/static"
 	"github.com/go-kit/kit/log"
+	kitot "github.com/go-kit/kit/tracing/opentracing"
 )
 
 func main() {
@@ -31,6 +36,10 @@ func main() {
 		thriftProtocol   = flag.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
 		thriftBufferSize = flag.Int("thrift.buffer.size", 0, "0 for unbuffered")
 		thriftFramed     = flag.Bool("thrift.framed", false, "true to enable framing")
+
+		// Two OpenTracing backends (to demonstrate how they can be interchanged):
+		appdashAddr          = flag.String("appdash.addr", "", "Enable Appdash tracing via an Appdash server host:port")
+		lightstepAccessToken = flag.String("lightstep.token", "", "Enable LightStep tracing via a LightStep access token")
 	)
 	flag.Parse()
 	if len(os.Args) < 4 {
@@ -48,6 +57,25 @@ func main() {
 	logger = log.NewLogfmtLogger(os.Stdout)
 	logger = log.NewContext(logger).With("caller", log.DefaultCaller)
 	logger = log.NewContext(logger).With("transport", *transport)
+	tracingLogger := log.NewContext(logger).With("component", "tracing")
+
+	// Set up OpenTracing
+	var tracer opentracing.Tracer
+	{
+		switch {
+		case *appdashAddr != "" && *lightstepAccessToken == "":
+			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
+		case *appdashAddr == "" && *lightstepAccessToken != "":
+			tracer = lightstep.NewTracer(lightstep.Options{
+				AccessToken: *lightstepAccessToken,
+			})
+			defer lightstep.FlushLightStepTracer(tracer)
+		case *appdashAddr == "" && *lightstepAccessToken == "":
+			tracer = opentracing.GlobalTracer() // no-op
+		default:
+			panic("specify either -appdash.addr or -lightstep.access.token, not both")
+		}
+	}
 
 	var (
 		instances                 []string
@@ -57,8 +85,8 @@ func main() {
 	switch *transport {
 	case "grpc":
 		instances = strings.Split(*grpcAddrs, ",")
-		sumFactory = grpcclient.SumEndpointFactory
-		concatFactory = grpcclient.ConcatEndpointFactory
+		sumFactory = grpcclient.MakeSumEndpointFactory(tracer, tracingLogger)
+		concatFactory = grpcclient.MakeConcatEndpointFactory(tracer, tracingLogger)
 
 	case "httpjson":
 		instances = strings.Split(*httpAddrs, ",")
@@ -67,8 +95,8 @@ func main() {
 				instances[i] = "http://" + rawurl
 			}
 		}
-		sumFactory = httpjsonclient.SumEndpointFactory
-		concatFactory = httpjsonclient.ConcatEndpointFactory
+		sumFactory = httpjsonclient.MakeSumEndpointFactory(tracer, tracingLogger)
+		concatFactory = httpjsonclient.MakeConcatEndpointFactory(tracer, tracingLogger)
 
 	case "netrpc":
 		instances = strings.Split(*netrpcAddrs, ",")
@@ -86,8 +114,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	sum := buildEndpoint(instances, sumFactory, randomSeed, logger)
-	concat := buildEndpoint(instances, concatFactory, randomSeed, logger)
+	sum := buildEndpoint(tracer, "sum", instances, sumFactory, randomSeed, logger)
+	concat := buildEndpoint(tracer, "concat", instances, concatFactory, randomSeed, logger)
 
 	svc := newClient(root, sum, concat, logger)
 
@@ -110,8 +138,9 @@ func main() {
 	}
 }
 
-func buildEndpoint(instances []string, factory loadbalancer.Factory, seed int64, logger log.Logger) endpoint.Endpoint {
+func buildEndpoint(tracer opentracing.Tracer, operationName string, instances []string, factory loadbalancer.Factory, seed int64, logger log.Logger) endpoint.Endpoint {
 	publisher := static.NewPublisher(instances, factory, logger)
 	random := loadbalancer.NewRandom(publisher, seed)
-	return loadbalancer.Retry(10, 10*time.Second, random)
+	endpoint := loadbalancer.Retry(10, 10*time.Second, random)
+	return kitot.TraceClient(tracer, operationName)(endpoint)
 }
