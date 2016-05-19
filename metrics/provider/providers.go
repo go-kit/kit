@@ -4,146 +4,190 @@ import (
 	"errors"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	kitexp "github.com/go-kit/kit/metrics/expvar"
 	"github.com/go-kit/kit/metrics/graphite"
 	kitprom "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/metrics/statsd"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Provider represents a union set of constructors and lifecycle management
-// functions for each supported metrics backend. It should be used by those
-// who need to easily swap out implementations, e.g. dynamically, or at a
-// single point in an intermediating framework.
+// functions for each supported metrics backend. It should be used by those who
+// need to easily swap out implementations, e.g. dynamically, or at a single
+// point in an intermediating framework.
 type Provider interface {
-	NewCounter(name string) metrics.Counter
-	NewHistogram(name string, min, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error)
-	NewGauge(name string) metrics.Gauge
-
+	NewCounter(name, help string) metrics.Counter
+	NewHistogram(name, help string, min, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error)
+	NewGauge(name, help string) metrics.Gauge
 	Stop()
 }
 
 // NewGraphiteProvider will return a Provider implementation that is a simple
-// wrapper around a graphite.Emitter. All metrics names will get prefixed
-// with the given value and data will be emitted once every interval.
-// If no network value is given, it will get defaulted to "udp".
-func NewGraphiteProvider(addr, network, prefix string, interval time.Duration, logger log.Logger) (Provider, error) {
-	if addr == "" {
-		return nil, errors.New("graphite server address is required")
-	}
+// wrapper around a graphite.Emitter. All metric names will be prefixed with the
+// given value and data will be emitted once every interval. If no network value
+// is given, it will default to "udp".
+func NewGraphiteProvider(network, address, prefix string, interval time.Duration, logger log.Logger) (Provider, error) {
 	if network == "" {
 		network = "udp"
 	}
-	e := graphite.NewEmitter(addr, network, prefix, interval, logger)
-	return &graphiteProvider{Emitter: e}, nil
+	if address == "" {
+		return nil, errors.New("address is required")
+	}
+	return graphiteProvider{
+		e: graphite.NewEmitter(network, address, prefix, interval, logger),
+	}, nil
 }
 
 type graphiteProvider struct {
-	*graphite.Emitter
+	e *graphite.Emitter
+}
+
+var _ Provider = graphiteProvider{}
+
+// NewCounter implements Provider. Help is ignored.
+func (p graphiteProvider) NewCounter(name, _ string) metrics.Counter {
+	return p.e.NewCounter(name)
+}
+
+// NewHistogram implements Provider. Help is ignored.
+func (p graphiteProvider) NewHistogram(name, _ string, min, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
+	return p.e.NewHistogram(name, min, max, sigfigs, quantiles...)
+}
+
+// NewGauge implements Provider. Help is ignored.
+func (p graphiteProvider) NewGauge(name, _ string) metrics.Gauge {
+	return p.e.NewGauge(name)
+}
+
+// Stop implements Provider.
+func (p graphiteProvider) Stop() {
+	p.e.Stop()
 }
 
 // NewStatsdProvider will return a Provider implementation that is a simple
-// wrapper around a statsd.Emitter. All metrics names will get prefixed
-// with the given value and data will be emitted once every interval
-// or when the buffer has reached its max size.
-// If no network value is given, it will get defaulted to "udp".
-func NewStatsdProvider(addr, network, prefix string, interval time.Duration, logger log.Logger) (Provider, error) {
-	if addr == "" {
-		return nil, errors.New("statsd server address is required")
-	}
+// wrapper around a statsd.Emitter. All metric names will be prefixed with the
+// given value and data will be emitted once every interval or when the buffer
+// has reached its max size. If no network value is given, it will default to
+// "udp".
+func NewStatsdProvider(network, address, prefix string, interval time.Duration, logger log.Logger) (Provider, error) {
 	if network == "" {
 		network = "udp"
 	}
-	e := statsd.NewEmitter(addr, network, prefix, interval, logger)
-	return &statsdProvider{e: e}, nil
+	if address == "" {
+		return nil, errors.New("address is required")
+	}
+	return statsdProvider{
+		e: statsd.NewEmitter(network, address, prefix, interval, logger),
+	}, nil
 }
 
 type statsdProvider struct {
 	e *statsd.Emitter
 }
 
-func (s *statsdProvider) NewCounter(name string) metrics.Counter {
-	return s.e.NewCounter(name)
+var _ Provider = statsdProvider{}
+
+// NewCounter implements Provider. Help is ignored.
+func (p statsdProvider) NewCounter(name, _ string) metrics.Counter {
+	return p.e.NewCounter(name)
 }
 
-func (s *statsdProvider) NewHistogram(name string, min, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
-	return s.e.NewHistogram(name), nil
+// NewHistogram implements Provider. Help is ignored.
+func (p statsdProvider) NewHistogram(name, _ string, min, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
+	return p.e.NewHistogram(name), nil
 }
 
-func (s *statsdProvider) NewGauge(name string) metrics.Gauge {
-	return s.e.NewGauge(name)
+// NewGauge implements Provider. Help is ignored.
+func (p statsdProvider) NewGauge(name, _ string) metrics.Gauge {
+	return p.e.NewGauge(name)
 }
 
 // Stop will call the underlying statsd.Emitter's Stop method.
-func (s *statsdProvider) Stop() {
-	s.e.Stop()
+func (p statsdProvider) Stop() {
+	p.e.Stop()
 }
 
 // NewExpvarProvider is a very thin wrapper over the expvar package.
-// If a prefix is provided, it will prefix in metric names.
+// If a prefix is provided, it will prefix all metric names.
 func NewExpvarProvider(prefix string) Provider {
-	return &expvarProvider{prefix: prefix}
+	return expvarProvider{prefix: prefix}
 }
 
 type expvarProvider struct {
 	prefix string
 }
 
-func (e *expvarProvider) pref(name string) string {
-	return e.prefix + name
+var _ Provider = expvarProvider{}
+
+// NewCounter implements Provider. Help is ignored.
+func (p expvarProvider) NewCounter(name, _ string) metrics.Counter {
+	return kitexp.NewCounter(p.prefix + name)
 }
 
-func (e *expvarProvider) NewCounter(name string) metrics.Counter {
-	return kitexp.NewCounter(e.pref(name))
+// NewHistogram implements Provider. Help is ignored.
+func (p expvarProvider) NewHistogram(name, _ string, min, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
+	return kitexp.NewHistogram(p.prefix+name, min, max, sigfigs, quantiles...), nil
 }
 
-func (e *expvarProvider) NewHistogram(name string, min, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
-	return kitexp.NewHistogram(e.pref(name), min, max, sigfigs, quantiles...), nil
-}
-
-func (e *expvarProvider) NewGauge(name string) metrics.Gauge {
-	return kitexp.NewGauge(e.pref(name))
+// NewGauge implements Provider. Help is ignored.
+func (p expvarProvider) NewGauge(name, _ string) metrics.Gauge {
+	return kitexp.NewGauge(p.prefix + name)
 }
 
 // Stop is a no-op.
-func (e *expvarProvider) Stop() {}
+func (expvarProvider) Stop() {}
 
 type prometheusProvider struct {
-	ns string
+	namespace string
+	subsystem string
 }
 
-// NewPrometheusProvider will use the given namespace
-// for all metrics' Opts.
-func NewPrometheusProvider(namespace string) Provider {
-	return &prometheusProvider{ns: namespace}
-}
+var _ Provider = prometheusProvider{}
 
-func (p *prometheusProvider) NewCounter(name string) metrics.Counter {
-	opts := prometheus.CounterOpts{
-		Namespace: p.ns,
-		Name:      name,
+// NewPrometheusProvider returns a Prometheus provider that uses the provided
+// namespace and subsystem for all metrics. Help is not provided, which is very
+// much against Prometheus guidelines. Therefore, avoid using the Prometheus
+// provider unless it is absolutely necessary; prefer constructing Prometheus
+// metrics directly.
+func NewPrometheusProvider(namespace, subsystem string) Provider {
+	return prometheusProvider{
+		namespace: namespace,
+		subsystem: subsystem,
 	}
-	return kitprom.NewCounter(opts, nil)
 }
 
-// NewHistogram ignores all NewHistogram parameters but `name`.
-func (p *prometheusProvider) NewHistogram(name string, min, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
-	opts := prometheus.HistogramOpts{
-		Namespace: p.ns,
+// NewCounter implements Provider.
+func (p prometheusProvider) NewCounter(name, help string) metrics.Counter {
+	return kitprom.NewCounter(prometheus.CounterOpts{
+		Namespace: p.namespace,
+		Subsystem: p.subsystem,
 		Name:      name,
-	}
-	return kitprom.NewHistogram(opts, nil), nil
+		Help:      help,
+	}, nil)
 }
 
-func (p *prometheusProvider) NewGauge(name string) metrics.Gauge {
-	opts := prometheus.GaugeOpts{
-		Namespace: p.ns,
+// NewHistogram ignores all parameters except name and help.
+func (p prometheusProvider) NewHistogram(name, help string, _, _ int64, _ int, _ ...int) (metrics.Histogram, error) {
+	return kitprom.NewHistogram(prometheus.HistogramOpts{
+		Namespace: p.namespace,
+		Subsystem: p.subsystem,
 		Name:      name,
-	}
-	return kitprom.NewGauge(opts, nil)
+		Help:      help,
+	}, nil), nil
 }
 
-// Stop is a no-op
-func (p *prometheusProvider) Stop() {}
+// NewGauge implements Provider.
+func (p prometheusProvider) NewGauge(name, help string) metrics.Gauge {
+	return kitprom.NewGauge(prometheus.GaugeOpts{
+		Namespace: p.namespace,
+		Subsystem: p.subsystem,
+		Name:      name,
+		Help:      help,
+	}, nil)
+}
+
+// Stop is a no-op.
+func (prometheusProvider) Stop() {}
