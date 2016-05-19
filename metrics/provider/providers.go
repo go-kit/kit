@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/discard"
 	"github.com/go-kit/kit/metrics/dogstatsd"
 	kitexp "github.com/go-kit/kit/metrics/expvar"
 	"github.com/go-kit/kit/metrics/graphite"
@@ -235,3 +236,27 @@ func (p prometheusProvider) NewGauge(name, help string) metrics.Gauge {
 
 // Stop is a no-op.
 func (prometheusProvider) Stop() {}
+
+var _ Provider = discardProvider{}
+
+// NewDiscardProvider returns a provider that will discard all metrics.
+func NewDiscardProvider(namespace, subsystem string) Provider {
+	return discardProvider{}
+}
+
+type discardProvider struct{}
+
+func (p discardProvider) NewCounter(name string, _ string) metrics.Counter {
+	return discard.NewCounter(name)
+}
+
+func (p discardProvider) NewHistogram(name string, _ string, _ int64, _ int64, _ int, _ ...int) (metrics.Histogram, error) {
+	return discard.NewHistogram(name), nil
+}
+
+func (p discardProvider) NewGauge(name string, _ string) metrics.Gauge {
+	return discard.NewGauge(name)
+}
+
+// Stop is a no-op.
+func (p discardProvider) Stop() {}
