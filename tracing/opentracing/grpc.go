@@ -39,11 +39,11 @@ func ToGRPCRequest(tracer opentracing.Tracer, logger log.Logger) func(ctx contex
 func FromGRPCRequest(tracer opentracing.Tracer, operationName string, logger log.Logger) func(ctx context.Context, md *metadata.MD) context.Context {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		span, err := tracer.Join(operationName, opentracing.TextMap, metadataReaderWriter{md})
-		if err != nil && logger != nil {
-			logger.Log("msg", "Join failed", "err", err)
-		}
-		if span == nil {
+		if err != nil {
 			span = tracer.StartSpan(operationName)
+			if logger != nil {
+				logger.Log("msg", "Join failed", "err", err)
+			}
 		}
 		return opentracing.ContextWithSpan(ctx, span)
 	}

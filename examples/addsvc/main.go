@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	zipkin "github.com/basvanbeek/zipkin-go-opentracing"
 	"github.com/lightstep/lightstep-tracer-go"
 	"github.com/opentracing/opentracing-go"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
@@ -32,7 +33,6 @@ import (
 	"github.com/go-kit/kit/metrics/expvar"
 	"github.com/go-kit/kit/metrics/prometheus"
 	kitot "github.com/go-kit/kit/tracing/opentracing"
-	"github.com/go-kit/kit/tracing/zipkin"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
@@ -51,6 +51,7 @@ func main() {
 		thriftFramed     = fs.Bool("thrift.framed", false, "true to enable framing")
 
 		// Supported OpenTracing backends
+		zipkinAddr           = fs.String("zipkin.kafka.addr", "", "Enable Zipkin tracing via a Kafka server host:port")
 		appdashAddr          = fs.String("appdash.addr", "", "Enable Appdash tracing via an Appdash server host:port")
 		lightstepAccessToken = fs.String("lightstep.token", "", "Enable LightStep tracing via a LightStep access token")
 	)
@@ -88,17 +89,33 @@ func main() {
 	var tracer opentracing.Tracer
 	{
 		switch {
-		case *appdashAddr != "" && *lightstepAccessToken == "":
+		case *appdashAddr != "" && *lightstepAccessToken == "" && *zipkinAddr == "":
 			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
-		case *appdashAddr == "" && *lightstepAccessToken != "":
+		case *appdashAddr == "" && *lightstepAccessToken != "" && *zipkinAddr == "":
 			tracer = lightstep.NewTracer(lightstep.Options{
 				AccessToken: *lightstepAccessToken,
 			})
 			defer lightstep.FlushLightStepTracer(tracer)
-		case *appdashAddr == "" && *lightstepAccessToken == "":
+		case *appdashAddr == "" && *lightstepAccessToken == "" && *zipkinAddr != "":
+			collector, err := zipkin.NewKafkaCollector(
+				strings.Split(*zipkinAddr, ","),
+				zipkin.KafkaLogger(logger),
+			)
+			if err != nil {
+				logger.Log("err", "unable to create kafka collector")
+				os.Exit(1)
+			}
+			tracer, err = zipkin.NewTracer(
+				zipkin.NewRecorder(collector, false, "localhost:80", "addsvc"),
+			)
+			if err != nil {
+				logger.Log("err", "unable to create zipkin tracer")
+				os.Exit(1)
+			}
+		case *appdashAddr == "" && *lightstepAccessToken == "" && *zipkinAddr == "":
 			tracer = opentracing.GlobalTracer() // no-op
 		default:
-			panic("specify either -appdash.addr or -lightstep.access.token, not both")
+			panic("specify a single -appdash.addr, -lightstep.access.token or -zipkin.kafka.addr")
 		}
 	}
 
@@ -237,24 +254,3 @@ func interrupt() error {
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	return fmt.Errorf("%s", <-c)
 }
-
-type loggingCollector struct{ log.Logger }
-
-func (c loggingCollector) Collect(s *zipkin.Span) error {
-	annotations := s.Encode().GetAnnotations()
-	values := make([]string, len(annotations))
-	for i, a := range annotations {
-		values[i] = a.Value
-	}
-	c.Logger.Log(
-		"trace_id", s.TraceID(),
-		"span_id", s.SpanID(),
-		"parent_span_id", s.ParentSpanID(),
-		"annotations", strings.Join(values, " "),
-	)
-	return nil
-}
-
-func (c loggingCollector) ShouldSample(*zipkin.Span) bool { return true }
-
-func (c loggingCollector) Close() error { return nil }
