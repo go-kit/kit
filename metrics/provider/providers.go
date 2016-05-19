@@ -240,7 +240,7 @@ func (prometheusProvider) Stop() {}
 var _ Provider = discardProvider{}
 
 // NewDiscardProvider returns a provider that will discard all metrics.
-func NewDiscardProvider(namespace, subsystem string) Provider {
+func NewDiscardProvider() Provider {
 	return discardProvider{}
 }
 
