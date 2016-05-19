@@ -23,6 +23,14 @@ func TestStatsd(t *testing.T) {
 	testProvider(t, "Statsd", p)
 }
 
+func TestDogStatsd(t *testing.T) {
+	p, err := NewDogStatsdProvider("network", "address", "prefix", time.Second, log.NewNopLogger())
+	if err != nil {
+		t.Fatal(err)
+	}
+	testProvider(t, "DogStatsd", p)
+}
+
 func TestExpvar(t *testing.T) {
 	testProvider(t, "Expvar", NewExpvarProvider("prefix"))
 }

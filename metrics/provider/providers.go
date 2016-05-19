@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/dogstatsd"
 	kitexp "github.com/go-kit/kit/metrics/expvar"
 	"github.com/go-kit/kit/metrics/graphite"
 	kitprom "github.com/go-kit/kit/metrics/prometheus"
@@ -107,6 +108,49 @@ func (p statsdProvider) NewGauge(name, _ string) metrics.Gauge {
 
 // Stop will call the underlying statsd.Emitter's Stop method.
 func (p statsdProvider) Stop() {
+	p.e.Stop()
+}
+
+// NewDogStatsdProvider will return a Provider implementation that is a simple
+// wrapper around a dogstatsd.Emitter. All metric names will be prefixed with
+// the given value and data will be emitted once every interval or when the
+// buffer has reached its max size. If no network value is given, it will
+// default to "udp".
+func NewDogStatsdProvider(network, address, prefix string, interval time.Duration, logger log.Logger) (Provider, error) {
+	if network == "" {
+		network = "udp"
+	}
+	if address == "" {
+		return nil, errors.New("address is required")
+	}
+	return dogstatsdProvider{
+		e: dogstatsd.NewEmitter(network, address, prefix, interval, logger),
+	}, nil
+}
+
+type dogstatsdProvider struct {
+	e *dogstatsd.Emitter
+}
+
+var _ Provider = dogstatsdProvider{}
+
+// NewCounter implements Provider. Help is ignored.
+func (p dogstatsdProvider) NewCounter(name, _ string) metrics.Counter {
+	return p.e.NewCounter(name)
+}
+
+// NewHistogram implements Provider. Help is ignored.
+func (p dogstatsdProvider) NewHistogram(name, _ string, min, max int64, sigfigs int, quantiles ...int) (metrics.Histogram, error) {
+	return p.e.NewHistogram(name), nil
+}
+
+// NewGauge implements Provider. Help is ignored.
+func (p dogstatsdProvider) NewGauge(name, _ string) metrics.Gauge {
+	return p.e.NewGauge(name)
+}
+
+// Stop will call the underlying statsd.Emitter's Stop method.
+func (p dogstatsdProvider) Stop() {
 	p.e.Stop()
 }
 
