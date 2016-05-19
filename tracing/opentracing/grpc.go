@@ -1,6 +1,9 @@
 package opentracing
 
 import (
+	"encoding/base64"
+	"strings"
+
 	"github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
@@ -53,6 +56,10 @@ type metadataReaderWriter struct {
 }
 
 func (w metadataReaderWriter) Set(key, val string) {
+	key = strings.ToLower(key)
+	if strings.HasSuffix(key, "-bin") {
+		val = string(base64.StdEncoding.EncodeToString([]byte(val)))
+	}
 	(*w.MD)[key] = append((*w.MD)[key], val)
 }
 
