@@ -121,11 +121,12 @@ This interface, and its supporting code like [log.Context](https://godoc.org/git
 For more details on the evolution of the Logger interface,
  see [The Hunt for a Logger Interface](http://go-talks.appspot.com/github.com/ChrisHines/talks/structured-logging/structured-logging.slide#1),
  a talk by [Chris Hines](https://github.com/ChrisHines).
-Also, see
+Also, please see
  [#63](https://github.com/go-kit/kit/issues/63),
  [#76](https://github.com/go-kit/kit/pull/76),
  [#131](https://github.com/go-kit/kit/issues/131),
- [#157](https://github.com/go-kit/kit/pull/157), and
+ [#157](https://github.com/go-kit/kit/pull/157),
+ [#164](https://github.com/go-kit/kit/issues/164), and
  [#252](https://github.com/go-kit/kit/pull/252)
  to review historical conversations about package log and the Logger interface.
 
