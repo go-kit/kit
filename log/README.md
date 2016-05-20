@@ -144,4 +144,4 @@ Good proposals should
 There are a few Go logging benchmarks and comparisons that include Go kit's package log.
 
 - [imkira/go-loggers-bench](https://github.com/imkira/go-loggers-bench) includes kit/log
-- [uber-common/zap](https://github.com/uber-common/zap), a logging library, include a comparison with kit/log
+- [uber-common/zap](https://github.com/uber-common/zap), a zero-alloc logging library, includes a comparison with kit/log
