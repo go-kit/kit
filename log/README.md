@@ -1,59 +1,63 @@
 # package log
 
 `package log` provides a minimal interface for structured logging in services.
-It may be wrapped to encode conventions, enforce type-safety, etc.
+It may be wrapped to encode conventions, enforce type-safety, provide leveled logging, and so on.
 It can be used for both typical application log events, and log-structured data streams.
 
-## Rationale
+## Structured logging
 
-TODO
+Structured logging is, basically, conceding to the reality that logs are _data_,
+ and warrant some level of schematic rigor.
+Using a stricter, key/value-oriented message format for our logs,
+ containing contextual and semantic information,
+ makes it much easier to get insight into the operational activity of the systems we build.
+Consequently, `package log` is of the strong belief that
+ "[the benefits of structured logging outweigh the minimal effort involved](https://www.thoughtworks.com/radar/techniques/structured-logging)".
+
+Migrating from unstructured to structured logging is probably a lot easier than you'd expect.
+
+```go
+// Unstructured
+log.Printf("HTTP server listening on %s", addr)
+
+// Structured
+logger.Log("transport", "HTTP", "addr", addr, "msg", "listening")
+```
 
 ## Usage
 
-Typical application logging.
+### Typical application logging
 
 ```go
-import (
-  "os"
+logger := log.NewLogfmtLogger(os.Stderr)
+logger.Log("question", "what is the meaning of life?", "answer", 42)
 
-  "github.com/go-kit/kit/log"
-)
+// Output:
+// question="what is the meaning of life?" answer=42
+```
 
+### Log contexts
+
+```go
 func main() {
-	logger := log.NewLogfmtLogger(os.Stderr)
-	logger.Log("question", "what is the meaning of life?", "answer", 42)
+	var logger log.Logger
+	logger = log.NewLogfmtLogger(os.Stderr)
+	logger = log.NewContext(logger).With("instance_id", 123)
+
+	logger.Log("msg", "starting")
+	NewWorker(log.NewContext(logger).With("component", "worker")).Run()
+	NewSlacker(log.NewContext(logger).With("component", "slacker")).Run()
 }
+
+// Output:
+// instance_id=123 msg=starting
+// instance_id=123 component=worker msg=running
+// instance_id=123 component=slacker msg=running
 ```
 
-Output:
-```
-question="what is the meaning of life?" answer=42
-```
+### Interact with stdlib logger
 
-Contextual logging.
-
-```go
-func handle(logger log.Logger, req *Request) {
-	ctx := log.NewContext(logger).With("txid", req.TransactionID, "query", req.Query)
-	ctx.Log()
-
-	answer, err := process(ctx, req.Query)
-	if err != nil {
-		ctx.Log("err", err)
-		return
-	}
-
-	ctx.Log("answer", answer)
-}
-```
-
-Output:
-```
-txid=12345 query="some=query"
-txid=12345 query="some=query" answer=42
-```
-
-Redirect stdlib log to gokit logger.
+Redirect stdlib logger to Go kit logger.
 
 ```go
 import (
@@ -65,58 +69,79 @@ import (
 func main() {
 	logger := kitlog.NewJSONLogger(os.Stdout)
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger))
-	
 	stdlog.Print("I sure like pie")
 }
+
+// Output:
+// {"msg":"I sure like pie","ts":"2016/01/01 12:34:56"}
 ```
 
-Output
-```
-{"msg":"I sure like pie","ts":"2016/01/28 19:41:08"}
-```
-
-Adding a timestamp to contextual logs
+Or, if, for legacy reasons,
+ you need to pipe all of your logging through the stdlib log package,
+ you can redirect Go kit logger to the stdlib logger.
 
 ```go
-func handle(logger log.Logger, req *Request) {
-	ctx := log.NewContext(logger).With("ts", log.DefaultTimestampUTC, "query", req.Query)
-	ctx.Log()
+logger := kitlog.NewLogfmtLogger(kitlog.StdlibWriter{})
+logger.Log("legacy", true, "msg", "at least it's something")
 
-	answer, err := process(ctx, req.Query)
-	if err != nil {
-		ctx.Log("err", err)
-		return
-	}
+// Output:
+// 2016/01/01 12:34:56 legacy=true msg="at least it's something"
+```
 
-	ctx.Log("answer", answer)
+### Timestamps and callers
+
+```go
+var logger log.Logger
+logger = log.NewLogfmtLogger(os.Stderr)
+logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
+
+logger.Log("msg", "hello")
+
+// Output:
+// ts=2016-01-01T12:34:56Z caller=main.go:15 msg=hello
+```
+
+## Supported output formats
+
+- [Logfmt](https://brandur.org/logfmt)
+- JSON
+
+## Enhancements
+
+`package log` is centered on the one-method Logger interface.
+
+```go
+type Logger interface {
+	Log(keyvals ...interface{}) error
 }
 ```
 
-Output
-```
-ts=2016-01-29T00:46:04Z query="some=query"
-ts=2016-01-29T00:46:04Z query="some=query" answer=42
-```
+This interface, and its supporting code like [log.Context](https://godoc.org/github.com/go-kit/kit/log#Context),
+ is the product of much iteration and evaluation.
+For more details on the evolution of the Logger interface,
+ see [The Hunt for a Logger Interface](http://go-talks.appspot.com/github.com/ChrisHines/talks/structured-logging/structured-logging.slide#1),
+ a talk by [Chris Hines](https://github.com/ChrisHines).
+Also, please see
+ [#63](https://github.com/go-kit/kit/issues/63),
+ [#76](https://github.com/go-kit/kit/pull/76),
+ [#131](https://github.com/go-kit/kit/issues/131),
+ [#157](https://github.com/go-kit/kit/pull/157),
+ [#164](https://github.com/go-kit/kit/issues/164), and
+ [#252](https://github.com/go-kit/kit/pull/252)
+ to review historical conversations about package log and the Logger interface.
 
-Adding caller info to contextual logs
+Value-add packages and suggestions,
+ like improvements to [the leveled logger](https://godoc.org/github.com/go-kit/kit/log/levels),
+ are of course welcome.
+Good proposals should
 
-```go
-func handle(logger log.Logger, req *Request) {
-	ctx := log.NewContext(logger).With("caller", log.DefaultCaller, "query", req.Query)
-	ctx.Log()
+- Be composable with [log.Context](https://godoc.org/github.com/go-kit/kit/log#Context),
+- Not break the behavior of [log.Caller](https://godoc.org/github.com/go-kit/kit/log#Caller) in any wrapped context, and
+- Be friendly to packages that accept only an unadorned log.Logger.
 
-	answer, err := process(ctx, req.Query)
-	if err != nil {
-		ctx.Log("err", err)
-		return
-	}
+## Benchmarks & comparisons
 
-	ctx.Log("answer", answer)
-}
-```
+There are a few Go logging benchmarks and comparisons that include Go kit's package log.
 
-Output
-```
-caller=logger.go:20 query="some=query"
-caller=logger.go:28 query="some=query" answer=42
-```
+- [imkira/go-loggers-bench](https://github.com/imkira/go-loggers-bench) includes kit/log
+- [uber-common/zap](https://github.com/uber-common/zap), a zero-alloc logging library, includes a comparison with kit/log
