@@ -193,10 +193,7 @@ type prometheusProvider struct {
 var _ Provider = prometheusProvider{}
 
 // NewPrometheusProvider returns a Prometheus provider that uses the provided
-// namespace and subsystem for all metrics. Help is not provided, which is very
-// much against Prometheus guidelines. Therefore, avoid using the Prometheus
-// provider unless it is absolutely necessary; prefer constructing Prometheus
-// metrics directly.
+// namespace and subsystem for all metrics.
 func NewPrometheusProvider(namespace, subsystem string) Provider {
 	return prometheusProvider{
 		namespace: namespace,
