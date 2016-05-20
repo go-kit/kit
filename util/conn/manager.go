@@ -11,7 +11,7 @@ import (
 type Dialer func(network, address string) (net.Conn, error)
 
 // time.After is a good default afterFunc.
-type afterFunc func(time.Duration) <-chan time.Time
+type AfterFunc func(time.Duration) <-chan time.Time
 
 // Manager manages a net.Conn. Clients should take the conn when they want to
 // use it, and put back whatever error they receive from an e.g. Write. When a
@@ -21,14 +21,14 @@ type Manager struct {
 	dial    Dialer
 	network string
 	address string
-	after   afterFunc
+	after   AfterFunc
 	logger  log.Logger
 
 	takec chan net.Conn
 	putc  chan error
 }
 
-func NewManager(d Dialer, network, address string, after afterFunc, logger log.Logger) *Manager {
+func NewManager(d Dialer, network, address string, after AfterFunc, logger log.Logger) *Manager {
 	m := &Manager{
 		dial:    d,
 		network: network,

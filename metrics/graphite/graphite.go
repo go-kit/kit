@@ -18,18 +18,15 @@ import (
 	"time"
 
 	"github.com/codahale/hdrhistogram"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 )
 
-// Newcounter will return a metrics.counter with the given name and a base
-// value of 0.
 func newCounter(name string) *counter {
 	return &counter{name, 0}
 }
 
-// Newgauge will return a metrics.gauge with the given name and a starting
-// value of 0.
 func newGauge(name string) *gauge {
 	return &gauge{name, 0}
 }
@@ -53,8 +50,8 @@ func (c *counter) get() uint64 { return atomic.LoadUint64(&c.count) }
 
 // flush will emit the current counter value in the Graphite plaintext
 // protocol to the given io.Writer.
-func (c *counter) flush(conn io.Writer, prefix string) {
-	fmt.Fprintf(conn, "%s.count %d %d\n", prefix+c.Name(), c.get(), time.Now().Unix())
+func (c *counter) flush(w io.Writer, prefix string) {
+	fmt.Fprintf(w, "%s.count %d %d\n", prefix+c.Name(), c.get(), time.Now().Unix())
 }
 
 // gauge implements the metrics.gauge interface but also provides a
@@ -90,8 +87,8 @@ func (g *gauge) Get() float64 {
 
 // Flush will emit the current gauge value in the Graphite plaintext
 // protocol to the given io.Writer.
-func (g *gauge) flush(conn io.Writer, prefix string) {
-	fmt.Fprintf(conn, "%s %.2f %d\n", prefix+g.Name(), g.Get(), time.Now().Unix())
+func (g *gauge) flush(w io.Writer, prefix string) {
+	fmt.Fprintf(w, "%s %.2f %d\n", prefix+g.Name(), g.Get(), time.Now().Unix())
 }
 
 // windowedHistogram is taken from http://github.com/codahale/metrics. It
@@ -163,15 +160,15 @@ func (h *windowedHistogram) Distribution() ([]metrics.Bucket, []metrics.Quantile
 	return buckets, quantiles
 }
 
-func (h *windowedHistogram) flush(conn io.Writer, prefix string) {
+func (h *windowedHistogram) flush(w io.Writer, prefix string) {
 	name := prefix + h.Name()
 	hist := h.hist.Merge()
 	now := time.Now().Unix()
-	fmt.Fprintf(conn, "%s.count %d %d\n", name, hist.TotalCount(), now)
-	fmt.Fprintf(conn, "%s.min %d %d\n", name, hist.Min(), now)
-	fmt.Fprintf(conn, "%s.max %d %d\n", name, hist.Max(), now)
-	fmt.Fprintf(conn, "%s.mean %.2f %d\n", name, hist.Mean(), now)
-	fmt.Fprintf(conn, "%s.std-dev %.2f %d\n", name, hist.StdDev(), now)
+	fmt.Fprintf(w, "%s.count %d %d\n", name, hist.TotalCount(), now)
+	fmt.Fprintf(w, "%s.min %d %d\n", name, hist.Min(), now)
+	fmt.Fprintf(w, "%s.max %d %d\n", name, hist.Max(), now)
+	fmt.Fprintf(w, "%s.mean %.2f %d\n", name, hist.Mean(), now)
+	fmt.Fprintf(w, "%s.std-dev %.2f %d\n", name, hist.StdDev(), now)
 }
 
 func (h *windowedHistogram) rotateLoop(d time.Duration) {
