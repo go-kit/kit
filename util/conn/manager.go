@@ -10,7 +10,7 @@ import (
 // Dialer dials a network and address. net.Dial is a good default Dialer.
 type Dialer func(network, address string) (net.Conn, error)
 
-// time.After is a good default afterFunc.
+// AfterFunc imitates time.After.
 type AfterFunc func(time.Duration) <-chan time.Time
 
 // Manager manages a net.Conn. Clients should take the conn when they want to
