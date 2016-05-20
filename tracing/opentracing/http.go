@@ -27,7 +27,7 @@ func ToHTTPRequest(tracer opentracing.Tracer, logger log.Logger) kithttp.Request
 			host, portString, err := net.SplitHostPort(req.URL.Host)
 			if err == nil {
 				ext.PeerHostname.Set(span, host)
-				if port, err := strconv.Atoi(portString); err != nil {
+				if port, _ := strconv.Atoi(portString); err != nil {
 					ext.PeerPort.Set(span, uint16(port))
 				}
 			} else {
@@ -35,13 +35,12 @@ func ToHTTPRequest(tracer opentracing.Tracer, logger log.Logger) kithttp.Request
 			}
 
 			// There's nothing we can do with any errors here.
-			err = tracer.Inject(
+			if err = tracer.Inject(
 				span,
 				opentracing.TextMap,
 				opentracing.HTTPHeaderTextMapCarrier(req.Header),
-			)
-			if err != nil && logger != nil {
-				logger.Log("msg", "Join failed", "err", err)
+			); err != nil {
+				logger.Log("err", err)
 			}
 		}
 		return ctx
@@ -65,8 +64,8 @@ func FromHTTPRequest(tracer opentracing.Tracer, operationName string, logger log
 		)
 		if err != nil {
 			span = tracer.StartSpan(operationName)
-			if logger != nil {
-				logger.Log("msg", "Join failed", "err", err)
+			if err != opentracing.ErrTraceNotFound {
+				logger.Log("err", err)
 			}
 		}
 		return opentracing.ContextWithSpan(ctx, span)
