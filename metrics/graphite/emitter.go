@@ -140,20 +140,20 @@ func (e *Emitter) Flush() {
 	e.mgr.Put(err)
 }
 
-func (e *Emitter) flush(conn io.Writer) error {
-	w := bufio.NewWriter(conn)
+func (e *Emitter) flush(w io.Writer) error {
+	bw := bufio.NewWriter(w)
 
 	for _, c := range e.counters {
-		c.flush(w, e.prefix)
+		c.flush(bw, e.prefix)
 	}
 
 	for _, h := range e.histograms {
-		h.flush(w, e.prefix)
+		h.flush(bw, e.prefix)
 	}
 
 	for _, g := range e.gauges {
-		g.flush(w, e.prefix)
+		g.flush(bw, e.prefix)
 	}
 
-	return w.Flush()
+	return bw.Flush()
 }
