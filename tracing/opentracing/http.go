@@ -35,13 +35,12 @@ func ToHTTPRequest(tracer opentracing.Tracer, logger log.Logger) kithttp.Request
 			}
 
 			// There's nothing we can do with any errors here.
-			err = tracer.Inject(
+			if err = tracer.Inject(
 				span,
 				opentracing.TextMap,
 				opentracing.HTTPHeaderTextMapCarrier(req.Header),
-			)
-			if err != nil && logger != nil {
-				logger.Log("msg", "Join failed", "err", err)
+			); err != nil {
+				logger.Log("err", err)
 			}
 		}
 		return ctx
@@ -57,18 +56,17 @@ func ToHTTPRequest(tracer opentracing.Tracer, logger log.Logger) kithttp.Request
 // The logger is used to report errors and may be nil.
 func FromHTTPRequest(tracer opentracing.Tracer, operationName string, logger log.Logger) kithttp.RequestFunc {
 	return func(ctx context.Context, req *http.Request) context.Context {
-		// Try to join to a trace propagated in `req`. There's nothing we can
-		// do with any errors here, so we ignore them.
+		// Try to join to a trace propagated in `req`.
 		span, err := tracer.Join(
 			operationName,
 			opentracing.TextMap,
 			opentracing.HTTPHeaderTextMapCarrier(req.Header),
 		)
-		if err != nil && logger != nil {
-			logger.Log("msg", "Join failed", "err", err)
-		}
-		if span == nil {
-			span = opentracing.StartSpan(operationName)
+		if err != nil {
+			span = tracer.StartSpan(operationName)
+			if err != opentracing.ErrTraceNotFound {
+				logger.Log("err", err)
+			}
 		}
 		return opentracing.ContextWithSpan(ctx, span)
 	}

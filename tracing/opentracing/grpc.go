@@ -20,9 +20,8 @@ func ToGRPCRequest(tracer opentracing.Tracer, logger log.Logger) func(ctx contex
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		if span := opentracing.SpanFromContext(ctx); span != nil {
 			// There's nothing we can do with an error here.
-			err := tracer.Inject(span, opentracing.TextMap, metadataReaderWriter{md})
-			if err != nil && logger != nil {
-				logger.Log("msg", "Inject failed", "err", err)
+			if err := tracer.Inject(span, opentracing.TextMap, metadataReaderWriter{md}); err != nil {
+				logger.Log("err", err)
 			}
 		}
 		return ctx
@@ -39,11 +38,11 @@ func ToGRPCRequest(tracer opentracing.Tracer, logger log.Logger) func(ctx contex
 func FromGRPCRequest(tracer opentracing.Tracer, operationName string, logger log.Logger) func(ctx context.Context, md *metadata.MD) context.Context {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		span, err := tracer.Join(operationName, opentracing.TextMap, metadataReaderWriter{md})
-		if err != nil && logger != nil {
-			logger.Log("msg", "Join failed", "err", err)
-		}
-		if span == nil {
+		if err != nil {
 			span = tracer.StartSpan(operationName)
+			if err != opentracing.ErrTraceNotFound {
+				logger.Log("err", err)
+			}
 		}
 		return opentracing.ContextWithSpan(ctx, span)
 	}
