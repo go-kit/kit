@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/codahale/hdrhistogram"
-	"github.com/go-kit/kit/metrics"
 	stdinflux "github.com/influxdata/influxdb/client/v2"
+
+	"github.com/go-kit/kit/metrics"
 )
 
 type counter struct {
@@ -21,13 +22,13 @@ type counter struct {
 }
 
 // NewCounter returns a Counter that writes values in the reportInterval
-// to the given InfluxDB client, utilizing batching
+// to the given InfluxDB client, utilizing batching.
 func NewCounter(client stdinflux.Client, bp stdinflux.BatchPoints, key string, tags []metrics.Field, reportInterval time.Duration) metrics.Counter {
 	return NewCounterTick(client, bp, key, tags, time.Tick(reportInterval))
 }
 
 // NewCounterTick is the same as NewCounter, but allows the user to pass a own
-// channel to trigger the write process to the client
+// channel to trigger the write process to the client.
 func NewCounterTick(client stdinflux.Client, bp stdinflux.BatchPoints, key string, tags []metrics.Field, reportTicker <-chan time.Time) metrics.Counter {
 	c := &counter{
 		key:   key,
@@ -80,12 +81,12 @@ type gauge struct {
 	bp     stdinflux.BatchPoints
 }
 
-// NewGauge creates a new gauge instance, reporting points in the defined reportInterval
+// NewGauge creates a new gauge instance, reporting points in the defined reportInterval.
 func NewGauge(client stdinflux.Client, bp stdinflux.BatchPoints, key string, tags []metrics.Field, reportInterval time.Duration) metrics.Gauge {
 	return NewGaugeTick(client, bp, key, tags, time.Tick(reportInterval))
 }
 
-// NewGaugeTick is the same as NewGauge with a ticker channel instead of a interval
+// NewGaugeTick is the same as NewGauge with a ticker channel instead of a interval.
 func NewGaugeTick(client stdinflux.Client, bp stdinflux.BatchPoints, key string, tags []metrics.Field, reportTicker <-chan time.Time) metrics.Gauge {
 	g := &gauge{
 		key:   key,
@@ -163,7 +164,7 @@ func NewHistogram(client stdinflux.Client, bp stdinflux.BatchPoints, key string,
 	return NewHistogramTick(client, bp, key, tags, time.Tick(reportInterval), minValue, maxValue, sigfigs, quantiles...)
 }
 
-// NewHistogramTick is the same as NewHistoGram, but allows to pass a custom reportTicker
+// NewHistogramTick is the same as NewHistoGram, but allows to pass a custom reportTicker.
 func NewHistogramTick(client stdinflux.Client, bp stdinflux.BatchPoints, key string, tags []metrics.Field,
 	reportTicker <-chan time.Time, minValue, maxValue int64, sigfigs int, quantiles ...int) metrics.Histogram {
 	gauges := map[int]metrics.Gauge{}
@@ -190,7 +191,6 @@ func (h *histogram) Name() string {
 }
 
 func (h *histogram) With(field metrics.Field) metrics.Histogram {
-
 	for q, gauge := range h.gauges {
 		h.gauges[q] = gauge.With(field)
 	}

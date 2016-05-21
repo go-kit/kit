@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
+	stdinflux "github.com/influxdata/influxdb/client/v2"
+
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/influxdb"
-	stdinflux "github.com/influxdata/influxdb/client/v2"
 )
 
 func TestCounter(t *testing.T) {
