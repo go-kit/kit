@@ -78,20 +78,21 @@ func main() {
 				zipkin.KafkaLogger(tracingLogger),
 			)
 			if err != nil {
-				tracingLogger.Log("err", "unable to create kafka collector")
+				tracingLogger.Log("err", "unable to create kafka collector", "fatal", err)
 				os.Exit(1)
 			}
 			tracer, err = zipkin.NewTracer(
 				zipkin.NewRecorder(collector, false, "localhost:8000", "addsvc-client"),
 			)
 			if err != nil {
-				tracingLogger.Log("err", "unable to create zipkin tracer")
+				tracingLogger.Log("err", "unable to create zipkin tracer", "fatal", err)
 				os.Exit(1)
 			}
 		case *appdashAddr == "" && *lightstepAccessToken == "" && *zipkinAddr == "":
 			tracer = opentracing.GlobalTracer() // no-op
 		default:
-			panic("specify a single -appdash.addr, -lightstep.access.token or -zipkin.kafka.addr")
+			tracingLogger.Log("fatal", "specify a single -appdash.addr, -lightstep.access.token or -zipkin.kafka.addr")
+			os.Exit(1)
 		}
 	}
 
