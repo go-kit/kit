@@ -3,11 +3,72 @@ package statsd
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/util/conn"
 )
+
+func TestEmitterCounter(t *testing.T) {
+	e, buf := testEmitter()
+
+	c := e.NewCounter("test_statsd_counter")
+	c.Add(1)
+	c.Add(2)
+
+	// give time for things to emit
+	time.Sleep(time.Millisecond * 250)
+	// force a flush and stop
+	e.Stop()
+
+	want := "prefix.test_statsd_counter:1|c\nprefix.test_statsd_counter:2|c\n"
+	have := buf.String()
+	if want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+}
+
+func TestEmitterGauge(t *testing.T) {
+	e, buf := testEmitter()
+
+	g := e.NewGauge("test_statsd_gauge")
+
+	delta := 1.0
+	g.Add(delta)
+
+	// give time for things to emit
+	time.Sleep(time.Millisecond * 250)
+	// force a flush and stop
+	e.Stop()
+
+	want := fmt.Sprintf("prefix.test_statsd_gauge:+%f|g\n", delta)
+	have := buf.String()
+	if want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+}
+
+func TestEmitterHistogram(t *testing.T) {
+	e, buf := testEmitter()
+	h := e.NewHistogram("test_statsd_histogram")
+
+	h.Observe(123)
+
+	// give time for things to emit
+	time.Sleep(time.Millisecond * 250)
+	// force a flush and stop
+	e.Stop()
+
+	want := "prefix.test_statsd_histogram:123|ms\n"
+	have := buf.String()
+	if want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+}
 
 func TestCounter(t *testing.T) {
 	buf := &syncbuf{buf: &bytes.Buffer{}}
@@ -140,4 +201,59 @@ func (s *syncbuf) Reset() {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.buf.Reset()
+}
+
+func testEmitter() (*Emitter, *syncbuf) {
+	buf := &syncbuf{buf: &bytes.Buffer{}}
+	e := &Emitter{
+		prefix:  "prefix.",
+		mgr:     conn.NewManager(mockDialer(buf), "", "", time.After, log.NewNopLogger()),
+		logger:  log.NewNopLogger(),
+		keyVals: make(chan keyVal),
+		quitc:   make(chan chan struct{}),
+	}
+	go e.loop(time.Millisecond * 20)
+	return e, buf
+}
+
+func mockDialer(buf *syncbuf) conn.Dialer {
+	return func(net, addr string) (net.Conn, error) {
+		return &mockConn{buf}, nil
+	}
+}
+
+type mockConn struct {
+	buf *syncbuf
+}
+
+func (c *mockConn) Read(b []byte) (n int, err error) {
+	panic("not implemented")
+}
+
+func (c *mockConn) Write(b []byte) (n int, err error) {
+	return c.buf.Write(b)
+}
+
+func (c *mockConn) Close() error {
+	panic("not implemented")
+}
+
+func (c *mockConn) LocalAddr() net.Addr {
+	panic("not implemented")
+}
+
+func (c *mockConn) RemoteAddr() net.Addr {
+	panic("not implemented")
+}
+
+func (c *mockConn) SetDeadline(t time.Time) error {
+	panic("not implemented")
+}
+
+func (c *mockConn) SetReadDeadline(t time.Time) error {
+	panic("not implemented")
+}
+
+func (c *mockConn) SetWriteDeadline(t time.Time) error {
+	panic("not implemented")
 }
