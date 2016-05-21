@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	zipkin "github.com/basvanbeek/zipkin-go-opentracing"
 	"github.com/lightstep/lightstep-tracer-go"
 	"github.com/opentracing/opentracing-go"
+	zipkin "github.com/openzipkin/zipkin-go-opentracing"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	appdashot "github.com/sourcegraph/appdash/opentracing"
 	"golang.org/x/net/context"

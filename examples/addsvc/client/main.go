@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	zipkin "github.com/basvanbeek/zipkin-go-opentracing"
 	"github.com/lightstep/lightstep-tracer-go"
 	"github.com/opentracing/opentracing-go"
+	zipkin "github.com/openzipkin/zipkin-go-opentracing"
 	appdashot "github.com/sourcegraph/appdash/opentracing"
 	"golang.org/x/net/context"
 	"sourcegraph.com/sourcegraph/appdash"
