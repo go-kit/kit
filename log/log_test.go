@@ -3,7 +3,6 @@ package log_test
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"sync"
 	"testing"
 
@@ -207,65 +206,4 @@ func BenchmarkTenWith(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		lc.Log("k", "v")
 	}
-}
-
-func TestSwapLogger(t *testing.T) {
-	var logger log.SwapLogger
-
-	// Zero value does not panic or error.
-	err := logger.Log("k", "v")
-	if got, want := err, error(nil); got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
-
-	buf := &bytes.Buffer{}
-	json := log.NewJSONLogger(buf)
-	logger.Swap(json)
-
-	if err := logger.Log("k", "v"); err != nil {
-		t.Error(err)
-	}
-	if got, want := buf.String(), `{"k":"v"}`+"\n"; got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
-
-	buf.Reset()
-	prefix := log.NewLogfmtLogger(buf)
-	logger.Swap(prefix)
-
-	if err := logger.Log("k", "v"); err != nil {
-		t.Error(err)
-	}
-	if got, want := buf.String(), "k=v\n"; got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
-
-	buf.Reset()
-	logger.Swap(nil)
-
-	if err := logger.Log("k", "v"); err != nil {
-		t.Error(err)
-	}
-	if got, want := buf.String(), ""; got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
-}
-
-func TestSwapLoggerConcurrency(t *testing.T) {
-	testConcurrency(t, &log.SwapLogger{})
-}
-
-func TestSyncLogger(t *testing.T) {
-	var w io.Writer
-	w = &bytes.Buffer{}
-	logger := log.NewLogfmtLogger(w)
-	logger = log.NewSyncLogger(logger)
-	testConcurrency(t, logger)
-}
-
-func TestSyncWriter(t *testing.T) {
-	var w io.Writer
-	w = &bytes.Buffer{}
-	w = log.NewSyncWriter(w)
-	testConcurrency(t, log.NewLogfmtLogger(w))
 }
