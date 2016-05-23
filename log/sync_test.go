@@ -10,6 +10,7 @@ import (
 )
 
 func TestSwapLogger(t *testing.T) {
+	t.Parallel()
 	var logger log.SwapLogger
 
 	// Zero value does not panic or error.
@@ -81,6 +82,7 @@ func TestAsyncLoggerConcurrency(t *testing.T) {
 }
 
 func TestAsyncLoggerLogs(t *testing.T) {
+	t.Parallel()
 	output := [][]interface{}{}
 	logger := log.LoggerFunc(func(keyvals ...interface{}) error {
 		output = append(output, keyvals)
@@ -119,6 +121,7 @@ func TestAsyncLoggerLogs(t *testing.T) {
 }
 
 func TestAsyncLoggerLogError(t *testing.T) {
+	t.Parallel()
 	const logcnt = 10
 	const logBeforeError = logcnt / 2
 	logErr := errors.New("log error")
@@ -162,6 +165,7 @@ func TestAsyncLoggerLogError(t *testing.T) {
 }
 
 func TestAsyncLoggerOverflow(t *testing.T) {
+	t.Parallel()
 	var (
 		output     = make(chan []interface{}, 10)
 		loggerdone = make(chan struct{})

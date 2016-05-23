@@ -100,6 +100,7 @@ func (textstringer) String() string {
 }
 
 func TestJSONLoggerStringValue(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		v        interface{}
 		expected string
