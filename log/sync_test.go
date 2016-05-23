@@ -98,6 +98,7 @@ func TestAsyncLoggerLogs(t *testing.T) {
 	}
 
 	al.Stop()
+	al.Stop() // stop is idempotent
 	<-al.Stopping()
 
 	if got, want := al.Log("key", "late"), log.ErrAsyncLoggerStopping; got != want {
@@ -105,6 +106,7 @@ func TestAsyncLoggerLogs(t *testing.T) {
 	}
 
 	<-al.Stopped()
+	al.Stop() // stop is idempotent
 
 	if got, want := al.Err(), error(nil); got != want {
 		t.Errorf(`logger err: got "%v", want "%v"`, got, want)
@@ -149,6 +151,7 @@ func TestAsyncLoggerLogError(t *testing.T) {
 	}
 
 	<-al.Stopped()
+	al.Stop() // stop is idempotent and must not destroy result of Err
 
 	if got, want := al.Err(), logErr; got != want {
 		t.Errorf(`logger err: got "%v", want "%v"`, got, want)
