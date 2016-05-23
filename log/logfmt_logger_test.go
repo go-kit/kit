@@ -11,6 +11,7 @@ import (
 )
 
 func TestLogfmtLogger(t *testing.T) {
+	t.Parallel()
 	buf := &bytes.Buffer{}
 	logger := log.NewLogfmtLogger(buf)
 

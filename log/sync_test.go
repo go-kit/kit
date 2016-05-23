@@ -9,6 +9,7 @@ import (
 )
 
 func TestSwapLogger(t *testing.T) {
+	t.Parallel()
 	var logger log.SwapLogger
 
 	// Zero value does not panic or error.

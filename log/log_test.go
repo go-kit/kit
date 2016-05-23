@@ -71,6 +71,7 @@ func TestContextMissingValue(t *testing.T) {
 // whether Context.Log is called via an interface typed variable or a concrete
 // typed variable.
 func TestContextStackDepth(t *testing.T) {
+	t.Parallel()
 	fn := fmt.Sprintf("%n", stack.Caller(0))
 
 	var output []interface{}
