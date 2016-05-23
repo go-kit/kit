@@ -91,11 +91,11 @@ type AsyncLogger struct {
 	logger   Logger
 	keyvalsC chan []interface{}
 
-	stopping chan struct{}
-	stopped  chan struct{}
+	mu       sync.Mutex
+	err      error
+	stopping chan struct{} // must be closed before keyvalsC
 
-	mu  sync.Mutex
-	err error
+	stopped chan struct{} // closed when run loop exits
 }
 
 // NewAsyncLogger returns a new AsyncLogger that logs to logger and can buffer
@@ -117,16 +117,14 @@ func (l *AsyncLogger) run() {
 	for keyvals := range l.keyvalsC {
 		err := l.logger.Log(keyvals...)
 		if err != nil {
-			l.mu.Lock()
 			l.stop(err)
-			l.mu.Unlock()
 			return
 		}
 	}
 }
 
-// caller must hold l.mu
 func (l *AsyncLogger) stop(err error) {
+	l.mu.Lock()
 	if err != nil && l.err == nil {
 		l.err = err
 	}
@@ -137,6 +135,7 @@ func (l *AsyncLogger) stop(err error) {
 		close(l.stopping)
 		close(l.keyvalsC)
 	}
+	l.mu.Unlock()
 }
 
 // Log queues keyvals for logging by the wrapped Logger. Log may be called
@@ -170,9 +169,7 @@ var (
 // Stop stops the AsyncLogger. After stop returns the logger will not accept
 // new log events. Log events queued prior to calling Stop will be logged.
 func (l *AsyncLogger) Stop() {
-	l.mu.Lock()
 	l.stop(nil)
-	l.mu.Unlock()
 }
 
 // Stopping returns a channel that is closed after Stop is called.
