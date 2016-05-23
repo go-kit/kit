@@ -52,7 +52,8 @@ func TestSwapLogger(t *testing.T) {
 }
 
 func TestSwapLoggerConcurrency(t *testing.T) {
-	testConcurrency(t, &log.SwapLogger{})
+	t.Parallel()
+	testConcurrency(t, &log.SwapLogger{}, 10000)
 }
 
 func TestSyncLoggerConcurrency(t *testing.T) {
@@ -60,12 +61,12 @@ func TestSyncLoggerConcurrency(t *testing.T) {
 	w = &bytes.Buffer{}
 	logger := log.NewLogfmtLogger(w)
 	logger = log.NewSyncLogger(logger)
-	testConcurrency(t, logger)
+	testConcurrency(t, logger, 10000)
 }
 
 func TestSyncWriterConcurrency(t *testing.T) {
 	var w io.Writer
 	w = &bytes.Buffer{}
 	w = log.NewSyncWriter(w)
-	testConcurrency(t, log.NewLogfmtLogger(w))
+	testConcurrency(t, log.NewLogfmtLogger(w), 10000)
 }

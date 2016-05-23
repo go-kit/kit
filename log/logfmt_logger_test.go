@@ -48,7 +48,8 @@ func BenchmarkLogfmtLoggerContextual(b *testing.B) {
 }
 
 func TestLogfmtLoggerConcurrency(t *testing.T) {
-	testConcurrency(t, log.NewLogfmtLogger(ioutil.Discard))
+	t.Parallel()
+	testConcurrency(t, log.NewLogfmtLogger(ioutil.Discard), 10000)
 }
 
 type mymap map[int]int
