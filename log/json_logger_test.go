@@ -153,5 +153,6 @@ func BenchmarkJSONLoggerContextual(b *testing.B) {
 }
 
 func TestJSONLoggerConcurrency(t *testing.T) {
-	testConcurrency(t, log.NewJSONLogger(ioutil.Discard))
+	t.Parallel()
+	testConcurrency(t, log.NewJSONLogger(ioutil.Discard), 10000)
 }
