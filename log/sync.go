@@ -193,3 +193,15 @@ func (l *AsyncLogger) Err() error {
 	l.mu.Unlock()
 	return err
 }
+
+// Len returns a snapshot of the number of buffered log events. The returned
+// count should only be used for monitoring purposes as it becomes stale
+// quickly.
+func (l *AsyncLogger) Len() int {
+	return len(l.keyvalsC)
+}
+
+// Cap returns the maximum capacity of the buffer.
+func (l *AsyncLogger) Cap() int {
+	return cap(l.keyvalsC)
+}
