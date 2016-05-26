@@ -11,4 +11,4 @@
 # See also
 #  https://github.com/grpc/grpc-go/tree/master/examples
 
-protoc add.proto --go_out=plugins=grpc:.
+protoc addsvc.proto --go_out=plugins=grpc:.

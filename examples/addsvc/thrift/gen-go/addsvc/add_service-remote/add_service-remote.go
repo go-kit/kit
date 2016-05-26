@@ -7,7 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/go-kit/kit/examples/addsvc/thrift/gen-go/add"
+	"github.com/go-kit/kit/examples/addsvc/thrift/gen-go/addsvc"
 	"math"
 	"net"
 	"net/url"
@@ -109,7 +109,7 @@ func main() {
 		Usage()
 		os.Exit(1)
 	}
-	client := add.NewAddServiceClientFactory(trans, protocolFactory)
+	client := addsvc.NewAddServiceClientFactory(trans, protocolFactory)
 	if err := trans.Open(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error opening socket to ", host, ":", port, " ", err)
 		os.Exit(1)
