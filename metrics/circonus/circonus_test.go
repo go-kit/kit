@@ -33,6 +33,7 @@ func TestCounter(t *testing.T) {
 	var (
 		name  = "test_counter"
 		value uint64
+		mtx   sync.Mutex
 	)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type postCounter struct {
@@ -40,6 +41,8 @@ func TestCounter(t *testing.T) {
 		}
 		m := map[string]postCounter{}
 		json.NewDecoder(r.Body).Decode(&m)
+		mtx.Lock()
+		defer mtx.Unlock()
 		value = m[name].Value
 	}))
 	defer s.Close()
@@ -67,6 +70,8 @@ func TestCounter(t *testing.T) {
 
 	onceStart.Do(func() { circonusgometrics.Start() })
 	if err := within(time.Second, func() bool {
+		mtx.Lock()
+		defer mtx.Unlock()
 		return value > 0
 	}); err != nil {
 		t.Fatalf("error collecting results: %v", err)
@@ -84,6 +89,7 @@ func TestGauge(t *testing.T) {
 	var (
 		name  = "test_gauge"
 		value float64
+		mtx   sync.Mutex
 	)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type postGauge struct {
@@ -91,6 +97,8 @@ func TestGauge(t *testing.T) {
 		}
 		m := map[string]postGauge{}
 		json.NewDecoder(r.Body).Decode(&m)
+		mtx.Lock()
+		defer mtx.Unlock()
 		value = m[name].Value
 	}))
 	defer s.Close()
@@ -110,6 +118,8 @@ func TestGauge(t *testing.T) {
 	onceStart.Do(func() { circonusgometrics.Start() })
 
 	if err := within(time.Second, func() bool {
+		mtx.Lock()
+		defer mtx.Unlock()
 		return value > 0.0
 	}); err != nil {
 		t.Fatalf("error collecting results: %v", err)
@@ -127,6 +137,7 @@ func TestHistogram(t *testing.T) {
 	var (
 		name       = "test_histogram"
 		result     []string
+		mtx        sync.Mutex
 		onceDecode sync.Once
 	)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -136,6 +147,8 @@ func TestHistogram(t *testing.T) {
 		onceDecode.Do(func() {
 			m := map[string]postHistogram{}
 			json.NewDecoder(r.Body).Decode(&m)
+			mtx.Lock()
+			defer mtx.Unlock()
 			result = m[name].Value
 		})
 	}))
@@ -158,6 +171,8 @@ func TestHistogram(t *testing.T) {
 	onceStart.Do(func() { circonusgometrics.Start() })
 
 	if err := within(time.Second, func() bool {
+		mtx.Lock()
+		defer mtx.Unlock()
 		return len(result) > 0
 	}); err != nil {
 		t.Fatalf("error collecting results: %v", err)
