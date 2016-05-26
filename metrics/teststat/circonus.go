@@ -44,7 +44,7 @@ func AssertCirconusNormalHistogram(t *testing.T, mean, stdev, min, max int64, re
 
 	// Apparently Circonus buckets observations by dropping a sigfig, so we have
 	// very coarse tolerance.
-	var tolerance int64 = 20
+	var tolerance int64 = 30
 	for _, quantile := range []int{50, 90, 99} {
 		want := normalValueAtQuantile(mean, stdev, quantile)
 		have := h.ValueAtQuantile(float64(quantile))
