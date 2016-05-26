@@ -9,9 +9,10 @@ import (
 )
 
 // Handler which should be called from the grpc binding of the service
-// implementation.
+// implementation. The incoming request parameter, and returned response
+// parameter, are both gRPC types, not user-domain.
 type Handler interface {
-	ServeGRPC(context.Context, interface{}) (context.Context, interface{}, error)
+	ServeGRPC(ctx context.Context, request interface{}) (context.Context, interface{}, error)
 }
 
 // Server wraps an endpoint and implements grpc.Handler.
@@ -25,8 +26,11 @@ type Server struct {
 	logger log.Logger
 }
 
-// NewServer constructs a new server, which implements grpc.Server and wraps
-// the provided endpoint.
+// NewServer constructs a new server, which implements wraps the provided
+// endpoint and implements the Handler interface. Consumers should write
+// bindings that adapt the concrete gRPC methods from their compiled protobuf
+// definitions to individual handlers. Request and response objects are from the
+// caller business domain, not gRPC request and reply types.
 func NewServer(
 	ctx context.Context,
 	e endpoint.Endpoint,
@@ -68,12 +72,12 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 	return func(s *Server) { s.logger = logger }
 }
 
-// ServeGRPC implements grpc.Handler
-func (s Server) ServeGRPC(grpcCtx context.Context, r interface{}) (context.Context, interface{}, error) {
+// ServeGRPC implements the Handler interface.
+func (s Server) ServeGRPC(grpcCtx context.Context, req interface{}) (context.Context, interface{}, error) {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 
-	// retrieve gRPC metadata
+	// Retrieve gRPC metadata.
 	md, ok := metadata.FromContext(grpcCtx)
 	if !ok {
 		md = metadata.MD{}
@@ -83,10 +87,10 @@ func (s Server) ServeGRPC(grpcCtx context.Context, r interface{}) (context.Conte
 		ctx = f(ctx, &md)
 	}
 
-	// store potentially updated metadata in the gRPC context
+	// Store potentially updated metadata in the gRPC context.
 	grpcCtx = metadata.NewContext(grpcCtx, md)
 
-	request, err := s.dec(grpcCtx, r)
+	request, err := s.dec(grpcCtx, req)
 	if err != nil {
 		s.logger.Log("err", err)
 		return grpcCtx, nil, BadRequestError{err}
@@ -102,7 +106,7 @@ func (s Server) ServeGRPC(grpcCtx context.Context, r interface{}) (context.Conte
 		f(ctx, &md)
 	}
 
-	// store potentially updated metadata in the gRPC context
+	// Store potentially updated metadata in the gRPC context.
 	grpcCtx = metadata.NewContext(grpcCtx, md)
 
 	grpcResp, err := s.enc(grpcCtx, response)
@@ -110,6 +114,7 @@ func (s Server) ServeGRPC(grpcCtx context.Context, r interface{}) (context.Conte
 		s.logger.Log("err", err)
 		return grpcCtx, nil, err
 	}
+
 	return grpcCtx, grpcResp, nil
 }
 
