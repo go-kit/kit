@@ -35,6 +35,9 @@ func TestCounter(t *testing.T) {
 		value uint64
 	)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		type postCounter struct {
+			Value uint64 `json:"_value"` // reverse-engineered
+		}
 		m := map[string]postCounter{}
 		json.NewDecoder(r.Body).Decode(&m)
 		value = m[name].Value
@@ -75,14 +78,17 @@ func TestCounter(t *testing.T) {
 }
 
 func TestGauge(t *testing.T) {
-	log.SetOutput(ioutil.Discard)   // Circonus logs errors directly! Bad Circonus!
-	defer circonusgometrics.Reset() // Circonus has package global state! Bad Circonus!
+	log.SetOutput(ioutil.Discard)
+	defer circonusgometrics.Reset()
 
 	var (
 		name  = "test_gauge"
 		value float64
 	)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		type postGauge struct {
+			Value float64 `json:"_value"`
+		}
 		m := map[string]postGauge{}
 		json.NewDecoder(r.Body).Decode(&m)
 		value = m[name].Value
@@ -115,8 +121,8 @@ func TestGauge(t *testing.T) {
 }
 
 func TestHistogram(t *testing.T) {
-	log.SetOutput(ioutil.Discard)   // Circonus logs errors directly! Bad Circonus!
-	defer circonusgometrics.Reset() // Circonus has package global state! Bad Circonus!
+	log.SetOutput(ioutil.Discard)
+	defer circonusgometrics.Reset()
 
 	var (
 		name       = "test_histogram"
@@ -124,6 +130,9 @@ func TestHistogram(t *testing.T) {
 		onceDecode sync.Once
 	)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		type postHistogram struct {
+			Value []string `json:"_value"`
+		}
 		onceDecode.Do(func() {
 			m := map[string]postHistogram{}
 			json.NewDecoder(r.Body).Decode(&m)
@@ -168,18 +177,4 @@ func within(d time.Duration, f func() bool) error {
 		}
 		time.Sleep(d / 10)
 	}
-}
-
-// These are reverse-engineered from the POST body.
-
-type postCounter struct {
-	Value uint64 `json:"_value"`
-}
-
-type postGauge struct {
-	Value float64 `json:"_value"`
-}
-
-type postHistogram struct {
-	Value []string `json:"_value"`
 }
