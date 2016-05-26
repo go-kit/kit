@@ -4,8 +4,7 @@
 
 Setting up [Zipkin] is not an easy thing to do. It will also demand quite some
 resources. To help you get started with development and testing we've made a
-docker-compose file available for running a full Zipkin stack. See the
-`kit/tracing/zipkin/_docker` subdirectory.
+docker-compose file available for running a full Zipkin stack.
 
 You will need [docker-compose] 1.6.0+ and [docker-engine] 1.10.0+.
 
@@ -14,7 +13,7 @@ or Windows you probably need to set the hostname environment variable to the
 hostname of the VM running the docker containers.
 
 ```sh
-cd tracing/zipkin/_docker
+cd tracing/zipkin
 HOSTNAME=localhost docker-compose -f docker-compose-zipkin.yml up
 ```
 
@@ -36,131 +35,134 @@ The following services have been set-up to run:
 
 ## Middleware Usage
 
-Wrap a server- or client-side [endpoint][] so that it emits traces to a Zipkin
-collector. Make sure the host given to `MakeNewSpanFunc` resolves to an IP. If
-not your span will silently fail!
+Follow the [addsvc] example to check out how to wire the Zipkin Middleware. The
+changes should be relatively minor.
 
-[endpoint]: http://godoc.org/github.com/go-kit/kit/endpoint#Endpoint
+The [zipkin-go-opentracing] package has support for Kafka and Scribe collectors
+as well as using Go Kit's [Log] package for logging.
 
-If needing to create child spans in methods or calling another service from your
-service method, it is highly recommended to request a context parameter so you
-can transfer the needed metadata for traces across service boundaries.
+### Span per Node vs. Span per RPC
+By default Zipkin V1 considers either side of an RPC to have the same identity
+and differs in that respect from many other tracing systems which consider the
+caller to be the parent and the receiver the child. The OpenTracing
+specification does not dictate one model over the other, but the Zipkin team is
+looking into these [single-host-spans] to potentially bring Zipkin more in-line
+with the other tracing systems.
 
-It is also wise to always return error parameters with your service method
-calls, even if your service method implementations will not throw errors
-themselves. The error return parameter can be wired to pass the potential
-transport errors when consuming your service API in a networked environment.
+[single-host-spans]: https://github.com/openzipkin/zipkin/issues/963
 
-```go
-func main() {
-	var (
-		// myHost MUST resolve to an IP or your span will not show up in Zipkin.
-		myHost        = "instance01.addsvc.internal.net:8000"
-		myService     = "AddService"
-		myMethod      = "Add"
-		url           = myHost + "/add/"
-		kafkaHost     = []string{"kafka.internal.net:9092"}
-	)
+In case of a `span per node` the receiver will create a child span from the
+propagated parent span like this:
 
-	ctx := context.Background()
+```
+Span per Node propagation and identities
 
-	// Set Up Zipkin Collector and Span factory
-	spanFunc := zipkin.MakeNewSpanFunc(myHost, myService, myMethod)
-	collector, _ := zipkin.NewKafkaCollector(kafkaHost)
-
-	// Server-side Wiring
-	var server endpoint.Endpoint
-	server = makeEndpoint() // for your service
-	// wrap endpoint with Zipkin tracing middleware
-	server = zipkin.AnnotateServer(spanFunc, collector)(server)
-
-	http.Handle(
-		"/add/",
-		httptransport.NewServer(
-			ctx,
-			server,
-			decodeRequestFunc,
-			encodeResponseFunc,
-			httptransport.ServerBefore(
-				zipkin.ToContext(spanFunc),
-			),
-		),
-	)
-	...
-
-	// Client-side
-	var client endpoint.Endpoint
-	client = httptransport.NewClient(
-		"GET",
-		URL,
-		encodeRequestFunc,
-		decodeResponseFunc,
-		httptransport.ClientBefore(zipkin.ToRequest(spanFunc)),
-	).Endpoint()
-	client = zipkin.AnnotateClient(spanFunc, collector)(client)
-
-	ctx, cancel := context.WithTimeout(ctx, myTimeout)
-	defer cancel()
-
-	reply, err := client(ctx, param1, param2)
-	// do something with the response/error
-	...
-}
+CALLER:            RECEIVER:
+---------------------------------
+traceId        ->  traceId
+                   spanId (new)
+spanId         ->  parentSpanId
+parentSpanId
 ```
 
-## Annotating Remote Resources
+**Note:** most tracing implementations supporting the `span per node` model
+therefore do not propagate their `parentSpanID` as its not needed.
 
-Next to the above shown examples of wiring server-side and client-side tracing
-middlewares, you can also span resources called from your service methods.
+A typical Zipkin implementation will use the `span per RPC` model and recreate
+the span identity from the caller on the receiver's end and then annotates its
+values on top of it. Propagation will happen like this:
 
-To do this, the service method needs to include a context parameter. From your
-endpoint wrapper you can inject the endpoint context which will hold the parent
-span already created by the server-side middleware. If the resource is a remote
-database you can use the `zipkin.ServerAddr` spanOption to identify the remote
-host:port and the display name of this resource.
+```
+Span per RPC propagation and identities
+
+CALLER:            RECEIVER:
+---------------------------------
+traceId        ->  traceId
+spanId         ->  spanId
+parentSpanId   ->  parentSpanId
+```
+
+The [zipkin-go-opentracing] implementation allows you to choose which model you
+wish to use. Make sure you select the same model consistently for all your
+services that are required to communicate with each other or you will have trace
+propagation issues. If using non OpenTracing / legacy instrumentation, it's
+probably best to use the `span per RPC call` model.
+
+To adhere to the more common tracing philosophy of `span per node`, the Tracer
+defaults to `span per node`. To set the `span per RPC call` mode start your
+tracer like this:
 
 ```go
-type MyService struct {
-	// add a Zipkin Collector to your service implementation's properties.
-	Collector zipkin.Collector
-}
+tracer, err = zipkin.NewTracer(
+	zipkin.NewRecorder(...),
+	zipkin.ClientServerSameSpan(true),
+)
+```
 
-// Example of the endpoint.Endpoint to service method wrapper, injecting the
-// context provided by the transport server.
-func makeComplexEndpoint() endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(ComplexRequest)
-		v, err := svc.Complex(ctx, req.A, req.B)
-		return ComplexResponse{V: v, Err: err}, nil
-	}
-}
+[zipkin-go-opentracing]: https://github.com/openzipkin/zipkin-go-opentracing
+[addsvc]:https://github.com/go-kit/kit/tree/master/examples/addsvc
+[Log]: https://github.com/go-kit/kit/tree/master/log
 
-// Complex is an example method of our service, displaying the tracing of a
-// remote database resource.
-func (s *MyService) Complex(ctx context.Context, A someType, B otherType) (returnType, error) {
-	// we've parsed the incoming parameters and now we need to query the database.
-	// we wish to include this action into our trace.
-	span, collect := zipkin.NewChildSpan(
-		ctx,
-		s.Collector,
-		"complexQuery",
-		zipkin.ServerAddr(
-			"mysql01.internal.net:3306",
-			"MySQL",
-		),
+### Tracing Resources
+
+In our legacy implementation we had the `NewChildSpan` method to allow
+annotation of resources such as databases, caches and other services that do not
+have server side tracing support. Since OpenTracing has no specific method of
+dealing with these items explicitely that is compatible with Zipkin's `SA`
+annotation, the [zipkin-go-opentracing] has implemented support using the
+OpenTracing Tags system. Here is an example of how one would be able to record
+a resource span compatible with standard OpenTracing and triggering an `SA`
+annotation in [zipkin-go-opentracing]:
+
+```go
+// you need to import the ext package for the Tag helper functions
+import (
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
+)
+
+func (svc *Service) GetMeSomeExamples(ctx context.Context, ...) ([]Examples, error) {
+	// Example of annotating a database query:
+	var (
+		serviceName = "MySQL"
+		serviceHost = "mysql.example.com"
+		servicePort = uint16(3306)
+		queryLabel  = "GetExamplesByParam"
+		query       = "select * from example where param = 'value'"
 	)
-	// you probably want to binary annotate your query
-	span.AnnotateBinary("query", "SELECT ... FROM ... WHERE ... ORDER BY ..."),
-	// annotate the start of the query
-	span.Annotate("complexQuery:start")
-	// do the query and handle resultset
-	...
-	// annotate we are done with the query
-	span.Annotate("complexQuery:end")
-	// maybe binary annotate some items returned by the resultset
-	...
-	// when done with all annotations, collect the span
-	collect()
+
+	// retrieve the parent span, if not found create a new trace
+	parentSpan := opentracing.SpanFromContext(ctx)
+	if parentSpan == nil {
+		parentSpan = opentracing.StartSpan(queryLabel)
+	}
+
+	// create a new span to record the resource interaction
+	span := opentracing.StartChildSpan(parentSpan, queryLabel)
+
+	// span.kind "resource" triggers SA annotation
+	ext.SpanKind.Set(span, "resource")
+
+	// this will label the span's service & hostPort (called Endpoint in Zipkin)
+	ext.PeerService.Set(span, serviceName)
+	ext.PeerHostname,Set(span, serviceHost)
+	ext.PeerPort.Set(span, servicePort)
+
+	// a Tag is the equivalent of a Zipkin Binary Annotation (key:value pair)
+	span.SetTag("query", query)
+
+	// a LogEvent is the equivalent of a Zipkin Annotation (timestamped)
+	span.LogEvent("query:start")
+
+	// do the actual query...
+
+	// let's annotate the end...
+	span.LogEvent("query:end")
+
+	// we're done with this span.
+	span.Finish()
+
+	// do other stuff
 	...
 }
 ```
