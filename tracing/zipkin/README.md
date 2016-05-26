@@ -42,18 +42,55 @@ The [zipkin-go-opentracing] package has support for Kafka and Scribe collectors
 as well as using Go Kit's [Log] package for logging.
 
 ### Span per Node vs. Span per RPC
-OpenTracing tends to support the `span per node` model, meaning the server and
-client side of an RPC call are dealt with in separate spans. This diverts from
-the Zipkin V1 model which is more tailored towards the `span per RPC call` model
-in which the server and client side annotations of the same RPC call are part of
-the same span. The [zipkin-go-opentracing] implementation allows you to choose
-which model you wish to use. Make sure you select the same model consistently
-for all your services that are required to talk to each other or you will have
-trace propagation issues. If using non OpenTracing / legacy instrumentation use
-the `span per RPC call` model.
+By default Zipkin V1 considers either side of an RPC to have the same identity
+and differs in that respect from many other tracing systems which consider the
+caller to be the parent and the receiver the child. The OpenTracing
+specification does not dictate one model over the other, but the Zipkin team is
+looking into these [single-host-spans] to potentially bring Zipkin more in-line
+with the other tracing systems.
 
-To adhere to the OpenTracing philosophy the Tracer defaults to `span per node`.
-To set the `span per RPC call` mode start your tracer like this:
+[single-host-spans]: https://github.com/openzipkin/zipkin/issues/963
+
+In case of a `span per node` the receiver will create a child span from the
+propagated parent span like this:
+
+```
+Span per Node propagation and identities
+
+CALLER:            RECEIVER:
+---------------------------------
+traceId        ->  traceId
+                   spanId (new)
+spanId         ->  parentSpanId
+parentSpanId
+```
+
+**Note:** most tracing implementations supporting the `span per node` model
+therefore do not propagate their `parentSpanID` as its not needed.
+
+A typical Zipkin implementation will use the `span per RPC` model and recreate
+the span identity from the caller on the receiver's end and then annotates its
+values on top of it. Propagation will happen like this:
+
+```
+Span per RPC propagation and identities
+
+CALLER:            RECEIVER:
+---------------------------------
+traceId        ->  traceId
+spanId         ->  spanId
+parentSpanId   ->  parentSpanId
+```
+
+The [zipkin-go-opentracing] implementation allows you to choose which model you
+wish to use. Make sure you select the same model consistently for all your
+services that are required to communicate with each other or you will have trace
+propagation issues. If using non OpenTracing / legacy instrumentation, it's
+probably best to use the `span per RPC call` model.
+
+To adhere to the more common tracing philosophy of `span per node`, the Tracer
+defaults to `span per node`. To set the `span per RPC call` mode start your
+tracer like this:
 
 ```go
 tracer, err = zipkin.NewTracer(
@@ -72,7 +109,7 @@ In our legacy implementation we had the `NewChildSpan` method to allow
 annotation of resources such as databases, caches and other services that do not
 have server side tracing support. Since OpenTracing has no specific method of
 dealing with these items explicitely that is compatible with Zipkin's `SA`
-annotation the [zipkin-go-opentracing] has implemented support using the
+annotation, the [zipkin-go-opentracing] has implemented support using the
 OpenTracing Tags system. Here is an example of how one would be able to record
 a resource span compatible with standard OpenTracing and triggering an `SA`
 annotation in [zipkin-go-opentracing]:
@@ -122,7 +159,7 @@ func (svc *Service) GetMeSomeExamples(ctx context.Context, ...) ([]Examples, err
 	// let's annotate the end...
 	span.LogEvent("query:end")
 
-	// we're done with the span. send it to the SpanRecorder for collection...
+	// we're done with this span.
 	span.Finish()
 
 	// do other stuff
