@@ -3,10 +3,7 @@ package booking
 import (
 	"time"
 
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
-
 	"github.com/go-kit/kit/metrics"
-	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 
 	"github.com/go-kit/kit/examples/shipping/cargo"
 	"github.com/go-kit/kit/examples/shipping/location"
@@ -19,23 +16,7 @@ type instrumentingService struct {
 }
 
 // NewInstrumentingService returns an instance of an instrumenting Service.
-func NewInstrumentingService(s Service) Service {
-	fieldKeys := []string{"method"}
-
-	requestCount := kitprometheus.NewCounter(stdprometheus.CounterOpts{
-		Namespace: "api",
-		Subsystem: "booking_service",
-		Name:      "request_count",
-		Help:      "Number of requests received.",
-	}, fieldKeys)
-
-	requestLatency := metrics.NewTimeHistogram(time.Microsecond, kitprometheus.NewSummary(stdprometheus.SummaryOpts{
-		Namespace: "api",
-		Subsystem: "booking_service",
-		Name:      "request_latency_microseconds",
-		Help:      "Total duration of requests in microseconds.",
-	}, fieldKeys))
-
+func NewInstrumentingService(requestCount metrics.Counter, requestLatency metrics.TimeHistogram, s Service) Service {
 	return &instrumentingService{
 		requestCount:   requestCount,
 		requestLatency: requestLatency,

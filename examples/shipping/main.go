@@ -10,9 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-kit/kit/log"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics"
+	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 
 	"github.com/go-kit/kit/examples/shipping/booking"
 	"github.com/go-kit/kit/examples/shipping/cargo"
@@ -69,23 +72,61 @@ func main() {
 	// Facilitate testing by adding some cargos.
 	storeTestData(cargos)
 
+	fieldKeys := []string{"method"}
+
 	var rs routing.Service
 	rs = routing.NewProxyingMiddleware(*routingServiceURL, ctx)(rs)
 
 	var bs booking.Service
 	bs = booking.NewService(cargos, locations, handlingEvents, rs)
 	bs = booking.NewLoggingService(log.NewContext(logger).With("component", "booking"), bs)
-	bs = booking.NewInstrumentingService(bs)
+	bs = booking.NewInstrumentingService(
+		kitprometheus.NewCounter(stdprometheus.CounterOpts{
+			Namespace: "api",
+			Subsystem: "booking_service",
+			Name:      "request_count",
+			Help:      "Number of requests received.",
+		}, fieldKeys),
+		metrics.NewTimeHistogram(time.Microsecond, kitprometheus.NewSummary(stdprometheus.SummaryOpts{
+			Namespace: "api",
+			Subsystem: "booking_service",
+			Name:      "request_latency_microseconds",
+			Help:      "Total duration of requests in microseconds.",
+		}, fieldKeys)), bs)
 
 	var ts tracking.Service
 	ts = tracking.NewService(cargos, handlingEvents)
 	ts = tracking.NewLoggingService(log.NewContext(logger).With("component", "tracking"), ts)
-	ts = tracking.NewInstrumentingService(ts)
+	ts = tracking.NewInstrumentingService(
+		kitprometheus.NewCounter(stdprometheus.CounterOpts{
+			Namespace: "api",
+			Subsystem: "tracking_service",
+			Name:      "request_count",
+			Help:      "Number of requests received.",
+		}, fieldKeys),
+		metrics.NewTimeHistogram(time.Microsecond, kitprometheus.NewSummary(stdprometheus.SummaryOpts{
+			Namespace: "api",
+			Subsystem: "tracking_service",
+			Name:      "request_latency_microseconds",
+			Help:      "Total duration of requests in microseconds.",
+		}, fieldKeys)), ts)
 
 	var hs handling.Service
 	hs = handling.NewService(handlingEvents, handlingEventFactory, handlingEventHandler)
 	hs = handling.NewLoggingService(log.NewContext(logger).With("component", "handling"), hs)
-	hs = handling.NewInstrumentingService(hs)
+	hs = handling.NewInstrumentingService(
+		kitprometheus.NewCounter(stdprometheus.CounterOpts{
+			Namespace: "api",
+			Subsystem: "handling_service",
+			Name:      "request_count",
+			Help:      "Number of requests received.",
+		}, fieldKeys),
+		metrics.NewTimeHistogram(time.Microsecond, kitprometheus.NewSummary(stdprometheus.SummaryOpts{
+			Namespace: "api",
+			Subsystem: "handling_service",
+			Name:      "request_latency_microseconds",
+			Help:      "Total duration of requests in microseconds.",
+		}, fieldKeys)), hs)
 
 	httpLogger := log.NewContext(logger).With("component", "http")
 
