@@ -32,7 +32,7 @@ var _ sd.Subscriber = &Subscriber{}
 // NewSubscriber returns a Consul subscriber which returns endpoints for the
 // requested service. It only returns instances for which all of the passed tags
 // are present.
-func NewSubscriber(client Client, factory sd.Factory, logger log.Logger, service string, tags []string, passingOnly bool) (*Subscriber, error) {
+func NewSubscriber(client Client, factory sd.Factory, logger log.Logger, service string, tags []string, passingOnly bool) *Subscriber {
 	s := &Subscriber{
 		cache:       cache.New(factory, logger),
 		client:      client,
@@ -52,7 +52,7 @@ func NewSubscriber(client Client, factory sd.Factory, logger log.Logger, service
 
 	s.cache.Update(instances)
 	go s.loop(index)
-	return s, nil
+	return s
 }
 
 // Endpoints implements the Subscriber interface.

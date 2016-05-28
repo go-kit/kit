@@ -47,7 +47,7 @@ func main() {
 	)
 	flag.Parse()
 
-	// Logging domain
+	// Logging domain.
 	var logger log.Logger
 	{
 		logger = log.NewLogfmtLogger(os.Stdout)
@@ -57,10 +57,10 @@ func main() {
 	logger.Log("msg", "hello")
 	defer logger.Log("msg", "goodbye")
 
-	// Metrics domain
+	// Metrics domain.
 	var ints, chars metrics.Counter
 	{
-		// Business level metrics
+		// Business level metrics.
 		ints = prometheus.NewCounter(stdprometheus.CounterOpts{
 			Namespace: "addsvc",
 			Name:      "integers_summed",
@@ -74,7 +74,7 @@ func main() {
 	}
 	var duration metrics.TimeHistogram
 	{
-		// Transport level metrics
+		// Transport level metrics.
 		duration = metrics.NewTimeHistogram(time.Nanosecond, prometheus.NewSummary(stdprometheus.SummaryOpts{
 			Namespace: "addsvc",
 			Name:      "request_duration_ns",
@@ -82,7 +82,7 @@ func main() {
 		}, []string{"method", "success"}))
 	}
 
-	// Tracing domain
+	// Tracing domain.
 	var tracer stdopentracing.Tracer
 	{
 		if *zipkinAddr != "" {
@@ -121,7 +121,7 @@ func main() {
 		}
 	}
 
-	// Business domain
+	// Business domain.
 	var service addsvc.Service
 	{
 		service = addsvc.NewBasicService()
@@ -129,7 +129,7 @@ func main() {
 		service = addsvc.ServiceInstrumentingMiddleware(ints, chars)(service)
 	}
 
-	// Endpoint domain
+	// Endpoint domain.
 	var sumEndpoint endpoint.Endpoint
 	{
 		sumDuration := duration.With(metrics.Field{Key: "method", Value: "Sum"})
@@ -155,18 +155,18 @@ func main() {
 		ConcatEndpoint: concatEndpoint,
 	}
 
-	// Mechanical domain
+	// Mechanical domain.
 	errc := make(chan error)
 	ctx := context.Background()
 
-	// Interrupt handler
+	// Interrupt handler.
 	go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 		errc <- fmt.Errorf("%s", <-c)
 	}()
 
-	// Debug listener
+	// Debug listener.
 	go func() {
 		logger := log.NewContext(logger).With("transport", "debug")
 
@@ -182,7 +182,7 @@ func main() {
 		errc <- http.ListenAndServe(*debugAddr, m)
 	}()
 
-	// HTTP transport
+	// HTTP transport.
 	go func() {
 		logger := log.NewContext(logger).With("transport", "HTTP")
 		h := addsvc.MakeHTTPHandler(ctx, endpoints, tracer, logger)
@@ -190,7 +190,7 @@ func main() {
 		errc <- http.ListenAndServe(*httpAddr, h)
 	}()
 
-	// gRPC transport
+	// gRPC transport.
 	go func() {
 		logger := log.NewContext(logger).With("transport", "gRPC")
 
@@ -208,7 +208,7 @@ func main() {
 		errc <- s.Serve(ln)
 	}()
 
-	// Thrift transport
+	// Thrift transport.
 	go func() {
 		logger := log.NewContext(logger).With("transport", "Thrift")
 
@@ -252,6 +252,6 @@ func main() {
 		).Serve()
 	}()
 
-	// Run
+	// Run!
 	logger.Log("exit", <-errc)
 }

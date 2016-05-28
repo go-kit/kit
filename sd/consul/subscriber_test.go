@@ -63,10 +63,7 @@ func TestSubscriber(t *testing.T) {
 		client = newTestClient(consulState)
 	)
 
-	s, err := NewSubscriber(client, testFactory, logger, "search", []string{"api"}, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewSubscriber(client, testFactory, logger, "search", []string{"api"}, true)
 	defer s.Stop()
 
 	endpoints, err := s.Endpoints()
@@ -85,10 +82,7 @@ func TestSubscriberNoService(t *testing.T) {
 		client = newTestClient(consulState)
 	)
 
-	s, err := NewSubscriber(client, testFactory, logger, "feed", []string{}, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewSubscriber(client, testFactory, logger, "feed", []string{}, true)
 	defer s.Stop()
 
 	endpoints, err := s.Endpoints()
@@ -107,10 +101,7 @@ func TestSubscriberWithTags(t *testing.T) {
 		client = newTestClient(consulState)
 	)
 
-	s, err := NewSubscriber(client, testFactory, logger, "search", []string{"api", "v2"}, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewSubscriber(client, testFactory, logger, "search", []string{"api", "v2"}, true)
 	defer s.Stop()
 
 	endpoints, err := s.Endpoints()
@@ -124,10 +115,7 @@ func TestSubscriberWithTags(t *testing.T) {
 }
 
 func TestSubscriberAddressOverride(t *testing.T) {
-	s, err := NewSubscriber(newTestClient(consulState), testFactory, log.NewNopLogger(), "search", []string{"db"}, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewSubscriber(newTestClient(consulState), testFactory, log.NewNopLogger(), "search", []string{"db"}, true)
 	defer s.Stop()
 
 	endpoints, err := s.Endpoints()
