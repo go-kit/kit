@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/go-kit/kit/examples/profilesvc"
 	"github.com/go-kit/kit/log"
 )
 
@@ -31,27 +32,28 @@ func main() {
 		ctx = context.Background()
 	}
 
-	var s ProfileService
+	var s profilesvc.Service
 	{
-		s = newInmemService()
-		s = loggingMiddleware{s, log.NewContext(logger).With("component", "svc")}
+		s = profilesvc.NewInmemService()
+		s = profilesvc.LoggingMiddleware(logger)(s)
 	}
 
 	var h http.Handler
 	{
-		h = makeHandler(ctx, s, log.NewContext(logger).With("component", "http"))
+		h = profilesvc.MakeHTTPHandler(ctx, s, log.NewContext(logger).With("component", "HTTP"))
 	}
 
-	errs := make(chan error, 2)
-	go func() {
-		logger.Log("transport", "http", "address", *httpAddr, "msg", "listening")
-		errs <- http.ListenAndServe(*httpAddr, h)
-	}()
+	errs := make(chan error)
 	go func() {
 		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
-	logger.Log("terminated", <-errs)
+	go func() {
+		logger.Log("transport", "HTTP", "addr", *httpAddr)
+		errs <- http.ListenAndServe(*httpAddr, h)
+	}()
+
+	logger.Log("exit", <-errs)
 }

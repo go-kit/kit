@@ -1,4 +1,4 @@
-package main
+package profilesvc
 
 import (
 	"time"
@@ -8,8 +8,20 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+// Middleware describes a service (as opposed to endpoint) middleware.
+type Middleware func(Service) Service
+
+func LoggingMiddleware(logger log.Logger) Middleware {
+	return func(next Service) Service {
+		return &loggingMiddleware{
+			next:   next,
+			logger: logger,
+		}
+	}
+}
+
 type loggingMiddleware struct {
-	next   ProfileService
+	next   Service
 	logger log.Logger
 }
 

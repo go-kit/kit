@@ -1,4 +1,4 @@
-package main
+package profilesvc
 
 import (
 	"errors"
@@ -7,8 +7,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-// ProfileService is a simple CRUD interface for user profiles.
-type ProfileService interface {
+// Service is a simple CRUD interface for user profiles.
+type Service interface {
 	PostProfile(ctx context.Context, p Profile) error
 	GetProfile(ctx context.Context, id string) (Profile, error)
 	PutProfile(ctx context.Context, id string, p Profile) error
@@ -36,9 +36,9 @@ type Address struct {
 }
 
 var (
-	errInconsistentIDs = errors.New("inconsistent IDs")
-	errAlreadyExists   = errors.New("already exists")
-	errNotFound        = errors.New("not found")
+	ErrInconsistentIDs = errors.New("inconsistent IDs")
+	ErrAlreadyExists   = errors.New("already exists")
+	ErrNotFound        = errors.New("not found")
 )
 
 type inmemService struct {
@@ -46,7 +46,7 @@ type inmemService struct {
 	m   map[string]Profile
 }
 
-func newInmemService() ProfileService {
+func NewInmemService() Service {
 	return &inmemService{
 		m: map[string]Profile{},
 	}
@@ -56,7 +56,7 @@ func (s *inmemService) PostProfile(ctx context.Context, p Profile) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	if _, ok := s.m[p.ID]; ok {
-		return errAlreadyExists // POST = create, don't overwrite
+		return ErrAlreadyExists // POST = create, don't overwrite
 	}
 	s.m[p.ID] = p
 	return nil
@@ -67,14 +67,14 @@ func (s *inmemService) GetProfile(ctx context.Context, id string) (Profile, erro
 	defer s.mtx.RUnlock()
 	p, ok := s.m[id]
 	if !ok {
-		return Profile{}, errNotFound
+		return Profile{}, ErrNotFound
 	}
 	return p, nil
 }
 
 func (s *inmemService) PutProfile(ctx context.Context, id string, p Profile) error {
 	if id != p.ID {
-		return errInconsistentIDs
+		return ErrInconsistentIDs
 	}
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
@@ -84,7 +84,7 @@ func (s *inmemService) PutProfile(ctx context.Context, id string, p Profile) err
 
 func (s *inmemService) PatchProfile(ctx context.Context, id string, p Profile) error {
 	if p.ID != "" && id != p.ID {
-		return errInconsistentIDs
+		return ErrInconsistentIDs
 	}
 
 	s.mtx.Lock()
@@ -92,7 +92,7 @@ func (s *inmemService) PatchProfile(ctx context.Context, id string, p Profile) e
 
 	existing, ok := s.m[id]
 	if !ok {
-		return errNotFound // PATCH = update existing, don't create
+		return ErrNotFound // PATCH = update existing, don't create
 	}
 
 	// We assume that it's not possible to PATCH the ID, and that it's not
@@ -115,7 +115,7 @@ func (s *inmemService) DeleteProfile(ctx context.Context, id string) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	if _, ok := s.m[id]; !ok {
-		return errNotFound
+		return ErrNotFound
 	}
 	delete(s.m, id)
 	return nil
@@ -126,7 +126,7 @@ func (s *inmemService) GetAddresses(ctx context.Context, profileID string) ([]Ad
 	defer s.mtx.RUnlock()
 	p, ok := s.m[profileID]
 	if !ok {
-		return []Address{}, errNotFound
+		return []Address{}, ErrNotFound
 	}
 	return p.Addresses, nil
 }
@@ -136,14 +136,14 @@ func (s *inmemService) GetAddress(ctx context.Context, profileID string, address
 	defer s.mtx.RUnlock()
 	p, ok := s.m[profileID]
 	if !ok {
-		return Address{}, errNotFound
+		return Address{}, ErrNotFound
 	}
 	for _, address := range p.Addresses {
 		if address.ID == addressID {
 			return address, nil
 		}
 	}
-	return Address{}, errNotFound
+	return Address{}, ErrNotFound
 }
 
 func (s *inmemService) PostAddress(ctx context.Context, profileID string, a Address) error {
@@ -151,11 +151,11 @@ func (s *inmemService) PostAddress(ctx context.Context, profileID string, a Addr
 	defer s.mtx.Unlock()
 	p, ok := s.m[profileID]
 	if !ok {
-		return errNotFound
+		return ErrNotFound
 	}
 	for _, address := range p.Addresses {
 		if address.ID == a.ID {
-			return errAlreadyExists
+			return ErrAlreadyExists
 		}
 	}
 	p.Addresses = append(p.Addresses, a)
@@ -168,7 +168,7 @@ func (s *inmemService) DeleteAddress(ctx context.Context, profileID string, addr
 	defer s.mtx.Unlock()
 	p, ok := s.m[profileID]
 	if !ok {
-		return errNotFound
+		return ErrNotFound
 	}
 	newAddresses := make([]Address, 0, len(p.Addresses))
 	for _, address := range p.Addresses {
@@ -178,7 +178,7 @@ func (s *inmemService) DeleteAddress(ctx context.Context, profileID string, addr
 		newAddresses = append(newAddresses, address)
 	}
 	if len(newAddresses) == len(p.Addresses) {
-		return errNotFound
+		return ErrNotFound
 	}
 	p.Addresses = newAddresses
 	s.m[profileID] = p
