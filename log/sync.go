@@ -85,7 +85,7 @@ func (l *syncLogger) Log(keyvals ...interface{}) error {
 // another logger.
 //
 // Errors returned by the wrapped logger are ignored, therefore the wrapped
-// logger should must handle all errors appropriately.
+// logger must handle all errors appropriately.
 type AsyncLogger struct {
 	logger   Logger
 	keyvalsC chan []interface{}
@@ -132,16 +132,13 @@ func (l *AsyncLogger) Cap() int {
 // NonblockingLogger provides buffered asynchronous and concurrent safe
 // logging for another logger.
 //
-// If the wrapped logger's Log method ever returns an error, the
-// NonblockingLogger will stop processing log events and make the error
-// available via the Err method. Any unprocessed log events in the buffer will
-// be lost.
+// Errors returned by the wrapped logger are ignored, therefore the wrapped
+// logger must handle all errors appropriately.
 type NonblockingLogger struct {
 	logger   Logger
 	keyvalsC chan []interface{}
 
 	mu       sync.Mutex
-	err      error
 	stopping chan struct{} // must be closed before keyvalsC
 
 	stopped chan struct{} // closed when run loop exits
@@ -164,19 +161,15 @@ func NewNonblockingLogger(logger Logger, size int) *NonblockingLogger {
 func (l *NonblockingLogger) run() {
 	defer close(l.stopped)
 	for keyvals := range l.keyvalsC {
-		err := l.logger.Log(keyvals...)
-		if err != nil {
-			l.stop(err)
-			return
-		}
+		l.logger.Log(keyvals...)
 	}
 }
 
-func (l *NonblockingLogger) stop(err error) {
+// Stop stops the NonblockingLogger. After stop returns the logger will not
+// accept new log events. Log events queued prior to calling Stop will be
+// logged.
+func (l *NonblockingLogger) Stop() {
 	l.mu.Lock()
-	if err != nil && l.err == nil {
-		l.err = err
-	}
 	select {
 	case <-l.stopping:
 		// already stopping, do nothing
@@ -216,13 +209,6 @@ var (
 	ErrNonblockingLoggerOverflow = errors.New("aysnc logger: log buffer overflow")
 )
 
-// Stop stops the NonblockingLogger. After stop returns the logger will not
-// accept new log events. Log events queued prior to calling Stop will be
-// logged.
-func (l *NonblockingLogger) Stop() {
-	l.stop(nil)
-}
-
 // Stopping returns a channel that is closed after Stop is called.
 func (l *NonblockingLogger) Stopping() <-chan struct{} {
 	return l.stopping
@@ -232,14 +218,6 @@ func (l *NonblockingLogger) Stopping() <-chan struct{} {
 // events have been sent to the wrapped logger.
 func (l *NonblockingLogger) Stopped() <-chan struct{} {
 	return l.stopped
-}
-
-// Err returns the first error returned by the wrapped logger.
-func (l *NonblockingLogger) Err() error {
-	l.mu.Lock()
-	err := l.err
-	l.mu.Unlock()
-	return err
 }
 
 // Len returns a snapshot of the number of buffered log events. The returned

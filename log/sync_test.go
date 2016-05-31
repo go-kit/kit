@@ -2,7 +2,6 @@ package log_test
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"testing"
 
@@ -144,56 +143,7 @@ func TestNonblockingLoggerLogs(t *testing.T) {
 	<-al.Stopped()
 	al.Stop() // stop is idempotent
 
-	if got, want := al.Err(), error(nil); got != want {
-		t.Errorf(`logger err: got "%v", want "%v"`, got, want)
-	}
-
 	if got, want := len(output), logcnt; got != want {
-		t.Errorf("logged events: got %v, want %v", got, want)
-	}
-
-	for i, e := range output {
-		if got, want := e[1], i; got != want {
-			t.Errorf("log event mismatch, got %v, want %v", got, want)
-		}
-	}
-}
-
-func TestNonblockingLoggerLogError(t *testing.T) {
-	t.Parallel()
-	const logcnt = 10
-	const logBeforeError = logcnt / 2
-	logErr := errors.New("log error")
-
-	output := [][]interface{}{}
-	logger := log.LoggerFunc(func(keyvals ...interface{}) error {
-		output = append(output, keyvals)
-		if len(output) == logBeforeError {
-			return logErr
-		}
-		return nil
-	})
-
-	al := log.NewNonblockingLogger(logger, logcnt)
-
-	for i := 0; i < logcnt; i++ {
-		al.Log("key", i)
-	}
-
-	<-al.Stopping()
-
-	if got, want := al.Log("key", "late"), log.ErrNonblockingLoggerStopping; got != want {
-		t.Errorf(`log while stopping err: got "%v", want "%v"`, got, want)
-	}
-
-	<-al.Stopped()
-	al.Stop() // stop is idempotent and must not destroy result of Err
-
-	if got, want := al.Err(), logErr; got != want {
-		t.Errorf(`logger err: got "%v", want "%v"`, got, want)
-	}
-
-	if got, want := len(output), logBeforeError; got != want {
 		t.Errorf("logged events: got %v, want %v", got, want)
 	}
 
@@ -247,8 +197,4 @@ func TestNonblockingLoggerOverflow(t *testing.T) {
 	// Release the NonblockingLogger.run loop and wait for it to stop.
 	close(loggerdone)
 	<-al.Stopped()
-
-	if got, want := al.Err(), error(nil); got != want {
-		t.Errorf(`logger err: got "%v", want "%v"`, got, want)
-	}
 }
