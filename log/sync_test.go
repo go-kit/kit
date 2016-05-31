@@ -57,6 +57,13 @@ func TestSwapLoggerConcurrency(t *testing.T) {
 	testConcurrency(t, &log.SwapLogger{}, 10000)
 }
 
+func TestSyncWriterConcurrency(t *testing.T) {
+	var w io.Writer
+	w = &bytes.Buffer{}
+	w = log.NewSyncWriter(w)
+	testConcurrency(t, log.NewLogfmtLogger(w), 10000)
+}
+
 func TestSyncLoggerConcurrency(t *testing.T) {
 	var w io.Writer
 	w = &bytes.Buffer{}
@@ -65,24 +72,53 @@ func TestSyncLoggerConcurrency(t *testing.T) {
 	testConcurrency(t, logger, 10000)
 }
 
-func TestSyncWriterConcurrency(t *testing.T) {
-	var w io.Writer
-	w = &bytes.Buffer{}
-	w = log.NewSyncWriter(w)
-	testConcurrency(t, log.NewLogfmtLogger(w), 10000)
+func TestAsyncLoggerConcurrency(t *testing.T) {
+	for _, size := range []int{1, 100, 1000, 10000} {
+		var w io.Writer
+		w = &bytes.Buffer{}
+		logger := log.NewLogfmtLogger(w)
+		logger = log.NewAsyncLogger(logger, size)
+		testConcurrency(t, logger, 10000)
+	}
 }
 
-func TestAsyncLoggerConcurrency(t *testing.T) {
+func TestAsyncLoggerLogs(t *testing.T) {
+	t.Parallel()
+	output := make(chan []interface{})
+	logger := log.LoggerFunc(func(keyvals ...interface{}) error {
+		output <- keyvals
+		return nil
+	})
+
+	const size = 4
+	const logcnt = size * 20
+	al := log.NewAsyncLogger(logger, size)
+
+	go func() {
+		for i := 0; i < logcnt; i++ {
+			al.Log("key", i)
+		}
+	}()
+
+	for i := 0; i < logcnt; i++ {
+		e := <-output
+		if got, want := e[1], i; got != want {
+			t.Errorf("log event mismatch, got %v, want %v", got, want)
+		}
+	}
+}
+
+func TestNonblockingLoggerConcurrency(t *testing.T) {
 	var w io.Writer
 	w = &bytes.Buffer{}
 	logger := log.NewLogfmtLogger(w)
-	al := log.NewAsyncLogger(logger, 10000)
+	al := log.NewNonblockingLogger(logger, 10000)
 	testConcurrency(t, al, 10000)
 	al.Stop()
 	<-al.Stopped()
 }
 
-func TestAsyncLoggerLogs(t *testing.T) {
+func TestNonblockingLoggerLogs(t *testing.T) {
 	t.Parallel()
 	output := [][]interface{}{}
 	logger := log.LoggerFunc(func(keyvals ...interface{}) error {
@@ -91,7 +127,7 @@ func TestAsyncLoggerLogs(t *testing.T) {
 	})
 
 	const logcnt = 10
-	al := log.NewAsyncLogger(logger, logcnt)
+	al := log.NewNonblockingLogger(logger, logcnt)
 
 	for i := 0; i < logcnt; i++ {
 		al.Log("key", i)
@@ -101,7 +137,7 @@ func TestAsyncLoggerLogs(t *testing.T) {
 	al.Stop() // stop is idempotent
 	<-al.Stopping()
 
-	if got, want := al.Log("key", "late"), log.ErrAsyncLoggerStopping; got != want {
+	if got, want := al.Log("key", "late"), log.ErrNonblockingLoggerStopping; got != want {
 		t.Errorf(`logger err: got "%v", want "%v"`, got, want)
 	}
 
@@ -123,7 +159,7 @@ func TestAsyncLoggerLogs(t *testing.T) {
 	}
 }
 
-func TestAsyncLoggerLogError(t *testing.T) {
+func TestNonblockingLoggerLogError(t *testing.T) {
 	t.Parallel()
 	const logcnt = 10
 	const logBeforeError = logcnt / 2
@@ -138,7 +174,7 @@ func TestAsyncLoggerLogError(t *testing.T) {
 		return nil
 	})
 
-	al := log.NewAsyncLogger(logger, logcnt)
+	al := log.NewNonblockingLogger(logger, logcnt)
 
 	for i := 0; i < logcnt; i++ {
 		al.Log("key", i)
@@ -146,7 +182,7 @@ func TestAsyncLoggerLogError(t *testing.T) {
 
 	<-al.Stopping()
 
-	if got, want := al.Log("key", "late"), log.ErrAsyncLoggerStopping; got != want {
+	if got, want := al.Log("key", "late"), log.ErrNonblockingLoggerStopping; got != want {
 		t.Errorf(`log while stopping err: got "%v", want "%v"`, got, want)
 	}
 
@@ -168,7 +204,7 @@ func TestAsyncLoggerLogError(t *testing.T) {
 	}
 }
 
-func TestAsyncLoggerOverflow(t *testing.T) {
+func TestNonblockingLoggerOverflow(t *testing.T) {
 	t.Parallel()
 	var (
 		output     = make(chan []interface{}, 10)
@@ -177,18 +213,18 @@ func TestAsyncLoggerOverflow(t *testing.T) {
 
 	logger := log.LoggerFunc(func(keyvals ...interface{}) error {
 		output <- keyvals
-		<-loggerdone // block here to stall the AsyncLogger.run loop
+		<-loggerdone // block here to stall the NonblockingLogger.run loop
 		return nil
 	})
 
-	al := log.NewAsyncLogger(logger, 1)
+	al := log.NewNonblockingLogger(logger, 1)
 
 	if got, want := al.Log("k", 1), error(nil); got != want {
 		t.Errorf(`first log err: got "%v", want "%v"`, got, want)
 	}
 
 	<-output
-	// Now we know the AsyncLogger.run loop has consumed the first log event
+	// Now we know the NonblockingLogger.run loop has consumed the first log event
 	// and will be stalled until loggerdone is closed.
 
 	// This log event fills the buffer without error.
@@ -197,18 +233,18 @@ func TestAsyncLoggerOverflow(t *testing.T) {
 	}
 
 	// Now we test for buffer overflow.
-	if got, want := al.Log("k", 3), log.ErrAsyncLoggerOverflow; got != want {
+	if got, want := al.Log("k", 3), log.ErrNonblockingLoggerOverflow; got != want {
 		t.Errorf(`third log err: got "%v", want "%v"`, got, want)
 	}
 
 	al.Stop()
 	<-al.Stopping()
 
-	if got, want := al.Log("key", "late"), log.ErrAsyncLoggerStopping; got != want {
+	if got, want := al.Log("key", "late"), log.ErrNonblockingLoggerStopping; got != want {
 		t.Errorf(`log while stopping err: got "%v", want "%v"`, got, want)
 	}
 
-	// Release the AsyncLogger.run loop and wait for it to stop.
+	// Release the NonblockingLogger.run loop and wait for it to stop.
 	close(loggerdone)
 	<-al.Stopped()
 

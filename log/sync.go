@@ -84,10 +84,59 @@ func (l *syncLogger) Log(keyvals ...interface{}) error {
 // AsyncLogger provides buffered asynchronous and concurrent safe logging for
 // another logger.
 //
-// If the wrapped logger's Log method ever returns an error, the AsyncLogger
-// will stop processing log events and make the error available via the Err
-// method. Any unprocessed log events in the buffer will be lost.
+// Errors returned by the wrapped logger are ignored, therefore the wrapped
+// logger should must handle all errors appropriately.
 type AsyncLogger struct {
+	logger   Logger
+	keyvalsC chan []interface{}
+}
+
+// NewAsyncLogger returns a new AsyncLogger that logs to logger and can buffer
+// up to size log events before its Log method blocks.
+func NewAsyncLogger(logger Logger, size int) *AsyncLogger {
+	l := &AsyncLogger{
+		logger:   logger,
+		keyvalsC: make(chan []interface{}, size),
+	}
+	go l.run()
+	return l
+}
+
+// run forwards log events from l.keyvalsC to l.logger.
+func (l *AsyncLogger) run() {
+	for keyvals := range l.keyvalsC {
+		l.logger.Log(keyvals...)
+	}
+}
+
+// Log queues keyvals for logging by the wrapped Logger. Log may be called
+// concurrently by multiple goroutines. If the the buffer is full, Log will
+// block until space is available. Log always returns a nil error.
+func (l *AsyncLogger) Log(keyvals ...interface{}) error {
+	l.keyvalsC <- keyvals
+	return nil
+}
+
+// Len returns a snapshot of the number of buffered log events. The returned
+// count should only be used for monitoring purposes as it becomes stale
+// quickly.
+func (l *AsyncLogger) Len() int {
+	return len(l.keyvalsC)
+}
+
+// Cap returns the maximum capacity of the buffer.
+func (l *AsyncLogger) Cap() int {
+	return cap(l.keyvalsC)
+}
+
+// NonblockingLogger provides buffered asynchronous and concurrent safe
+// logging for another logger.
+//
+// If the wrapped logger's Log method ever returns an error, the
+// NonblockingLogger will stop processing log events and make the error
+// available via the Err method. Any unprocessed log events in the buffer will
+// be lost.
+type NonblockingLogger struct {
 	logger   Logger
 	keyvalsC chan []interface{}
 
@@ -98,10 +147,10 @@ type AsyncLogger struct {
 	stopped chan struct{} // closed when run loop exits
 }
 
-// NewAsyncLogger returns a new AsyncLogger that logs to logger and can buffer
-// up to size log events before overflowing.
-func NewAsyncLogger(logger Logger, size int) *AsyncLogger {
-	l := &AsyncLogger{
+// NewNonblockingLogger returns a new NonblockingLogger that logs to logger
+// and can buffer up to size log events before overflowing.
+func NewNonblockingLogger(logger Logger, size int) *NonblockingLogger {
+	l := &NonblockingLogger{
 		logger:   logger,
 		keyvalsC: make(chan []interface{}, size),
 		stopping: make(chan struct{}),
@@ -112,7 +161,7 @@ func NewAsyncLogger(logger Logger, size int) *AsyncLogger {
 }
 
 // run forwards log events from l.keyvalsC to l.logger.
-func (l *AsyncLogger) run() {
+func (l *NonblockingLogger) run() {
 	defer close(l.stopped)
 	for keyvals := range l.keyvalsC {
 		err := l.logger.Log(keyvals...)
@@ -123,7 +172,7 @@ func (l *AsyncLogger) run() {
 	}
 }
 
-func (l *AsyncLogger) stop(err error) {
+func (l *NonblockingLogger) stop(err error) {
 	l.mu.Lock()
 	if err != nil && l.err == nil {
 		l.err = err
@@ -140,15 +189,16 @@ func (l *AsyncLogger) stop(err error) {
 
 // Log queues keyvals for logging by the wrapped Logger. Log may be called
 // concurrently by multiple goroutines. If the the buffer is full, Log will
-// return ErrAsyncLoggerOverflow and the keyvals are not queued. If the
-// AsyncLogger is stopping, Log will return ErrAsyncLoggerStopping.
-func (l *AsyncLogger) Log(keyvals ...interface{}) error {
+// return ErrNonblockingLoggerOverflow and the keyvals are not queued. If the
+// NonblockingLogger is stopping, Log will return
+// ErrNonblockingLoggerStopping.
+func (l *NonblockingLogger) Log(keyvals ...interface{}) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	select {
 	case <-l.stopping:
-		return ErrAsyncLoggerStopping
+		return ErrNonblockingLoggerStopping
 	default:
 	}
 
@@ -156,35 +206,36 @@ func (l *AsyncLogger) Log(keyvals ...interface{}) error {
 	case l.keyvalsC <- keyvals:
 		return nil
 	default:
-		return ErrAsyncLoggerOverflow
+		return ErrNonblockingLoggerOverflow
 	}
 }
 
-// Errors returned by AsyncLogger.
+// Errors returned by NonblockingLogger.
 var (
-	ErrAsyncLoggerStopping = errors.New("aysnc logger: logger stopped")
-	ErrAsyncLoggerOverflow = errors.New("aysnc logger: log buffer overflow")
+	ErrNonblockingLoggerStopping = errors.New("aysnc logger: logger stopped")
+	ErrNonblockingLoggerOverflow = errors.New("aysnc logger: log buffer overflow")
 )
 
-// Stop stops the AsyncLogger. After stop returns the logger will not accept
-// new log events. Log events queued prior to calling Stop will be logged.
-func (l *AsyncLogger) Stop() {
+// Stop stops the NonblockingLogger. After stop returns the logger will not
+// accept new log events. Log events queued prior to calling Stop will be
+// logged.
+func (l *NonblockingLogger) Stop() {
 	l.stop(nil)
 }
 
 // Stopping returns a channel that is closed after Stop is called.
-func (l *AsyncLogger) Stopping() <-chan struct{} {
+func (l *NonblockingLogger) Stopping() <-chan struct{} {
 	return l.stopping
 }
 
 // Stopped returns a channel that is closed after Stop is called and all log
 // events have been sent to the wrapped logger.
-func (l *AsyncLogger) Stopped() <-chan struct{} {
+func (l *NonblockingLogger) Stopped() <-chan struct{} {
 	return l.stopped
 }
 
 // Err returns the first error returned by the wrapped logger.
-func (l *AsyncLogger) Err() error {
+func (l *NonblockingLogger) Err() error {
 	l.mu.Lock()
 	err := l.err
 	l.mu.Unlock()
@@ -194,11 +245,11 @@ func (l *AsyncLogger) Err() error {
 // Len returns a snapshot of the number of buffered log events. The returned
 // count should only be used for monitoring purposes as it becomes stale
 // quickly.
-func (l *AsyncLogger) Len() int {
+func (l *NonblockingLogger) Len() int {
 	return len(l.keyvalsC)
 }
 
 // Cap returns the maximum capacity of the buffer.
-func (l *AsyncLogger) Cap() int {
+func (l *NonblockingLogger) Cap() int {
 	return cap(l.keyvalsC)
 }
