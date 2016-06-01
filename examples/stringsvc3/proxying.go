@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"strings"
 	"time"
@@ -14,45 +13,70 @@ import (
 
 	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/loadbalancer"
-	"github.com/go-kit/kit/loadbalancer/static"
 	"github.com/go-kit/kit/log"
-	kitratelimit "github.com/go-kit/kit/ratelimit"
+	"github.com/go-kit/kit/ratelimit"
+	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/kit/sd/lb"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
-func proxyingMiddleware(proxyList string, ctx context.Context, logger log.Logger) ServiceMiddleware {
-	if proxyList == "" {
+func proxyingMiddleware(instances string, ctx context.Context, logger log.Logger) ServiceMiddleware {
+	// If instances is empty, don't proxy.
+	if instances == "" {
 		logger.Log("proxy_to", "none")
 		return func(next StringService) StringService { return next }
 	}
-	proxies := split(proxyList)
-	logger.Log("proxy_to", fmt.Sprint(proxies))
 
+	// Set some parameters for our client.
+	var (
+		qps         = 100                    // beyond which we will return an error
+		maxAttempts = 3                      // per request, before giving up
+		maxTime     = 250 * time.Millisecond // wallclock time, before giving up
+	)
+
+	// Otherwise, construct an endpoint for each instance in the list, and add
+	// it to a fixed set of endpoints. In a real service, rather than doing this
+	// by hand, you'd probably use package sd's support for your service
+	// discovery system.
+	var (
+		instanceList = split(instances)
+		subscriber   sd.FixedSubscriber
+	)
+	logger.Log("proxy_to", fmt.Sprint(instanceList))
+	for _, instance := range instanceList {
+		var e endpoint.Endpoint
+		e = makeUppercaseProxy(ctx, instance)
+		e = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(e)
+		e = ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(float64(qps), int64(qps)))(e)
+		subscriber = append(subscriber, e)
+	}
+
+	// Now, build a single, retrying, load-balancing endpoint out of all of
+	// those individual endpoints.
+	balancer := lb.NewRoundRobin(subscriber)
+	retry := lb.Retry(maxAttempts, maxTime, balancer)
+
+	// And finally, return the ServiceMiddleware, implemented by proxymw.
 	return func(next StringService) StringService {
-		var (
-			qps         = 100 // max to each instance
-			publisher   = static.NewPublisher(proxies, factory(ctx, qps), logger)
-			lb          = loadbalancer.NewRoundRobin(publisher)
-			maxAttempts = 3
-			maxTime     = 100 * time.Millisecond
-			endpoint    = loadbalancer.Retry(maxAttempts, maxTime, lb)
-		)
-		return proxymw{ctx, endpoint, next}
+		return proxymw{ctx, next, retry}
 	}
 }
 
 // proxymw implements StringService, forwarding Uppercase requests to the
 // provided endpoint, and serving all other (i.e. Count) requests via the
-// embedded StringService.
+// next StringService.
 type proxymw struct {
-	context.Context
-	UppercaseEndpoint endpoint.Endpoint
-	StringService
+	ctx       context.Context
+	next      StringService     // Serve most requests via this service...
+	uppercase endpoint.Endpoint // ...except Uppercase, which gets served by this endpoint
+}
+
+func (mw proxymw) Count(s string) int {
+	return mw.next.Count(s)
 }
 
 func (mw proxymw) Uppercase(s string) (string, error) {
-	response, err := mw.UppercaseEndpoint(mw.Context, uppercaseRequest{S: s})
+	response, err := mw.uppercase(mw.ctx, uppercaseRequest{S: s})
 	if err != nil {
 		return "", err
 	}
@@ -62,16 +86,6 @@ func (mw proxymw) Uppercase(s string) (string, error) {
 		return resp.V, errors.New(resp.Err)
 	}
 	return resp.V, nil
-}
-
-func factory(ctx context.Context, qps int) loadbalancer.Factory {
-	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
-		var e endpoint.Endpoint
-		e = makeUppercaseProxy(ctx, instance)
-		e = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(e)
-		e = kitratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(float64(qps), int64(qps)))(e)
-		return e, nil, nil
-	}
 }
 
 func makeUppercaseProxy(ctx context.Context, instance string) endpoint.Endpoint {
