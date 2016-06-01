@@ -3,6 +3,7 @@ package grpc
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -35,9 +36,12 @@ func NewClient(
 	grpcReply interface{},
 	options ...ClientOption,
 ) *Client {
+	if strings.IndexByte(serviceName, '.') == -1 {
+		serviceName = "pb." + serviceName
+	}
 	c := &Client{
 		client: cc,
-		method: fmt.Sprintf("/pb.%s/%s", serviceName, method),
+		method: fmt.Sprintf("/%s/%s", serviceName, method),
 		enc:    enc,
 		dec:    dec,
 		// We are using reflect.Indirect here to allow both reply structs and
