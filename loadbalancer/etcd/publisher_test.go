@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"testing"
+	"time"
 
 	stdetcd "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
@@ -49,6 +50,8 @@ func TestPublisher(t *testing.T) {
 	if _, err := p.Endpoints(); err != nil {
 		t.Fatal(err)
 	}
+	// wait for the loop before stop
+	time.Sleep(time.Millisecond)
 }
 
 func TestBadFactory(t *testing.T) {
@@ -95,4 +98,9 @@ func (c *fakeClient) GetEntries(prefix string) ([]string, error) {
 	return entries, nil
 }
 
-func (c *fakeClient) WatchPrefix(prefix string, responseChan chan *stdetcd.Response) {}
+func (c *fakeClient) WatchPrefix(prefix string, responseChan chan *stdetcd.Response) {
+	response, ok := c.responses[prefix]
+	if ok {
+		responseChan <- response
+	}
+}
