@@ -20,9 +20,10 @@
 	1. [Request tracing](#request-tracing)
 	1. [Threading a context](#threading-a-context)
 1. [Other examples](#other-examples)
-	1. [Transport-specific](#transport-specific)
 	1. [addsvc](#addsvc)
+	1. [profilesvc](#profilesvc)
 	1. [apigateway](#apigateway)
+	1. [shipping](#shipping)
 
 ## A minimal example
 
@@ -708,6 +709,7 @@ It's a good example of a fully-featured Go kit service.
  demonstrates how to use Go kit to build a REST-ish microservice.
 
 ### apigateway
+
 [apigateway](https://github.com/go-kit/kit/blob/master/examples/apigateway/main.go)
  demonstrates how to implement the API gateway pattern,
  backed by a Consul service discovery system.
