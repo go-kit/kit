@@ -4,6 +4,7 @@ import (
 	"io"
 	"sort"
 	"sync"
+	"sync/atomic"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
@@ -18,7 +19,7 @@ type Cache struct {
 	mtx     sync.RWMutex
 	factory sd.Factory
 	cache   map[string]endpointCloser
-	slice   []endpoint.Endpoint
+	slice   atomic.Value // []endpoint.Endpoint
 	logger  log.Logger
 }
 
@@ -84,14 +85,12 @@ func (c *Cache) Update(instances []string) {
 	}
 
 	// Swap and trigger GC for old copies.
-	c.slice = slice
+	c.slice.Store(slice)
 	c.cache = cache
 }
 
 // Endpoints yields the current set of (presumably identical) endpoints, ordered
 // lexicographically by the corresponding instance string.
 func (c *Cache) Endpoints() []endpoint.Endpoint {
-	c.mtx.RLock()
-	defer c.mtx.RUnlock()
-	return c.slice
+	return c.slice.Load().([]endpoint.Endpoint)
 }
