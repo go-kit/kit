@@ -21,7 +21,7 @@ type Client struct {
 	bufferedStream bool
 }
 
-// NewClient constructs a usable Client for a single remote endpoint.
+// NewClient constructs a usable Client for a single remote method.
 func NewClient(
 	method string,
 	tgt *url.URL,
@@ -65,8 +65,7 @@ func SetBufferedStream(buffered bool) ClientOption {
 	return func(c *Client) { c.bufferedStream = buffered }
 }
 
-// Endpoint returns a usable endpoint that will invoke the RPC specified by
-// the client.
+// Endpoint returns a usable endpoint that invokes the remote endpoint.
 func (c Client) Endpoint() endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		ctx, cancel := context.WithCancel(ctx)

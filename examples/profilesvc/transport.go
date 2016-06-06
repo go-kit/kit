@@ -1,28 +1,37 @@
-package main
+package profilesvc
+
+// The profilesvc is just over HTTP, so we just have a single transport.go.
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
-	stdhttp "net/http"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 
-	kitlog "github.com/go-kit/kit/log"
-	kithttp "github.com/go-kit/kit/transport/http"
+	"net/url"
+
+	"github.com/go-kit/kit/log"
+	httptransport "github.com/go-kit/kit/transport/http"
 )
 
 var (
-	errBadRouting = errors.New("inconsistent mapping between route and handler (programmer error)")
+	// ErrBadRouting is returned when an expected path variable is missing.
+	// It always indicates programmer error.
+	ErrBadRouting = errors.New("inconsistent mapping between route and handler (programmer error)")
 )
 
-func makeHandler(ctx context.Context, s ProfileService, logger kitlog.Logger) stdhttp.Handler {
-	e := makeEndpoints(s)
+// MakeHTTPHandler mounts all of the service endpoints into an http.Handler.
+// Useful in a profilesvc server.
+func MakeHTTPHandler(ctx context.Context, s Service, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
-
-	commonOptions := []kithttp.ServerOption{
-		kithttp.ServerErrorLogger(logger),
-		kithttp.ServerErrorEncoder(encodeError),
+	e := MakeServerEndpoints(s)
+	options := []httptransport.ServerOption{
+		httptransport.ServerErrorLogger(logger),
+		httptransport.ServerErrorEncoder(encodeError),
 	}
 
 	// POST    /profiles                           adds another profile
@@ -35,73 +44,73 @@ func makeHandler(ctx context.Context, s ProfileService, logger kitlog.Logger) st
 	// POST    /profiles/:id/addresses             add a new address
 	// DELETE  /profiles/:id/addresses/:addressID  remove an address
 
-	r.Methods("POST").Path("/profiles/").Handler(kithttp.NewServer(
+	r.Methods("POST").Path("/profiles/").Handler(httptransport.NewServer(
 		ctx,
-		e.postProfileEndpoint,
+		e.PostProfileEndpoint,
 		decodePostProfileRequest,
 		encodeResponse,
-		commonOptions...,
+		options...,
 	))
-	r.Methods("GET").Path("/profiles/{id}").Handler(kithttp.NewServer(
+	r.Methods("GET").Path("/profiles/{id}").Handler(httptransport.NewServer(
 		ctx,
-		e.getProfileEndpoint,
+		e.GetProfileEndpoint,
 		decodeGetProfileRequest,
 		encodeResponse,
-		commonOptions...,
+		options...,
 	))
-	r.Methods("PUT").Path("/profiles/{id}").Handler(kithttp.NewServer(
+	r.Methods("PUT").Path("/profiles/{id}").Handler(httptransport.NewServer(
 		ctx,
-		e.putProfileEndpoint,
+		e.PutProfileEndpoint,
 		decodePutProfileRequest,
 		encodeResponse,
-		commonOptions...,
+		options...,
 	))
-	r.Methods("PATCH").Path("/profiles/{id}").Handler(kithttp.NewServer(
+	r.Methods("PATCH").Path("/profiles/{id}").Handler(httptransport.NewServer(
 		ctx,
-		e.patchProfileEndpoint,
+		e.PatchProfileEndpoint,
 		decodePatchProfileRequest,
 		encodeResponse,
-		commonOptions...,
+		options...,
 	))
-	r.Methods("DELETE").Path("/profiles/{id}").Handler(kithttp.NewServer(
+	r.Methods("DELETE").Path("/profiles/{id}").Handler(httptransport.NewServer(
 		ctx,
-		e.deleteProfileEndpoint,
+		e.DeleteProfileEndpoint,
 		decodeDeleteProfileRequest,
 		encodeResponse,
-		commonOptions...,
+		options...,
 	))
-	r.Methods("GET").Path("/profiles/{id}/addresses/").Handler(kithttp.NewServer(
+	r.Methods("GET").Path("/profiles/{id}/addresses/").Handler(httptransport.NewServer(
 		ctx,
-		e.getAddressesEndpoint,
+		e.GetAddressesEndpoint,
 		decodeGetAddressesRequest,
 		encodeResponse,
-		commonOptions...,
+		options...,
 	))
-	r.Methods("GET").Path("/profiles/{id}/addresses/{addressID}").Handler(kithttp.NewServer(
+	r.Methods("GET").Path("/profiles/{id}/addresses/{addressID}").Handler(httptransport.NewServer(
 		ctx,
-		e.getAddressEndpoint,
+		e.GetAddressEndpoint,
 		decodeGetAddressRequest,
 		encodeResponse,
-		commonOptions...,
+		options...,
 	))
-	r.Methods("POST").Path("/profiles/{id}/addresses/").Handler(kithttp.NewServer(
+	r.Methods("POST").Path("/profiles/{id}/addresses/").Handler(httptransport.NewServer(
 		ctx,
-		e.postAddressEndpoint,
+		e.PostAddressEndpoint,
 		decodePostAddressRequest,
 		encodeResponse,
-		commonOptions...,
+		options...,
 	))
-	r.Methods("DELETE").Path("/profiles/{id}/addresses/{addressID}").Handler(kithttp.NewServer(
+	r.Methods("DELETE").Path("/profiles/{id}/addresses/{addressID}").Handler(httptransport.NewServer(
 		ctx,
-		e.deleteAddressEndpoint,
+		e.DeleteAddressEndpoint,
 		decodeDeleteAddressRequest,
 		encodeResponse,
-		commonOptions...,
+		options...,
 	))
 	return r
 }
 
-func decodePostProfileRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
+func decodePostProfileRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	var req postProfileRequest
 	if e := json.NewDecoder(r.Body).Decode(&req.Profile); e != nil {
 		return nil, e
@@ -109,20 +118,20 @@ func decodePostProfileRequest(_ context.Context, r *stdhttp.Request) (request in
 	return req, nil
 }
 
-func decodeGetProfileRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
+func decodeGetProfileRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		return nil, errBadRouting
+		return nil, ErrBadRouting
 	}
 	return getProfileRequest{ID: id}, nil
 }
 
-func decodePutProfileRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
+func decodePutProfileRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		return nil, errBadRouting
+		return nil, ErrBadRouting
 	}
 	var profile Profile
 	if err := json.NewDecoder(r.Body).Decode(&profile); err != nil {
@@ -134,11 +143,11 @@ func decodePutProfileRequest(_ context.Context, r *stdhttp.Request) (request int
 	}, nil
 }
 
-func decodePatchProfileRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
+func decodePatchProfileRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		return nil, errBadRouting
+		return nil, ErrBadRouting
 	}
 	var profile Profile
 	if err := json.NewDecoder(r.Body).Decode(&profile); err != nil {
@@ -150,33 +159,33 @@ func decodePatchProfileRequest(_ context.Context, r *stdhttp.Request) (request i
 	}, nil
 }
 
-func decodeDeleteProfileRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
+func decodeDeleteProfileRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		return nil, errBadRouting
+		return nil, ErrBadRouting
 	}
 	return deleteProfileRequest{ID: id}, nil
 }
 
-func decodeGetAddressesRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
+func decodeGetAddressesRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		return nil, errBadRouting
+		return nil, ErrBadRouting
 	}
 	return getAddressesRequest{ProfileID: id}, nil
 }
 
-func decodeGetAddressRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
+func decodeGetAddressRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		return nil, errBadRouting
+		return nil, ErrBadRouting
 	}
 	addressID, ok := vars["addressID"]
 	if !ok {
-		return nil, errBadRouting
+		return nil, ErrBadRouting
 	}
 	return getAddressRequest{
 		ProfileID: id,
@@ -184,11 +193,11 @@ func decodeGetAddressRequest(_ context.Context, r *stdhttp.Request) (request int
 	}, nil
 }
 
-func decodePostAddressRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
+func decodePostAddressRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		return nil, errBadRouting
+		return nil, ErrBadRouting
 	}
 	var address Address
 	if err := json.NewDecoder(r.Body).Decode(&address); err != nil {
@@ -200,15 +209,15 @@ func decodePostAddressRequest(_ context.Context, r *stdhttp.Request) (request in
 	}, nil
 }
 
-func decodeDeleteAddressRequest(_ context.Context, r *stdhttp.Request) (request interface{}, err error) {
+func decodeDeleteAddressRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
-		return nil, errBadRouting
+		return nil, ErrBadRouting
 	}
 	addressID, ok := vars["addressID"]
 	if !ok {
-		return nil, errBadRouting
+		return nil, ErrBadRouting
 	}
 	return deleteAddressRequest{
 		ProfileID: id,
@@ -216,32 +225,163 @@ func decodeDeleteAddressRequest(_ context.Context, r *stdhttp.Request) (request 
 	}, nil
 }
 
-// errorer is implemented by all concrete response types. It allows us to
-// change the HTTP response code without needing to trigger an endpoint
-// (transport-level) error. For more information, read the big comment in
-// endpoints.go.
+func encodePostProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
+	// r.Methods("POST").Path("/profiles/")
+	req.Method, req.URL.Path = "POST", url.QueryEscape("/profiles/")
+	return encodeRequest(ctx, req, request)
+}
+
+func encodeGetProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
+	// r.Methods("GET").Path("/profiles/{id}")
+	r := request.(getProfileRequest)
+	req.Method, req.URL.Path = "GET", url.QueryEscape("/profiles/"+r.ID)
+	return encodeRequest(ctx, req, request)
+}
+
+func encodePutProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
+	// r.Methods("PUT").Path("/profiles/{id}")
+	r := request.(putProfileRequest)
+	req.Method, req.URL.Path = "PUT", url.QueryEscape("/profiles/"+r.ID)
+	return encodeRequest(ctx, req, request)
+}
+
+func encodePatchProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
+	// r.Methods("PATCH").Path("/profiles/{id}")
+	r := request.(patchProfileRequest)
+	req.Method, req.URL.Path = "PATCH", url.QueryEscape("/profiles/"+r.ID)
+	return encodeRequest(ctx, req, request)
+}
+
+func encodeDeleteProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
+	// r.Methods("DELETE").Path("/profiles/{id}")
+	r := request.(deleteProfileRequest)
+	req.Method, req.URL.Path = "DELETE", url.QueryEscape("/profiles/"+r.ID)
+	return encodeRequest(ctx, req, request)
+}
+
+func encodeGetAddressesRequest(ctx context.Context, req *http.Request, request interface{}) error {
+	// r.Methods("GET").Path("/profiles/{id}/addresses/")
+	r := request.(getAddressesRequest)
+	req.Method, req.URL.Path = "GET", url.QueryEscape("/profiles/"+r.ProfileID+"/addresses/")
+	return encodeRequest(ctx, req, request)
+}
+
+func encodeGetAddressRequest(ctx context.Context, req *http.Request, request interface{}) error {
+	// r.Methods("GET").Path("/profiles/{id}/addresses/{addressID}")
+	r := request.(getAddressRequest)
+	req.Method, req.URL.Path = "GET", url.QueryEscape("/profiles/"+r.ProfileID+"/addresses/"+r.AddressID)
+	return encodeRequest(ctx, req, request)
+}
+
+func encodePostAddressRequest(ctx context.Context, req *http.Request, request interface{}) error {
+	// r.Methods("POST").Path("/profiles/{id}/addresses/")
+	r := request.(postAddressRequest)
+	req.Method, req.URL.Path = "POST", url.QueryEscape("/profiles/"+r.ProfileID+"/addresses/")
+	return encodeRequest(ctx, req, request)
+}
+
+func encodeDeleteAddressRequest(ctx context.Context, req *http.Request, request interface{}) error {
+	// r.Methods("DELETE").Path("/profiles/{id}/addresses/{addressID}")
+	r := request.(deleteAddressRequest)
+	req.Method, req.URL.Path = "DELETE", url.QueryEscape("/profiles/"+r.ProfileID+"/addresses/"+r.AddressID)
+	return encodeRequest(ctx, req, request)
+}
+
+func decodePostProfileResponse(_ context.Context, resp *http.Response) (interface{}, error) {
+	var response postProfileResponse
+	err := json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
+}
+
+func decodeGetProfileResponse(_ context.Context, resp *http.Response) (interface{}, error) {
+	var response getProfileResponse
+	err := json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
+}
+
+func decodePutProfileResponse(_ context.Context, resp *http.Response) (interface{}, error) {
+	var response putProfileResponse
+	err := json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
+}
+
+func decodePatchProfileResponse(_ context.Context, resp *http.Response) (interface{}, error) {
+	var response patchProfileResponse
+	err := json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
+}
+
+func decodeDeleteProfileResponse(_ context.Context, resp *http.Response) (interface{}, error) {
+	var response deleteProfileResponse
+	err := json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
+}
+
+func decodeGetAddressesResponse(_ context.Context, resp *http.Response) (interface{}, error) {
+	var response getAddressesResponse
+	err := json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
+}
+
+func decodeGetAddressResponse(_ context.Context, resp *http.Response) (interface{}, error) {
+	var response getAddressResponse
+	err := json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
+}
+
+func decodePostAddressResponse(_ context.Context, resp *http.Response) (interface{}, error) {
+	var response postAddressResponse
+	err := json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
+}
+
+func decodeDeleteAddressResponse(_ context.Context, resp *http.Response) (interface{}, error) {
+	var response deleteAddressResponse
+	err := json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
+}
+
+// errorer is implemented by all concrete response types that may contain
+// errors. It allows us to change the HTTP response code without needing to
+// trigger an endpoint (transport-level) error. For more information, read the
+// big comment in endpoints.go.
 type errorer interface {
 	error() error
 }
 
 // encodeResponse is the common method to encode all response types to the
-// client. I chose to do it this way because I didn't know if something more
-// specific was necessary. It's certainly possible to specialize on a
-// per-response (per-method) basis.
-func encodeResponse(ctx context.Context, w stdhttp.ResponseWriter, response interface{}) error {
+// client. I chose to do it this way because, since we're using JSON, there's no
+// reason to provide anything more specific. It's certainly possible to
+// specialize on a per-response (per-method) basis.
+func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	if e, ok := response.(errorer); ok && e.error() != nil {
 		// Not a Go kit transport error, but a business-logic error.
 		// Provide those as HTTP errors.
 		encodeError(ctx, e.error(), w)
 		return nil
 	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	return json.NewEncoder(w).Encode(response)
 }
 
-func encodeError(_ context.Context, err error, w stdhttp.ResponseWriter) {
+// encodeRequest likewise JSON-encodes the request to the HTTP request body.
+// Don't use it directly as a transport/http.Client EncodeRequestFunc:
+// profilesvc endpoints require mutating the HTTP method and request path.
+func encodeRequest(_ context.Context, req *http.Request, request interface{}) error {
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(request)
+	if err != nil {
+		return err
+	}
+	req.Body = ioutil.NopCloser(&buf)
+	return nil
+}
+
+func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	if err == nil {
 		panic("encodeError with nil error")
 	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(codeFrom(err))
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": err.Error(),
@@ -250,21 +390,21 @@ func encodeError(_ context.Context, err error, w stdhttp.ResponseWriter) {
 
 func codeFrom(err error) int {
 	switch err {
-	case errNotFound:
-		return stdhttp.StatusNotFound
-	case errAlreadyExists, errInconsistentIDs:
-		return stdhttp.StatusBadRequest
+	case ErrNotFound:
+		return http.StatusNotFound
+	case ErrAlreadyExists, ErrInconsistentIDs:
+		return http.StatusBadRequest
 	default:
-		if e, ok := err.(kithttp.Error); ok {
+		if e, ok := err.(httptransport.Error); ok {
 			switch e.Domain {
-			case kithttp.DomainDecode:
-				return stdhttp.StatusBadRequest
-			case kithttp.DomainDo:
-				return stdhttp.StatusServiceUnavailable
+			case httptransport.DomainDecode:
+				return http.StatusBadRequest
+			case httptransport.DomainDo:
+				return http.StatusServiceUnavailable
 			default:
-				return stdhttp.StatusInternalServerError
+				return http.StatusInternalServerError
 			}
 		}
-		return stdhttp.StatusInternalServerError
+		return http.StatusInternalServerError
 	}
 }

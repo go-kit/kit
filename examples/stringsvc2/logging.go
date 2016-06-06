@@ -8,7 +8,7 @@ import (
 
 type loggingMiddleware struct {
 	logger log.Logger
-	StringService
+	next   StringService
 }
 
 func (mw loggingMiddleware) Uppercase(s string) (output string, err error) {
@@ -22,7 +22,7 @@ func (mw loggingMiddleware) Uppercase(s string) (output string, err error) {
 		)
 	}(time.Now())
 
-	output, err = mw.StringService.Uppercase(s)
+	output, err = mw.next.Uppercase(s)
 	return
 }
 
@@ -36,6 +36,6 @@ func (mw loggingMiddleware) Count(s string) (n int) {
 		)
 	}(time.Now())
 
-	n = mw.StringService.Count(s)
+	n = mw.next.Count(s)
 	return
 }

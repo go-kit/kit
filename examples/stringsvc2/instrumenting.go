@@ -11,7 +11,7 @@ type instrumentingMiddleware struct {
 	requestCount   metrics.Counter
 	requestLatency metrics.TimeHistogram
 	countResult    metrics.Histogram
-	StringService
+	next           StringService
 }
 
 func (mw instrumentingMiddleware) Uppercase(s string) (output string, err error) {
@@ -22,7 +22,7 @@ func (mw instrumentingMiddleware) Uppercase(s string) (output string, err error)
 		mw.requestLatency.With(methodField).With(errorField).Observe(time.Since(begin))
 	}(time.Now())
 
-	output, err = mw.StringService.Uppercase(s)
+	output, err = mw.next.Uppercase(s)
 	return
 }
 
@@ -35,6 +35,6 @@ func (mw instrumentingMiddleware) Count(s string) (n int) {
 		mw.countResult.Observe(int64(n))
 	}(time.Now())
 
-	n = mw.StringService.Count(s)
+	n = mw.next.Count(s)
 	return
 }
