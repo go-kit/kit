@@ -15,7 +15,7 @@ type RequestFunc func(context.Context, *http.Request) context.Context
 // ServerResponseFunc may take information from a request context and use it to
 // manipulate a ResponseWriter. ServerResponseFuncs are only executed in
 // servers, after invoking the endpoint but prior to writing a response.
-type ServerResponseFunc func(context.Context, http.ResponseWriter)
+type ServerResponseFunc func(context.Context, http.ResponseWriter) context.Context
 
 // ClientResponseFunc may take information from an HTTP request and make the
 // response available for consumption. ClientResponseFuncs are only executed in
@@ -30,8 +30,9 @@ func SetContentType(contentType string) ServerResponseFunc {
 
 // SetResponseHeader returns a ResponseFunc that sets the specified header.
 func SetResponseHeader(key, val string) ServerResponseFunc {
-	return func(_ context.Context, w http.ResponseWriter) {
+	return func(ctx context.Context, w http.ResponseWriter) context.Context {
 		w.Header().Set(key, val)
+		return ctx
 	}
 }
 
