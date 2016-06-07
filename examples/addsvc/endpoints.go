@@ -42,7 +42,7 @@ func (e Endpoints) Sum(ctx context.Context, a, b int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return response.(sumResponse).V, nil
+	return response.(sumResponse).V, response.(sumResponse).Err
 }
 
 // Concat implements Service. Primarily useful in a client.
@@ -52,7 +52,7 @@ func (e Endpoints) Concat(ctx context.Context, a, b string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return response.(concatResponse).V, err
+	return response.(concatResponse).V, response.(concatResponse).Err
 }
 
 // MakeSumEndpoint returns an endpoint that invokes Sum on the service.
@@ -61,11 +61,12 @@ func MakeSumEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		sumReq := request.(sumRequest)
 		v, err := s.Sum(ctx, sumReq.A, sumReq.B)
-		if err != nil {
-			return nil, err
+		if err == ErrIntOverflow {
+			return nil, err // special case; see comment on ErrIntOverflow
 		}
 		return sumResponse{
-			V: v,
+			V:   v,
+			Err: err,
 		}, nil
 	}
 }
@@ -76,11 +77,9 @@ func MakeConcatEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		concatReq := request.(concatRequest)
 		v, err := s.Concat(ctx, concatReq.A, concatReq.B)
-		if err != nil {
-			return nil, err
-		}
 		return concatResponse{
-			V: v,
+			V:   v,
+			Err: err,
 		}, nil
 	}
 }
@@ -124,8 +123,14 @@ func EndpointLoggingMiddleware(logger log.Logger) endpoint.Middleware {
 
 type sumRequest struct{ A, B int }
 
-type sumResponse struct{ V int }
+type sumResponse struct {
+	V   int
+	Err error
+}
 
 type concatRequest struct{ A, B string }
 
-type concatResponse struct{ V string }
+type concatResponse struct {
+	V   string
+	Err error
+}

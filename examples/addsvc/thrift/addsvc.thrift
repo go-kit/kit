@@ -1,9 +1,11 @@
 struct SumReply {
 	1: i64 value
+	2: string err
 }
 
 struct ConcatReply {
 	1: string value
+	2: string err
 }
 
 service AddService {

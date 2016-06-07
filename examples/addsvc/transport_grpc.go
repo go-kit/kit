@@ -76,7 +76,7 @@ func DecodeGRPCConcatRequest(_ context.Context, grpcReq interface{}) (interface{
 // gRPC sum reply to a user-domain sum response. Primarily useful in a client.
 func DecodeGRPCSumResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.SumReply)
-	return sumResponse{V: int(reply.V)}, nil
+	return sumResponse{V: int(reply.V), Err: str2err(reply.Err)}, nil
 }
 
 // DecodeGRPCConcatResponse is a transport/grpc.DecodeResponseFunc that converts
@@ -84,14 +84,14 @@ func DecodeGRPCSumResponse(_ context.Context, grpcReply interface{}) (interface{
 // client.
 func DecodeGRPCConcatResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.ConcatReply)
-	return concatResponse{V: reply.V}, nil
+	return concatResponse{V: reply.V, Err: str2err(reply.Err)}, nil
 }
 
 // EncodeGRPCSumResponse is a transport/grpc.EncodeResponseFunc that converts a
 // user-domain sum response to a gRPC sum reply. Primarily useful in a server.
 func EncodeGRPCSumResponse(_ context.Context, response interface{}) (interface{}, error) {
 	resp := response.(sumResponse)
-	return &pb.SumReply{V: int64(resp.V)}, nil
+	return &pb.SumReply{V: int64(resp.V), Err: err2str(resp.Err)}, nil
 }
 
 // EncodeGRPCConcatResponse is a transport/grpc.EncodeResponseFunc that converts
@@ -99,7 +99,7 @@ func EncodeGRPCSumResponse(_ context.Context, response interface{}) (interface{}
 // server.
 func EncodeGRPCConcatResponse(_ context.Context, response interface{}) (interface{}, error) {
 	resp := response.(concatResponse)
-	return &pb.ConcatReply{V: resp.V}, nil
+	return &pb.ConcatReply{V: resp.V, Err: err2str(resp.Err)}, nil
 }
 
 // EncodeGRPCSumRequest is a transport/grpc.EncodeRequestFunc that converts a
