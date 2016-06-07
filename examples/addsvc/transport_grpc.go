@@ -43,12 +43,18 @@ type grpcServer struct {
 
 func (s *grpcServer) Sum(ctx context.Context, req *pb.SumRequest) (*pb.SumReply, error) {
 	_, rep, err := s.sum.ServeGRPC(ctx, req)
-	return rep.(*pb.SumReply), err
+	if err != nil {
+		return nil, err
+	}
+	return rep.(*pb.SumReply), nil
 }
 
 func (s *grpcServer) Concat(ctx context.Context, req *pb.ConcatRequest) (*pb.ConcatReply, error) {
 	_, rep, err := s.concat.ServeGRPC(ctx, req)
-	return rep.(*pb.ConcatReply), err
+	if err != nil {
+		return nil, err
+	}
+	return rep.(*pb.ConcatReply), nil
 }
 
 // DecodeGRPCSumRequest is a transport/grpc.DecodeRequestFunc that converts a
