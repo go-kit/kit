@@ -94,15 +94,15 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		}
 
 		resp, err := ctxhttp.Do(ctx, c.client, req)
-		for _, f := range c.after {
-			ctx = f(ctx, resp)
-		}
-
 		if err != nil {
 			return nil, Error{Domain: DomainDo, Err: err}
 		}
 		if !c.bufferedStream {
 			defer resp.Body.Close()
+		}
+
+		for _, f := range c.after {
+			ctx = f(ctx, resp)
 		}
 
 		response, err := c.dec(ctx, resp)

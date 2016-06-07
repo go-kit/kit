@@ -19,7 +19,7 @@ type ServerResponseFunc func(context.Context, http.ResponseWriter) context.Conte
 
 // ClientResponseFunc may take information from an HTTP request and make the
 // response available for consumption. ClientResponseFuncs are only executed in
-// clients, immediately after a request has been made.
+// clients, after a request has been made, but prior to it being decoded.
 type ClientResponseFunc func(context.Context, *http.Response) context.Context
 
 // SetContentType returns a ResponseFunc that sets the Content-Type header to
