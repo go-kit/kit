@@ -35,6 +35,10 @@ type Client interface {
 	// CreateParentNodes should try to create the path in case it does not exist
 	// yet on ZooKeeper.
 	CreateParentNodes(path string) error
+	// Register a service with ZooKeeper.
+	Register(s *Service) error
+	// Deregister a service with ZooKeeper.
+	Deregister(s *Service) error
 	// Stop should properly shutdown the client implementation
 	Stop()
 }
@@ -221,6 +225,42 @@ func (c *client) GetEntries(path string) ([]string, <-chan zk.Event, error) {
 		}
 	}
 	return resp, eventc, nil
+}
+
+// Register implements the ZooKeeper Client interface.
+func (c *client) Register(s *Service) error {
+	if s.Path[len(s.Path)-1] != '/' {
+		s.Path += "/"
+	}
+	path := s.Path + s.Name
+	if err := c.CreateParentNodes(path); err != nil {
+		return err
+	}
+	node, err := c.CreateProtectedEphemeralSequential(path, s.Data, c.acl)
+	if err != nil {
+		return err
+	}
+	s.node = node
+	return nil
+}
+
+// Deregister implements the ZooKeeper Client interface.
+func (c *client) Deregister(s *Service) error {
+	if s.node == "" {
+		return errors.New("not registered")
+	}
+	path := s.Path + s.Name
+	found, stat, err := c.Exists(path)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return errors.New("node not found")
+	}
+	if err := c.Delete(path, stat.Version); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Stop implements the ZooKeeper Client interface.
