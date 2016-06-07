@@ -16,6 +16,8 @@ var (
 	DefaultACL            = zk.WorldACL(zk.PermAll)
 	ErrInvalidCredentials = errors.New("invalid credentials provided")
 	ErrClientClosed       = errors.New("client service closed")
+	ErrNotRegistered      = errors.New("not registered")
+	ErrNodeNotFound       = errors.New("node not found")
 )
 
 const (
@@ -247,7 +249,7 @@ func (c *client) Register(s *Service) error {
 // Deregister implements the ZooKeeper Client interface.
 func (c *client) Deregister(s *Service) error {
 	if s.node == "" {
-		return errors.New("not registered")
+		return ErrNotRegistered
 	}
 	path := s.Path + s.Name
 	found, stat, err := c.Exists(path)
@@ -255,7 +257,7 @@ func (c *client) Deregister(s *Service) error {
 		return err
 	}
 	if !found {
-		return errors.New("node not found")
+		return ErrNodeNotFound
 	}
 	if err := c.Delete(path, stat.Version); err != nil {
 		return err

@@ -190,7 +190,7 @@ func TestGetEntriesPayloadOnServer(t *testing.T) {
 		if want, have := stdzk.EventNodeChildrenChanged.String(), event.Type.String(); want != have {
 			t.Errorf("want %s, have %s", want, have)
 		}
-	case <-time.After(20 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
 		t.Errorf("expected incoming watch event, timeout occurred")
 	}
 
@@ -205,7 +205,7 @@ func TestGetEntriesPayloadOnServer(t *testing.T) {
 		if want, have := stdzk.EventNodeChildrenChanged.String(), event.Type.String(); want != have {
 			t.Errorf("want %s, have %s", want, have)
 		}
-	case <-time.After(20 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
 		t.Errorf("expected incoming watch event, timeout occurred")
 	}
 
