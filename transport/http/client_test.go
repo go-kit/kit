@@ -33,8 +33,9 @@ func TestHTTPClient(t *testing.T) {
 		afterHeaderKey = "X-The-Dude"
 		afterHeaderVal = "Abides"
 		afterVal       = ""
-		afterFunc      = func(_ context.Context, r *http.Response) {
+		afterFunc      = func(ctx context.Context, r *http.Response) context.Context {
 			afterVal = r.Header.Get(afterHeaderKey)
+			return ctx
 		}
 	)
 

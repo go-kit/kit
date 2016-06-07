@@ -54,7 +54,7 @@ type ClientOption func(*Client)
 // context. ClientResponseFuncs are only executed on the client immediately
 // after the request has been made but prior to decoding. This allows for
 // intervention in case there is an error from the request.
-type ClientResponseFunc func(context.Context, *http.Response)
+type ClientResponseFunc func(context.Context, *http.Response) context.Context
 
 // SetClient sets the underlying HTTP client used for requests.
 // By default, http.DefaultClient is used.
@@ -102,7 +102,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		resp, err := ctxhttp.Do(ctx, c.client, req)
 		for _, f := range c.after {
-			f(ctx, resp)
+			ctx = f(ctx, resp)
 		}
 
 		if err != nil {
