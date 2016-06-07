@@ -18,6 +18,7 @@ type Client struct {
 	enc            EncodeRequestFunc
 	dec            DecodeResponseFunc
 	before         []RequestFunc
+	after          []ClientResponseFunc
 	bufferedStream bool
 }
 
@@ -36,6 +37,7 @@ func NewClient(
 		enc:            enc,
 		dec:            dec,
 		before:         []RequestFunc{},
+		after:          []ClientResponseFunc{},
 		bufferedStream: false,
 	}
 	for _, option := range options {
@@ -47,6 +49,13 @@ func NewClient(
 // ClientOption sets an optional parameter for clients.
 type ClientOption func(*Client)
 
+// ClientResponseFunc takes information from an HTTP request to read from the
+// response and do something additional with the response or add/update
+// context. ClientResponseFuncs are only executed on the client immediately
+// after the request has been made but prior to decoding. This allows for
+// intervention in case there is an error from the request.
+type ClientResponseFunc func(context.Context, *http.Response)
+
 // SetClient sets the underlying HTTP client used for requests.
 // By default, http.DefaultClient is used.
 func SetClient(client *http.Client) ClientOption {
@@ -57,6 +66,13 @@ func SetClient(client *http.Client) ClientOption {
 // request before it's invoked.
 func SetClientBefore(before ...RequestFunc) ClientOption {
 	return func(c *Client) { c.before = before }
+}
+
+// SetClientAfter sets the ClientResponseFunc applied to the incoming HTTP
+// request prior to it being decoded. This is useful for obtaining anything off
+// of the response and adding onto the context prior to decoding.
+func SetClientAfter(after ...ClientResponseFunc) ClientOption {
+	return func(c *Client) { c.after = after }
 }
 
 // SetBufferedStream sets whether the Response.Body is left open, allowing it
@@ -85,6 +101,10 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		}
 
 		resp, err := ctxhttp.Do(ctx, c.client, req)
+		for _, f := range c.after {
+			f(ctx, resp)
+		}
+
 		if err != nil {
 			return nil, Error{Domain: DomainDo, Err: err}
 		}
