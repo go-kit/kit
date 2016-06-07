@@ -18,8 +18,10 @@ var GoUnusedProtection__ int
 
 // Attributes:
 //  - Value
+//  - Err
 type SumReply struct {
-	Value int64 `thrift:"value,1" json:"value"`
+	Value int64  `thrift:"value,1" json:"value"`
+	Err   string `thrift:"err,2" json:"err"`
 }
 
 func NewSumReply() *SumReply {
@@ -28,6 +30,10 @@ func NewSumReply() *SumReply {
 
 func (p *SumReply) GetValue() int64 {
 	return p.Value
+}
+
+func (p *SumReply) GetErr() string {
+	return p.Err
 }
 func (p *SumReply) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
@@ -45,6 +51,10 @@ func (p *SumReply) Read(iprot thrift.TProtocol) error {
 		switch fieldId {
 		case 1:
 			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
 				return err
 			}
 		default:
@@ -71,11 +81,23 @@ func (p *SumReply) readField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *SumReply) readField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.Err = v
+	}
+	return nil
+}
+
 func (p *SumReply) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("SumReply"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -100,6 +122,19 @@ func (p *SumReply) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
+func (p *SumReply) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("err", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.Err)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.err (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:err: ", p), err)
+	}
+	return err
+}
+
 func (p *SumReply) String() string {
 	if p == nil {
 		return "<nil>"
@@ -109,8 +144,10 @@ func (p *SumReply) String() string {
 
 // Attributes:
 //  - Value
+//  - Err
 type ConcatReply struct {
 	Value string `thrift:"value,1" json:"value"`
+	Err   string `thrift:"err,2" json:"err"`
 }
 
 func NewConcatReply() *ConcatReply {
@@ -119,6 +156,10 @@ func NewConcatReply() *ConcatReply {
 
 func (p *ConcatReply) GetValue() string {
 	return p.Value
+}
+
+func (p *ConcatReply) GetErr() string {
+	return p.Err
 }
 func (p *ConcatReply) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
@@ -136,6 +177,10 @@ func (p *ConcatReply) Read(iprot thrift.TProtocol) error {
 		switch fieldId {
 		case 1:
 			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
 				return err
 			}
 		default:
@@ -162,11 +207,23 @@ func (p *ConcatReply) readField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ConcatReply) readField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.Err = v
+	}
+	return nil
+}
+
 func (p *ConcatReply) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("ConcatReply"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -187,6 +244,19 @@ func (p *ConcatReply) writeField1(oprot thrift.TProtocol) (err error) {
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:value: ", p), err)
+	}
+	return err
+}
+
+func (p *ConcatReply) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("err", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.Err)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.err (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:err: ", p), err)
 	}
 	return err
 }

@@ -35,7 +35,7 @@ func (s *thriftServer) Sum(a int64, b int64) (*thriftadd.SumReply, error) {
 		return nil, err
 	}
 	resp := response.(sumResponse)
-	return &thriftadd.SumReply{Value: int64(resp.V)}, nil
+	return &thriftadd.SumReply{Value: int64(resp.V), Err: err2str(resp.Err)}, nil
 }
 
 func (s *thriftServer) Concat(a string, b string) (*thriftadd.ConcatReply, error) {
@@ -45,7 +45,7 @@ func (s *thriftServer) Concat(a string, b string) (*thriftadd.ConcatReply, error
 		return nil, err
 	}
 	resp := response.(concatResponse)
-	return &thriftadd.ConcatReply{Value: resp.V}, nil
+	return &thriftadd.ConcatReply{Value: resp.V, Err: err2str(resp.Err)}, nil
 }
 
 // MakeThriftSumEndpoint returns an endpoint that invokes the passed Thrift client.
@@ -54,10 +54,10 @@ func MakeThriftSumEndpoint(client *thriftadd.AddServiceClient) endpoint.Endpoint
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(sumRequest)
 		reply, err := client.Sum(int64(req.A), int64(req.B))
-		if err != nil {
-			return nil, err
+		if err == ErrIntOverflow {
+			return nil, err // special case; see comment on ErrIntOverflow
 		}
-		return sumResponse{V: int(reply.Value)}, nil
+		return sumResponse{V: int(reply.Value), Err: err}, nil
 	}
 }
 
@@ -68,9 +68,6 @@ func MakeThriftConcatEndpoint(client *thriftadd.AddServiceClient) endpoint.Endpo
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(concatRequest)
 		reply, err := client.Concat(req.A, req.B)
-		if err != nil {
-			return nil, err
-		}
-		return concatResponse{V: reply.Value}, nil
+		return concatResponse{V: reply.Value, Err: err}, nil
 	}
 }
