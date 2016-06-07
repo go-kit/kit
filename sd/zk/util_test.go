@@ -71,6 +71,14 @@ func (c *fakeClient) RemoveService(node string) {
 	c.ch <- zk.Event{}
 }
 
+func (c *fakeClient) Register(s *Service) error {
+	return nil
+}
+
+func (c *fakeClient) Deregister(s *Service) error {
+	return nil
+}
+
 func (c *fakeClient) SendErrorOnWatch() {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()

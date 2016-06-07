@@ -52,7 +52,7 @@ func TestCreateParentNodesOnServer(t *testing.T) {
 	}
 	defer s.Stop()
 
-	services, err := s.Services()
+	services, err := s.Endpoints()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestConnection(t *testing.T) {
 }
 
 func TestGetEntriesOnServer(t *testing.T) {
-	var instancePayload = "protocol://hostname:port/routing"
+	var instancePayload = "10.0.3.204:8002"
 
 	c1, err := NewClient(host, logger)
 	if err != nil {
@@ -140,29 +140,26 @@ func TestGetEntriesOnServer(t *testing.T) {
 	}
 	defer c2.Stop()
 
-	c2impl, _ := c2.(*client)
-	_, err = c2impl.Create(
-		path+"/instance1",
-		[]byte(instancePayload),
-		stdzk.FlagEphemeral|stdzk.FlagSequence,
-		stdzk.WorldACL(stdzk.PermAll),
-	)
-	if err != nil {
-		t.Fatalf("Unable to create test ephemeral znode 1: %v", err)
+	instance1 := &Service{
+		Path: path,
+		Name: "instance1",
+		Data: []byte(instancePayload),
 	}
-	_, err = c2impl.Create(
-		path+"/instance2",
-		[]byte(instancePayload+"2"),
-		stdzk.FlagEphemeral|stdzk.FlagSequence,
-		stdzk.WorldACL(stdzk.PermAll),
-	)
-	if err != nil {
-		t.Fatalf("Unable to create test ephemeral znode 2: %v", err)
+	if err = c2.Register(instance1); err != nil {
+		t.Fatalf("Unable to create test ephemeral znode 1: %+v", err)
+	}
+	instance2 := &Service{
+		Path: path,
+		Name: "instance2",
+		Data: []byte(instancePayload),
+	}
+	if err = c2.Register(instance2); err != nil {
+		t.Fatalf("Unable to create test ephemeral znode 2: %+v", err)
 	}
 
 	time.Sleep(50 * time.Millisecond)
 
-	services, err := s.Services()
+	services, err := s.Endpoints()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,21 +177,35 @@ func TestGetEntriesPayloadOnServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = c.(*client).Create(
-		path+"/instance3",
-		[]byte("just some payload"),
-		stdzk.FlagEphemeral|stdzk.FlagSequence,
-		stdzk.WorldACL(stdzk.PermAll),
-	)
-	if err != nil {
-		t.Fatalf("Unable to create test ephemeral znode: %v", err)
+
+	instance3 := Service{
+		Path: path,
+		Name: "instance3",
+		Data: []byte("just some payload"),
 	}
+	registrar := NewRegistrar(c, instance3, logger)
+	registrar.Register()
 	select {
 	case event := <-eventc:
 		if want, have := stdzk.EventNodeChildrenChanged.String(), event.Type.String(); want != have {
 			t.Errorf("want %s, have %s", want, have)
 		}
-	case <-time.After(20 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
+		t.Errorf("expected incoming watch event, timeout occurred")
+	}
+
+	_, eventc, err = c.GetEntries(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	registrar.Deregister()
+	select {
+	case event := <-eventc:
+		if want, have := stdzk.EventNodeChildrenChanged.String(), event.Type.String(); want != have {
+			t.Errorf("want %s, have %s", want, have)
+		}
+	case <-time.After(100 * time.Millisecond):
 		t.Errorf("expected incoming watch event, timeout occurred")
 	}
 
