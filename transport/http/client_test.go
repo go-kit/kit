@@ -51,8 +51,8 @@ func TestHTTPClient(t *testing.T) {
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.SetClientBefore(httptransport.SetRequestHeader(headerKey, headerVal)),
-		httptransport.SetClientAfter(afterFunc),
+		httptransport.ClientBefore(httptransport.SetRequestHeader(headerKey, headerVal)),
+		httptransport.ClientAfter(afterFunc),
 	)
 
 	res, err := client.Endpoint()(context.Background(), struct{}{})
@@ -115,7 +115,7 @@ func TestHTTPClientBufferedStream(t *testing.T) {
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.SetBufferedStream(true),
+		httptransport.BufferedStream(true),
 	)
 
 	res, err := client.Endpoint()(context.Background(), struct{}{})

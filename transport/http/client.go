@@ -55,22 +55,22 @@ func SetClient(client *http.Client) ClientOption {
 	return func(c *Client) { c.client = client }
 }
 
-// SetClientBefore sets the RequestFuncs that are applied to the outgoing HTTP
+// ClientBefore sets the RequestFuncs that are applied to the outgoing HTTP
 // request before it's invoked.
-func SetClientBefore(before ...RequestFunc) ClientOption {
+func ClientBefore(before ...RequestFunc) ClientOption {
 	return func(c *Client) { c.before = before }
 }
 
-// SetClientAfter sets the ClientResponseFuncs applied to the incoming HTTP
+// ClientAfter sets the ClientResponseFuncs applied to the incoming HTTP
 // request prior to it being decoded. This is useful for obtaining anything off
 // of the response and adding onto the context prior to decoding.
-func SetClientAfter(after ...ClientResponseFunc) ClientOption {
+func ClientAfter(after ...ClientResponseFunc) ClientOption {
 	return func(c *Client) { c.after = after }
 }
 
-// SetBufferedStream sets whether the Response.Body is left open, allowing it
+// BufferedStream sets whether the Response.Body is left open, allowing it
 // to be read from later. Useful for transporting a file as a buffered stream.
-func SetBufferedStream(buffered bool) ClientOption {
+func BufferedStream(buffered bool) ClientOption {
 	return func(c *Client) { c.bufferedStream = buffered }
 }
 
