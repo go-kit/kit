@@ -91,6 +91,39 @@ func TestManager(t *testing.T) {
 	}
 }
 
+func TestIssue292(t *testing.T) {
+	// The util/conn.Manager won't attempt to reconnect to the provided endpoint
+	// if the endpoint is initially unavailable (e.g. dial tcp :8080:
+	// getsockopt: connection refused). If the endpoint is up when
+	// conn.NewManager is called and then goes down/up, it reconnects just fine.
+
+	var (
+		tickc    = make(chan time.Time)
+		after    = func(time.Duration) <-chan time.Time { return tickc }
+		dialconn = net.Conn(nil)
+		dialerr  = errors.New("fail")
+		dialer   = func(string, string) (net.Conn, error) { return dialconn, dialerr }
+		mgr      = NewManager(dialer, "netw", "addr", after, log.NewNopLogger())
+	)
+
+	if conn := mgr.Take(); conn != nil {
+		t.Fatal("first Take should have yielded nil conn, but didn't")
+	}
+
+	dialconn, dialerr = &mockConn{}, nil
+	select {
+	case tickc <- time.Now():
+	case <-time.After(time.Second):
+		t.Fatal("manager isn't listening for a tick, despite a failed dial")
+	}
+
+	if !within(time.Second, func() bool {
+		return mgr.Take() != nil
+	}) {
+		t.Fatal("second Take should have yielded good conn, but didn't")
+	}
+}
+
 type mockConn struct {
 	rd, wr uint64
 }
