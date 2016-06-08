@@ -64,9 +64,9 @@ func NewClient(
 // ClientOption sets an optional parameter for clients.
 type ClientOption func(*Client)
 
-// SetClientBefore sets the RequestFuncs that are applied to the outgoing gRPC
+// ClientBefore sets the RequestFuncs that are applied to the outgoing gRPC
 // request before it's invoked.
-func SetClientBefore(before ...RequestFunc) ClientOption {
+func ClientBefore(before ...RequestFunc) ClientOption {
 	return func(c *Client) { c.before = before }
 }
 
