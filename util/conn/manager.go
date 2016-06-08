@@ -67,10 +67,15 @@ func (m *Manager) Put(err error) {
 func (m *Manager) loop() {
 	var (
 		conn       = dial(m.dialer, m.network, m.address, m.logger) // may block slightly
-		connc      = make(chan net.Conn)
+		connc      = make(chan net.Conn, 1)
 		reconnectc <-chan time.Time // initially nil
 		backoff    = time.Second
 	)
+
+	// If the initial dial fails, we need to trigger a reconnect via the loop
+	// body, below. If we did this in a goroutine, we would race on the conn
+	// variable. So we use a buffered chan instead.
+	connc <- conn
 
 	for {
 		select {

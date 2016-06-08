@@ -20,6 +20,7 @@ message SumRequest {
 // The sum response contains the result of the calculation.
 message SumReply {
   int64 v = 1;
+  string err = 2;
 }
 
 // The Concat request contains two parameters.
@@ -31,4 +32,5 @@ message ConcatRequest {
 // The Concat response contains the result of the concatenation.
 message ConcatReply {
   string v = 1;
+  string err = 2;
 }
