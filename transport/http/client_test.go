@@ -30,10 +30,18 @@ func TestHTTPClient(t *testing.T) {
 		headers   = make(chan string, 1)
 		headerKey = "X-Foo"
 		headerVal = "abcde"
+		afterHeaderKey = "X-The-Dude"
+		afterHeaderVal = "Abides"
+		afterVal       = ""
+		afterFunc      = func(ctx context.Context, r *http.Response) context.Context {
+			afterVal = r.Header.Get(afterHeaderKey)
+			return ctx
+		}
 	)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headers <- r.Header.Get(headerKey)
+		w.Header().Set(afterHeaderKey, afterHeaderVal)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(testbody))
 	}))
@@ -43,7 +51,8 @@ func TestHTTPClient(t *testing.T) {
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.SetClientBefore(httptransport.SetRequestHeader(headerKey, headerVal)),
+		httptransport.ClientBefore(httptransport.SetRequestHeader(headerKey, headerVal)),
+		httptransport.ClientAfter(afterFunc),
 	)
 
 	res, err := client.Endpoint()(context.Background(), struct{}{})
@@ -59,6 +68,11 @@ func TestHTTPClient(t *testing.T) {
 	}
 	// Check that Request Header was successfully received
 	if want := headerVal; want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+
+	// Check that Response header set from server was received in SetClientAfter
+	if want, have := afterVal, afterHeaderVal; want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
 
@@ -101,7 +115,7 @@ func TestHTTPClientBufferedStream(t *testing.T) {
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.SetBufferedStream(true),
+		httptransport.BufferedStream(true),
 	)
 
 	res, err := client.Endpoint()(context.Background(), struct{}{})

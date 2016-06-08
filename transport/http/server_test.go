@@ -103,7 +103,7 @@ func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) 
 			func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 			func(context.Context, http.ResponseWriter, interface{}) error { return nil },
 			httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context { return ctx }),
-			httptransport.ServerAfter(func(ctx context.Context, w http.ResponseWriter) { return }),
+			httptransport.ServerAfter(func(ctx context.Context, w http.ResponseWriter) context.Context { return ctx }),
 		)
 	)
 	go func() {
