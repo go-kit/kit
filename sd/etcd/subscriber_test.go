@@ -87,3 +87,10 @@ func (c *fakeClient) GetEntries(prefix string) ([]string, error) {
 }
 
 func (c *fakeClient) WatchPrefix(prefix string, responseChan chan *stdetcd.Response) {}
+
+func (c *fakeClient) Register(Service) error {
+	return nil
+}
+func (c *fakeClient) Deregister(Service) error {
+	return nil
+}
