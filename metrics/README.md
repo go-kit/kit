@@ -15,7 +15,10 @@ It has **[counters][]**, **[gauges][]**, and **[histograms][]**,
 
 Code instrumentation is absolutely essential to achieve [observability][] into a distributed system.
 Metrics and instrumentation tools have coalesced around a few well-defined idioms.
-`package metrics` provides a common, minimal interface those idioms for service authors. 
+`package metrics` provides a common, minimal interface those idioms for service authors.
+
+Using this interface allows library authors to easily support exporting a wide
+variety of metrics without committing to any single metrics provider.
 
 [observability]: https://speakerdeck.com/mattheath/observability-in-micro-service-architectures
 
@@ -24,12 +27,17 @@ Metrics and instrumentation tools have coalesced around a few well-defined idiom
 A simple counter, exported via expvar.
 
 ```go
-import "github.com/go-kit/kit/metrics/expvar"
+import (
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/expvar"
+)
 
 func main() {
-	myCount := expvar.NewCounter("my_count")
+	var myCount metrics.Counter
+	myCount = expvar.NewCounter("my_count")
 	myCount.Add(1)
 }
+
 ```
 
 A histogram for request duration, exported via a Prometheus summary with
@@ -37,10 +45,11 @@ dynamically-computed quantiles.
 
 ```go
 import (
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
+	"time"
 
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/prometheus"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 var requestDuration = prometheus.NewSummary(stdprometheus.SummaryOpts{
@@ -50,8 +59,8 @@ var requestDuration = prometheus.NewSummary(stdprometheus.SummaryOpts{
 	Help:      "Total time spent serving requests.",
 }, []string{})
 
-func handleRequest() {
-	defer func(begin time.Time) { requestDuration.Observe(time.Since(begin)) }(time.Now())
+func handleRequest(requestDur metrics.Histogram) {
+	defer func(begin time.Time) { requestDur.Observe(int64(time.Since(begin))) }(time.Now())
 	// handle request
 }
 ```
@@ -75,9 +84,14 @@ func main() {
 	}
 
 	reportInterval := 5 * time.Second
-	goroutines := statsd.NewGauge(statsdWriter, "total_goroutines", reportInterval)
-	for range time.Tick(reportInterval) {
-		goroutines.Set(float64(runtime.NumGoroutine()))
-	}
+    var goroutines metrics.Gauge
+	goroutines = statsd.NewGauge(statsdWriter, "total_goroutines", reportInterval)
+    exportGoroutines(goroutines, reportInterval)
+}
+
+func exportGoroutines(g metrics.Gauge, interval time.Duration) {
+    for range time.Tick(reportInterval) {
+        goroutines.Set(float64(runtime.NumGoroutine()))
+    }
 }
 ```
