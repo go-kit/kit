@@ -1,7 +1,3 @@
-// Package metrics provides an extensible framework to instrument your
-// application. All metrics are safe for concurrent use. Considerable design
-// influence has been taken from https://github.com/codahale/metrics and
-// https://prometheus.io.
 package metrics
 
 // Counter is a monotonically-increasing, unsigned, 64-bit integer used to
