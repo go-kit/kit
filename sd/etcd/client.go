@@ -3,6 +3,7 @@ package etcd
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -10,6 +11,11 @@ import (
 
 	etcd "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
+)
+
+var (
+	ErrNoKey   = errors.New("no key provided")
+	ErrNoValue = errors.New("no value provided")
 )
 
 // Client is a wrapper around the etcd client.
@@ -20,6 +26,11 @@ type Client interface {
 	// WatchPrefix starts watching every change for given prefix in etcd. When an
 	// change is detected it will populate the responseChan when an *etcd.Response.
 	WatchPrefix(prefix string, responseChan chan *etcd.Response)
+
+	// Register a service with etcd.
+	Register(s Service) error
+	// Deregister a service with etcd.
+	Deregister(s Service) error
 }
 
 type client struct {
@@ -112,10 +123,16 @@ func (c *client) GetEntries(key string) ([]string, error) {
 	}
 
 	entries := make([]string, len(resp.Node.Nodes))
-	for i, node := range resp.Node.Nodes {
-		entries[i] = node.Value
+
+	if len(entries) > 0 {
+		for i, node := range resp.Node.Nodes {
+			entries[i] = node.Value
+		}
+	} else {
+		entries = append(entries, resp.Node.Value)
 	}
 	return entries, nil
+
 }
 
 // WatchPrefix implements the etcd Client interface.
@@ -128,4 +145,23 @@ func (c *client) WatchPrefix(prefix string, responseChan chan *etcd.Response) {
 		}
 		responseChan <- res
 	}
+}
+
+func (c *client) Register(s Service) error {
+	if s.Key == "" {
+		return ErrNoKey
+	}
+	if s.Value == "" {
+		return ErrNoValue
+	}
+	_, err := c.keysAPI.Create(c.ctx, s.Key, s.Value)
+	return err
+}
+
+func (c *client) Deregister(s Service) error {
+	if s.Key == "" {
+		return ErrNoKey
+	}
+	_, err := c.keysAPI.Delete(c.ctx, s.Key, s.DeleteOptions)
+	return err
 }
