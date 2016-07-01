@@ -9,7 +9,6 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	kitot "github.com/go-kit/kit/tracing/opentracing"
-	"github.com/go-kit/kit/transport/grpc"
 )
 
 func TestTraceGRPCRequestRoundtrip(t *testing.T) {
@@ -21,7 +20,7 @@ func TestTraceGRPCRequestRoundtrip(t *testing.T) {
 	beforeSpan.SetBaggageItem("baggage", "check")
 	beforeCtx := opentracing.ContextWithSpan(context.Background(), beforeSpan)
 
-	var toGRPCFunc grpc.RequestFunc = kitot.ToGRPCRequest(tracer, nil)
+	toGRPCFunc := kitot.ToGRPCRequest(tracer, nil)
 	md := metadata.Pairs()
 	// Call the RequestFunc.
 	afterCtx := toGRPCFunc(beforeCtx, &md)
@@ -33,12 +32,13 @@ func TestTraceGRPCRequestRoundtrip(t *testing.T) {
 	}
 
 	// No spans should have finished yet.
-	if want, have := 0, len(tracer.FinishedSpans); want != have {
+	finishedSpans := tracer.GetFinishedSpans()
+	if want, have := 0, len(finishedSpans); want != have {
 		t.Errorf("Want %v span(s), found %v", want, have)
 	}
 
 	// Use FromGRPCRequest to verify that we can join with the trace given MD.
-	var fromGRPCFunc grpc.RequestFunc = kitot.FromGRPCRequest(tracer, "joined", nil)
+	fromGRPCFunc := kitot.FromGRPCRequest(tracer, "joined", nil)
 	joinCtx := fromGRPCFunc(afterCtx, &md)
 	joinedSpan := opentracing.SpanFromContext(joinCtx).(*mocktracer.MockSpan)
 

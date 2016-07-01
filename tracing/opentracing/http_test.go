@@ -9,7 +9,6 @@ import (
 	"golang.org/x/net/context"
 
 	kitot "github.com/go-kit/kit/tracing/opentracing"
-	kithttp "github.com/go-kit/kit/transport/http"
 )
 
 func TestTraceHTTPRequestRoundtrip(t *testing.T) {
@@ -21,7 +20,7 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	beforeSpan.SetBaggageItem("baggage", "check")
 	beforeCtx := opentracing.ContextWithSpan(context.Background(), beforeSpan)
 
-	var toHTTPFunc kithttp.RequestFunc = kitot.ToHTTPRequest(tracer, nil)
+	toHTTPFunc := kitot.ToHTTPRequest(tracer, nil)
 	req, _ := http.NewRequest("GET", "http://test.biz/url", nil)
 	// Call the RequestFunc.
 	afterCtx := toHTTPFunc(beforeCtx, req)
@@ -33,12 +32,13 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	}
 
 	// No spans should have finished yet.
-	if want, have := 0, len(tracer.FinishedSpans); want != have {
+	finishedSpans := tracer.GetFinishedSpans()
+	if want, have := 0, len(finishedSpans); want != have {
 		t.Errorf("Want %v span(s), found %v", want, have)
 	}
 
 	// Use FromHTTPRequest to verify that we can join with the trace given a req.
-	var fromHTTPFunc kithttp.RequestFunc = kitot.FromHTTPRequest(tracer, "joined", nil)
+	fromHTTPFunc := kitot.FromHTTPRequest(tracer, "joined", nil)
 	joinCtx := fromHTTPFunc(afterCtx, req)
 	joinedSpan := opentracing.SpanFromContext(joinCtx).(*mocktracer.MockSpan)
 
