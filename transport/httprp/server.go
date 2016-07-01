@@ -51,8 +51,7 @@ func ServerBefore(before ...RequestFunc) ServerOption {
 
 // ServeHTTP implements http.Handler.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithCancel(s.ctx)
-	defer cancel()
+	ctx := s.ctx
 
 	for _, f := range s.before {
 		ctx = f(ctx, r)
