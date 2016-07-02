@@ -71,7 +71,7 @@ func (e *Emitter) NewCounter(key string) metrics.Counter {
 }
 
 // NewHistogram returns a Histogram that emits observations in the DogStatsD
-// protocol via the Emitter's conection manager. Observations are buffered for
+// protocol via the Emitter's connection manager. Observations are buffered for
 // the reporting interval or until the buffer exceeds a max packet size,
 // whichever comes first. Fields are ignored.
 //
