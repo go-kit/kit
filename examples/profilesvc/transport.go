@@ -9,10 +9,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"net/url"
+
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
-
-	"net/url"
 
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -227,63 +227,73 @@ func decodeDeleteAddressRequest(_ context.Context, r *http.Request) (request int
 
 func encodePostProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
 	// r.Methods("POST").Path("/profiles/")
-	req.Method, req.URL.Path = "POST", url.QueryEscape("/profiles/")
+	req.Method, req.URL.Path = "POST", "/profiles/"
 	return encodeRequest(ctx, req, request)
 }
 
 func encodeGetProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
 	// r.Methods("GET").Path("/profiles/{id}")
 	r := request.(getProfileRequest)
-	req.Method, req.URL.Path = "GET", url.QueryEscape("/profiles/"+r.ID)
+	profileID := url.QueryEscape(r.ID)
+	req.Method, req.URL.Path = "GET", "/profiles/"+profileID
 	return encodeRequest(ctx, req, request)
 }
 
 func encodePutProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
 	// r.Methods("PUT").Path("/profiles/{id}")
 	r := request.(putProfileRequest)
-	req.Method, req.URL.Path = "PUT", url.QueryEscape("/profiles/"+r.ID)
+	profileID := url.QueryEscape(r.ID)
+	req.Method, req.URL.Path = "PUT", "/profiles/"+profileID
 	return encodeRequest(ctx, req, request)
 }
 
 func encodePatchProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
 	// r.Methods("PATCH").Path("/profiles/{id}")
 	r := request.(patchProfileRequest)
-	req.Method, req.URL.Path = "PATCH", url.QueryEscape("/profiles/"+r.ID)
+	profileID := url.QueryEscape(r.ID)
+	req.Method, req.URL.Path = "PATCH", "/profiles/"+profileID
 	return encodeRequest(ctx, req, request)
 }
 
 func encodeDeleteProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
 	// r.Methods("DELETE").Path("/profiles/{id}")
 	r := request.(deleteProfileRequest)
-	req.Method, req.URL.Path = "DELETE", url.QueryEscape("/profiles/"+r.ID)
+	profileID := url.QueryEscape(r.ID)
+	req.Method, req.URL.Path = "DELETE", "/profiles/"+profileID
 	return encodeRequest(ctx, req, request)
 }
 
 func encodeGetAddressesRequest(ctx context.Context, req *http.Request, request interface{}) error {
 	// r.Methods("GET").Path("/profiles/{id}/addresses/")
 	r := request.(getAddressesRequest)
-	req.Method, req.URL.Path = "GET", url.QueryEscape("/profiles/"+r.ProfileID+"/addresses/")
+	profileID := url.QueryEscape(r.ProfileID)
+	req.Method, req.URL.Path = "GET", "/profiles/"+profileID+"/addresses/"
 	return encodeRequest(ctx, req, request)
 }
 
 func encodeGetAddressRequest(ctx context.Context, req *http.Request, request interface{}) error {
 	// r.Methods("GET").Path("/profiles/{id}/addresses/{addressID}")
 	r := request.(getAddressRequest)
-	req.Method, req.URL.Path = "GET", url.QueryEscape("/profiles/"+r.ProfileID+"/addresses/"+r.AddressID)
+	profileID := url.QueryEscape(r.ProfileID)
+	addressID := url.QueryEscape(r.AddressID)
+	req.Method, req.URL.Path = "GET", "/profiles/"+profileID+"/addresses/"+ addressID
 	return encodeRequest(ctx, req, request)
 }
 
 func encodePostAddressRequest(ctx context.Context, req *http.Request, request interface{}) error {
 	// r.Methods("POST").Path("/profiles/{id}/addresses/")
 	r := request.(postAddressRequest)
-	req.Method, req.URL.Path = "POST", url.QueryEscape("/profiles/"+r.ProfileID+"/addresses/")
+	profileID := url.QueryEscape(r.ProfileID)
+	req.Method, req.URL.Path = "POST", "/profiles/"+profileID+"/addresses/"
 	return encodeRequest(ctx, req, request)
 }
 
 func encodeDeleteAddressRequest(ctx context.Context, req *http.Request, request interface{}) error {
 	// r.Methods("DELETE").Path("/profiles/{id}/addresses/{addressID}")
 	r := request.(deleteAddressRequest)
-	req.Method, req.URL.Path = "DELETE", url.QueryEscape("/profiles/"+r.ProfileID+"/addresses/"+r.AddressID)
+	profileID := url.QueryEscape(r.ProfileID)
+	addressID := url.QueryEscape(r.AddressID)
+	req.Method, req.URL.Path = "DELETE", "/profiles/"+profileID+"/addresses/"+addressID
 	return encodeRequest(ctx, req, request)
 }
 
