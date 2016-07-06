@@ -37,10 +37,10 @@ func TraceClient(tracer opentracing.Tracer, operationName string) endpoint.Middl
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			parentSpan := opentracing.SpanFromContext(ctx)
-			clientSpan := tracer.StartSpanWithOptions(opentracing.StartSpanOptions{
-				OperationName: operationName,
-				Parent:        parentSpan, // may be nil
-			})
+			clientSpan := tracer.StartSpan(
+				operationName,
+				opentracing.ChildOf(parentSpan.Context()),
+			)
 			defer clientSpan.Finish()
 			otext.SpanKind.Set(clientSpan, otext.SpanKindRPCClient)
 			ctx = opentracing.ContextWithSpan(ctx, clientSpan)
