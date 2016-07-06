@@ -43,11 +43,7 @@ func FromGRPCRequest(tracer opentracing.Tracer, operationName string, logger log
 		if err != nil {
 			logger.Log("err", err)
 		}
-		if wireContext != nil {
-			span = tracer.StartSpan(operationName, ext.RPCServerOption(wireContext))
-		} else {
-			span = tracer.StartSpan(operationName)
-		}
+		span = tracer.StartSpan(operationName, ext.RPCServerOption(wireContext))
 		return opentracing.ContextWithSpan(ctx, span)
 	}
 }
