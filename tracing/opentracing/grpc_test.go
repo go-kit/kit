@@ -8,19 +8,21 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/go-kit/kit/log"
 	kitot "github.com/go-kit/kit/tracing/opentracing"
 )
 
 func TestTraceGRPCRequestRoundtrip(t *testing.T) {
+	logger := log.NewNopLogger()
 	tracer := mocktracer.New()
 
 	// Initialize the ctx with a Span to inject.
 	beforeSpan := tracer.StartSpan("to_inject").(*mocktracer.MockSpan)
 	defer beforeSpan.Finish()
-	beforeSpan.SetBaggageItem("baggage", "check")
+	beforeSpan.Context().SetBaggageItem("baggage", "check")
 	beforeCtx := opentracing.ContextWithSpan(context.Background(), beforeSpan)
 
-	toGRPCFunc := kitot.ToGRPCRequest(tracer, nil)
+	toGRPCFunc := kitot.ToGRPCRequest(tracer, logger)
 	md := metadata.Pairs()
 	// Call the RequestFunc.
 	afterCtx := toGRPCFunc(beforeCtx, &md)
@@ -38,22 +40,25 @@ func TestTraceGRPCRequestRoundtrip(t *testing.T) {
 	}
 
 	// Use FromGRPCRequest to verify that we can join with the trace given MD.
-	fromGRPCFunc := kitot.FromGRPCRequest(tracer, "joined", nil)
+	fromGRPCFunc := kitot.FromGRPCRequest(tracer, "joined", logger)
 	joinCtx := fromGRPCFunc(afterCtx, &md)
 	joinedSpan := opentracing.SpanFromContext(joinCtx).(*mocktracer.MockSpan)
 
-	if joinedSpan.SpanID == beforeSpan.SpanID {
-		t.Error("SpanID should have changed", joinedSpan.SpanID, beforeSpan.SpanID)
+	joinedContext := joinedSpan.Context().(*mocktracer.MockSpanContext)
+	beforeContext := beforeSpan.Context().(*mocktracer.MockSpanContext)
+
+	if joinedContext.SpanID == beforeContext.SpanID {
+		t.Error("SpanID should have changed", joinedContext.SpanID, beforeContext.SpanID)
 	}
 
 	// Check that the parent/child relationship is as expected for the joined span.
-	if want, have := beforeSpan.SpanID, joinedSpan.ParentID; want != have {
+	if want, have := beforeContext.SpanID, joinedSpan.ParentID; want != have {
 		t.Errorf("Want ParentID %q, have %q", want, have)
 	}
 	if want, have := "joined", joinedSpan.OperationName; want != have {
 		t.Errorf("Want %q, have %q", want, have)
 	}
-	if want, have := "check", joinedSpan.BaggageItem("baggage"); want != have {
+	if want, have := "check", joinedSpan.Context().BaggageItem("baggage"); want != have {
 		t.Errorf("Want %q, have %q", want, have)
 	}
 }

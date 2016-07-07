@@ -36,7 +36,7 @@ func ToHTTPRequest(tracer opentracing.Tracer, logger log.Logger) kithttp.Request
 
 			// There's nothing we can do with any errors here.
 			if err = tracer.Inject(
-				span,
+				span.Context(),
 				opentracing.TextMap,
 				opentracing.HTTPHeaderTextMapCarrier(req.Header),
 			); err != nil {
@@ -57,17 +57,15 @@ func ToHTTPRequest(tracer opentracing.Tracer, logger log.Logger) kithttp.Request
 func FromHTTPRequest(tracer opentracing.Tracer, operationName string, logger log.Logger) kithttp.RequestFunc {
 	return func(ctx context.Context, req *http.Request) context.Context {
 		// Try to join to a trace propagated in `req`.
-		span, err := tracer.Join(
-			operationName,
+		var span opentracing.Span
+		wireContext, err := tracer.Extract(
 			opentracing.TextMap,
 			opentracing.HTTPHeaderTextMapCarrier(req.Header),
 		)
 		if err != nil {
-			span = tracer.StartSpan(operationName)
-			if err != opentracing.ErrTraceNotFound {
-				logger.Log("err", err)
-			}
+			logger.Log("err", err)
 		}
+		span = tracer.StartSpan(operationName, ext.RPCServerOption(wireContext))
 		return opentracing.ContextWithSpan(ctx, span)
 	}
 }

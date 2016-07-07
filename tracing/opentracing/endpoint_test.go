@@ -33,9 +33,10 @@ func TestTraceServer(t *testing.T) {
 	if want, have := "testOp", endpointSpan.OperationName; want != have {
 		t.Fatalf("Want %q, have %q", want, have)
 	}
-
+	contextContext := contextSpan.Context().(*mocktracer.MockSpanContext)
+	endpointContext := endpointSpan.Context().(*mocktracer.MockSpanContext)
 	// ...and that the ID is unmodified.
-	if want, have := contextSpan.SpanID, endpointSpan.SpanID; want != have {
+	if want, have := contextContext.SpanID, endpointContext.SpanID; want != have {
 		t.Errorf("Want SpanID %q, have %q", want, have)
 	}
 }
@@ -85,8 +86,11 @@ func TestTraceClient(t *testing.T) {
 		t.Fatalf("Want %q, have %q", want, have)
 	}
 
+	parentContext := parentSpan.Context().(*mocktracer.MockSpanContext)
+	endpointContext := parentSpan.Context().(*mocktracer.MockSpanContext)
+
 	// ... and that the parent ID is set appropriately.
-	if want, have := parentSpan.SpanID, endpointSpan.ParentID; want != have {
+	if want, have := parentContext.SpanID, endpointContext.SpanID; want != have {
 		t.Errorf("Want ParentID %q, have %q", want, have)
 	}
 }
