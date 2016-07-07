@@ -1,6 +1,7 @@
 package conn
 
 import (
+	"errors"
 	"net"
 	"time"
 
@@ -34,9 +35,8 @@ type Manager struct {
 
 // NewManager returns a connection manager using the passed Dialer, network, and
 // address. The AfterFunc is used to control exponential backoff and retries.
-// For normal use, pass net.Dial and time.After as the Dialer and AfterFunc
-// respectively. The logger is used to log errors; pass a log.NopLogger if you
-// don't care to receive them.
+// The logger is used to log errors; pass a log.NopLogger if you don't care to
+// receive them. For normal use, prefer NewDefaultManager.
 func NewManager(d Dialer, network, address string, after AfterFunc, logger log.Logger) *Manager {
 	m := &Manager{
 		dialer:  d,
@@ -52,6 +52,12 @@ func NewManager(d Dialer, network, address string, after AfterFunc, logger log.L
 	return m
 }
 
+// NewDefaultManager is a helper constructor, suitable for most normal use in
+// real (non-test) code. It uses the real net.Dial and time.After functions.
+func NewDefaultManager(network, address string, logger log.Logger) *Manager {
+	return NewManager(net.Dial, network, address, time.After, logger)
+}
+
 // Take yields the current connection. It may be nil.
 func (m *Manager) Take() net.Conn {
 	return <-m.takec
@@ -62,6 +68,17 @@ func (m *Manager) Take() net.Conn {
 // to reconnect, with exponential backoff. Putting a nil error is a no-op.
 func (m *Manager) Put(err error) {
 	m.putc <- err
+}
+
+// Write writes the passed data to the connection in a single Take/Put cycle.
+func (m *Manager) Write(b []byte) (int, error) {
+	conn := m.Take()
+	if conn == nil {
+		return 0, ErrConnectionUnavailable
+	}
+	n, err := conn.Write(b)
+	defer m.Put(err)
+	return n, err
 }
 
 func (m *Manager) loop() {
@@ -122,3 +139,7 @@ func exponential(d time.Duration) time.Duration {
 	}
 	return d
 }
+
+// ErrConnectionUnavailable is returned by the Manager's Write method when the
+// manager cannot yield a good connection.
+var ErrConnectionUnavailable = errors.New("connection unavailable")
