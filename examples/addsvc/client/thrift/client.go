@@ -49,7 +49,7 @@ func New(client *thriftadd.AddServiceClient) addsvc.Service {
 	}
 
 	return addsvc.Endpoints{
-		SumEndpoint:    addsvc.MakeThriftSumEndpoint(client),
-		ConcatEndpoint: addsvc.MakeThriftConcatEndpoint(client),
+		SumEndpoint:    sumEndpoint,
+		ConcatEndpoint: concatEndpoint,
 	}
 }
