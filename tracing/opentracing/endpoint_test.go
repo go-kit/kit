@@ -94,3 +94,24 @@ func TestTraceClient(t *testing.T) {
 		t.Errorf("Want ParentID %q, have %q", want, have)
 	}
 }
+
+func TestTraceClientNoContextSpan(t *testing.T) {
+	tracer := mocktracer.New()
+
+	// Empty/background context.
+	tracedEndpoint := kitot.TraceClient(tracer, "testOp")(endpoint.Nop)
+	if _, err := tracedEndpoint(context.Background(), struct{}{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// tracedEndpoint created a new Span.
+	finishedSpans := tracer.GetFinishedSpans()
+	if want, have := 1, len(finishedSpans); want != have {
+		t.Fatalf("Want %v span(s), found %v", want, have)
+	}
+
+	endpointSpan := finishedSpans[0]
+	if want, have := "testOp", endpointSpan.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+}
