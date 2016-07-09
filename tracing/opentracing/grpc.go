@@ -15,8 +15,6 @@ import (
 // ToGRPCRequest returns a grpc RequestFunc that injects an OpenTracing Span
 // found in `ctx` into the grpc Metadata. If no such Span can be found, the
 // RequestFunc is a noop.
-//
-// The logger is used to report errors and may be nil.
 func ToGRPCRequest(tracer opentracing.Tracer, logger log.Logger) func(ctx context.Context, md *metadata.MD) context.Context {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		if span := opentracing.SpanFromContext(ctx); span != nil {
@@ -34,13 +32,11 @@ func ToGRPCRequest(tracer opentracing.Tracer, logger log.Logger) func(ctx contex
 // `operationName` accordingly. If no trace could be found in `req`, the Span
 // will be a trace root. The Span is incorporated in the returned Context and
 // can be retrieved with opentracing.SpanFromContext(ctx).
-//
-// The logger is used to report errors and may be nil.
 func FromGRPCRequest(tracer opentracing.Tracer, operationName string, logger log.Logger) func(ctx context.Context, md *metadata.MD) context.Context {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		var span opentracing.Span
 		wireContext, err := tracer.Extract(opentracing.TextMap, metadataReaderWriter{md})
-		if err != nil {
+		if err != nil && err != opentracing.ErrSpanContextNotFound {
 			logger.Log("err", err)
 		}
 		span = tracer.StartSpan(operationName, ext.RPCServerOption(wireContext))
