@@ -183,7 +183,7 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (int64, error) {
 		sv := sampling(h.sampleRate)
 		tv := tagValues(h.lvs)
 		for _, value := range h.values {
-			n, err = fmt.Fprintf(w, "%s:%f%s%s\n", name, value, sv, tv)
+			n, err = fmt.Fprintf(w, "%s:%f|h%s%s\n", name, value, sv, tv)
 			count += int64(n)
 			if err != nil {
 				return count, err

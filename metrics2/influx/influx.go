@@ -128,7 +128,7 @@ func (i *Influx) WriteTo(client influxdb.Client) error {
 	for name, c := range i.counters {
 		fields := fieldsFrom(c.LabelValues())
 		fields["count"] = c.ValueReset()
-		p, err := influxdb.NewPoint(name, c.tags, fields, now)
+		p, err := influxdb.NewPoint(name, merge(i.tags, c.tags), fields, now)
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func (i *Influx) WriteTo(client influxdb.Client) error {
 	for name, g := range i.gauges {
 		fields := fieldsFrom(g.LabelValues())
 		fields["value"] = g.Value()
-		p, err := influxdb.NewPoint(name, g.tags, fields, now)
+		p, err := influxdb.NewPoint(name, merge(i.tags, g.tags), fields, now)
 		if err != nil {
 			return err
 		}
@@ -154,7 +154,7 @@ func (i *Influx) WriteTo(client influxdb.Client) error {
 			".p99": 0.99,
 		} {
 			fields["value"] = h.Quantile(quantile)
-			p, err := influxdb.NewPoint(name+suffix, h.tags, fields, now)
+			p, err := influxdb.NewPoint(name+suffix, merge(i.tags, h.tags), fields, now)
 			if err != nil {
 				return err
 			}
@@ -174,6 +174,17 @@ func fieldsFrom(labelValues []string) map[string]interface{} {
 		fields[labelValues[i]] = labelValues[i+1]
 	}
 	return fields
+}
+
+func merge(a, b map[string]string) map[string]string {
+	res := map[string]string{}
+	for k, v := range a {
+		res[k] = v
+	}
+	for k, v := range b {
+		res[k] = v
+	}
+	return res
 }
 
 // Counter is a generic counter, with static tags.

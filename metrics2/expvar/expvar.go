@@ -81,7 +81,7 @@ func (h *Histogram) With(labelValues ...string) metrics.Histogram { return h }
 func (h *Histogram) Observe(value float64) {
 	h.mtx.Lock()
 	defer h.mtx.Unlock()
-	h.Observe(value)
+	h.h.Observe(value)
 	h.p50.Set(h.h.Quantile(0.50))
 	h.p90.Set(h.h.Quantile(0.90))
 	h.p95.Set(h.h.Quantile(0.95))
