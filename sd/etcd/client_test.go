@@ -13,7 +13,7 @@ func TestNewClient(t *testing.T) {
 		Key:                     "",
 		CaCert:                  "",
 		DialTimeout:             (2 * time.Second),
-		DialKeepAline:           (2 * time.Second),
+		DialKeepAlive:           (2 * time.Second),
 		HeaderTimeoutPerRequest: (2 * time.Second),
 	}
 
@@ -40,7 +40,7 @@ func TestOptions(t *testing.T) {
 			Key:                     "",
 			CaCert:                  "",
 			DialTimeout:             (2 * time.Second),
-			DialKeepAline:           (2 * time.Second),
+			DialKeepAlive:           (2 * time.Second),
 			HeaderTimeoutPerRequest: (2 * time.Second),
 		})
 
@@ -60,7 +60,7 @@ func TestOptions(t *testing.T) {
 			Key:                     "blank.key",
 			CaCert:                  "blank.cacert",
 			DialTimeout:             (2 * time.Second),
-			DialKeepAline:           (2 * time.Second),
+			DialKeepAlive:           (2 * time.Second),
 			HeaderTimeoutPerRequest: (2 * time.Second),
 		})
 

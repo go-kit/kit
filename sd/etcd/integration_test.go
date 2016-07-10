@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 		Key:                     "",
 		CaCert:                  "",
 		DialTimeout:             (2 * time.Second),
-		DialKeepAline:           (2 * time.Second),
+		DialKeepAlive:           (2 * time.Second),
 		HeaderTimeoutPerRequest: (2 * time.Second),
 	}
 

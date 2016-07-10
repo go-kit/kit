@@ -44,7 +44,7 @@ type ClientOptions struct {
 	Key                     string
 	CaCert                  string
 	DialTimeout             time.Duration
-	DialKeepAline           time.Duration
+	DialKeepAlive           time.Duration
 	HeaderTimeoutPerRequest time.Duration
 }
 
@@ -83,7 +83,7 @@ func NewClient(ctx context.Context, machines []string, options ClientOptions) (C
 			Dial: func(network, addr string) (net.Conn, error) {
 				dial := &net.Dialer{
 					Timeout:   options.DialTimeout,
-					KeepAlive: options.DialKeepAline,
+					KeepAlive: options.DialKeepAlive,
 				}
 				return dial.Dial(network, addr)
 			},
