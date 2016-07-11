@@ -2,6 +2,7 @@ package circonus
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/circonus-labs/circonus-gometrics"
+	"github.com/circonus-labs/circonus-gometrics/checkmgr"
 
 	"github.com/go-kit/kit/metrics2/generic"
 	"github.com/go-kit/kit/metrics2/teststat"
@@ -29,8 +31,7 @@ func TestCounter(t *testing.T) {
 	defer s.Close()
 
 	// Set up a Circonus object, submitting to our HTTP server.
-	m := circonusgometrics.NewCirconusMetrics()
-	m.SubmissionUrl = s.URL
+	m := newCirconusMetrics(s.URL)
 	counter := New(m).NewCounter(name)
 	value := func() float64 { m.Flush(); return float64(val) }
 
@@ -52,8 +53,7 @@ func TestGauge(t *testing.T) {
 	}))
 	defer s.Close()
 
-	m := circonusgometrics.NewCirconusMetrics()
-	m.SubmissionUrl = s.URL
+	m := newCirconusMetrics(s.URL)
 	gauge := New(m).NewGauge(name)
 	value := func() float64 { m.Flush(); return float64(val) }
 
@@ -95,8 +95,7 @@ func TestHistogram(t *testing.T) {
 	}))
 	defer s.Close()
 
-	m := circonusgometrics.NewCirconusMetrics()
-	m.SubmissionUrl = s.URL
+	m := newCirconusMetrics(s.URL)
 	histogram := New(m).NewHistogram(name)
 	quantiles := func() (float64, float64, float64, float64) { m.Flush(); return p50, p90, p95, p99 }
 
@@ -105,4 +104,18 @@ func TestHistogram(t *testing.T) {
 	if err := teststat.TestHistogram(histogram, quantiles, 0.05); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func newCirconusMetrics(url string) *circonusgometrics.CirconusMetrics {
+	m, err := circonusgometrics.NewCirconusMetrics(&circonusgometrics.Config{
+		CheckManager: checkmgr.Config{
+			Check: checkmgr.CheckConfig{
+				SubmissionUrl: url,
+			},
+		},
+	})
+	if err != nil {
+		panic(fmt.Sprintln("URL=", url, "--", err))
+	}
+	return m
 }
