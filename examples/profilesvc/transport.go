@@ -276,7 +276,7 @@ func encodeGetAddressRequest(ctx context.Context, req *http.Request, request int
 	r := request.(getAddressRequest)
 	profileID := url.QueryEscape(r.ProfileID)
 	addressID := url.QueryEscape(r.AddressID)
-	req.Method, req.URL.Path = "GET", "/profiles/"+profileID+"/addresses/"+ addressID
+	req.Method, req.URL.Path = "GET", "/profiles/"+profileID+"/addresses/"+addressID
 	return encodeRequest(ctx, req, request)
 }
 
