@@ -2,7 +2,6 @@ package circonus
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -115,7 +114,7 @@ func newCirconusMetrics(url string) *circonusgometrics.CirconusMetrics {
 		},
 	})
 	if err != nil {
-		panic(fmt.Sprintln("URL=", url, "--", err))
+		panic(err)
 	}
 	return m
 }
