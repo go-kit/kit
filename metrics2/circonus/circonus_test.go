@@ -113,7 +113,7 @@ func newCirconusMetrics(url string) *circonusgometrics.CirconusMetrics {
 	m, err := circonusgometrics.NewCirconusMetrics(&circonusgometrics.Config{
 		CheckManager: checkmgr.Config{
 			Check: checkmgr.CheckConfig{
-				SubmissionUrl: url,
+				SubmissionURL: url,
 			},
 		},
 	})
