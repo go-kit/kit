@@ -2,12 +2,16 @@ package statsd
 
 import (
 	"bytes"
+	"fmt"
+	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics2/generic"
 	"github.com/go-kit/kit/metrics2/teststat"
 )
 
@@ -69,4 +73,35 @@ func TestGauge(t *testing.T) {
 	if err := teststat.TestGauge(gauge, value); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestHistogram(t *testing.T) {
+	prefix, name := "statsd.", "histogram_test"
+	re := regexp.MustCompile(`^` + prefix + name + `:([0-9\.]+)\|ms$`)
+	s := NewRaw(prefix, log.NewNopLogger())
+	histogram := s.MustNewHistogram(name, time.Millisecond, time.Millisecond, 1.0)
+
+	// Like DogStatsD, Statsd histograms (Timings) just emit all observations.
+	// So, we collect them into a generic histogram, and run the statistics test
+	// on that.
+	quantiles := func() (float64, float64, float64, float64) {
+		var buf bytes.Buffer
+		s.WriteTo(&buf)
+		fmt.Fprintf(os.Stderr, "%s\n", buf.String())
+		h := generic.NewHistogram(50)
+		for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+			match := re.FindStringSubmatch(line)
+			f, _ := strconv.ParseFloat(match[1], 64)
+			h.Observe(f)
+		}
+		return h.Quantile(0.50), h.Quantile(0.90), h.Quantile(0.95), h.Quantile(0.99)
+	}
+
+	if err := teststat.TestHistogram(histogram, quantiles, 0.01); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTiming(t *testing.T) {
+	t.Skip("TODO")
 }

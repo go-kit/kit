@@ -76,5 +76,17 @@ func TestHistogram(t *testing.T) {
 }
 
 func TestHistogramSampled(t *testing.T) {
-	t.Skip("TODO(pb)")
+	t.Skip("TODO")
+}
+
+func TestTiming(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func TestSet(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func TestWith(t *testing.T) {
+	t.Skip("TODO")
 }

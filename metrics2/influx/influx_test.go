@@ -70,6 +70,10 @@ func TestHistogram(t *testing.T) {
 	}
 }
 
+func TestWith(t *testing.T) {
+	t.Skip("TODO")
+}
+
 type mockClient struct {
 	buf bytes.Buffer
 }

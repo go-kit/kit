@@ -105,6 +105,10 @@ func TestHistogram(t *testing.T) {
 	}
 }
 
+func TestWith(t *testing.T) {
+	t.Skip("TODO")
+}
+
 func newCirconusMetrics(url string) *circonusgometrics.CirconusMetrics {
 	m, err := circonusgometrics.NewCirconusMetrics(&circonusgometrics.Config{
 		CheckManager: checkmgr.Config{

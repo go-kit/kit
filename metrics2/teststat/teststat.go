@@ -55,14 +55,9 @@ func TestGauge(gauge metrics.Gauge, value func() float64) error {
 // the quantiles func to checks that the histogram has computed the correct
 // quantiles within some tolerance
 func TestHistogram(histogram metrics.Histogram, quantiles func() (p50, p90, p95, p99 float64), tolerance float64) error {
-	var (
-		seed  = rand.Int()
-		mean  = 500
-		stdev = 25
-	)
-	populateNormal(histogram, seed, mean, stdev)
+	PopulateNormalHistogram(histogram, rand.Int())
 
-	want50, want90, want95, want99 := normalQuantiles(mean, stdev)
+	want50, want90, want95, want99 := normalQuantiles()
 	have50, have90, have95, have99 := quantiles()
 
 	var errs []string
@@ -83,6 +78,21 @@ func TestHistogram(histogram metrics.Histogram, quantiles func() (p50, p90, p95,
 	}
 
 	return nil
+}
+
+var (
+	Count = 12345
+	Mean  = 500
+	Stdev = 25
+)
+
+// ExpectedObservationsLessThan returns the number of observations that should
+// have a value less than or equal to the given value, given a normal
+// distribution of observations described by Count, Mean, and Stdev.
+func ExpectedObservationsLessThan(bucket int64) int64 {
+	// https://code.google.com/p/gostat/source/browse/stat/normal.go
+	cdf := ((1.0 / 2.0) * (1 + math.Erf((float64(bucket)-float64(Mean))/(float64(Stdev)*math.Sqrt2))))
+	return int64(cdf * float64(Count))
 }
 
 func cmp(want, have, tol float64) bool {

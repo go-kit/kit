@@ -7,12 +7,18 @@ import (
 	"github.com/go-kit/kit/metrics2"
 )
 
-const population = 12345
-
-func populateNormal(h metrics.Histogram, seed, mean, stdev int) {
+// PopulateNormalHistogram makes a series of normal random observations into the
+// histogram. The number of observations is determined by Count. The randomness
+// is determined by Mean, Stdev, and the seed parameter.
+//
+// This is a low-level function, exported only for metrics that don't perform
+// dynamic quantile computation, like a Prometheus Histogram (c.f. Summary). In
+// most cases, you don't need to use this function, and can use TestHistogram
+// instead.
+func PopulateNormalHistogram(h metrics.Histogram, seed int) {
 	r := rand.New(rand.NewSource(int64(seed)))
-	for i := 0; i < population; i++ {
-		sample := r.NormFloat64()*float64(stdev) + float64(mean)
+	for i := 0; i < Count; i++ {
+		sample := r.NormFloat64()*float64(Stdev) + float64(Mean)
 		if sample < 0 {
 			sample = 0
 		}
@@ -20,13 +26,13 @@ func populateNormal(h metrics.Histogram, seed, mean, stdev int) {
 	}
 }
 
-func normalQuantiles(mean, stdev int) (p50, p90, p95, p99 float64) {
-	return nvq(mean, stdev, 50), nvq(mean, stdev, 90), nvq(mean, stdev, 95), nvq(mean, stdev, 99)
+func normalQuantiles() (p50, p90, p95, p99 float64) {
+	return nvq(50), nvq(90), nvq(95), nvq(99)
 }
 
-func nvq(mean, stdev, quantile int) float64 {
+func nvq(quantile int) float64 {
 	// https://en.wikipedia.org/wiki/Normal_distribution#Quantile_function
-	return float64(mean) + float64(stdev)*math.Sqrt2*erfinv(2*(float64(quantile)/100)-1)
+	return float64(Mean) + float64(Stdev)*math.Sqrt2*erfinv(2*(float64(quantile)/100)-1)
 }
 
 func erfinv(y float64) float64 {
