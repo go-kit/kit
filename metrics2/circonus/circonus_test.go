@@ -31,7 +31,7 @@ func TestCounter(t *testing.T) {
 
 	// Set up a Circonus object, submitting to our HTTP server.
 	m := newCirconusMetrics(s.URL)
-	counter := New(m).NewCounter(name)
+	counter := New(m).NewCounter(name).With("label values", "not supported")
 	value := func() float64 { m.Flush(); return float64(val) }
 
 	// Engage.
@@ -53,7 +53,7 @@ func TestGauge(t *testing.T) {
 	defer s.Close()
 
 	m := newCirconusMetrics(s.URL)
-	gauge := New(m).NewGauge(name)
+	gauge := New(m).NewGauge(name).With("label values", "not supported")
 	value := func() float64 { m.Flush(); return float64(val) }
 
 	if err := teststat.TestGauge(gauge, value); err != nil {
@@ -95,7 +95,7 @@ func TestHistogram(t *testing.T) {
 	defer s.Close()
 
 	m := newCirconusMetrics(s.URL)
-	histogram := New(m).NewHistogram(name)
+	histogram := New(m).NewHistogram(name).With("label values", "not supported")
 	quantiles := func() (float64, float64, float64, float64) { m.Flush(); return p50, p90, p95, p99 }
 
 	// Circonus metrics, because they do their own bucketing, are less precise
@@ -103,10 +103,6 @@ func TestHistogram(t *testing.T) {
 	if err := teststat.TestHistogram(histogram, quantiles, 0.05); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func TestWith(t *testing.T) {
-	t.Skip("TODO")
 }
 
 func newCirconusMetrics(url string) *circonusgometrics.CirconusMetrics {
