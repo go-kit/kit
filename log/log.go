@@ -1,13 +1,3 @@
-// Package log provides basic interfaces for structured logging.
-//
-// The fundamental interface is Logger. Loggers create log events from
-// key/value data.
-//
-// Concurrent Safety
-//
-// Applications with multiple goroutines want each log event written to the
-// same logger to remain separate from other log events. Package log provides
-// multiple solutions for concurrent safe logging.
 package log
 
 import "errors"
