@@ -11,6 +11,7 @@ import (
 )
 
 // Counter implements the counter metric with an expvar float.
+// Label values are not supported.
 type Counter struct {
 	f *expvar.Float
 }
@@ -30,6 +31,7 @@ func (c *Counter) With(labelValues ...string) metrics.Counter { return c }
 func (c *Counter) Add(delta float64) { c.f.Add(delta) }
 
 // Gauge implements the gauge metric wtih an expvar float.
+// Label values are not supported.
 type Gauge struct {
 	f *expvar.Float
 }
@@ -51,7 +53,7 @@ func (g *Gauge) Set(value float64) { g.f.Set(value) }
 // Histogram implements the histogram metric with a combination of the generic
 // Histogram object and several expvar Floats, one for each of the 50th, 90th,
 // 95th, and 99th quantiles of observed values, with the quantile attached to
-// the name as a suffix.
+// the name as a suffix. Label values are not supported.
 type Histogram struct {
 	mtx sync.Mutex
 	h   *generic.Histogram

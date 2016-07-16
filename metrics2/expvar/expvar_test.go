@@ -8,7 +8,7 @@ import (
 )
 
 func TestCounter(t *testing.T) {
-	counter := NewCounter("expvar_counter")
+	counter := NewCounter("expvar_counter").With("label values", "not supported").(*Counter)
 	value := func() float64 { f, _ := strconv.ParseFloat(counter.f.String(), 64); return f }
 	if err := teststat.TestCounter(counter, value); err != nil {
 		t.Fatal(err)
@@ -16,7 +16,7 @@ func TestCounter(t *testing.T) {
 }
 
 func TestGauge(t *testing.T) {
-	gauge := NewGauge("expvar_gauge")
+	gauge := NewGauge("expvar_gauge").With("label values", "not supported").(*Gauge)
 	value := func() float64 { f, _ := strconv.ParseFloat(gauge.f.String(), 64); return f }
 	if err := teststat.TestGauge(gauge, value); err != nil {
 		t.Fatal(err)
@@ -24,7 +24,7 @@ func TestGauge(t *testing.T) {
 }
 
 func TestHistogram(t *testing.T) {
-	histogram := NewHistogram("expvar_histogram", 50)
+	histogram := NewHistogram("expvar_histogram", 50).With("label values", "not supported").(*Histogram)
 	quantiles := func() (float64, float64, float64, float64) {
 		p50, _ := strconv.ParseFloat(histogram.p50.String(), 64)
 		p90, _ := strconv.ParseFloat(histogram.p90.String(), 64)
@@ -35,8 +35,4 @@ func TestHistogram(t *testing.T) {
 	if err := teststat.TestHistogram(histogram, quantiles, 0.01); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func TestWith(t *testing.T) {
-	t.Skip("TODO")
 }
