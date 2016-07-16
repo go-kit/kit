@@ -1,6 +1,10 @@
 package enabled
 
-import "github.com/go-kit/kit/log/levels"
+import (
+	"errors"
+
+	"github.com/go-kit/kit/log/levels"
+)
 
 // LevelEnabledLogger provides a wrapper around a logger with a feature
 // for checking a level is enabled.  It has five
@@ -17,12 +21,75 @@ type LevelEnabledLogger struct {
 }
 
 // New creates a new level enabled logger, wrapping the passed logger.
-func New(logger levels.Levels, option Option) LevelEnabledLogger {
-	l := LevelEnabledLogger{
-		Levels: logger,
+// level must be one of debug, info, warning (warn), error, critical (crit)
+// or an empty string (which means info).
+// It returns an error only when the level value is invalid.
+func New(logger levels.Levels, level string) (LevelEnabledLogger, error) {
+	switch level {
+	case "debug":
+		return NewDebug(logger), nil
+	case "", "info":
+		return NewInfo(logger), nil
+	case "warn", "warning":
+		return NewWarn(logger), nil
+	case "error":
+		return NewError(logger), nil
+	case "crit", "critical":
+		return NewCrit(logger), nil
+	default:
+		return LevelEnabledLogger{}, errors.New("invalid log level")
 	}
-	option(&l)
-	return l
+}
+
+// NewDebug creates a new debug level enabled logger, wrapping the passed logger.
+func NewDebug(logger levels.Levels) LevelEnabledLogger {
+	return LevelEnabledLogger{
+		Levels:       logger,
+		debugEnabled: true,
+		infoEnabled:  true,
+		warnEnabled:  true,
+		errorEnabled: true,
+		critEnabled:  true,
+	}
+}
+
+// NewInfo creates a new info level enabled logger, wrapping the passed logger.
+func NewInfo(logger levels.Levels) LevelEnabledLogger {
+	return LevelEnabledLogger{
+		Levels:       logger,
+		infoEnabled:  true,
+		warnEnabled:  true,
+		errorEnabled: true,
+		critEnabled:  true,
+	}
+}
+
+// NewWarn creates a new warn level enabled logger, wrapping the passed logger.
+func NewWarn(logger levels.Levels) LevelEnabledLogger {
+	return LevelEnabledLogger{
+		Levels:       logger,
+		warnEnabled:  true,
+		errorEnabled: true,
+		critEnabled:  true,
+	}
+}
+
+// NewError creates a new error level enabled logger, wrapping the passed logger.
+func NewError(logger levels.Levels) LevelEnabledLogger {
+	return LevelEnabledLogger{
+		Levels:       logger,
+		errorEnabled: true,
+		critEnabled:  true,
+	}
+}
+
+// NewCrit creates a new crit level enabled logger, wrapping the passed logger.
+func NewCrit(logger levels.Levels) LevelEnabledLogger {
+	return LevelEnabledLogger{
+		Levels:       logger,
+		errorEnabled: true,
+		critEnabled:  true,
+	}
 }
 
 // DebugEnabled returns the debug level is enabled
@@ -39,51 +106,3 @@ func (l LevelEnabledLogger) ErrorEnabled() bool { return l.errorEnabled }
 
 // CritEnabled returns the crit level is enabled
 func (l LevelEnabledLogger) CritEnabled() bool { return l.critEnabled }
-
-// Option sets a parameter for level enabled loggers.
-type Option func(*LevelEnabledLogger)
-
-// Debug enables all levels for the level enabled logger.
-func Debug() Option {
-	return func(l *LevelEnabledLogger) {
-		l.debugEnabled = true
-		l.infoEnabled = true
-		l.warnEnabled = true
-		l.errorEnabled = true
-		l.critEnabled = true
-	}
-}
-
-// Info enables info and above levels for the level enabled logger.
-func Info() Option {
-	return func(l *LevelEnabledLogger) {
-		l.infoEnabled = true
-		l.warnEnabled = true
-		l.errorEnabled = true
-		l.critEnabled = true
-	}
-}
-
-// Warn enables warn and above levels for the level enabled logger.
-func Warn() Option {
-	return func(l *LevelEnabledLogger) {
-		l.warnEnabled = true
-		l.errorEnabled = true
-		l.critEnabled = true
-	}
-}
-
-// Error enables error and above levels for the level enabled logger.
-func Error() Option {
-	return func(l *LevelEnabledLogger) {
-		l.errorEnabled = true
-		l.critEnabled = true
-	}
-}
-
-// Crit enables crit level for the level enabled logger.
-func Crit() Option {
-	return func(l *LevelEnabledLogger) {
-		l.critEnabled = true
-	}
-}

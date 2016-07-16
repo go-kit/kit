@@ -12,7 +12,7 @@ import (
 
 func TestInfoLevel(t *testing.T) {
 	buf := bytes.Buffer{}
-	logger := enabled.New(levels.New(log.NewLogfmtLogger(&buf)), enabled.Info())
+	logger := enabled.NewInfo(levels.New(log.NewLogfmtLogger(&buf)))
 
 	if logger.DebugEnabled() {
 		logger.Debug().Log("msg", "résumé") // of course you'd want to do this
@@ -47,7 +47,14 @@ func TestInfoLevel(t *testing.T) {
 }
 
 func ExampleEnabled() {
-	logger := enabled.New(levels.New(log.NewLogfmtLogger(os.Stdout)), enabled.Warn())
+	logger, err := enabled.New(levels.New(log.NewLogfmtLogger(os.Stdout)), "warn")
+	if err != nil {
+		// This happens only when the level is invalid.
+		// In this example, this never happens as the valid level "warn" is used.
+		// In a real usage like reading a level from a command line option or a
+		// config file, you should check this error.
+		panic(err)
+	}
 	if logger.DebugEnabled() {
 		logger.Debug().Log("msg", "hello")
 	}
