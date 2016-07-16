@@ -22,7 +22,7 @@ func NewDogstatsdProvider(d *dogstatsd.Dogstatsd, stop func()) Provider {
 
 // NewCounter implements Provider.
 func (p *dogstatsdProvider) NewCounter(name string) metrics.Counter {
-	return p.d.NewCounter(name)
+	return p.d.NewCounter(name, 1.0)
 }
 
 // NewGauge implements Provider.
