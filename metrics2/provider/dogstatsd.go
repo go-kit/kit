@@ -20,7 +20,8 @@ func NewDogstatsdProvider(d *dogstatsd.Dogstatsd, stop func()) Provider {
 	}
 }
 
-// NewCounter implements Provider.
+// NewCounter implements Provider, returning a new Dogstatsd Counter with a
+// sample rate of 1.0.
 func (p *dogstatsdProvider) NewCounter(name string) metrics.Counter {
 	return p.d.NewCounter(name, 1.0)
 }
@@ -31,7 +32,7 @@ func (p *dogstatsdProvider) NewGauge(name string) metrics.Gauge {
 }
 
 // NewHistogram implements Provider, returning a new Dogstatsd Histogram with a
-// sample rate of 1.0. Buckets are ignored.
+// sample rate of 1.0. The buckets argument is ignored.
 func (p *dogstatsdProvider) NewHistogram(name string, _ int) metrics.Histogram {
 	return p.d.NewHistogram(name, 1.0)
 }
