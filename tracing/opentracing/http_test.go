@@ -34,7 +34,7 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	}
 
 	// No spans should have finished yet.
-	finishedSpans := tracer.GetFinishedSpans()
+	finishedSpans := tracer.FinishedSpans()
 	if want, have := 0, len(finishedSpans); want != have {
 		t.Errorf("Want %v span(s), found %v", want, have)
 	}

@@ -23,7 +23,7 @@ func TestTraceServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	finishedSpans := tracer.GetFinishedSpans()
+	finishedSpans := tracer.FinishedSpans()
 	if want, have := 1, len(finishedSpans); want != have {
 		t.Fatalf("Want %v span(s), found %v", want, have)
 	}
@@ -51,7 +51,7 @@ func TestTraceServerNoContextSpan(t *testing.T) {
 	}
 
 	// tracedEndpoint created a new Span.
-	finishedSpans := tracer.GetFinishedSpans()
+	finishedSpans := tracer.FinishedSpans()
 	if want, have := 1, len(finishedSpans); want != have {
 		t.Fatalf("Want %v span(s), found %v", want, have)
 	}
@@ -76,7 +76,7 @@ func TestTraceClient(t *testing.T) {
 	}
 
 	// tracedEndpoint created a new Span.
-	finishedSpans := tracer.GetFinishedSpans()
+	finishedSpans := tracer.FinishedSpans()
 	if want, have := 1, len(finishedSpans); want != have {
 		t.Fatalf("Want %v span(s), found %v", want, have)
 	}
@@ -105,7 +105,7 @@ func TestTraceClientNoContextSpan(t *testing.T) {
 	}
 
 	// tracedEndpoint created a new Span.
-	finishedSpans := tracer.GetFinishedSpans()
+	finishedSpans := tracer.FinishedSpans()
 	if want, have := 1, len(finishedSpans); want != have {
 		t.Fatalf("Want %v span(s), found %v", want, have)
 	}
