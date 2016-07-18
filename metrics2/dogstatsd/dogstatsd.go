@@ -23,8 +23,8 @@ import (
 	"github.com/go-kit/kit/util/conn"
 )
 
-// Dogstatsd is a buffer for metrics that will be reported to a DogStatsD
-// server. Create a Dogstatsd object, use it to create metrics, and pass those
+// Dogstatsd is a buffer for metrics that will be emitted in the DogStatsD
+// format. Create a Dogstatsd object, use it to create metrics, and pass those
 // metrics as dependencies to components that will use them.
 //
 // All observations are kept and buffered until WriteTo is called. To regularly

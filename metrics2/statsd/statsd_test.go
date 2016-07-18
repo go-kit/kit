@@ -39,19 +39,12 @@ func TestHistogramAdapter(t *testing.T) {
 
 func TestCounter(t *testing.T) {
 	prefix, name := "hello.", "world"
-	re := regexp.MustCompile(prefix + name + `:([0-9\.]+)\|c`) // StatsD protocol
+	label, value := "labels are", "not supported"
+	regex := `^` + prefix + name + `:([0-9\.]+)\|c$`
 	d := NewRaw(prefix, log.NewNopLogger())
-
-	counter := d.NewCounter(name)
-	value := func() float64 {
-		var buf bytes.Buffer
-		d.WriteTo(&buf)
-		match := re.FindStringSubmatch(buf.String())
-		f, _ := strconv.ParseFloat(match[1], 64)
-		return f
-	}
-
-	if err := teststat.TestCounter(counter, value); err != nil {
+	counter := d.NewCounter(name).With(label, value)
+	valuef := teststat.SumLines(d, regex)
+	if err := teststat.TestCounter(counter, valuef); err != nil {
 		t.Fatal(err)
 	}
 }

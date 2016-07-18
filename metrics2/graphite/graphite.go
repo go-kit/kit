@@ -15,70 +15,68 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics2"
 	"github.com/go-kit/kit/metrics2/generic"
+	"github.com/go-kit/kit/metrics2/internal/push"
 	"github.com/go-kit/kit/util/conn"
 )
 
-// Graphite is a store for metrics that will be reported to a Graphite server.
-// Create a Graphite object, use it to create metrics objects, and pass those
-// objects as dependencies to the components that will use them.
+// Graphite is a buffer for metrics that will be emitted in the Graphite format.
+// Create a Graphite object, use it to create metrics, and pass those metrics as
+// dependencies to components that will use them.
+//
+// All observations are kept and buffered until WriteTo is called. To regularly
+// report metrics to an io.Writer, use the WriteLoop helper method. To send to a
+// remote Graphite server, use the SendLoop helper method.
+//
+// Histograms have their observations collected into a generic.Histogram. With
+// every flush, the 50th, 90th, 95th, and 99th quantiles are computed and
+// reported in metrics with the provided name concatenated with a suffix of the
+// form ".pNN" e.g. ".p99".
 type Graphite struct {
 	mtx        sync.RWMutex
 	prefix     string
-	counters   map[string]*generic.Counter
-	gauges     map[string]*generic.Gauge
+	buffer     *push.Buffer
 	histograms map[string]*generic.Histogram
 	logger     log.Logger
 }
 
-// New creates a Statsd object that flushes all metrics in the Graphite
-// plaintext format every flushInterval to the network and address. Use the
-// returned stop function to terminate the flushing goroutine.
-func New(prefix string, network, address string, flushInterval time.Duration, logger log.Logger) (res *Graphite, stop func()) {
-	s := NewRaw(prefix, logger)
-	manager := conn.NewDefaultManager(network, address, logger)
-	ticker := time.NewTicker(flushInterval)
-	go s.FlushTo(manager, ticker)
-	return s, ticker.Stop
-}
-
-// NewRaw returns a Graphite object capable of allocating individual metrics.
-// All metrics will share the given prefix in their path. All metrics can be
-// snapshotted, and their values and statistical summaries written to a writer,
-// via the WriteTo method.
-func NewRaw(prefix string, logger log.Logger) *Graphite {
+// New returns a Graphite object that may be used to create metrics. Prefix is
+// applied to all created metrics. bufSz controls the buffer depth of various
+// internal channels, which can help to mitigate blocking in the observation
+// path. Callers must ensure that regular calls to WriteTo are performed, either
+// manually or with one of the helper methods.
+func New(prefix string, bufSz int, logger log.Logger) *Graphite {
 	return &Graphite{
 		prefix:     prefix,
-		counters:   map[string]*generic.Counter{},
-		gauges:     map[string]*generic.Gauge{},
+		buffer:     push.NewBuffer(prefix, bufSz),
 		histograms: map[string]*generic.Histogram{},
 		logger:     logger,
 	}
 }
 
-// NewCounter allocates and returns a counter with the given name.
-func (g *Graphite) NewCounter(name string) *generic.Counter {
-	g.mtx.Lock()
-	defer g.mtx.Unlock()
-	c := generic.NewCounter()
-	g.counters[g.prefix+name] = c
-	return c
+// NewCounter returns a new counter. Observations are collected in this object
+// and flushed when WriteTo is invoked.
+func (g *Graphite) NewCounter(name string) metrics.Counter {
+	return g.buffer.NewCounter(name, 1.0)
 }
 
-// NewGauge allocates and returns a gauge with the given name.
-func (g *Graphite) NewGauge(name string) *generic.Gauge {
-	g.mtx.Lock()
-	defer g.mtx.Unlock()
-	ga := generic.NewGauge()
-	g.gauges[g.prefix+name] = ga
-	return ga
+// NewGauge returns a new gauge. Observations are collected in this object and
+// flushed when WriteTo is invoked.
+func (g *Graphite) NewGauge(name string) metrics.Gauge {
+	return g.buffer.NewGauge(name)
 }
 
-// NewHistogram allocates and returns a histogram with the given name and bucket
-// count. 50 is a good default number of buckets. Histograms report their 50th,
-// 90th, 95th, and 99th quantiles in distinct metrics with the .p50, .p90, .p95,
-// and .p99 suffixes, respectively.
-func (g *Graphite) NewHistogram(name string, buckets int) *generic.Histogram {
+// NewHistogram returns a new histogram. Observations are collected into a
+// generic.Histogram, and quantiles are reported with every WriteTo. Buckets
+// sets the number of buckets in the histogram; 50 is a good default.
+func (g *Graphite) NewHistogram(name string, buckets int) metrics.Histogram {
+	// The push.Buffer batches and emits individual observations, but that's
+	// intended for push-based systems where individual observations are taken
+	// as input. Graphite, in contrast, has no native support for histograms,
+	// timings, or anything that accepts individual observations. Instead, we
+	// perform statistical aggregation in the client, and report something like
+	// gauges at each quantile.
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
 	h := generic.NewHistogram(buckets)
@@ -86,52 +84,69 @@ func (g *Graphite) NewHistogram(name string, buckets int) *generic.Histogram {
 	return h
 }
 
-// FlushTo invokes WriteTo to the writer every time the ticker fires. FlushTo
-// blocks until the ticker is stopped. Most users won't need to call this method
-// directly, and should prefer to use the New constructor.
-func (g *Graphite) FlushTo(w io.Writer, ticker *time.Ticker) {
-	for range ticker.C {
+// WriteLoop is a helper method that invokes WriteTo to the passed writer every
+// time the passed channel fires. This method blocks until the channel is
+// closed, so clients probably want to run it in its own goroutine.
+func (g *Graphite) WriteLoop(c <-chan time.Time, w io.Writer) {
+	for range c {
 		if _, err := g.WriteTo(w); err != nil {
-			g.logger.Log("during", "flush", "err", err)
+			g.logger.Log("during", "WriteTo", "err", err)
 		}
 	}
 }
 
-// WriteTo writes a snapshot of all of the allocated metrics to the writer in
-// the Graphite plaintext format. Clients probably shouldn't invoke this method
-// directly, and should prefer using FlushTo, or the New constructor.
+// SendLoop is a helper method that wraps WriteLoop, passing a managed
+// connection to the network and address. Like WriteLoop, this method blocks
+// until the channel is closed, so clients probably want to start it in its own
+// goroutine.
+func (g *Graphite) SendLoop(c <-chan time.Time, network, address string) {
+	g.WriteLoop(c, conn.NewDefaultManager(network, address, g.logger))
+}
+
+// WriteTo flushes the buffered content of the metrics to the writer, in
+// DogStatsD format. WriteTo abides best-effort semantics, so observations are
+// lost if there is a problem with the write. Clients should be sure to call
+// WriteTo regularly, ideally through the WriteLoop or SendLoop helper methods.
 func (g *Graphite) WriteTo(w io.Writer) (int64, error) {
+	// TODO(pb): As an optimization, we can aggregate in-memory for metrics with
+	// the same name and label values, and write a single aggregate line.
+	adds, sets, _ := g.buffer.Get()
+	now := time.Now().Unix()
+	var count int64
+	for _, add := range adds {
+		n, err := fmt.Fprintf(w, "%s %f %d\n", add.Name, add.Delta, now)
+		if err != nil {
+			return count, err
+		}
+		count += int64(n)
+	}
+	for _, set := range sets {
+		n, err := fmt.Fprintf(w, "%s %f %d\n", set.Name, set.Value, now)
+		if err != nil {
+			return count, err
+		}
+		count += int64(n)
+	}
+
+	// Histograms are different than the rest.
 	g.mtx.RLock()
 	defer g.mtx.RUnlock()
-	var (
-		n     int
-		err   error
-		count int64
-		now   = time.Now().Unix()
-	)
-	for path, c := range g.counters {
-		n, err = fmt.Fprintf(w, "%s.count %f %d\n", path, c.Value(), now)
-		if err != nil {
-			return count, err
-		}
-		count += int64(n)
-	}
-	for path, ga := range g.gauges {
-		n, err = fmt.Fprintf(w, "%s %f %d\n", path, ga.Value(), now)
-		if err != nil {
-			return count, err
-		}
-		count += int64(n)
-	}
 	for path, h := range g.histograms {
-		n, err = fmt.Fprintf(w, "%s.p50 %f %d\n", path, h.Quantile(0.50), now)
-		n, err = fmt.Fprintf(w, "%s.p90 %f %d\n", path, h.Quantile(0.90), now)
-		n, err = fmt.Fprintf(w, "%s.p95 %f %d\n", path, h.Quantile(0.95), now)
-		n, err = fmt.Fprintf(w, "%s.p99 %f %d\n", path, h.Quantile(0.99), now)
-		if err != nil {
-			return count, err
+		for _, p := range []struct {
+			s string
+			f float64
+		}{
+			{"50", 0.50},
+			{"90", 0.90},
+			{"95", 0.95},
+			{"99", 0.99},
+		} {
+			n, err := fmt.Fprintf(w, "%s.p%s %f %d\n", path, p.s, h.Quantile(p.f), now)
+			if err != nil {
+				return count, err
+			}
+			count += int64(n)
 		}
-		count += int64(n)
 	}
 	return count, nil
 }

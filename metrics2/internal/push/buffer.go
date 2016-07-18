@@ -53,7 +53,6 @@ func (b *Buffer) Get() ([]Add, []Set, []Obv) {
 	c := make(chan collection)
 	b.getc <- c
 	res := <-c
-	res.reduce()
 	return res.a, res.s, res.o
 }
 
@@ -61,8 +60,4 @@ type collection struct {
 	a []Add
 	s []Set
 	o []Obv
-}
-
-func (c *collection) reduce() {
-	// Ugh.
 }
