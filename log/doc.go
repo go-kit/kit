@@ -80,12 +80,12 @@
 // same logger to remain separate from other log events. Package log provides
 // two simple solutions for concurrent safe logging.
 //
-// NewSyncWriter wraps a io.Writer and serializes each call to its Write
+// NewSyncWriter wraps an io.Writer and serializes each call to its Write
 // method. Using a SyncWriter has the benefit that the smallest practical
 // portion of the logging logic is performed within a mutex, but it requires
 // the formatting Logger to make only one call to Write per log event.
 //
-// NewSyncLogger wraps any Logger and serializes each to to its Log method.
+// NewSyncLogger wraps any Logger and serializes each call to its Log method.
 // Using a SyncLogger has the benefit that it guarantees each log event is
 // handled atomically within the wrapped logger, but it typically serializes
 // both the formatting and output logic. Use a SyncLogger if the formatting
