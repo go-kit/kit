@@ -122,22 +122,24 @@ func (c *client) GetEntries(key string) ([]string, error) {
 		return nil, err
 	}
 
-	entries := make([]string, len(resp.Node.Nodes))
+	// Special case. Note that it's possible that len(resp.Node.Nodes) == 0 and
+	// resp.Node.Value is also empty, in which case the key is empty and we
+	// should not return any entries.
+	if len(resp.Node.Nodes) == 0 && resp.Node.Value != "" {
+		return []string{resp.Node.Value}, nil
+	}
 
-	if len(entries) > 0 {
-		for i, node := range resp.Node.Nodes {
-			entries[i] = node.Value
-		}
-	} else {
-		entries = append(entries, resp.Node.Value)
+	entries := make([]string, len(resp.Node.Nodes))
+	for i, node := range resp.Node.Nodes {
+		entries[i] = node.Value
 	}
 	return entries, nil
-
 }
 
 // WatchPrefix implements the etcd Client interface.
 func (c *client) WatchPrefix(prefix string, responseChan chan *etcd.Response) {
 	watch := c.keysAPI.Watcher(prefix, &etcd.WatcherOptions{AfterIndex: 0, Recursive: true})
+	responseChan <- nil // TODO(pb) explain this
 	for {
 		res, err := watch.Next(c.ctx)
 		if err != nil {
