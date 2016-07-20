@@ -100,6 +100,7 @@ func (textstringer) String() string {
 }
 
 func TestJSONLoggerStringValue(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		v        interface{}
 		expected string
@@ -152,5 +153,6 @@ func BenchmarkJSONLoggerContextual(b *testing.B) {
 }
 
 func TestJSONLoggerConcurrency(t *testing.T) {
-	testConcurrency(t, log.NewJSONLogger(ioutil.Discard))
+	t.Parallel()
+	testConcurrency(t, log.NewJSONLogger(ioutil.Discard), 10000)
 }

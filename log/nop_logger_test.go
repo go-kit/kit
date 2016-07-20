@@ -7,6 +7,7 @@ import (
 )
 
 func TestNopLogger(t *testing.T) {
+	t.Parallel()
 	logger := log.NewNopLogger()
 	if err := logger.Log("abc", 123); err != nil {
 		t.Error(err)

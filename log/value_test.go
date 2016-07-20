@@ -9,6 +9,7 @@ import (
 )
 
 func TestValueBinding(t *testing.T) {
+	t.Parallel()
 	var output []interface{}
 
 	logger := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {
@@ -33,7 +34,7 @@ func TestValueBinding(t *testing.T) {
 	if want, have := start.Add(time.Second), timestamp; want != have {
 		t.Errorf("output[1]: want %v, have %v", want, have)
 	}
-	if want, have := "value_test.go:28", fmt.Sprint(output[3]); want != have {
+	if want, have := "value_test.go:29", fmt.Sprint(output[3]); want != have {
 		t.Errorf("output[3]: want %s, have %s", want, have)
 	}
 
@@ -46,12 +47,13 @@ func TestValueBinding(t *testing.T) {
 	if want, have := start.Add(2*time.Second), timestamp; want != have {
 		t.Errorf("output[1]: want %v, have %v", want, have)
 	}
-	if want, have := "value_test.go:41", fmt.Sprint(output[3]); want != have {
+	if want, have := "value_test.go:42", fmt.Sprint(output[3]); want != have {
 		t.Errorf("output[3]: want %s, have %s", want, have)
 	}
 }
 
 func TestValueBinding_loggingZeroKeyvals(t *testing.T) {
+	t.Parallel()
 	var output []interface{}
 
 	logger := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {

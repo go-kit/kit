@@ -29,7 +29,8 @@ logger.Log("transport", "HTTP", "addr", addr, "msg", "listening")
 ### Typical application logging
 
 ```go
-logger := log.NewLogfmtLogger(os.Stderr)
+w := log.NewSyncWriter(os.Stderr)
+logger := log.NewLogfmtLogger(w)
 logger.Log("question", "what is the meaning of life?", "answer", 42)
 
 // Output:
@@ -41,7 +42,7 @@ logger.Log("question", "what is the meaning of life?", "answer", 42)
 ```go
 func main() {
 	var logger log.Logger
-	logger = log.NewLogfmtLogger(os.Stderr)
+	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	logger = log.NewContext(logger).With("instance_id", 123)
 
 	logger.Log("msg", "starting")
@@ -67,7 +68,7 @@ import (
 )
 
 func main() {
-	logger := kitlog.NewJSONLogger(os.Stdout)
+	logger := kitlog.NewJSONLogger(log.NewSyncWriter(os.Stdout))
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger))
 	stdlog.Print("I sure like pie")
 }
@@ -92,7 +93,7 @@ logger.Log("legacy", true, "msg", "at least it's something")
 
 ```go
 var logger log.Logger
-logger = log.NewLogfmtLogger(os.Stderr)
+logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
 
 logger.Log("msg", "hello")
