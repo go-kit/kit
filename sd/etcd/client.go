@@ -49,7 +49,8 @@ type client struct {
 	ctx     context.Context
 }
 
-// ClientOptions defines options for the etcd client.
+// ClientOptions defines options for the etcd client. All values are optional.
+// If any duration is not specified, a default of 3 seconds will be used.
 type ClientOptions struct {
 	Cert                    string
 	Key                     string
@@ -59,11 +60,21 @@ type ClientOptions struct {
 	HeaderTimeoutPerRequest time.Duration
 }
 
-// NewClient returns an *etcd.Client with a connection to the named machines.
-// It will return an error if a connection to the cluster cannot be made.
-// The parameter machines needs to be a full URL with schemas.
-// e.g. "http://localhost:2379" will work, but "localhost:2379" will not.
+// NewClient returns Client with a connection to the named machines. It will
+// return an error if a connection to the cluster cannot be made. The parameter
+// machines needs to be a full URL with schemas. e.g. "http://localhost:2379"
+// will work, but "localhost:2379" will not.
 func NewClient(ctx context.Context, machines []string, options ClientOptions) (Client, error) {
+	if options.DialTimeout == 0 {
+		options.DialTimeout = 3 * time.Second
+	}
+	if options.DialKeepAlive == 0 {
+		options.DialKeepAlive = 3 * time.Second
+	}
+	if options.HeaderTimeoutPerRequest == 0 {
+		options.HeaderTimeoutPerRequest = 3 * time.Second
+	}
+
 	transport := etcd.DefaultTransport
 	if options.Cert != "" && options.Key != "" {
 		tlsCert, err := tls.LoadX509KeyPair(options.Cert, options.Key)
