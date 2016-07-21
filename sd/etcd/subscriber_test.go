@@ -86,7 +86,7 @@ func (c *fakeClient) GetEntries(prefix string) ([]string, error) {
 	return entries, nil
 }
 
-func (c *fakeClient) WatchPrefix(prefix string, responseChan chan *stdetcd.Response) {}
+func (c *fakeClient) WatchPrefix(prefix string, ch chan struct{}) {}
 
 func (c *fakeClient) Register(Service) error {
 	return nil
