@@ -11,47 +11,39 @@ import (
 )
 
 func TestCounter(t *testing.T) {
-	prefix, name := "foo.", "bar"
-	re := regexp.MustCompile(prefix + name + `.count ([0-9\.]+) [0-9]+`) // Graphite protocol
-	g := NewRaw(prefix, log.NewNopLogger())
-	counter := g.NewCounter(name)
-	value := func() float64 {
-		var buf bytes.Buffer
-		g.WriteTo(&buf)
-		match := re.FindStringSubmatch(buf.String())
-		f, _ := strconv.ParseFloat(match[1], 64)
-		return f
-	}
-	if err := teststat.TestCounter(counter, value); err != nil {
+	prefix, name := "abc.", "def"
+	label, value := "label", "value" // ignored for Graphite
+	regex := `^` + prefix + name + ` ([0-9\.]+) [0-9]+$`
+	g := New(prefix, 0, log.NewNopLogger())
+	counter := g.NewCounter(name).With(label, value)
+	valuef := teststat.SumLines(g, regex)
+	if err := teststat.TestCounter(counter, valuef); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestGauge(t *testing.T) {
-	prefix, name := "baz.", "quux"
-	re := regexp.MustCompile(prefix + name + ` ([0-9\.]+) [0-9]+`)
-	g := NewRaw(prefix, log.NewNopLogger())
-	gauge := g.NewGauge(name)
-	value := func() float64 {
-		var buf bytes.Buffer
-		g.WriteTo(&buf)
-		match := re.FindStringSubmatch(buf.String())
-		f, _ := strconv.ParseFloat(match[1], 64)
-		return f
-	}
-	if err := teststat.TestGauge(gauge, value); err != nil {
+	prefix, name := "ghi.", "jkl"
+	label, value := "xyz", "abc" // ignored for Graphite
+	regex := `^` + prefix + name + ` ([0-9\.]+) [0-9]+$`
+	g := New(prefix, 0, log.NewNopLogger())
+	gauge := g.NewGauge(name).With(label, value)
+	valuef := teststat.LastLine(g, regex)
+	if err := teststat.TestGauge(gauge, valuef); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestHistogram(t *testing.T) {
-	prefix, name := "head.", "toes"
+	// The histogram test is actually like 4 gauge tests.
+	prefix, name := "statsd.", "histogram_test"
+	label, value := "abc", "def" // ignored for Graphite
 	re50 := regexp.MustCompile(prefix + name + `.p50 ([0-9\.]+) [0-9]+`)
 	re90 := regexp.MustCompile(prefix + name + `.p90 ([0-9\.]+) [0-9]+`)
 	re95 := regexp.MustCompile(prefix + name + `.p95 ([0-9\.]+) [0-9]+`)
 	re99 := regexp.MustCompile(prefix + name + `.p99 ([0-9\.]+) [0-9]+`)
-	g := NewRaw(prefix, log.NewNopLogger())
-	histogram := g.NewHistogram(name, 50)
+	g := New(prefix, 0, log.NewNopLogger())
+	histogram := g.NewHistogram(name, 50).With(label, value)
 	quantiles := func() (float64, float64, float64, float64) {
 		var buf bytes.Buffer
 		g.WriteTo(&buf)
@@ -68,8 +60,4 @@ func TestHistogram(t *testing.T) {
 	if err := teststat.TestHistogram(histogram, quantiles, 0.01); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func TestWith(t *testing.T) {
-	t.Skip("TODO")
 }
