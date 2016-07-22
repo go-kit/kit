@@ -11,17 +11,14 @@ import (
 	"github.com/VividCortex/gohistogram"
 
 	"github.com/go-kit/kit/metrics2"
+	"github.com/go-kit/kit/metrics2/internal/lv"
 )
-
-// LabelValueUnknown is used as a label value when one is expected but not
-// provided, typically due to user error.
-const LabelValueUnknown = "unknown"
 
 // Counter is an in-memory implementation of a Counter.
 type Counter struct {
 	sampleRate float64
 	bits       uint64
-	lvs        []string // immutable
+	lvs        lv.LabelValues
 }
 
 // NewCounter returns a new, usable Counter.
@@ -31,12 +28,9 @@ func NewCounter() *Counter {
 
 // With implements Counter.
 func (c *Counter) With(labelValues ...string) metrics.Counter {
-	if len(labelValues)%2 != 0 {
-		labelValues = append(labelValues, LabelValueUnknown)
-	}
 	return &Counter{
 		bits: atomic.LoadUint64(&c.bits),
-		lvs:  append(c.lvs, labelValues...),
+		lvs:  c.lvs.With(labelValues...),
 	}
 }
 
@@ -83,7 +77,7 @@ func (c *Counter) LabelValues() []string {
 // Gauge is an in-memory implementation of a Gauge.
 type Gauge struct {
 	bits uint64
-	lvs  []string // immutable
+	lvs  lv.LabelValues
 }
 
 // NewGauge returns a new, usable Gauge.
@@ -92,36 +86,33 @@ func NewGauge() *Gauge {
 }
 
 // With implements Gauge.
-func (c *Gauge) With(labelValues ...string) metrics.Gauge {
-	if len(labelValues)%2 != 0 {
-		labelValues = append(labelValues, LabelValueUnknown)
-	}
+func (g *Gauge) With(labelValues ...string) metrics.Gauge {
 	return &Gauge{
-		bits: atomic.LoadUint64(&c.bits),
-		lvs:  append(c.lvs, labelValues...),
+		bits: atomic.LoadUint64(&g.bits),
+		lvs:  g.lvs.With(labelValues...),
 	}
 }
 
 // Set implements Gauge.
-func (c *Gauge) Set(value float64) {
-	atomic.StoreUint64(&c.bits, math.Float64bits(value))
+func (g *Gauge) Set(value float64) {
+	atomic.StoreUint64(&g.bits, math.Float64bits(value))
 }
 
 // Value returns the current value of the gauge.
-func (c *Gauge) Value() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&c.bits))
+func (g *Gauge) Value() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&g.bits))
 }
 
 // LabelValues returns the set of label values attached to the gauge.
-func (c *Gauge) LabelValues() []string {
-	return c.lvs
+func (g *Gauge) LabelValues() []string {
+	return g.lvs
 }
 
 // Histogram is an in-memory implementation of a streaming histogram, based on
 // VividCortex/gohistogram. It dynamically computes quantiles, so it's not
 // suitable for aggregation.
 type Histogram struct {
-	lvs []string // immutable
+	lvs lv.LabelValues
 	h   gohistogram.Histogram
 }
 
@@ -135,11 +126,8 @@ func NewHistogram(buckets int) *Histogram {
 
 // With implements Histogram.
 func (h *Histogram) With(labelValues ...string) metrics.Histogram {
-	if len(labelValues)%2 != 0 {
-		labelValues = append(labelValues, LabelValueUnknown)
-	}
 	return &Histogram{
-		lvs: append(h.lvs, labelValues...),
+		lvs: h.lvs.With(labelValues...),
 		h:   h.h,
 	}
 }
@@ -163,7 +151,7 @@ func (h *Histogram) LabelValues() []string {
 // an approximate moving average, so is likely too naïve for many use cases.
 type SimpleHistogram struct {
 	mtx sync.RWMutex
-	lvs []string
+	lvs lv.LabelValues
 	avg float64
 	n   uint64
 }
@@ -175,11 +163,8 @@ func NewSimpleHistogram() *SimpleHistogram {
 
 // With implements Histogram.
 func (h *SimpleHistogram) With(labelValues ...string) metrics.Histogram {
-	if len(labelValues)%2 != 0 {
-		labelValues = append(labelValues, LabelValueUnknown)
-	}
 	return &SimpleHistogram{
-		lvs: append(h.lvs, labelValues...),
+		lvs: h.lvs.With(labelValues...),
 		avg: h.avg,
 		n:   h.n,
 	}

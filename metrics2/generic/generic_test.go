@@ -1,15 +1,20 @@
-package generic
+package generic_test
+
+// This is package generic_test in order to get around an import cycle: this
+// package imports teststat to do its testing, but package teststat imports
+// generic to use its Histogram in the Quantiles helper function.
 
 import (
 	"math"
 	"math/rand"
 	"testing"
 
+	"github.com/go-kit/kit/metrics2/generic"
 	"github.com/go-kit/kit/metrics2/teststat"
 )
 
 func TestCounter(t *testing.T) {
-	counter := NewCounter()
+	counter := generic.NewCounter().With("label", "counter").(*generic.Counter)
 	value := func() float64 { return counter.Value() }
 	if err := teststat.TestCounter(counter, value); err != nil {
 		t.Fatal(err)
@@ -17,7 +22,7 @@ func TestCounter(t *testing.T) {
 }
 
 func TestGauge(t *testing.T) {
-	gauge := NewGauge()
+	gauge := generic.NewGauge().With("label", "gauge").(*generic.Gauge)
 	value := func() float64 { return gauge.Value() }
 	if err := teststat.TestGauge(gauge, value); err != nil {
 		t.Fatal(err)
@@ -25,7 +30,7 @@ func TestGauge(t *testing.T) {
 }
 
 func TestHistogram(t *testing.T) {
-	histogram := NewHistogram(50)
+	histogram := generic.NewHistogram(50).With("label", "histogram").(*generic.Histogram)
 	quantiles := func() (float64, float64, float64, float64) {
 		return histogram.Quantile(0.50), histogram.Quantile(0.90), histogram.Quantile(0.95), histogram.Quantile(0.99)
 	}
@@ -35,7 +40,7 @@ func TestHistogram(t *testing.T) {
 }
 
 func TestSimpleHistogram(t *testing.T) {
-	histogram := NewSimpleHistogram()
+	histogram := generic.NewSimpleHistogram().With("label", "simple_histogram").(*generic.SimpleHistogram)
 	var (
 		sum   int
 		count = 1234 // not too big
@@ -54,8 +59,4 @@ func TestSimpleHistogram(t *testing.T) {
 	if math.Abs(want-have)/want > tolerance {
 		t.Errorf("want %f, have %f", want, have)
 	}
-}
-
-func TestWith(t *testing.T) {
-	t.Skip("TODO")
 }
