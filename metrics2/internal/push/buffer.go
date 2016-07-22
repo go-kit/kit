@@ -1,5 +1,8 @@
 package push
 
+// Buffer produces metrics that are reported on a per-observation basis.
+// That is, no statistical aggregation shall occur in the client.
+// Several instrumentation systems are built this way, e.g. StatsD.
 type Buffer struct {
 	prefix string
 	addc   chan Add
@@ -9,6 +12,9 @@ type Buffer struct {
 	cache  collection
 }
 
+// NewBuffer returns a new Buffer ready for use. The prefix is applied to the
+// names of all created metrics. The bufSz is the channel buffer depth for each
+// metric type, and should be used to prevent blocking in the observation path.
 func NewBuffer(prefix string, bufSz int) *Buffer {
 	b := &Buffer{
 		prefix: prefix,
@@ -21,14 +27,17 @@ func NewBuffer(prefix string, bufSz int) *Buffer {
 	return b
 }
 
+// NewCounter returns a forwarding Counter metric.
 func (b *Buffer) NewCounter(name string, sampleRate float64) *Counter {
 	return NewCounter(b.prefix+name, sampleRate, b.addc)
 }
 
+// NewGauge returns a forwarding Gauge metric.
 func (b *Buffer) NewGauge(name string) *Gauge {
 	return NewGauge(b.prefix+name, b.setc)
 }
 
+// NewHistogram returns a forwarding Histogram metric.
 func (b *Buffer) NewHistogram(name string, sampleRate float64) *Histogram {
 	return NewHistogram(b.prefix+name, sampleRate, b.obvc)
 }
@@ -49,6 +58,9 @@ func (b *Buffer) loop() {
 	}
 }
 
+// Get returns ordered sets of observations from all counters, gauges, and
+// metrics since the last call. Get is destructive, so make sure those
+// observations get to their destination!
 func (b *Buffer) Get() ([]Add, []Set, []Obv) {
 	c := make(chan collection)
 	b.getc <- c

@@ -4,20 +4,8 @@ import (
 	"math/rand"
 
 	"github.com/go-kit/kit/metrics2"
+	"github.com/go-kit/kit/metrics2/internal/lv"
 )
-
-// LabelValues is a type alias that provides validation on its With method.
-// Metrics may include it as a member to help them satisfy With sematnics and
-// save some code duplication.
-type LabelValues []string
-
-// With validates the input, and returns a new aggregate labelValues.
-func (lvs LabelValues) With(labelValues ...string) LabelValues {
-	if len(labelValues)%2 != 0 {
-		labelValues = append(labelValues, "unknown")
-	}
-	return append(lvs, labelValues...)
-}
 
 // Add captures a single counter add invocation.
 type Add struct {
@@ -27,11 +15,11 @@ type Add struct {
 	Delta      float64
 }
 
-// Counter is a forwarding implementation of the metric.
+// Counter is a forwarding implementation of the counter metric.
 type Counter struct {
 	name       string
 	sampleRate float64
-	lvs        LabelValues
+	lvs        lv.LabelValues
 	c          chan<- Add
 }
 
@@ -67,10 +55,10 @@ type Set struct {
 	Value float64
 }
 
-// Gauge is a forwarding implementation of the metric.
+// Gauge is a forwarding implementation of the gauge metric.
 type Gauge struct {
 	name string
-	lvs  LabelValues
+	lvs  lv.LabelValues
 	c    chan<- Set
 }
 
@@ -102,25 +90,24 @@ type Obv struct {
 	Value      float64
 }
 
-// Histogram is a forwarding implementation of the metric.
+// Histogram is a forwarding implementation of the histogram metric.
 type Histogram struct {
 	name       string
 	sampleRate float64
-	lvs        LabelValues
+	lvs        lv.LabelValues
 	c          chan<- Obv
 }
 
-// NewHistogram returns a Histogram that sends observes on the channel. If
-// sample rate is less than 1.0, it may be a no-op, depending on the result of
-// rand.Float.
+// NewHistogram returns a Histogram that sends observes on the channel. Sample rate
+// is consulted at observation time.
 func NewHistogram(name string, sampleRate float64, c chan<- Obv) *Histogram {
 	return &Histogram{name: name, sampleRate: sampleRate, c: c}
 }
 
-// Observe forwards the value to the remote.
+// Observe forwards the value to the remote. If sample rate is less than 1.0,
+// this call may be a no-op, depending on the result of of rand.Float.
 func (h Histogram) Observe(value float64) {
 	if h.sampleRate < 1.0 && rand.Float64() > h.sampleRate {
-		println("### Observation dropped")
 		return
 	}
 	h.c <- Obv{Name: h.name, SampleRate: h.sampleRate, LVs: h.lvs, Value: value}
