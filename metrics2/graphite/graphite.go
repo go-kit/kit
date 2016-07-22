@@ -37,7 +37,7 @@ type Graphite struct {
 	mtx        sync.RWMutex
 	prefix     string
 	buffer     *push.Buffer
-	histograms map[string]*generic.Histogram
+	histograms map[string]*Histogram
 	logger     log.Logger
 }
 
@@ -50,7 +50,7 @@ func New(prefix string, bufSz int, logger log.Logger) *Graphite {
 	return &Graphite{
 		prefix:     prefix,
 		buffer:     push.NewBuffer(prefix, bufSz),
-		histograms: map[string]*generic.Histogram{},
+		histograms: map[string]*Histogram{},
 		logger:     logger,
 	}
 }
@@ -77,9 +77,13 @@ func (g *Graphite) NewHistogram(name string, buckets int) metrics.Histogram {
 	// timings, or anything that accepts individual observations. Instead, we
 	// perform statistical aggregation in the client, and report something like
 	// gauges at each quantile.
+	//
+	// Note that this only works because Graphite doesn't support label values.
+	// That means the With method on the returned generic.Histogram is effectively
+	// ignored, and observations
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
-	h := generic.NewHistogram(buckets)
+	h := &Histogram{generic.NewHistogram(buckets)}
 	g.histograms[g.prefix+name] = h
 	return h
 }
@@ -150,3 +154,15 @@ func (g *Graphite) WriteTo(w io.Writer) (int64, error) {
 	}
 	return count, nil
 }
+
+// Histogram adapts the generic.Histogram and makes the With method a no-op.
+// Graphite doesn't support label values, so this is fine from a protocol
+// perspective. It's also necessary because histograms are registered in the
+// Graphite object, and if With returns a new copy of the metric, observations
+// are lost.
+type Histogram struct {
+	*generic.Histogram
+}
+
+// With is a no-op.
+func (h *Histogram) With(...string) metrics.Histogram { return h }
