@@ -1,100 +1,66 @@
 package statsd
 
 import (
-	"bytes"
-	"fmt"
-	"os"
-	"regexp"
-	"strconv"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics2/generic"
 	"github.com/go-kit/kit/metrics2/teststat"
 )
 
-func TestHistogramAdapter(t *testing.T) {
-	for _, testcase := range []struct {
-		observeIn time.Duration
-		reportIn  time.Duration
-		unit      string
-		input     float64
-		want      int64
-	}{
-		{time.Second, time.Second, "s", 0.10, 0},
-		{time.Second, time.Second, "s", 1.01, 1},
-		{time.Second, time.Millisecond, "ms", 1.23, 1230},
-		{time.Millisecond, time.Microsecond, "us", 123, 123000},
-	} {
-		tm := NewTiming(testcase.unit, 1.0)
-		h := newHistogram(testcase.observeIn, testcase.reportIn, tm)
-		h.Observe(testcase.input)
-		if want, have := testcase.want, tm.Values()[0]; want != have {
-			t.Errorf("Observe(%.2f %s): want %d, have %d", testcase.input, testcase.unit, want, have)
-		}
-	}
-}
-
 func TestCounter(t *testing.T) {
-	prefix, name := "hello.", "world"
-	label, value := "labels are", "not supported"
+	prefix, name := "abc.", "def"
+	label, value := "label", "value" // ignored
 	regex := `^` + prefix + name + `:([0-9\.]+)\|c$`
-	d := NewRaw(prefix, log.NewNopLogger())
-	counter := d.NewCounter(name).With(label, value)
-	valuef := teststat.SumLines(d, regex)
+	s := New(prefix, 0, log.NewNopLogger())
+	counter := s.NewCounter(name, 1.0).With(label, value)
+	valuef := teststat.SumLines(s, regex)
 	if err := teststat.TestCounter(counter, valuef); err != nil {
 		t.Fatal(err)
 	}
 }
 
+func TestCounterSampled(t *testing.T) {
+	// This will involve multiplying the observed sum by the inverse of the
+	// sample rate and checking against the expected value within some
+	// tolerance.
+	t.Skip("TODO")
+}
+
 func TestGauge(t *testing.T) {
-	prefix, name := "hello.", "world"
-	re := regexp.MustCompile(prefix + name + `:([0-9\.]+)\|g`)
-	d := NewRaw(prefix, log.NewNopLogger())
-
-	gauge := d.NewGauge(name)
-	value := func() float64 {
-		var buf bytes.Buffer
-		d.WriteTo(&buf)
-		match := re.FindStringSubmatch(buf.String())
-		f, _ := strconv.ParseFloat(match[1], 64)
-		return f
-	}
-
-	if err := teststat.TestGauge(gauge, value); err != nil {
+	prefix, name := "ghi.", "jkl"
+	label, value := "xyz", "abc" // ignored
+	regex := `^` + prefix + name + `:([0-9\.]+)\|g$`
+	s := New(prefix, 0, log.NewNopLogger())
+	gauge := s.NewGauge(name).With(label, value)
+	valuef := teststat.LastLine(s, regex)
+	if err := teststat.TestGauge(gauge, valuef); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestHistogram(t *testing.T) {
-	prefix, name := "statsd.", "histogram_test"
-	re := regexp.MustCompile(`^` + prefix + name + `:([0-9\.]+)\|ms$`)
-	s := NewRaw(prefix, log.NewNopLogger())
-	histogram := s.MustNewHistogram(name, time.Millisecond, time.Millisecond, 1.0)
-
-	// Like DogStatsD, Statsd histograms (Timings) just emit all observations.
-	// So, we collect them into a generic histogram, and run the statistics test
-	// on that.
-	quantiles := func() (float64, float64, float64, float64) {
-		var buf bytes.Buffer
-		s.WriteTo(&buf)
-		fmt.Fprintf(os.Stderr, "%s\n", buf.String())
-		h := generic.NewHistogram(50)
-		for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
-			match := re.FindStringSubmatch(line)
-			f, _ := strconv.ParseFloat(match[1], 64)
-			h.Observe(f)
-		}
-		return h.Quantile(0.50), h.Quantile(0.90), h.Quantile(0.95), h.Quantile(0.99)
-	}
-
-	if err := teststat.TestHistogram(histogram, quantiles, 0.01); err != nil {
-		t.Fatal(err)
-	}
-}
+// StatsD timings just emit all observations. So, we collect them into a generic
+// histogram, and run the statistics test on that.
 
 func TestTiming(t *testing.T) {
-	t.Skip("TODO")
+	prefix, name := "statsd.", "timing_test"
+	label, value := "abc", "def" // ignored
+	regex := `^` + prefix + name + `:([0-9\.]+)\|ms$`
+	s := New(prefix, 0, log.NewNopLogger())
+	timing := s.NewTiming(name, 1.0).With(label, value)
+	quantiles := teststat.Quantiles(s, regex, 50) // no |@0.X
+	if err := teststat.TestHistogram(timing, quantiles, 0.01); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTimingSampled(t *testing.T) {
+	prefix, name := "statsd.", "sampled_timing_test"
+	label, value := "foo", "bar" // ignored
+	regex := `^` + prefix + name + `:([0-9\.]+)\|ms\|@0\.01[0]*$`
+	s := New(prefix, 0, log.NewNopLogger())
+	timing := s.NewTiming(name, 0.01).With(label, value)
+	quantiles := teststat.Quantiles(s, regex, 50)
+	if err := teststat.TestHistogram(timing, quantiles, 0.02); err != nil {
+		t.Fatal(err)
+	}
 }
