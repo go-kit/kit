@@ -108,7 +108,7 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (int64, error) {
 	adds, sets, obvs := d.buffer.Get()
 	var count int64
 	for _, add := range adds {
-		n, err := fmt.Fprintf(w, "%s:%f|c%s\n", add.Name, add.Delta, tagValues(add.LVs))
+		n, err := fmt.Fprintf(w, "%s:%f|c%s%s\n", add.Name, add.Delta, sampling(add.SampleRate), tagValues(add.LVs))
 		if err != nil {
 			return count, err
 		}
