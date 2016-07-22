@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -31,8 +32,10 @@ import (
 // report metrics to an io.Writer, use the WriteLoop helper method. To send to a
 // remote DogStatsD server, use the SendLoop helper method.
 type Dogstatsd struct {
-	buffer *push.Buffer
-	logger log.Logger
+	prefix  string
+	buffer  *push.Buffer
+	timings *set // to differentiate from histograms
+	logger  log.Logger
 }
 
 // New returns a Dogstatsd object that may be used to create metrics. Prefix is
@@ -42,8 +45,10 @@ type Dogstatsd struct {
 // manually or with one of the helper methods.
 func New(prefix string, bufSz int, logger log.Logger) *Dogstatsd {
 	return &Dogstatsd{
-		buffer: push.NewBuffer(prefix, bufSz),
-		logger: logger,
+		prefix:  prefix,
+		buffer:  push.NewBuffer(prefix, bufSz),
+		timings: newSet(),
+		logger:  logger,
 	}
 }
 
@@ -64,6 +69,13 @@ func (d *Dogstatsd) NewGauge(name string) metrics.Gauge {
 // object and flushed when WriteTo is invoked. If no sampling is required, pass
 // sampleRate 1.0.
 func (d *Dogstatsd) NewHistogram(name string, sampleRate float64) metrics.Histogram {
+	return d.buffer.NewHistogram(name, sampleRate)
+}
+
+// NewTiming is like NewHistogram but assumes observations in milliseconds.
+// See DogStatsD documentation for more detail.
+func (d *Dogstatsd) NewTiming(name string, sampleRate float64) metrics.Histogram {
+	d.timings.add(d.prefix + name)
 	return d.buffer.NewHistogram(name, sampleRate)
 }
 
@@ -110,13 +122,16 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (int64, error) {
 		count += int64(n)
 	}
 	for _, obv := range obvs {
-		n, err := fmt.Fprintf(w, "%s:%f|h%s%s\n", obv.Name, obv.Value, sampling(obv.SampleRate), tagValues(obv.LVs))
+		suffix := "|h"
+		if d.timings.has(obv.Name) {
+			suffix = "|ms"
+		}
+		n, err := fmt.Fprintf(w, "%s:%f%s%s%s\n", obv.Name, obv.Value, suffix, sampling(obv.SampleRate), tagValues(obv.LVs))
 		if err != nil {
 			return count, err
 		}
 		count += int64(n)
 	}
-	// TODO(pb): timings?
 	return count, nil
 }
 
@@ -141,3 +156,12 @@ func tagValues(labelValues []string) string {
 	}
 	return "|#" + strings.Join(pairs, ",")
 }
+
+type set struct {
+	mtx sync.RWMutex
+	m   map[string]struct{}
+}
+
+func newSet() *set               { return &set{m: map[string]struct{}{}} }
+func (s *set) add(a string)      { s.mtx.Lock(); defer s.mtx.Unlock(); s.m[a] = struct{}{} }
+func (s *set) has(a string) bool { s.mtx.RLock(); defer s.mtx.RUnlock(); _, ok := s.m[a]; return ok }
