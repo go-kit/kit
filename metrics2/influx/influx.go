@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics2"
 	"github.com/go-kit/kit/metrics2/generic"
 	influxdb "github.com/influxdata/influxdb/client/v2"
 )
@@ -38,31 +39,10 @@ type Influx struct {
 	logger     log.Logger
 }
 
-// New returns an Influx object, ready to create metrics and aggregate
-// observations, and automatically flushing to the passed Influx client every
-// flushInterval. Use the returned stop function to terminate the flushing
-// goroutine.
-func New(
-	tags map[string]string,
-	conf influxdb.BatchPointsConfig,
-	client influxdb.Client,
-	flushInterval time.Duration,
-	logger log.Logger,
-) (res *Influx, stop func()) {
-	i := NewRaw(tags, conf, logger)
-	ticker := time.NewTicker(flushInterval)
-	go i.FlushTo(client, ticker)
-	return i, ticker.Stop
-}
-
-// NewRaw returns an Influx object, ready to create metrics and aggregate
-// observations, but without automatically flushing anywhere. Users should
-// probably prefer the New constructor.
-//
-// Tags are applied to all metrics created from this object. A BatchPoints
-// structure is created from the provided BatchPointsConfig; any error will
-// cause a panic. Observations are aggregated into the BatchPoints.
-func NewRaw(tags map[string]string, conf influxdb.BatchPointsConfig, logger log.Logger) *Influx {
+// New returns an Influx, ready to create metrics and collect observations. Tags
+// are applied to all metrics created from this object. The BatchPointsConfig is
+// used during flushing.
+func New(tags map[string]string, conf influxdb.BatchPointsConfig, logger log.Logger) *Influx {
 	return &Influx{
 		counters:   map[string]*Counter{},
 		gauges:     map[string]*Gauge{},
@@ -101,21 +81,28 @@ func (i *Influx) NewHistogram(name string, tags map[string]string, buckets int) 
 	return h
 }
 
-// FlushTo invokes WriteTo to the client every time the ticker fires. FlushTo
-// blocks until the ticker is stopped. Most users won't need to call this method
-// directly, and should prefer to use the New constructor.
-func (i *Influx) FlushTo(client influxdb.Client, ticker *time.Ticker) {
-	for range ticker.C {
-		if err := i.WriteTo(client); err != nil {
-			i.logger.Log("during", "flush", "err", err)
+// WriteLoop is a helper method that invokes WriteTo to the passed writer every
+// time the passed channel fires. This method blocks until the channel is
+// closed, so clients probably want to run it in its own goroutine. For typical
+// usage, create a time.Ticker and pass its C channel to this method.
+func (i *Influx) WriteLoop(c <-chan time.Time, w BatchPointsWriter) {
+	for range c {
+		if err := i.WriteTo(w); err != nil {
+			i.logger.Log("during", "WriteTo", "err", err)
 		}
 	}
 }
 
+// BatchPointsWriter captures a subset of the influxdb.Client methods necessary
+// for emitting metrics observations.
+type BatchPointsWriter interface {
+	Write(influxdb.BatchPoints) error
+}
+
 // WriteTo converts the current set of metrics to Influx BatchPoints, and writes
 // the BatchPoints to the client. Clients probably shouldn't invoke this method
-// directly, and should prefer using FlushTo, or the New constructor.
-func (i *Influx) WriteTo(client influxdb.Client) error {
+// directly, and should prefer using WriteLoop.
+func (i *Influx) WriteTo(w BatchPointsWriter) error {
 	i.mtx.Lock()
 	defer i.mtx.Unlock()
 
@@ -123,6 +110,7 @@ func (i *Influx) WriteTo(client influxdb.Client) error {
 	if err != nil {
 		return err
 	}
+
 	now := time.Now()
 
 	for name, c := range i.counters {
@@ -147,14 +135,17 @@ func (i *Influx) WriteTo(client influxdb.Client) error {
 
 	for name, h := range i.histograms {
 		fields := fieldsFrom(h.LabelValues())
-		for suffix, quantile := range map[string]float64{
-			".p50": 0.50,
-			".p90": 0.90,
-			".p95": 0.95,
-			".p99": 0.99,
+		for _, x := range []struct {
+			suffix   string
+			quantile float64
+		}{
+			{".p50", 0.50},
+			{".p90", 0.90},
+			{".p95", 0.95},
+			{".p99", 0.99},
 		} {
-			fields["value"] = h.Quantile(quantile)
-			p, err := influxdb.NewPoint(name+suffix, merge(i.tags, h.tags), fields, now)
+			fields["value"] = h.Quantile(x.quantile)
+			p, err := influxdb.NewPoint(name+x.suffix, merge(i.tags, h.tags), fields, now)
 			if err != nil {
 				return err
 			}
@@ -162,7 +153,7 @@ func (i *Influx) WriteTo(client influxdb.Client) error {
 		}
 	}
 
-	return client.Write(bp)
+	return w.Write(bp)
 }
 
 func fieldsFrom(labelValues []string) map[string]interface{} {
@@ -200,6 +191,13 @@ func newCounter(tags map[string]string) *Counter {
 	}
 }
 
+// With adapts the generic With method to update the metric in-place. This is
+// necessary so that pointers in the parent Influx struct aren't invalidated.
+func (c *Counter) With(labelValues ...string) metrics.Counter {
+	c.Counter = c.Counter.With(labelValues...).(*generic.Counter)
+	return c
+}
+
 // Gauge is a generic gauge, with static tags.
 type Gauge struct {
 	*generic.Gauge
@@ -213,6 +211,13 @@ func newGauge(tags map[string]string) *Gauge {
 	}
 }
 
+// With adapts the generic With method to update the metric in-place. This is
+// necessary so that pointers in the parent Influx struct aren't invalidated.
+func (g *Gauge) With(labelValues ...string) metrics.Gauge {
+	g.Gauge = g.Gauge.With(labelValues...).(*generic.Gauge)
+	return g
+}
+
 // Histogram is a generic histogram, with static tags.
 type Histogram struct {
 	*generic.Histogram
@@ -224,4 +229,11 @@ func newHistogram(tags map[string]string, buckets int) *Histogram {
 		Histogram: generic.NewHistogram(buckets),
 		tags:      tags,
 	}
+}
+
+// With adapts the generic With method to update the metric in-place. This is
+// necessary so that pointers in the parent Influx struct aren't invalidated.
+func (h *Histogram) With(labelValues ...string) metrics.Histogram {
+	h.Histogram = h.Histogram.With(labelValues...).(*generic.Histogram)
+	return h
 }

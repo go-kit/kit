@@ -90,7 +90,8 @@ func (g *Graphite) NewHistogram(name string, buckets int) metrics.Histogram {
 
 // WriteLoop is a helper method that invokes WriteTo to the passed writer every
 // time the passed channel fires. This method blocks until the channel is
-// closed, so clients probably want to run it in its own goroutine.
+// closed, so clients probably want to run it in its own goroutine. For typical
+// usage, create a time.Ticker and pass its C channel to this method.
 func (g *Graphite) WriteLoop(c <-chan time.Time, w io.Writer) {
 	for range c {
 		if _, err := g.WriteTo(w); err != nil {
@@ -102,7 +103,8 @@ func (g *Graphite) WriteLoop(c <-chan time.Time, w io.Writer) {
 // SendLoop is a helper method that wraps WriteLoop, passing a managed
 // connection to the network and address. Like WriteLoop, this method blocks
 // until the channel is closed, so clients probably want to start it in its own
-// goroutine.
+// goroutine. For typical usage, create a time.Ticker and pass its C channel to
+// this method.
 func (g *Graphite) SendLoop(c <-chan time.Time, network, address string) {
 	g.WriteLoop(c, conn.NewDefaultManager(network, address, g.logger))
 }

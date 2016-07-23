@@ -51,7 +51,10 @@ func stats(w io.WriterTo, regex string, h *generic.Histogram) (sum, final float6
 	s := bufio.NewScanner(buf)
 	for s.Scan() {
 		match := re.FindStringSubmatch(s.Text())
-		f, _ := strconv.ParseFloat(match[1], 64)
+		f, err := strconv.ParseFloat(match[1], 64)
+		if err != nil {
+			panic(err)
+		}
 		sum += f
 		final = f
 		if h != nil {
