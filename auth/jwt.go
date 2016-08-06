@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"google.golang.org/grpc/metadata"
+
 	"golang.org/x/net/context"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -18,12 +20,12 @@ func NewJWTSigner(key string, method jwt.SigningMethod) endpoint.Middleware {
 			token := jwt.New(method)
 
 			// Sign and get the complete encoded token as a string using the secret
-			tokenString, err := token.SignedString(key)
+			tokenString, err := token.SignedString([]byte(key))
 			if err != nil {
 				return nil, err
 			}
-
-			ctx = context.WithValue(ctx, "jwtToken", tokenString)
+			md := metadata.Pairs("jwtToken", tokenString)
+			ctx = metadata.NewContext(ctx, md)
 
 			return next(ctx, request)
 		}
@@ -37,7 +39,11 @@ func NewJWTParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middle
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// tokenString is stored in the context from the transport handlers
-			tokenString := ctx.Value("jwtToken").(string)
+
+			tokenString, ok := ctx.Value("jwtToken").(string)
+			if !ok {
+				return nil, errors.New("Token up for parsing was not passed through the context")
+			}
 
 			// Parse takes the token string and a function for looking up the key. The latter is especially
 			// useful if you use multiple keys for your application.  The standard is to use 'kid' in the
