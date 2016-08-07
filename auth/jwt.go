@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	"google.golang.org/grpc/metadata"
 
@@ -51,7 +52,7 @@ func NewJWTParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middle
 			// to the callback, providing flexibility.
 			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 				// Don't forget to validate the alg is what you expect:
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				if reflect.TypeOf(token.Method) != reflect.TypeOf(method) {
 					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 				}
 				return keyFunc(token)
