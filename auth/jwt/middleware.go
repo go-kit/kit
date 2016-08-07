@@ -1,4 +1,4 @@
-package auth
+package jwt
 
 import (
 	"errors"
@@ -11,12 +11,11 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/transport/grpc"
 )
 
 // Create a new JWT token generating middleware, specifying signing method and the claims
 // you would like it to contain. Particulary useful for clients.
-func NewJWTSigner(key string, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
+func NewSigner(key string, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			token := jwt.NewWithClaims(method, claims)
@@ -37,7 +36,7 @@ func NewJWTSigner(key string, method jwt.SigningMethod, claims jwt.Claims) endpo
 // Create a new JWT token parsing middleware, specifying a jwt.Keyfunc interface and the
 // signing method. Adds the resulting claims to endpoint context or returns error on invalid
 // token. Particualry useful for servers.
-func NewJWTParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middleware {
+func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// tokenString is stored in the context from the transport handlers
@@ -71,32 +70,5 @@ func NewJWTParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middle
 
 			return next(ctx, request)
 		}
-	}
-}
-
-func NewGRPCServerRequestFunc() grpc.RequestFunc {
-	return func(ctx context.Context, md *metadata.MD) context.Context {
-		token, ok := (*md)["jwttoken"]
-		if ok {
-			ctx = context.WithValue(ctx, "jwtToken", token[0])
-		}
-
-		return ctx
-	}
-}
-
-func NewGRPCClientRequestFunc() grpc.RequestFunc {
-	return func(ctx context.Context, md *metadata.MD) context.Context {
-		md1, ok := metadata.FromContext(ctx)
-		if !ok {
-			return ctx
-		}
-
-		token, ok := md1["jwttoken"]
-		if ok {
-			(*md)["jwttoken"] = token
-		}
-
-		return ctx
 	}
 }
