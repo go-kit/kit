@@ -40,7 +40,6 @@ func NewJWTParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middle
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// tokenString is stored in the context from the transport handlers
-
 			tokenString, ok := ctx.Value("jwtToken").(string)
 			if !ok {
 				return nil, errors.New("Token up for parsing was not passed through the context")
