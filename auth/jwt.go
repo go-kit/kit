@@ -15,10 +15,10 @@ import (
 
 // Create a new JWT token generating middleware, specifying signing method and the claims
 // you would like it to contain. Particulary useful for clients.
-func NewJWTSigner(key string, method jwt.SigningMethod) endpoint.Middleware {
+func NewJWTSigner(key string, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			token := jwt.New(method)
+			token := jwt.NewWithClaims(method, claims)
 
 			// Sign and get the complete encoded token as a string using the secret
 			tokenString, err := token.SignedString([]byte(key))
