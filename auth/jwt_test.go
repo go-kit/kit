@@ -7,7 +7,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 
-	"github.com/briankassouf/kit/auth"
+	"github.com/go-kit/kit/auth"
 	"golang.org/x/net/context"
 )
 

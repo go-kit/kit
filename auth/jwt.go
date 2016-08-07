@@ -9,9 +9,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/briankassouf/kit/transport/grpc"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/transport/grpc"
 )
 
 // Create a new JWT token generating middleware, specifying signing method and the claims
