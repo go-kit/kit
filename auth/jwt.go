@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/briankassouf/kit/transport/grpc"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/endpoint"
 )
@@ -70,5 +71,32 @@ func NewJWTParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middle
 
 			return next(ctx, request)
 		}
+	}
+}
+
+func NewGRPCServerRequestFunc() grpc.RequestFunc {
+	return func(ctx context.Context, md *metadata.MD) context.Context {
+		token, ok := (*md)["jwttoken"]
+		if ok {
+			ctx = context.WithValue(ctx, "jwtToken", token[0])
+		}
+
+		return ctx
+	}
+}
+
+func NewGRPCClientRequestFunc() grpc.RequestFunc {
+	return func(ctx context.Context, md *metadata.MD) context.Context {
+		md1, ok := metadata.FromContext(ctx)
+		if !ok {
+			return ctx
+		}
+
+		token, ok := md1["jwttoken"]
+		if ok {
+			(*md)["jwttoken"] = token
+		}
+
+		return ctx
 	}
 }
