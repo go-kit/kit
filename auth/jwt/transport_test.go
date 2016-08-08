@@ -56,7 +56,7 @@ func TestFromGRPCContext(t *testing.T) {
 	}
 
 	// Correct JWT Token is passed in the context
-	ctx = metadata.NewContext(context.Background(), metadata.MD{jwt.JWTTokenContextKey: []string{signedKey}})
+	ctx = context.WithValue(context.Background(), jwt.JWTTokenContextKey, signedKey)
 	md = metadata.MD{}
 	reqFunc(ctx, &md)
 

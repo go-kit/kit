@@ -3,8 +3,6 @@ package jwt_test
 import (
 	"testing"
 
-	"google.golang.org/grpc/metadata"
-
 	stdjwt "github.com/dgrijalva/jwt-go"
 
 	"github.com/go-kit/kit/auth/jwt"
@@ -28,18 +26,13 @@ func TestSigner(t *testing.T) {
 		t.Fatalf("Signer returned error: %s", err)
 	}
 
-	md, ok := metadata.FromContext(ctx1.(context.Context))
-	if !ok {
-		t.Fatal("Could not retrieve metadata from context")
-	}
-
-	token, ok := md[jwt.JWTTokenContextKey]
+	token, ok := ctx1.(context.Context).Value(jwt.JWTTokenContextKey).(string)
 	if !ok {
 		t.Fatal("Token did not exist in context")
 	}
 
-	if token[0] != signedKey {
-		t.Fatalf("JWT tokens did not match: expecting %s got %s", signedKey, token[0])
+	if token != signedKey {
+		t.Fatalf("JWT tokens did not match: expecting %s got %s", signedKey, token)
 	}
 }
 

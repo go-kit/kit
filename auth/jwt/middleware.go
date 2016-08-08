@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"google.golang.org/grpc/metadata"
-
 	"golang.org/x/net/context"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -32,8 +30,7 @@ func NewSigner(key string, method jwt.SigningMethod, claims jwt.Claims) endpoint
 			if err != nil {
 				return nil, err
 			}
-			md := metadata.MD{JWTTokenContextKey: []string{tokenString}}
-			ctx = metadata.NewContext(ctx, md)
+			ctx = context.WithValue(ctx, JWTTokenContextKey, tokenString)
 
 			return next(ctx, request)
 		}
