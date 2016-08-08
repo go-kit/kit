@@ -21,7 +21,7 @@ const (
 )
 
 // Create a new JWT token generating middleware, specifying signing method and the claims
-// you would like it to contain. Particulary useful for clients.
+// you would like it to contain. Particularly useful for clients.
 func NewSigner(key string, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
@@ -42,7 +42,7 @@ func NewSigner(key string, method jwt.SigningMethod, claims jwt.Claims) endpoint
 
 // Create a new JWT token parsing middleware, specifying a jwt.Keyfunc interface and the
 // signing method. Adds the resulting claims to endpoint context or returns error on invalid
-// token. Particualry useful for servers.
+// token. Particularly useful for servers.
 func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
