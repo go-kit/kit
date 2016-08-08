@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	"github.com/briankassouf/kit/auth/jwt"
+	"github.com/go-kit/kit/auth/jwt"
 	"golang.org/x/net/context"
 )
 
