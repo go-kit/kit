@@ -33,7 +33,7 @@ func TestSigner(t *testing.T) {
 		t.Fatal("Could not retrieve metadata from context")
 	}
 
-	token, ok := md["jwttoken"]
+	token, ok := md[jwt.JWTTokenContextKey]
 	if !ok {
 		t.Fatal("Token did not exist in context")
 	}
@@ -49,13 +49,13 @@ func TestJWTParser(t *testing.T) {
 	keyfunc := func(token *stdjwt.Token) (interface{}, error) { return []byte(key), nil }
 
 	parser := jwt.NewParser(keyfunc, method)(e)
-	ctx := context.WithValue(context.Background(), "jwtToken", signedKey)
+	ctx := context.WithValue(context.Background(), jwt.JWTTokenContextKey, signedKey)
 	ctx1, err := parser(ctx, struct{}{})
 	if err != nil {
 		t.Fatalf("Parser returned error: %s", err)
 	}
 
-	cl, ok := ctx1.(context.Context).Value("jwtClaims").(stdjwt.MapClaims)
+	cl, ok := ctx1.(context.Context).Value(jwt.JWTClaimsContextKey).(stdjwt.MapClaims)
 	if !ok {
 		t.Fatal("Claims were not passed into context correctly")
 	}

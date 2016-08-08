@@ -12,12 +12,12 @@ import (
 
 func TestToGRPCContext(t *testing.T) {
 	md := metadata.MD{}
-	md["Authorization"] = []string{fmt.Sprintf("Bearer %s", signedKey)}
+	md["authorization"] = []string{fmt.Sprintf("Bearer %s", signedKey)}
 	ctx := context.Background()
 	reqFunc := jwt.ToGRPCContext()
 
 	ctx = reqFunc(ctx, &md)
-	token, ok := ctx.Value("jwtToken").(string)
+	token, ok := ctx.Value(jwt.JWTTokenContextKey).(string)
 	if !ok {
 		t.Fatal("JWT Token not passed to context correctly")
 	}
@@ -28,17 +28,22 @@ func TestToGRPCContext(t *testing.T) {
 }
 
 func TestFromGRPCContext(t *testing.T) {
-	ctx := context.WithValue(context.Background(), "jwtToken", signedKey)
+	ctx := metadata.NewContext(context.Background(), metadata.MD{jwt.JWTTokenContextKey: []string{signedKey}})
 
 	reqFunc := jwt.FromGRPCContext()
 	md := metadata.MD{}
 	reqFunc(ctx, &md)
-	token, ok := md["jwttoken"]
+
+	token, ok := md["authorization"]
 	if !ok {
 		t.Fatal("JWT Token not passed to metadata correctly")
 	}
 
-	if token[0] != signedKey {
+	if token[0] != generateAuthHeaderFromToken(signedKey) {
 		t.Fatalf("JWT tokens did not match: expecting %s got %s", signedKey, token[0])
 	}
+}
+
+func generateAuthHeaderFromToken(token string) string {
+	return fmt.Sprintf("Bearer %s", token)
 }

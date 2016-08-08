@@ -13,6 +13,13 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
+const (
+	// JWTContextKey holds the key used to store a JWT Token in the context
+	JWTTokenContextKey = "JWTToken"
+	// JWTContextKey holds the key used to store a JWT in the context
+	JWTClaimsContextKey = "JWTClaims"
+)
+
 // Create a new JWT token generating middleware, specifying signing method and the claims
 // you would like it to contain. Particulary useful for clients.
 func NewSigner(key string, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
@@ -25,7 +32,7 @@ func NewSigner(key string, method jwt.SigningMethod, claims jwt.Claims) endpoint
 			if err != nil {
 				return nil, err
 			}
-			md := metadata.Pairs("jwtToken", tokenString)
+			md := metadata.MD{JWTTokenContextKey: []string{tokenString}}
 			ctx = metadata.NewContext(ctx, md)
 
 			return next(ctx, request)
@@ -40,7 +47,7 @@ func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middlewar
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// tokenString is stored in the context from the transport handlers
-			tokenString, ok := ctx.Value("jwtToken").(string)
+			tokenString, ok := ctx.Value(JWTTokenContextKey).(string)
 			if !ok {
 				return nil, errors.New("Token up for parsing was not passed through the context")
 			}
@@ -65,7 +72,7 @@ func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middlewar
 			}
 
 			if claims, ok := token.Claims.(jwt.MapClaims); ok {
-				ctx = context.WithValue(ctx, "jwtClaims", claims)
+				ctx = context.WithValue(ctx, JWTClaimsContextKey, claims)
 			}
 
 			return next(ctx, request)

@@ -18,20 +18,21 @@ func ToHTTPContext() http.RequestFunc {
 			return ctx
 		}
 
-		return context.WithValue(ctx, "jwtToken", token)
+		return context.WithValue(ctx, JWTTokenContextKey, token)
 	}
 }
 
 func ToGRPCContext() grpc.RequestFunc {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
-		authHeader, ok := (*md)["Authorization"]
+		// capital "Key" is illegal in HTTP/2.
+		authHeader, ok := (*md)["authorization"]
 		if !ok {
 			return ctx
 		}
 
 		token, ok := extractTokenFromAuthHeader(authHeader[0])
 		if ok {
-			ctx = context.WithValue(ctx, "jwtToken", token)
+			ctx = context.WithValue(ctx, JWTTokenContextKey, token)
 		}
 
 		return ctx
@@ -45,9 +46,10 @@ func FromGRPCContext() grpc.RequestFunc {
 			return ctx
 		}
 
-		token, ok := md1["jwttoken"]
+		token, ok := md1[JWTTokenContextKey]
 		if ok {
-			(*md)["Authorization"] = []string{generateAuthHeaderFromToken(token[0])}
+			// capital "Key" is illegal in HTTP/2.
+			(*md)["authorization"] = []string{generateAuthHeaderFromToken(token[0])}
 		}
 
 		return ctx
