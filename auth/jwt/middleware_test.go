@@ -7,7 +7,7 @@ import (
 
 	stdjwt "github.com/dgrijalva/jwt-go"
 
-	"github.com/briankassouf/kit/auth/jwt"
+	"github.com/go-kit/kit/auth/jwt"
 	"golang.org/x/net/context"
 )
 
