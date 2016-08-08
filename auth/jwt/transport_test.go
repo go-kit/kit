@@ -12,11 +12,26 @@ import (
 
 func TestToGRPCContext(t *testing.T) {
 	md := metadata.MD{}
-	md["authorization"] = []string{fmt.Sprintf("Bearer %s", signedKey)}
-	ctx := context.Background()
 	reqFunc := jwt.ToGRPCContext()
 
-	ctx = reqFunc(ctx, &md)
+	// No Authorization header is passed
+	ctx := reqFunc(context.Background(), &md)
+	token := ctx.Value(jwt.JWTTokenContextKey)
+	if token != nil {
+		t.Fatal("Context should not contain a JWT Token")
+	}
+
+	// Invalid Authorization header is passed
+	md["authorization"] = []string{fmt.Sprintf("%s", signedKey)}
+	ctx = reqFunc(context.Background(), &md)
+	token = ctx.Value(jwt.JWTTokenContextKey)
+	if token != nil {
+		t.Fatal("Context should not contain a JWT Token")
+	}
+
+	// Authorization header is correct
+	md["authorization"] = []string{fmt.Sprintf("Bearer %s", signedKey)}
+	ctx = reqFunc(context.Background(), &md)
 	token, ok := ctx.Value(jwt.JWTTokenContextKey).(string)
 	if !ok {
 		t.Fatal("JWT Token not passed to context correctly")
@@ -28,10 +43,21 @@ func TestToGRPCContext(t *testing.T) {
 }
 
 func TestFromGRPCContext(t *testing.T) {
-	ctx := metadata.NewContext(context.Background(), metadata.MD{jwt.JWTTokenContextKey: []string{signedKey}})
-
 	reqFunc := jwt.FromGRPCContext()
+
+	// No JWT Token is passed in the context
+	ctx := context.Background()
 	md := metadata.MD{}
+	reqFunc(ctx, &md)
+
+	_, ok := md["authorization"]
+	if ok {
+		t.Fatal("authorization key should not exist in metadata")
+	}
+
+	// Correct JWT Token is passed in the context
+	ctx = metadata.NewContext(context.Background(), metadata.MD{jwt.JWTTokenContextKey: []string{signedKey}})
+	md = metadata.MD{}
 	reqFunc(ctx, &md)
 
 	token, ok := md["authorization"]
