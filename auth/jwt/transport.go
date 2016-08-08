@@ -22,6 +22,22 @@ func ToHTTPContext() http.RequestFunc {
 	}
 }
 
+func FromHTTPContext() http.RequestFunc {
+	return func(ctx context.Context, r *stdhttp.Request) context.Context {
+		md1, ok := metadata.FromContext(ctx)
+		if !ok {
+			return ctx
+		}
+
+		token, ok := md1[JWTTokenContextKey]
+		if ok {
+			r.Header.Add("Authorization", generateAuthHeaderFromToken(token[0]))
+		}
+		fmt.Println(r.Header)
+		return ctx
+	}
+}
+
 func ToGRPCContext() grpc.RequestFunc {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		// capital "Key" is illegal in HTTP/2.
