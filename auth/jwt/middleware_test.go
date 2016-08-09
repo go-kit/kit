@@ -1,32 +1,31 @@
-package jwt_test
+package jwt
 
 import (
 	"testing"
 
-	stdjwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 
-	"github.com/go-kit/kit/auth/jwt"
 	"golang.org/x/net/context"
 )
 
 var (
 	key       = "test_signing_key"
-	method    = stdjwt.SigningMethodHS256
-	claims    = stdjwt.MapClaims{"user": "go-kit"}
+	method    = jwt.SigningMethodHS256
+	claims    = jwt.MapClaims{"user": "go-kit"}
 	signedKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiZ28ta2l0In0.MMefQU5pwDeoWBSdyagqNlr1tDGddGUOMGiIWmMlFvk"
 )
 
 func TestSigner(t *testing.T) {
 	e := func(ctx context.Context, i interface{}) (interface{}, error) { return ctx, nil }
 
-	signer := jwt.NewSigner(key, method, claims)(e)
+	signer := NewSigner(key, method, claims)(e)
 	ctx := context.Background()
 	ctx1, err := signer(ctx, struct{}{})
 	if err != nil {
 		t.Fatalf("Signer returned error: %s", err)
 	}
 
-	token, ok := ctx1.(context.Context).Value(jwt.JWTTokenContextKey).(string)
+	token, ok := ctx1.(context.Context).Value(JWTTokenContextKey).(string)
 	if !ok {
 		t.Fatal("Token did not exist in context")
 	}
@@ -39,16 +38,16 @@ func TestSigner(t *testing.T) {
 func TestJWTParser(t *testing.T) {
 	e := func(ctx context.Context, i interface{}) (interface{}, error) { return ctx, nil }
 
-	keyfunc := func(token *stdjwt.Token) (interface{}, error) { return []byte(key), nil }
+	keyfunc := func(token *jwt.Token) (interface{}, error) { return []byte(key), nil }
 
-	parser := jwt.NewParser(keyfunc, method)(e)
-	ctx := context.WithValue(context.Background(), jwt.JWTTokenContextKey, signedKey)
+	parser := NewParser(keyfunc, method)(e)
+	ctx := context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
 	ctx1, err := parser(ctx, struct{}{})
 	if err != nil {
 		t.Fatalf("Parser returned error: %s", err)
 	}
 
-	cl, ok := ctx1.(context.Context).Value(jwt.JWTClaimsContextKey).(stdjwt.MapClaims)
+	cl, ok := ctx1.(context.Context).Value(JWTClaimsContextKey).(jwt.MapClaims)
 	if !ok {
 		t.Fatal("Claims were not passed into context correctly")
 	}
