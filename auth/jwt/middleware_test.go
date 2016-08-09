@@ -9,10 +9,12 @@ import (
 )
 
 var (
-	key       = "test_signing_key"
-	method    = jwt.SigningMethodHS256
-	claims    = jwt.MapClaims{"user": "go-kit"}
-	signedKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiZ28ta2l0In0.MMefQU5pwDeoWBSdyagqNlr1tDGddGUOMGiIWmMlFvk"
+	key           = "test_signing_key"
+	method        = jwt.SigningMethodHS256
+	invalidMethod = jwt.SigningMethodRS256
+	claims        = jwt.MapClaims{"user": "go-kit"}
+	signedKey     = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiZ28ta2l0In0.MMefQU5pwDeoWBSdyagqNlr1tDGddGUOMGiIWmMlFvk"
+	invalidKey    = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
 )
 
 func TestSigner(t *testing.T) {
@@ -39,9 +41,41 @@ func TestJWTParser(t *testing.T) {
 	e := func(ctx context.Context, i interface{}) (interface{}, error) { return ctx, nil }
 
 	keyfunc := func(token *jwt.Token) (interface{}, error) { return []byte(key), nil }
+	badKeyfunc := func(token *jwt.Token) (interface{}, error) { return []byte("bad"), nil }
 
 	parser := NewParser(keyfunc, method)(e)
-	ctx := context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
+
+	// No Token is passed into the parser
+	_, err := parser(context.Background(), struct{}{})
+	if err == nil {
+		t.Error("Parser should have returned an error")
+	}
+
+	// Invalid Token is passed into the parser
+	ctx := context.WithValue(context.Background(), JWTTokenContextKey, invalidKey)
+	_, err = parser(ctx, struct{}{})
+	if err == nil {
+		t.Error("Parser should have returned an error")
+	}
+
+	// Invalid Method is used in the parser
+	badParser := NewParser(keyfunc, invalidMethod)(e)
+	ctx = context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
+	_, err = badParser(ctx, struct{}{})
+	if err == nil {
+		t.Error("Parser should have returned an error")
+	}
+
+	// Invalid key is used in the parser
+	badParser = NewParser(badKeyfunc, method)(e)
+	ctx = context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
+	_, err = badParser(ctx, struct{}{})
+	if err == nil {
+		t.Error("Parser should have returned an error")
+	}
+
+	// Correct token is passed into the parser
+	ctx = context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
 	ctx1, err := parser(ctx, struct{}{})
 	if err != nil {
 		t.Fatalf("Parser returned error: %s", err)
