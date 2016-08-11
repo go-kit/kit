@@ -77,7 +77,7 @@ func TestHistogram(t *testing.T) {
 		}
 		json.NewDecoder(r.Body).Decode(&res)
 
-		h := generic.NewHistogram(len(res[name].Values)) // match tbe bucket counts
+		h := generic.NewHistogram("dummy", len(res[name].Values)) // match tbe bucket counts
 		for _, v := range res[name].Values {
 			match := re.FindStringSubmatch(v)
 			f, _ := strconv.ParseFloat(match[1], 64)

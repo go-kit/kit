@@ -68,7 +68,7 @@ type Histogram struct {
 // buckets.
 func NewHistogram(name string, buckets int) *Histogram {
 	return &Histogram{
-		h:   generic.NewHistogram(buckets),
+		h:   generic.NewHistogram(name, buckets),
 		p50: expvar.NewFloat(name + ".p50"),
 		p90: expvar.NewFloat(name + ".p90"),
 		p95: expvar.NewFloat(name + ".p95"),
