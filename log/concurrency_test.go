@@ -1,8 +1,7 @@
 package log_test
 
 import (
-	"strconv"
-	"sync"
+	"math"
 	"testing"
 
 	"github.com/go-kit/kit/log"
@@ -10,19 +9,32 @@ import (
 
 // These test are designed to be run with the race detector.
 
-func testConcurrency(t *testing.T, logger log.Logger) {
-	for _, n := range []int{10, 100, 500} {
-		wg := sync.WaitGroup{}
-		wg.Add(n)
-		for i := 0; i < n; i++ {
-			go func() { spam(logger); wg.Done() }()
+func testConcurrency(t *testing.T, logger log.Logger, total int) {
+	n := int(math.Sqrt(float64(total)))
+	share := total / n
+
+	errC := make(chan error, n)
+
+	for i := 0; i < n; i++ {
+		go func() {
+			errC <- spam(logger, share)
+		}()
+	}
+
+	for i := 0; i < n; i++ {
+		err := <-errC
+		if err != nil {
+			t.Fatalf("concurrent logging error: %v", err)
 		}
-		wg.Wait()
 	}
 }
 
-func spam(logger log.Logger) {
-	for i := 0; i < 100; i++ {
-		logger.Log("key", strconv.FormatInt(int64(i), 10))
+func spam(logger log.Logger, count int) error {
+	for i := 0; i < count; i++ {
+		err := logger.Log("key", i)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }

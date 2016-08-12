@@ -36,7 +36,7 @@ func ToHTTPRequest(tracer opentracing.Tracer, logger log.Logger) kithttp.Request
 			if err = tracer.Inject(
 				span.Context(),
 				opentracing.TextMap,
-				opentracing.HTTPHeaderTextMapCarrier(req.Header),
+				opentracing.HTTPHeadersCarrier(req.Header),
 			); err != nil {
 				logger.Log("err", err)
 			}
@@ -56,7 +56,7 @@ func FromHTTPRequest(tracer opentracing.Tracer, operationName string, logger log
 		var span opentracing.Span
 		wireContext, err := tracer.Extract(
 			opentracing.TextMap,
-			opentracing.HTTPHeaderTextMapCarrier(req.Header),
+			opentracing.HTTPHeadersCarrier(req.Header),
 		)
 		if err != nil && err != opentracing.ErrSpanContextNotFound {
 			logger.Log("err", err)

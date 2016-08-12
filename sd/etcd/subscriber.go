@@ -1,8 +1,6 @@
 package etcd
 
 import (
-	etcd "github.com/coreos/etcd/client"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
@@ -45,11 +43,11 @@ func NewSubscriber(c Client, prefix string, factory sd.Factory, logger log.Logge
 }
 
 func (s *Subscriber) loop() {
-	responseChan := make(chan *etcd.Response)
-	go s.client.WatchPrefix(s.prefix, responseChan)
+	ch := make(chan struct{})
+	go s.client.WatchPrefix(s.prefix, ch)
 	for {
 		select {
-		case <-responseChan:
+		case <-ch:
 			instances, err := s.client.GetEntries(s.prefix)
 			if err != nil {
 				s.logger.Log("msg", "failed to retrieve entries", "err", err)

@@ -8,19 +8,14 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	ClientOptions := ClientOptions{
-		Cert:                    "",
-		Key:                     "",
-		CaCert:                  "",
-		DialTimeout:             (2 * time.Second),
-		DialKeepAline:           (2 * time.Second),
-		HeaderTimeoutPerRequest: (2 * time.Second),
-	}
-
 	client, err := NewClient(
 		context.Background(),
 		[]string{"http://irrelevant:12345"},
-		ClientOptions,
+		ClientOptions{
+			DialTimeout:             2 * time.Second,
+			DialKeepAlive:           2 * time.Second,
+			HeaderTimeoutPerRequest: 2 * time.Second,
+		},
 	)
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
@@ -30,20 +25,20 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+// NewClient should fail when providing invalid or missing endpoints.
 func TestOptions(t *testing.T) {
-	//creating new client should fail when providing invalid or missing endpoints
 	a, err := NewClient(
 		context.Background(),
 		[]string{},
 		ClientOptions{
 			Cert:                    "",
 			Key:                     "",
-			CaCert:                  "",
-			DialTimeout:             (2 * time.Second),
-			DialKeepAline:           (2 * time.Second),
-			HeaderTimeoutPerRequest: (2 * time.Second),
-		})
-
+			CACert:                  "",
+			DialTimeout:             2 * time.Second,
+			DialKeepAlive:           2 * time.Second,
+			HeaderTimeoutPerRequest: 2 * time.Second,
+		},
+	)
 	if err == nil {
 		t.Errorf("expected error: %v", err)
 	}
@@ -51,19 +46,18 @@ func TestOptions(t *testing.T) {
 		t.Fatalf("expected client to be nil on failure")
 	}
 
-	//creating new client should fail when providing invalid or missing endpoints
 	_, err = NewClient(
 		context.Background(),
 		[]string{"http://irrelevant:12345"},
 		ClientOptions{
 			Cert:                    "blank.crt",
 			Key:                     "blank.key",
-			CaCert:                  "blank.cacert",
-			DialTimeout:             (2 * time.Second),
-			DialKeepAline:           (2 * time.Second),
-			HeaderTimeoutPerRequest: (2 * time.Second),
-		})
-
+			CACert:                  "blank.CACert",
+			DialTimeout:             2 * time.Second,
+			DialKeepAlive:           2 * time.Second,
+			HeaderTimeoutPerRequest: 2 * time.Second,
+		},
+	)
 	if err == nil {
 		t.Errorf("expected error: %v", err)
 	}
