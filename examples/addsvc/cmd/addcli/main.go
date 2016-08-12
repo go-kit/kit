@@ -12,10 +12,10 @@ import (
 	"github.com/lightstep/lightstep-tracer-go"
 	stdopentracing "github.com/opentracing/opentracing-go"
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
-	//appdashot "github.com/sourcegraph/appdash/opentracing"
+	appdashot "github.com/sourcegraph/appdash/opentracing"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	//"sourcegraph.com/sourcegraph/appdash"
+	"sourcegraph.com/sourcegraph/appdash"
 
 	"github.com/go-kit/kit/examples/addsvc"
 	grpcclient "github.com/go-kit/kit/examples/addsvc/client/grpc"
@@ -41,9 +41,9 @@ func main() {
 		thriftBufferSize = flag.Int("thrift.buffer.size", 0, "0 for unbuffered")
 		thriftFramed     = flag.Bool("thrift.framed", false, "true to enable framing")
 		zipkinAddr       = flag.String("zipkin.addr", "", "Enable Zipkin tracing via a Kafka Collector host:port")
-		//appdashAddr      = flag.String("appdash.addr", "", "Enable Appdash tracing via an Appdash server host:port")
-		lightstepToken = flag.String("lightstep.token", "", "Enable LightStep tracing via a LightStep access token")
-		method         = flag.String("method", "sum", "sum, concat")
+		appdashAddr      = flag.String("appdash.addr", "", "Enable Appdash tracing via an Appdash server host:port")
+		lightstepToken   = flag.String("lightstep.token", "", "Enable LightStep tracing via a LightStep access token")
+		method           = flag.String("method", "sum", "sum, concat")
 	)
 	flag.Parse()
 
@@ -72,8 +72,8 @@ func main() {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
 				os.Exit(1)
 			}
-			//} else if *appdashAddr != "" {
-			//	tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
+		} else if *appdashAddr != "" {
+			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
 		} else if *lightstepToken != "" {
 			tracer = lightstep.NewTracer(lightstep.Options{
 				AccessToken: *lightstepToken,
