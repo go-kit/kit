@@ -19,7 +19,7 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	// Initialize the ctx with a Span to inject.
 	beforeSpan := tracer.StartSpan("to_inject").(*mocktracer.MockSpan)
 	defer beforeSpan.Finish()
-	beforeSpan.Context().SetBaggageItem("baggage", "check")
+	beforeSpan.SetBaggageItem("baggage", "check")
 	beforeCtx := opentracing.ContextWithSpan(context.Background(), beforeSpan)
 
 	toHTTPFunc := kitot.ToHTTPRequest(tracer, logger)
@@ -44,8 +44,8 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	joinCtx := fromHTTPFunc(afterCtx, req)
 	joinedSpan := opentracing.SpanFromContext(joinCtx).(*mocktracer.MockSpan)
 
-	joinedContext := joinedSpan.Context().(*mocktracer.MockSpanContext)
-	beforeContext := beforeSpan.Context().(*mocktracer.MockSpanContext)
+	joinedContext := joinedSpan.Context().(mocktracer.MockSpanContext)
+	beforeContext := beforeSpan.Context().(mocktracer.MockSpanContext)
 
 	if joinedContext.SpanID == beforeContext.SpanID {
 		t.Error("SpanID should have changed", joinedContext.SpanID, beforeContext.SpanID)
@@ -58,7 +58,7 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	if want, have := "joined", joinedSpan.OperationName; want != have {
 		t.Errorf("Want %q, have %q", want, have)
 	}
-	if want, have := "check", joinedSpan.Context().BaggageItem("baggage"); want != have {
+	if want, have := "check", joinedSpan.BaggageItem("baggage"); want != have {
 		t.Errorf("Want %q, have %q", want, have)
 	}
 }
