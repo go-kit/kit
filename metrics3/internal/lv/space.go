@@ -34,6 +34,16 @@ func (s *Space) Walk(fn func(name string, lvs LabelValues, observations []float6
 	}
 }
 
+// Reset empties the current space and returns a new Space with the old
+// contents. Reset a Space to get an immutable copy suitable for walking.
+func (s *Space) Reset() *Space {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	n := NewSpace()
+	n.nodes, s.nodes = s.nodes, n.nodes
+	return n
+}
+
 func (s *Space) nodeFor(name string) *node {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()

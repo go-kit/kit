@@ -121,16 +121,9 @@ func (d *Dogstatsd) SendLoop(c <-chan time.Time, network, address string) {
 // lost if there is a problem with the write. Clients should be sure to call
 // WriteTo regularly, ideally through the WriteLoop or SendLoop helper methods.
 func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
-	defer func() {
-		d.counters = lv.NewSpace()
-		d.gauges = lv.NewSpace()
-		d.timings = lv.NewSpace()
-		d.histograms = lv.NewSpace()
-	}()
-
 	var n int
 
-	d.counters.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
+	d.counters.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
 		n, err = fmt.Fprintf(w, "%s:%f|c%s%s\n", name, sum(values), sampling(d.rates.Get(name)), tagValues(lvs))
 		if err != nil {
 			return false
@@ -142,7 +135,7 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 		return count, err
 	}
 
-	d.gauges.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
+	d.gauges.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
 		n, err = fmt.Fprintf(w, "%s:%f|g%s\n", name, last(values), tagValues(lvs))
 		if err != nil {
 			return false
@@ -154,7 +147,7 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 		return count, err
 	}
 
-	d.timings.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
+	d.timings.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
 		sampleRate := d.rates.Get(name)
 		for _, value := range values {
 			n, err = fmt.Fprintf(w, "%s:%f|ms%s%s\n", name, value, sampling(sampleRate), tagValues(lvs))
@@ -169,7 +162,7 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 		return count, err
 	}
 
-	d.histograms.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
+	d.histograms.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
 		sampleRate := d.rates.Get(name)
 		for _, value := range values {
 			n, err = fmt.Fprintf(w, "%s:%f|h%s%s\n", name, value, sampling(sampleRate), tagValues(lvs))

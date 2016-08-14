@@ -38,7 +38,7 @@ type Statsd struct {
 	// though they only take advantage of a single dimension (name). This is an
 	// implementation detail born purely from convenience. It would be more
 	// accurate to collect them in a map[string][]float64, but we already have
-	// this nice data type.
+	// this nice data structure and helper methods.
 	counters *lv.Space
 	gauges   *lv.Space
 	timings  *lv.Space
@@ -121,7 +121,7 @@ func (s *Statsd) WriteTo(w io.Writer) (count int64, err error) {
 
 	var n int
 
-	s.counters.Walk(func(name string, _ lv.LabelValues, values []float64) bool {
+	s.counters.Reset().Walk(func(name string, _ lv.LabelValues, values []float64) bool {
 		n, err = fmt.Fprintf(w, "%s:%f|c%s\n", name, sum(values), sampling(s.rates.Get(name)))
 		if err != nil {
 			return false
@@ -133,7 +133,7 @@ func (s *Statsd) WriteTo(w io.Writer) (count int64, err error) {
 		return count, err
 	}
 
-	s.gauges.Walk(func(name string, _ lv.LabelValues, values []float64) bool {
+	s.gauges.Reset().Walk(func(name string, _ lv.LabelValues, values []float64) bool {
 		n, err = fmt.Fprintf(w, "%s:%f|g\n", name, last(values))
 		if err != nil {
 			return false
@@ -145,7 +145,7 @@ func (s *Statsd) WriteTo(w io.Writer) (count int64, err error) {
 		return count, err
 	}
 
-	s.timings.Walk(func(name string, _ lv.LabelValues, values []float64) bool {
+	s.timings.Reset().Walk(func(name string, _ lv.LabelValues, values []float64) bool {
 		sampleRate := s.rates.Get(name)
 		for _, value := range values {
 			n, err = fmt.Fprintf(w, "%s:%f|ms%s\n", name, value, sampling(sampleRate))
