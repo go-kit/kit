@@ -4,6 +4,8 @@
 package generic
 
 import (
+	"fmt"
+	"io"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -152,6 +154,23 @@ func (h *Histogram) Quantile(q float64) float64 {
 // LabelValues returns the set of label values attached to the histogram.
 func (h *Histogram) LabelValues() []string {
 	return h.lvs
+}
+
+// Print writes a string representation of the histogram to the passed writer.
+// Useful for printing to a terminal.
+func (h *Histogram) Print(w io.Writer) {
+	fmt.Fprintf(w, h.h.String())
+}
+
+// Bucket is a range in a histogram which aggregates observations.
+type Bucket struct {
+	From, To, Count int64
+}
+
+// Quantile is a pair of a quantile (0..100) and its observed maximum value.
+type Quantile struct {
+	Quantile int // 0..100
+	Value    int64
 }
 
 // SimpleHistogram is an in-memory implementation of a Histogram. It only tracks
