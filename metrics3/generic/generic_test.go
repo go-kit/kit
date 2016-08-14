@@ -21,6 +21,19 @@ func TestCounter(t *testing.T) {
 	}
 }
 
+func TestValueReset(t *testing.T) {
+	counter := generic.NewCounter("test_value_reset")
+	counter.Add(123)
+	counter.Add(456)
+	counter.Add(789)
+	if want, have := float64(123+456+789), counter.ValueReset(); want != have {
+		t.Errorf("want %f, have %f", want, have)
+	}
+	if want, have := float64(0), counter.Value(); want != have {
+		t.Errorf("want %f, have %f", want, have)
+	}
+}
+
 func TestGauge(t *testing.T) {
 	gauge := generic.NewGauge("my_gauge").With("label", "gauge").(*generic.Gauge)
 	value := func() float64 { return gauge.Value() }
