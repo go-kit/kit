@@ -19,6 +19,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics3"
 	"github.com/go-kit/kit/metrics3/internal/lv"
+	"github.com/go-kit/kit/metrics3/internal/ratemap"
 	"github.com/go-kit/kit/util/conn"
 )
 
@@ -34,7 +35,7 @@ import (
 // To send to a DogStatsD server, use the SendLoop helper method.
 type Dogstatsd struct {
 	prefix     string
-	rates      *rateMap
+	rates      *ratemap.RateMap
 	counters   *lv.Space
 	gauges     *lv.Space
 	timings    *lv.Space
@@ -48,7 +49,7 @@ type Dogstatsd struct {
 func New(prefix string, logger log.Logger) *Dogstatsd {
 	return &Dogstatsd{
 		prefix:     prefix,
-		rates:      newRateMap(),
+		rates:      ratemap.New(),
 		counters:   lv.NewSpace(),
 		gauges:     lv.NewSpace(),
 		timings:    lv.NewSpace(),
@@ -59,7 +60,7 @@ func New(prefix string, logger log.Logger) *Dogstatsd {
 
 // NewCounter returns a counter, sending observations to this Dogstatsd object.
 func (d *Dogstatsd) NewCounter(name string, sampleRate float64) *Counter {
-	d.rates.set(d.prefix+name, sampleRate)
+	d.rates.Set(d.prefix+name, sampleRate)
 	return &Counter{
 		name: d.prefix + name,
 		obs:  d.counters.Observe,
@@ -77,7 +78,7 @@ func (d *Dogstatsd) NewGauge(name string) *Gauge {
 // NewTiming returns a histogram whose observations are interpreted as
 // millisecond durations, and are forwarded to this Dogstatsd object.
 func (d *Dogstatsd) NewTiming(name string, sampleRate float64) *Timing {
-	d.rates.set(d.prefix+name, sampleRate)
+	d.rates.Set(d.prefix+name, sampleRate)
 	return &Timing{
 		name: d.prefix + name,
 		obs:  d.timings.Observe,
@@ -87,7 +88,7 @@ func (d *Dogstatsd) NewTiming(name string, sampleRate float64) *Timing {
 // NewHistogram returns a histogram whose observations are of an unspecified
 // unit, and are forwarded to this Dogstatsd object.
 func (d *Dogstatsd) NewHistogram(name string, sampleRate float64) *Histogram {
-	d.rates.set(d.prefix+name, sampleRate)
+	d.rates.Set(d.prefix+name, sampleRate)
 	return &Histogram{
 		name: d.prefix + name,
 		obs:  d.histograms.Observe,
@@ -130,7 +131,7 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 	var n int
 
 	d.counters.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		n, err = fmt.Fprintf(w, "%s:%f|c%s%s\n", name, sum(values), sampling(d.rates.get(name)), tagValues(lvs))
+		n, err = fmt.Fprintf(w, "%s:%f|c%s%s\n", name, sum(values), sampling(d.rates.Get(name)), tagValues(lvs))
 		if err != nil {
 			return false
 		}
@@ -154,7 +155,7 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 	}
 
 	d.timings.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		sampleRate := d.rates.get(name)
+		sampleRate := d.rates.Get(name)
 		for _, value := range values {
 			n, err = fmt.Fprintf(w, "%s:%f|ms%s%s\n", name, value, sampling(sampleRate), tagValues(lvs))
 			if err != nil {
@@ -169,7 +170,7 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 	}
 
 	d.histograms.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		sampleRate := d.rates.get(name)
+		sampleRate := d.rates.Get(name)
 		for _, value := range values {
 			n, err = fmt.Fprintf(w, "%s:%f|h%s%s\n", name, value, sampling(sampleRate), tagValues(lvs))
 			if err != nil {
