@@ -24,10 +24,10 @@ import (
 // with a "value" field that reflects each observation; use e.g. the HISTOGRAM
 // aggregate function to compute histograms.
 //
-// Influx tags are assigned to each Go kit metric at construction, and are
-// immutable for the life of the metric. Influx fields are mapped to Go kit
-// label values, and may be mutated via With functions. Actual metric values are
-// provided as fields with specific names depending on the metric.
+// Influx tags are immutable, attached to the Influx object, and given to each
+// metric at construction. Influx fields are mapped to Go kit label values, and
+// may be mutated via With functions. Actual metric values are provided as
+// fields with specific names depending on the metric.
 //
 // All observations are collected in memory locally, and flushed on demand.
 type Influx struct {
