@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics2/generic"
+	"github.com/go-kit/kit/metrics3/generic"
 	"github.com/go-kit/kit/metrics3/teststat"
 	influxdb "github.com/influxdata/influxdb/client/v2"
 )
@@ -53,7 +53,7 @@ func TestHistogram(t *testing.T) {
 	quantiles := func() (float64, float64, float64, float64) {
 		w := &bufWriter{}
 		in.WriteTo(w)
-		h := generic.NewHistogram(50)
+		h := generic.NewHistogram("h", 50)
 		matches := re.FindAllStringSubmatch(w.buf.String(), -1)
 		for _, match := range matches {
 			f, _ := strconv.ParseFloat(match[1], 64)
