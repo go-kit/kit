@@ -285,7 +285,7 @@ func (t *Timing) With(labelValues ...string) metrics.Histogram {
 	}
 }
 
-// Observe implements metrics.Histogram.
+// Observe implements metrics.Histogram. Value is interpreted as milliseconds.
 func (t *Timing) Observe(value float64) {
 	t.obs(t.name, t.lvs, value)
 }
