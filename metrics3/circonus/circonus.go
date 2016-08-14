@@ -69,8 +69,8 @@ type Gauge struct {
 // concept of per-observation label values.
 func (g *Gauge) With(labelValues ...string) metrics.Gauge { return g }
 
-// Set implements Gauge. Value is converted to int64; precision will be lost.
-func (g *Gauge) Set(value float64) { g.m.SetGauge(g.name, int64(value)) }
+// Set implements Gauge.
+func (g *Gauge) Set(value float64) { g.m.SetGauge(g.name, value) }
 
 // Histogram is a Circonus implementation of a histogram metric.
 type Histogram struct {

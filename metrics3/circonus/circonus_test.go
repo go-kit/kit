@@ -20,21 +20,19 @@ func TestCounter(t *testing.T) {
 	// server and receive real HTTP writes.
 	const name = "abc"
 	var val int64
-	updated := make(chan struct{})
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var res map[string]struct {
 			Value int64 `json:"_value"` // reverse-engineered :\
 		}
 		json.NewDecoder(r.Body).Decode(&res)
 		val = res[name].Value
-		close(updated)
 	}))
 	defer s.Close()
 
 	// Set up a Circonus object, submitting to our HTTP server.
 	m := newCirconusMetrics(s.URL)
 	counter := New(m).NewCounter(name).With("label values", "not supported")
-	value := func() float64 { m.Flush(); <-updated; return float64(val) }
+	value := func() float64 { m.Flush(); return float64(val) }
 
 	// Engage.
 	if err := teststat.TestCounter(counter, value); err != nil {
@@ -44,21 +42,19 @@ func TestCounter(t *testing.T) {
 
 func TestGauge(t *testing.T) {
 	const name = "def"
-	var val int64
-	updated := make(chan struct{})
+	var val float64
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var res map[string]struct {
-			Value int64 `json:"_value"`
+			Value string `json:"_value"`
 		}
 		json.NewDecoder(r.Body).Decode(&res)
-		val = res[name].Value
-		close(updated)
+		val, _ = strconv.ParseFloat(res[name].Value, 64)
 	}))
 	defer s.Close()
 
 	m := newCirconusMetrics(s.URL)
 	gauge := New(m).NewGauge(name).With("label values", "not supported")
-	value := func() float64 { m.Flush(); <-updated; return float64(val) }
+	value := func() float64 { m.Flush(); return val }
 
 	if err := teststat.TestGauge(gauge, value); err != nil {
 		t.Fatal(err)
@@ -75,7 +71,6 @@ func TestHistogram(t *testing.T) {
 	re := regexp.MustCompile(`^H\[([0-9\.e\+]+)\]=([0-9]+)$`) // H[1.2e+03]=456
 
 	var p50, p90, p95, p99 float64
-	updated := make(chan struct{})
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var res map[string]struct {
 			Values []string `json:"_value"` // reverse-engineered :\
@@ -96,13 +91,12 @@ func TestHistogram(t *testing.T) {
 		p90 = h.Quantile(0.90)
 		p95 = h.Quantile(0.95)
 		p99 = h.Quantile(0.99)
-		close(updated)
 	}))
 	defer s.Close()
 
 	m := newCirconusMetrics(s.URL)
 	histogram := New(m).NewHistogram(name).With("label values", "not supported")
-	quantiles := func() (float64, float64, float64, float64) { m.Flush(); <-updated; return p50, p90, p95, p99 }
+	quantiles := func() (float64, float64, float64, float64) { m.Flush(); return p50, p90, p95, p99 }
 
 	// Circonus metrics, because they do their own bucketing, are less precise
 	// than other systems. So, we bump the tolerance to 5 percent.
