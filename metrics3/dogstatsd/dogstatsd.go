@@ -154,9 +154,9 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 	}
 
 	d.timings.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		samp := d.rates.get(name)
+		sampleRate := d.rates.get(name)
 		for _, value := range values {
-			n, err = fmt.Fprintf(w, "%s:%f|ms%s%s\n", name, value, samp, tagValues(lvs))
+			n, err = fmt.Fprintf(w, "%s:%f|ms%s%s\n", name, value, sampling(sampleRate), tagValues(lvs))
 			if err != nil {
 				return false
 			}
@@ -169,9 +169,9 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 	}
 
 	d.histograms.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		samp := d.rates.get(name)
+		sampleRate := d.rates.get(name)
 		for _, value := range values {
-			n, err = fmt.Fprintf(w, "%s:%f|h%s%s\n", name, value, samp, tagValues(lvs))
+			n, err = fmt.Fprintf(w, "%s:%f|h%s%s\n", name, value, sampling(sampleRate), tagValues(lvs))
 			if err != nil {
 				return false
 			}
