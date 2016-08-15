@@ -22,7 +22,7 @@ func NewStatsdProvider(s *statsd.Statsd, stop func()) Provider {
 
 // NewCounter implements Provider.
 func (p *statsdProvider) NewCounter(name string) metrics.Counter {
-	return p.s.NewCounter(name)
+	return p.s.NewCounter(name, 1.0)
 }
 
 // NewGauge implements Provider.
