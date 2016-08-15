@@ -113,12 +113,6 @@ func (s *Statsd) SendLoop(c <-chan time.Time, network, address string) {
 // lost if there is a problem with the write. Clients should be sure to call
 // WriteTo regularly, ideally through the WriteLoop or SendLoop helper methods.
 func (s *Statsd) WriteTo(w io.Writer) (count int64, err error) {
-	defer func() {
-		s.counters = lv.NewSpace()
-		s.gauges = lv.NewSpace()
-		s.timings = lv.NewSpace()
-	}()
-
 	var n int
 
 	s.counters.Reset().Walk(func(name string, _ lv.LabelValues, values []float64) bool {
