@@ -9,7 +9,7 @@ import (
 
 func instrumentingMiddleware(
 	requestCount metrics.Counter,
-	requestLatency metrics.TimeHistogram,
+	requestLatency metrics.Histogram,
 	countResult metrics.Histogram,
 ) ServiceMiddleware {
 	return func(next StringService) StringService {
@@ -19,17 +19,16 @@ func instrumentingMiddleware(
 
 type instrmw struct {
 	requestCount   metrics.Counter
-	requestLatency metrics.TimeHistogram
+	requestLatency metrics.Histogram
 	countResult    metrics.Histogram
 	StringService
 }
 
 func (mw instrmw) Uppercase(s string) (output string, err error) {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "uppercase"}
-		errorField := metrics.Field{Key: "error", Value: fmt.Sprintf("%v", err)}
-		mw.requestCount.With(methodField).With(errorField).Add(1)
-		mw.requestLatency.With(methodField).With(errorField).Observe(time.Since(begin))
+		lvs := []string{"method", "uppercase", "error", fmt.Sprint(err == nil)}
+		mw.requestCount.With(lvs...).Add(1)
+		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
 	output, err = mw.StringService.Uppercase(s)
@@ -38,11 +37,10 @@ func (mw instrmw) Uppercase(s string) (output string, err error) {
 
 func (mw instrmw) Count(s string) (n int) {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "count"}
-		errorField := metrics.Field{Key: "error", Value: fmt.Sprintf("%v", error(nil))}
-		mw.requestCount.With(methodField).With(errorField).Add(1)
-		mw.requestLatency.With(methodField).With(errorField).Observe(time.Since(begin))
-		mw.countResult.Observe(int64(n))
+		lvs := []string{"method", "uppercase"}
+		mw.requestCount.With(lvs...).Add(1)
+		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
+		mw.countResult.Observe(float64(n))
 	}(time.Now())
 
 	n = mw.StringService.Count(s)

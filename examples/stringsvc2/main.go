@@ -3,13 +3,11 @@ package main
 import (
 	"net/http"
 	"os"
-	"time"
 
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
@@ -19,19 +17,19 @@ func main() {
 	logger := log.NewLogfmtLogger(os.Stderr)
 
 	fieldKeys := []string{"method", "error"}
-	requestCount := kitprometheus.NewCounter(stdprometheus.CounterOpts{
+	requestCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Namespace: "my_group",
 		Subsystem: "string_service",
 		Name:      "request_count",
 		Help:      "Number of requests received.",
 	}, fieldKeys)
-	requestLatency := metrics.NewTimeHistogram(time.Microsecond, kitprometheus.NewSummary(stdprometheus.SummaryOpts{
+	requestLatency := kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 		Namespace: "my_group",
 		Subsystem: "string_service",
 		Name:      "request_latency_microseconds",
 		Help:      "Total duration of requests in microseconds.",
-	}, fieldKeys))
-	countResult := kitprometheus.NewSummary(stdprometheus.SummaryOpts{
+	}, fieldKeys)
+	countResult := kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 		Namespace: "my_group",
 		Subsystem: "string_service",
 		Name:      "count_result",

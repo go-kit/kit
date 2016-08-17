@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	lightstep "github.com/lightstep/lightstep-tracer-go"
@@ -61,25 +60,25 @@ func main() {
 	var ints, chars metrics.Counter
 	{
 		// Business level metrics.
-		ints = prometheus.NewCounter(stdprometheus.CounterOpts{
+		ints = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: "addsvc",
 			Name:      "integers_summed",
 			Help:      "Total count of integers summed via the Sum method.",
 		}, []string{})
-		chars = prometheus.NewCounter(stdprometheus.CounterOpts{
+		chars = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: "addsvc",
 			Name:      "characters_concatenated",
 			Help:      "Total count of characters concatenated via the Concat method.",
 		}, []string{})
 	}
-	var duration metrics.TimeHistogram
+	var duration metrics.Histogram
 	{
 		// Transport level metrics.
-		duration = metrics.NewTimeHistogram(time.Nanosecond, prometheus.NewSummary(stdprometheus.SummaryOpts{
+		duration = prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 			Namespace: "addsvc",
 			Name:      "request_duration_ns",
 			Help:      "Request duration in nanoseconds.",
-		}, []string{"method", "success"}))
+		}, []string{"method", "success"})
 	}
 
 	// Tracing domain.
@@ -132,7 +131,7 @@ func main() {
 	// Endpoint domain.
 	var sumEndpoint endpoint.Endpoint
 	{
-		sumDuration := duration.With(metrics.Field{Key: "method", Value: "Sum"})
+		sumDuration := duration.With("method", "Sum")
 		sumLogger := log.NewContext(logger).With("method", "Sum")
 
 		sumEndpoint = addsvc.MakeSumEndpoint(service)
@@ -142,7 +141,7 @@ func main() {
 	}
 	var concatEndpoint endpoint.Endpoint
 	{
-		concatDuration := duration.With(metrics.Field{Key: "method", Value: "Concat"})
+		concatDuration := duration.With("method", "Concat")
 		concatLogger := log.NewContext(logger).With("method", "Concat")
 
 		concatEndpoint = addsvc.MakeConcatEndpoint(service)

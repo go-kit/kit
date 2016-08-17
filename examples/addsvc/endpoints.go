@@ -88,13 +88,12 @@ func MakeConcatEndpoint(s Service) endpoint.Endpoint {
 // the duration of each invocation to the passed histogram. The middleware adds
 // a single field: "success", which is "true" if no error is returned, and
 // "false" otherwise.
-func EndpointInstrumentingMiddleware(duration metrics.TimeHistogram) endpoint.Middleware {
+func EndpointInstrumentingMiddleware(duration metrics.Histogram) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 
 			defer func(begin time.Time) {
-				f := metrics.Field{Key: "success", Value: fmt.Sprint(err == nil)}
-				duration.With(f).Observe(time.Since(begin))
+				duration.With("success", fmt.Sprint(err == nil)).Observe(time.Since(begin).Seconds())
 			}(time.Now())
 			return next(ctx, request)
 
