@@ -4,5 +4,6 @@ script: go test -race -v ./...
 
 go:
     - 1.5.3
-    - 1.6
-    #- tip
+    - 1.6.3
+    - 1.7
+    - tip

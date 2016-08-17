@@ -13,11 +13,10 @@ import (
 )
 
 func TestServerHappyPathSingleServer(t *testing.T) {
-	originServer := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("hey"))
-		}))
+	originServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("hey"))
+	}))
 	defer originServer.Close()
 	originURL, _ := url.Parse(originServer.URL)
 
@@ -35,7 +34,7 @@ func TestServerHappyPathSingleServer(t *testing.T) {
 
 	responseBody, _ := ioutil.ReadAll(resp.Body)
 	if want, have := "hey", string(responseBody); want != have {
-		t.Errorf("want %d, have %d", want, have)
+		t.Errorf("want %q, have %q", want, have)
 	}
 }
 
@@ -45,15 +44,14 @@ func TestServerHappyPathSingleServerWithServerOptions(t *testing.T) {
 		headerVal = "go-kit-proxy"
 	)
 
-	originServer := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if want, have := headerVal, r.Header.Get(headerKey); want != have {
-				t.Errorf("want %d, have %d", want, have)
-			}
+	originServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if want, have := headerVal, r.Header.Get(headerKey); want != have {
+			t.Errorf("want %q, have %q", want, have)
+		}
 
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("hey"))
-		}))
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("hey"))
+	}))
 	defer originServer.Close()
 	originURL, _ := url.Parse(originServer.URL)
 
@@ -75,7 +73,7 @@ func TestServerHappyPathSingleServerWithServerOptions(t *testing.T) {
 
 	responseBody, _ := ioutil.ReadAll(resp.Body)
 	if want, have := "hey", string(responseBody); want != have {
-		t.Errorf("want %d, have %d", want, have)
+		t.Errorf("want %q, have %q", want, have)
 	}
 }
 
@@ -99,10 +97,9 @@ func TestServerOriginServerNotFoundResponse(t *testing.T) {
 
 func TestServerOriginServerUnreachable(t *testing.T) {
 	// create a server, then promptly shut it down
-	originServer := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		}))
+	originServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
 	originURL, _ := url.Parse(originServer.URL)
 	originServer.Close()
 
@@ -114,7 +111,7 @@ func TestServerOriginServerUnreachable(t *testing.T) {
 	defer proxyServer.Close()
 
 	resp, _ := http.Get(proxyServer.URL)
-	if want, have := http.StatusInternalServerError, resp.StatusCode; want != have {
+	if want, have := http.StatusBadGateway, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
