@@ -111,7 +111,12 @@ func TestServerOriginServerUnreachable(t *testing.T) {
 	defer proxyServer.Close()
 
 	resp, _ := http.Get(proxyServer.URL)
-	if want, have := http.StatusBadGateway, resp.StatusCode; want != have {
-		t.Errorf("want %d, have %d", want, have)
+	switch resp.StatusCode {
+	case http.StatusBadGateway: // go1.7 and beyond
+		break
+	case http.StatusInternalServerError: // to go1.7
+		break
+	default:
+		t.Errorf("want %d or %d, have %d", http.StatusBadGateway, http.StatusInternalServerError, resp.StatusCode)
 	}
 }
