@@ -7,7 +7,7 @@ type Counter interface {
 	Add(delta float64)
 }
 
-// Gauge describes a metric that takes a specific value over time.
+// Gauge describes a metric that takes specific values over time.
 // An example of a gauge is the current depth of a job queue.
 type Gauge interface {
 	With(labelValues ...string) Gauge
@@ -16,8 +16,8 @@ type Gauge interface {
 
 // Histogram describes a metric that takes repeated observations of the same
 // kind of thing, and produces a statistical summary of those observations,
-// typically expressed as quantile buckets. An example of a histogram is HTTP
-// request latencies.
+// typically expressed as quantiles or buckets. An example of a histogram is
+// HTTP request latencies.
 type Histogram interface {
 	With(labelValues ...string) Histogram
 	Observe(value float64)
