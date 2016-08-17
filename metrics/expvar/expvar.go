@@ -6,8 +6,8 @@ import (
 	"expvar"
 	"sync"
 
-	"github.com/go-kit/kit/metrics3"
-	"github.com/go-kit/kit/metrics3/generic"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/generic"
 )
 
 // Counter implements the counter metric with an expvar float.

@@ -11,8 +11,8 @@ import (
 	"github.com/circonus-labs/circonus-gometrics"
 	"github.com/circonus-labs/circonus-gometrics/checkmgr"
 
-	"github.com/go-kit/kit/metrics3/generic"
-	"github.com/go-kit/kit/metrics3/teststat"
+	"github.com/go-kit/kit/metrics/generic"
+	"github.com/go-kit/kit/metrics/teststat"
 )
 
 func TestCounter(t *testing.T) {

@@ -4,7 +4,7 @@ package circonus
 import (
 	"github.com/circonus-labs/circonus-gometrics"
 
-	"github.com/go-kit/kit/metrics3"
+	"github.com/go-kit/kit/metrics"
 )
 
 // Circonus wraps a CirconusMetrics object and provides constructors for each of

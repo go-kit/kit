@@ -8,10 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics3/generic"
-	"github.com/go-kit/kit/metrics3/teststat"
 	influxdb "github.com/influxdata/influxdb/client/v2"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/generic"
+	"github.com/go-kit/kit/metrics/teststat"
 )
 
 func TestCounter(t *testing.T) {

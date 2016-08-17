@@ -11,8 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-kit/kit/metrics3/teststat"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
+
+	"github.com/go-kit/kit/metrics/teststat"
 )
 
 func TestCounter(t *testing.T) {

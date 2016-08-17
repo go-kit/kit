@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/go-kit/kit/metrics3"
+	"github.com/go-kit/kit/metrics"
 )
 
 // TestCounter puts some deltas through the counter, and then calls the value
