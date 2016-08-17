@@ -1,186 +1,200 @@
-// Package graphite implements a Graphite backend for package metrics. Metrics
-// will be emitted to a Graphite server in the plaintext protocol which looks
-// like:
+// Package graphite provides a Graphite backend for metrics. Metrics are batched
+// and emitted in the plaintext protocol. For more information, see
+// http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol
 //
-//   "<metric path> <metric value> <metric timestamp>"
-//
-// See http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol.
-// The current implementation ignores fields.
+// Graphite does not have a native understanding of metric parameterization, so
+// label values not supported. Use distinct metrics for each unique combination
+// of label values.
 package graphite
 
 import (
 	"fmt"
 	"io"
-	"math"
-	"sort"
 	"sync"
-	"sync/atomic"
 	"time"
 
-	"github.com/codahale/hdrhistogram"
-
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics3"
+	"github.com/go-kit/kit/metrics3/generic"
+	"github.com/go-kit/kit/util/conn"
 )
 
-func newCounter(name string) *counter {
-	return &counter{name, 0}
+// Graphite receives metrics observations and forwards them to a Graphite server.
+// Create a Graphite object, use it to create metrics, and pass those metrics as
+// dependencies to the components that will use them.
+//
+// All metrics are buffered until WriteTo is called. Counters and gauges are
+// aggregated into a single observation per timeseries per write. Histograms are
+// exploded into per-quantile gauges and reported once per write.
+//
+// To regularly report metrics to an io.Writer, use the WriteLoop helper method.
+// To send to a Graphite server, use the SendLoop helper method.
+type Graphite struct {
+	mtx        sync.RWMutex
+	prefix     string
+	counters   map[string]*Counter
+	gauges     map[string]*Gauge
+	histograms map[string]*Histogram
+	logger     log.Logger
 }
 
-func newGauge(name string) *gauge {
-	return &gauge{name, 0}
-}
-
-// counter implements the metrics.counter interface but also provides a
-// Flush method to emit the current counter values in the Graphite plaintext
-// protocol.
-type counter struct {
-	key   string
-	count uint64
-}
-
-func (c *counter) Name() string { return c.key }
-
-// With currently ignores fields.
-func (c *counter) With(metrics.Field) metrics.Counter { return c }
-
-func (c *counter) Add(delta uint64) { atomic.AddUint64(&c.count, delta) }
-
-func (c *counter) get() uint64 { return atomic.LoadUint64(&c.count) }
-
-// flush will emit the current counter value in the Graphite plaintext
-// protocol to the given io.Writer.
-func (c *counter) flush(w io.Writer, prefix string) {
-	fmt.Fprintf(w, "%s.count %d %d\n", prefix+c.Name(), c.get(), time.Now().Unix())
-}
-
-// gauge implements the metrics.gauge interface but also provides a
-// Flush method to emit the current counter values in the Graphite plaintext
-// protocol.
-type gauge struct {
-	key   string
-	value uint64 // math.Float64bits
-}
-
-func (g *gauge) Name() string { return g.key }
-
-// With currently ignores fields.
-func (g *gauge) With(metrics.Field) metrics.Gauge { return g }
-
-func (g *gauge) Add(delta float64) {
-	for {
-		old := atomic.LoadUint64(&g.value)
-		new := math.Float64bits(math.Float64frombits(old) + delta)
-		if atomic.CompareAndSwapUint64(&g.value, old, new) {
-			return
-		}
+// New returns a Statsd object that may be used to create metrics. Prefix is
+// applied to all created metrics. Callers must ensure that regular calls to
+// WriteTo are performed, either manually or with one of the helper methods.
+func New(prefix string, logger log.Logger) *Graphite {
+	return &Graphite{
+		prefix:     prefix,
+		counters:   map[string]*Counter{},
+		gauges:     map[string]*Gauge{},
+		histograms: map[string]*Histogram{},
+		logger:     logger,
 	}
 }
 
-func (g *gauge) Set(value float64) {
-	atomic.StoreUint64(&g.value, math.Float64bits(value))
+// NewCounter returns a counter. Observations are aggregated and emitted once
+// per write invocation.
+func (g *Graphite) NewCounter(name string) *Counter {
+	c := NewCounter(g.prefix + name)
+	g.mtx.Lock()
+	g.counters[g.prefix+name] = c
+	g.mtx.Unlock()
+	return c
 }
 
-func (g *gauge) Get() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&g.value))
+// NewGauge returns a gauge. Observations are aggregated and emitted once per
+// write invocation.
+func (g *Graphite) NewGauge(name string) *Gauge {
+	ga := NewGauge(g.prefix + name)
+	g.mtx.Lock()
+	g.gauges[g.prefix+name] = ga
+	g.mtx.Unlock()
+	return ga
 }
 
-// Flush will emit the current gauge value in the Graphite plaintext
-// protocol to the given io.Writer.
-func (g *gauge) flush(w io.Writer, prefix string) {
-	fmt.Fprintf(w, "%s %.2f %d\n", prefix+g.Name(), g.Get(), time.Now().Unix())
-}
-
-// windowedHistogram is taken from http://github.com/codahale/metrics. It
-// is a windowed HDR histogram which drops data older than five minutes.
-//
-// The histogram exposes metrics for each passed quantile as gauges. Quantiles
-// should be integers in the range 1..99. The gauge names are assigned by using
-// the passed name as a prefix and appending "_pNN" e.g. "_p50".
-//
-// The values of this histogram will be periodically emitted in a
-// Graphite-compatible format once the GraphiteProvider is started. Fields are ignored.
-type windowedHistogram struct {
-	mtx  sync.Mutex
-	hist *hdrhistogram.WindowedHistogram
-
-	name   string
-	gauges map[int]metrics.Gauge
-	logger log.Logger
-}
-
-func newWindowedHistogram(name string, minValue, maxValue int64, sigfigs int, quantiles map[int]metrics.Gauge, logger log.Logger) *windowedHistogram {
-	h := &windowedHistogram{
-		hist:   hdrhistogram.NewWindowed(5, minValue, maxValue, sigfigs),
-		name:   name,
-		gauges: quantiles,
-		logger: logger,
-	}
-	go h.rotateLoop(1 * time.Minute)
+// NewHistogram returns a histogram. Observations are aggregated and emitted as
+// per-quantile gauges, once per write invocation. 50 is a good default value
+// for buckets.
+func (g *Graphite) NewHistogram(name string, buckets int) *Histogram {
+	h := NewHistogram(g.prefix+name, buckets)
+	g.mtx.Lock()
+	g.histograms[g.prefix+name] = h
+	g.mtx.Unlock()
 	return h
 }
 
-func (h *windowedHistogram) Name() string { return h.name }
-
-func (h *windowedHistogram) With(metrics.Field) metrics.Histogram { return h }
-
-func (h *windowedHistogram) Observe(value int64) {
-	h.mtx.Lock()
-	err := h.hist.Current.RecordValue(value)
-	h.mtx.Unlock()
-
-	if err != nil {
-		h.logger.Log("err", err, "msg", "unable to record histogram value")
-		return
-	}
-
-	for q, gauge := range h.gauges {
-		gauge.Set(float64(h.hist.Current.ValueAtQuantile(float64(q))))
-	}
-}
-
-func (h *windowedHistogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
-	bars := h.hist.Merge().Distribution()
-	buckets := make([]metrics.Bucket, len(bars))
-	for i, bar := range bars {
-		buckets[i] = metrics.Bucket{
-			From:  bar.From,
-			To:    bar.To,
-			Count: bar.Count,
+// WriteLoop is a helper method that invokes WriteTo to the passed writer every
+// time the passed channel fires. This method blocks until the channel is
+// closed, so clients probably want to run it in its own goroutine. For typical
+// usage, create a time.Ticker and pass its C channel to this method.
+func (g *Graphite) WriteLoop(c <-chan time.Time, w io.Writer) {
+	for range c {
+		if _, err := g.WriteTo(w); err != nil {
+			g.logger.Log("during", "WriteTo", "err", err)
 		}
 	}
-	quantiles := make([]metrics.Quantile, 0, len(h.gauges))
-	for quantile, gauge := range h.gauges {
-		quantiles = append(quantiles, metrics.Quantile{
-			Quantile: quantile,
-			Value:    int64(gauge.Get()),
-		})
-	}
-	sort.Sort(quantileSlice(quantiles))
-	return buckets, quantiles
 }
 
-func (h *windowedHistogram) flush(w io.Writer, prefix string) {
-	name := prefix + h.Name()
-	hist := h.hist.Merge()
+// SendLoop is a helper method that wraps WriteLoop, passing a managed
+// connection to the network and address. Like WriteLoop, this method blocks
+// until the channel is closed, so clients probably want to start it in its own
+// goroutine. For typical usage, create a time.Ticker and pass its C channel to
+// this method.
+func (g *Graphite) SendLoop(c <-chan time.Time, network, address string) {
+	g.WriteLoop(c, conn.NewDefaultManager(network, address, g.logger))
+}
+
+// WriteTo flushes the buffered content of the metrics to the writer, in
+// Graphite plaintext format. WriteTo abides best-effort semantics, so
+// observations are lost if there is a problem with the write. Clients should be
+// sure to call WriteTo regularly, ideally through the WriteLoop or SendLoop
+// helper methods.
+func (g *Graphite) WriteTo(w io.Writer) (count int64, err error) {
+	g.mtx.RLock()
+	defer g.mtx.RUnlock()
 	now := time.Now().Unix()
-	fmt.Fprintf(w, "%s.count %d %d\n", name, hist.TotalCount(), now)
-	fmt.Fprintf(w, "%s.min %d %d\n", name, hist.Min(), now)
-	fmt.Fprintf(w, "%s.max %d %d\n", name, hist.Max(), now)
-	fmt.Fprintf(w, "%s.mean %.2f %d\n", name, hist.Mean(), now)
-	fmt.Fprintf(w, "%s.std-dev %.2f %d\n", name, hist.StdDev(), now)
-}
 
-func (h *windowedHistogram) rotateLoop(d time.Duration) {
-	for range time.Tick(d) {
-		h.mtx.Lock()
-		h.hist.Rotate()
-		h.mtx.Unlock()
+	for name, c := range g.counters {
+		n, err := fmt.Fprintf(w, "%s %f %d\n", name, c.c.ValueReset(), now)
+		if err != nil {
+			return count, err
+		}
+		count += int64(n)
 	}
+
+	for name, ga := range g.gauges {
+		n, err := fmt.Fprintf(w, "%s %f %d\n", name, ga.g.Value(), now)
+		if err != nil {
+			return count, err
+		}
+		count += int64(n)
+	}
+
+	for name, h := range g.histograms {
+		for _, p := range []struct {
+			s string
+			f float64
+		}{
+			{"50", 0.50},
+			{"90", 0.90},
+			{"95", 0.95},
+			{"99", 0.99},
+		} {
+			n, err := fmt.Fprintf(w, "%s.p%s %f %d\n", name, p.s, h.h.Quantile(p.f), now)
+			if err != nil {
+				return count, err
+			}
+			count += int64(n)
+		}
+	}
+
+	return count, err
 }
 
-type quantileSlice []metrics.Quantile
+// Counter is a Graphite counter metric.
+type Counter struct {
+	c *generic.Counter
+}
 
-func (a quantileSlice) Len() int           { return len(a) }
-func (a quantileSlice) Less(i, j int) bool { return a[i].Quantile < a[j].Quantile }
-func (a quantileSlice) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+// NewCounter returns a new usable counter metric.
+func NewCounter(name string) *Counter {
+	return &Counter{generic.NewCounter(name)}
+}
+
+// With is a no-op.
+func (c *Counter) With(...string) metrics.Counter { return c }
+
+// Add implements counter.
+func (c *Counter) Add(delta float64) { c.c.Add(delta) }
+
+// Gauge is a Graphite gauge metric.
+type Gauge struct {
+	g *generic.Gauge
+}
+
+// NewGauge returns a new usable Gauge metric.
+func NewGauge(name string) *Gauge {
+	return &Gauge{generic.NewGauge(name)}
+}
+
+// With is a no-op.
+func (g *Gauge) With(...string) metrics.Gauge { return g }
+
+// Set implements gauge.
+func (g *Gauge) Set(value float64) { g.g.Set(value) }
+
+// Histogram is a Graphite histogram metric. Observations are bucketed into
+// per-quantile gauges.
+type Histogram struct {
+	h *generic.Histogram
+}
+
+// NewHistogram returns a new usable Histogram metric.
+func NewHistogram(name string, buckets int) *Histogram {
+	return &Histogram{generic.NewHistogram(name, buckets)}
+}
+
+// With is a no-op.
+func (h *Histogram) With(...string) metrics.Histogram { return h }
+
+// Observe implements histogram.
+func (h *Histogram) Observe(value float64) { h.h.Observe(value) }

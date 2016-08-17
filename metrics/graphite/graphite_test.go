@@ -2,79 +2,62 @@ package graphite
 
 import (
 	"bytes"
-	"fmt"
-	"strings"
+	"regexp"
+	"strconv"
 	"testing"
-	"time"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/metrics/teststat"
+	"github.com/go-kit/kit/metrics3/teststat"
 )
 
-func TestHistogramQuantiles(t *testing.T) {
-	prefix := "prefix."
-	e := NewEmitter("", "", prefix, time.Second, log.NewNopLogger())
-	var (
-		name      = "test_histogram_quantiles"
-		quantiles = []int{50, 90, 95, 99}
-	)
-	h, err := e.NewHistogram(name, 0, 100, 3, quantiles...)
-	if err != nil {
-		t.Fatalf("unable to create test histogram: %v", err)
-	}
-	h = h.With(metrics.Field{Key: "ignored", Value: "field"})
-	const seed, mean, stdev int64 = 424242, 50, 10
-	teststat.PopulateNormalHistogram(t, h, seed, mean, stdev)
-
-	// flush the current metrics into a buffer to examine
-	var b bytes.Buffer
-	e.flush(&b)
-	teststat.AssertGraphiteNormalHistogram(t, prefix, name, mean, stdev, quantiles, b.String())
-}
-
 func TestCounter(t *testing.T) {
-	var (
-		prefix = "prefix."
-		name   = "m"
-		value  = 123
-		e      = NewEmitter("", "", prefix, time.Second, log.NewNopLogger())
-		b      bytes.Buffer
-	)
-	e.NewCounter(name).With(metrics.Field{Key: "ignored", Value: "field"}).Add(uint64(value))
-	e.flush(&b)
-	want := fmt.Sprintf("%s%s.count %d", prefix, name, value)
-	payload := b.String()
-	if !strings.HasPrefix(payload, want) {
-		t.Errorf("counter %s want\n%s, have\n%s", name, want, payload)
+	prefix, name := "abc.", "def"
+	label, value := "label", "value" // ignored for Graphite
+	regex := `^` + prefix + name + ` ([0-9\.]+) [0-9]+$`
+	g := New(prefix, log.NewNopLogger())
+	counter := g.NewCounter(name).With(label, value)
+	valuef := teststat.SumLines(g, regex)
+	if err := teststat.TestCounter(counter, valuef); err != nil {
+		t.Fatal(err)
 	}
 }
 
 func TestGauge(t *testing.T) {
-	var (
-		prefix = "prefix."
-		name   = "xyz"
-		value  = 54321
-		delta  = 12345
-		e      = NewEmitter("", "", prefix, time.Second, log.NewNopLogger())
-		b      bytes.Buffer
-		g      = e.NewGauge(name).With(metrics.Field{Key: "ignored", Value: "field"})
-	)
-
-	g.Set(float64(value))
-	g.Add(float64(delta))
-
-	e.flush(&b)
-	payload := b.String()
-
-	want := fmt.Sprintf("%s%s %d", prefix, name, value+delta)
-	if !strings.HasPrefix(payload, want) {
-		t.Errorf("gauge %s want\n%s, have\n%s", name, want, payload)
+	prefix, name := "ghi.", "jkl"
+	label, value := "xyz", "abc" // ignored for Graphite
+	regex := `^` + prefix + name + ` ([0-9\.]+) [0-9]+$`
+	g := New(prefix, log.NewNopLogger())
+	gauge := g.NewGauge(name).With(label, value)
+	valuef := teststat.LastLine(g, regex)
+	if err := teststat.TestGauge(gauge, valuef); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func TestEmitterStops(t *testing.T) {
-	e := NewEmitter("foo", "bar", "baz", time.Second, log.NewNopLogger())
-	time.Sleep(100 * time.Millisecond)
-	e.Stop()
+func TestHistogram(t *testing.T) {
+	// The histogram test is actually like 4 gauge tests.
+	prefix, name := "statsd.", "histogram_test"
+	label, value := "abc", "def" // ignored for Graphite
+	re50 := regexp.MustCompile(prefix + name + `.p50 ([0-9\.]+) [0-9]+`)
+	re90 := regexp.MustCompile(prefix + name + `.p90 ([0-9\.]+) [0-9]+`)
+	re95 := regexp.MustCompile(prefix + name + `.p95 ([0-9\.]+) [0-9]+`)
+	re99 := regexp.MustCompile(prefix + name + `.p99 ([0-9\.]+) [0-9]+`)
+	g := New(prefix, log.NewNopLogger())
+	histogram := g.NewHistogram(name, 50).With(label, value)
+	quantiles := func() (float64, float64, float64, float64) {
+		var buf bytes.Buffer
+		g.WriteTo(&buf)
+		match50 := re50.FindStringSubmatch(buf.String())
+		p50, _ := strconv.ParseFloat(match50[1], 64)
+		match90 := re90.FindStringSubmatch(buf.String())
+		p90, _ := strconv.ParseFloat(match90[1], 64)
+		match95 := re95.FindStringSubmatch(buf.String())
+		p95, _ := strconv.ParseFloat(match95[1], 64)
+		match99 := re99.FindStringSubmatch(buf.String())
+		p99, _ := strconv.ParseFloat(match99[1], 64)
+		return p50, p90, p95, p99
+	}
+	if err := teststat.TestHistogram(histogram, quantiles, 0.01); err != nil {
+		t.Fatal(err)
+	}
 }

@@ -1,23 +1,22 @@
 # package metrics
 
 `package metrics` provides a set of uniform interfaces for service instrumentation.
-It has **[counters][]**, **[gauges][]**, and **[histograms][]**,
- and provides adapters to popular metrics packages, like **[expvar][]**, **[statsd][]**, and **[Prometheus][]**.
-
-[counters]: http://prometheus.io/docs/concepts/metric_types/#counter
-[gauges]: http://prometheus.io/docs/concepts/metric_types/#gauge
-[histograms]: http://prometheus.io/docs/concepts/metric_types/#histogram
-[expvar]: https://golang.org/pkg/expvar
-[statsd]: https://github.com/etsy/statsd
-[Prometheus]: http://prometheus.io
+It has
+ [counters](http://prometheus.io/docs/concepts/metric_types/#counter),
+ [gauges](http://prometheus.io/docs/concepts/metric_types/#gauge), and
+ [histograms](http://prometheus.io/docs/concepts/metric_types/#histogram),
+and provides adapters to popular metrics packages, like
+ [expvar](https://golang.org/pkg/expvar),
+ [StatsD](https://github.com/etsy/statsd), and
+ [Prometheus](https://prometheus.io).
 
 ## Rationale
 
-Code instrumentation is absolutely essential to achieve [observability][] into a distributed system.
+Code instrumentation is absolutely essential to achieve
+ [observability](https://speakerdeck.com/mattheath/observability-in-micro-service-architectures)
+ into a distributed system.
 Metrics and instrumentation tools have coalesced around a few well-defined idioms.
-`package metrics` provides a common, minimal interface those idioms for service authors. 
-
-[observability]: https://speakerdeck.com/mattheath/observability-in-micro-service-architectures
+`package metrics` provides a common, minimal interface those idioms for service authors.
 
 ## Usage
 
@@ -32,8 +31,8 @@ func main() {
 }
 ```
 
-A histogram for request duration, exported via a Prometheus summary with
-dynamically-computed quantiles.
+A histogram for request duration,
+ exported via a Prometheus summary with dynamically-computed quantiles.
 
 ```go
 import (
@@ -43,20 +42,20 @@ import (
 	"github.com/go-kit/kit/metrics/prometheus"
 )
 
-var requestDuration = prometheus.NewSummary(stdprometheus.SummaryOpts{
+var dur = prometheus.NewSummary(stdprometheus.SummaryOpts{
 	Namespace: "myservice",
 	Subsystem: "api",
-	Name:      "request_duration_nanoseconds_count",
-	Help:      "Total time spent serving requests.",
+	Name:     "request_duration_seconds",
+	Help:     "Total time spent serving requests.",
 }, []string{})
 
 func handleRequest() {
-	defer func(begin time.Time) { requestDuration.Observe(time.Since(begin)) }(time.Now())
+	defer func(begin time.Time) { dur.Observe(time.Since(begin).Seconds()) }(time.Now())
 	// handle request
 }
 ```
 
-A gauge for the number of goroutines currently running, exported via statsd.
+A gauge for the number of goroutines currently running, exported via StatsD.
 
 ```go
 import (
@@ -66,17 +65,18 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/metrics/statsd"
+	"github.com/go-kit/kit/log"
 )
 
 func main() {
-	statsdWriter, err := net.Dial("udp", "127.0.0.1:8126")
-	if err != nil {
-		panic(err)
-	}
+	statsd := statsd.New("foo_svc.", log.NewNopLogger())
 
-	reportInterval := 5 * time.Second
-	goroutines := statsd.NewGauge(statsdWriter, "total_goroutines", reportInterval)
-	for range time.Tick(reportInterval) {
+	report := time.NewTicker(5*time.Second)
+	defer report.Stop()
+	go statsd.SendLoop(report.C, "tcp", "statsd.internal:8125")
+
+	goroutines := statsd.NewGauge("goroutine_count")
+	for range time.Tick(time.Second) {
 		goroutines.Set(float64(runtime.NumGoroutine()))
 	}
 }

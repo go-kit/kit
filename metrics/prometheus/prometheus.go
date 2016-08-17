@@ -1,202 +1,157 @@
-// Package prometheus implements a Prometheus backend for package metrics.
+// Package prometheus provides Prometheus implementations for metrics.
+// Individual metrics are mapped to their Prometheus counterparts, and
+// (depending on the constructor used) may be automatically registered in the
+// global Prometheus metrics registry.
 package prometheus
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics3"
+	"github.com/go-kit/kit/metrics3/internal/lv"
 )
 
-// Prometheus has strong opinions about the dimensionality of fields. Users
-// must predeclare every field key they intend to use. On every observation,
-// fields with keys that haven't been predeclared will be silently dropped,
-// and predeclared field keys without values will receive the value
-// PrometheusLabelValueUnknown.
-var PrometheusLabelValueUnknown = "unknown"
-
-type counter struct {
-	*prometheus.CounterVec
-	name  string
-	Pairs map[string]string
+// Counter implements Counter, via a Prometheus CounterVec.
+type Counter struct {
+	cv  *prometheus.CounterVec
+	lvs lv.LabelValues
 }
 
-// NewCounter returns a new Counter backed by a Prometheus metric. The counter
-// is automatically registered via prometheus.Register.
-func NewCounter(opts prometheus.CounterOpts, fieldKeys []string) metrics.Counter {
-	m := prometheus.NewCounterVec(opts, fieldKeys)
-	prometheus.MustRegister(m)
-	p := map[string]string{}
-	for _, fieldName := range fieldKeys {
-		p[fieldName] = PrometheusLabelValueUnknown
-	}
-	return counter{
-		CounterVec: m,
-		name:       opts.Name,
-		Pairs:      p,
+// NewCounterFrom constructs and registers a Prometheus CounterVec,
+// and returns a usable Counter object.
+func NewCounterFrom(opts prometheus.CounterOpts, labelNames []string) *Counter {
+	cv := prometheus.NewCounterVec(opts, labelNames)
+	prometheus.MustRegister(cv)
+	return NewCounter(cv)
+}
+
+// NewCounter wraps the CounterVec and returns a usable Counter object.
+func NewCounter(cv *prometheus.CounterVec) *Counter {
+	return &Counter{
+		cv: cv,
 	}
 }
 
-func (c counter) Name() string { return c.name }
-
-func (c counter) With(f metrics.Field) metrics.Counter {
-	return counter{
-		CounterVec: c.CounterVec,
-		name:       c.name,
-		Pairs:      merge(c.Pairs, f),
+// With implements Counter.
+func (c *Counter) With(labelValues ...string) metrics.Counter {
+	return &Counter{
+		cv:  c.cv,
+		lvs: c.lvs.With(labelValues...),
 	}
 }
 
-func (c counter) Add(delta uint64) {
-	c.CounterVec.With(prometheus.Labels(c.Pairs)).Add(float64(delta))
+// Add implements Counter.
+func (c *Counter) Add(delta float64) {
+	c.cv.WithLabelValues(c.lvs...).Add(delta)
 }
 
-type gauge struct {
-	*prometheus.GaugeVec
-	name  string
-	Pairs map[string]string
+// Gauge implements Gauge, via a Prometheus GaugeVec.
+type Gauge struct {
+	gv  *prometheus.GaugeVec
+	lvs lv.LabelValues
 }
 
-// NewGauge returns a new Gauge backed by a Prometheus metric. The gauge is
-// automatically registered via prometheus.Register.
-func NewGauge(opts prometheus.GaugeOpts, fieldKeys []string) metrics.Gauge {
-	m := prometheus.NewGaugeVec(opts, fieldKeys)
-	prometheus.MustRegister(m)
-	return gauge{
-		GaugeVec: m,
-		name:     opts.Name,
-		Pairs:    pairsFrom(fieldKeys),
+// NewGaugeFrom construts and registers a Prometheus GaugeVec,
+// and returns a usable Gauge object.
+func NewGaugeFrom(opts prometheus.GaugeOpts, labelNames []string) *Gauge {
+	gv := prometheus.NewGaugeVec(opts, labelNames)
+	prometheus.MustRegister(gv)
+	return NewGauge(gv)
+}
+
+// NewGauge wraps the GaugeVec and returns a usable Gauge object.
+func NewGauge(gv *prometheus.GaugeVec) *Gauge {
+	return &Gauge{
+		gv: gv,
 	}
 }
 
-func (g gauge) Name() string { return g.name }
-
-func (g gauge) With(f metrics.Field) metrics.Gauge {
-	return gauge{
-		GaugeVec: g.GaugeVec,
-		name:     g.name,
-		Pairs:    merge(g.Pairs, f),
+// With implements Gauge.
+func (g *Gauge) With(labelValues ...string) metrics.Gauge {
+	return &Gauge{
+		gv:  g.gv,
+		lvs: g.lvs.With(labelValues...),
 	}
 }
 
-func (g gauge) Set(value float64) {
-	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Set(value)
+// Set implements Gauge.
+func (g *Gauge) Set(value float64) {
+	g.gv.WithLabelValues(g.lvs...).Set(value)
 }
 
-func (g gauge) Add(delta float64) {
-	g.GaugeVec.With(prometheus.Labels(g.Pairs)).Add(delta)
+// Add is supported by Prometheus GaugeVecs.
+func (g *Gauge) Add(delta float64) {
+	g.gv.WithLabelValues(g.lvs...).Add(delta)
 }
 
-func (g gauge) Get() float64 {
-	// TODO(pb): see https://github.com/prometheus/client_golang/issues/58
-	return 0.0
+// Summary implements Histogram, via a Prometheus SummaryVec. The difference
+// between a Summary and a Histogram is that Summaries don't require predefined
+// quantile buckets, but cannot be statistically aggregated.
+type Summary struct {
+	sv  *prometheus.SummaryVec
+	lvs lv.LabelValues
 }
 
-// RegisterCallbackGauge registers a Gauge with Prometheus whose value is
-// determined at collect time by the passed callback function. The callback
-// determines the value, and fields are ignored, so RegisterCallbackGauge
-// returns nothing.
-func RegisterCallbackGauge(opts prometheus.GaugeOpts, callback func() float64) {
-	prometheus.MustRegister(prometheus.NewGaugeFunc(opts, callback))
+// NewSummaryFrom constructs and registers a Prometheus SummaryVec,
+// and returns a usable Summary object.
+func NewSummaryFrom(opts prometheus.SummaryOpts, labelNames []string) *Summary {
+	sv := prometheus.NewSummaryVec(opts, labelNames)
+	prometheus.MustRegister(sv)
+	return NewSummary(sv)
 }
 
-type summary struct {
-	*prometheus.SummaryVec
-	name  string
-	Pairs map[string]string
-}
-
-// NewSummary returns a new Histogram backed by a Prometheus summary. The
-// histogram is automatically registered via prometheus.Register.
-//
-// For more information on Prometheus histograms and summaries, refer to
-// http://prometheus.io/docs/practices/histograms.
-func NewSummary(opts prometheus.SummaryOpts, fieldKeys []string) metrics.Histogram {
-	m := prometheus.NewSummaryVec(opts, fieldKeys)
-	prometheus.MustRegister(m)
-	return summary{
-		SummaryVec: m,
-		name:       opts.Name,
-		Pairs:      pairsFrom(fieldKeys),
+// NewSummary wraps the SummaryVec and returns a usable Summary object.
+func NewSummary(sv *prometheus.SummaryVec) *Summary {
+	return &Summary{
+		sv: sv,
 	}
 }
 
-func (s summary) Name() string { return s.name }
-
-func (s summary) With(f metrics.Field) metrics.Histogram {
-	return summary{
-		SummaryVec: s.SummaryVec,
-		name:       s.name,
-		Pairs:      merge(s.Pairs, f),
+// With implements Histogram.
+func (s *Summary) With(labelValues ...string) metrics.Histogram {
+	return &Summary{
+		sv:  s.sv,
+		lvs: s.lvs.With(labelValues...),
 	}
 }
 
-func (s summary) Observe(value int64) {
-	s.SummaryVec.With(prometheus.Labels(s.Pairs)).Observe(float64(value))
+// Observe implements Histogram.
+func (s *Summary) Observe(value float64) {
+	s.sv.WithLabelValues(s.lvs...).Observe(value)
 }
 
-func (s summary) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
-	// TODO(pb): see https://github.com/prometheus/client_golang/issues/58
-	return []metrics.Bucket{}, []metrics.Quantile{}
+// Histogram implements Histogram via a Prometheus HistogramVec. The difference
+// between a Histogram and a Summary is that Histograms require predefined
+// quantile buckets, and can be statistically aggregated.
+type Histogram struct {
+	hv  *prometheus.HistogramVec
+	lvs lv.LabelValues
 }
 
-type histogram struct {
-	*prometheus.HistogramVec
-	name  string
-	Pairs map[string]string
+// NewHistogramFrom constructs and registers a Prometheus HistogramVec,
+// and returns a usable Histogram object.
+func NewHistogramFrom(opts prometheus.HistogramOpts, labelNames []string) *Histogram {
+	hv := prometheus.NewHistogramVec(opts, labelNames)
+	prometheus.MustRegister(hv)
+	return NewHistogram(hv)
 }
 
-// NewHistogram returns a new Histogram backed by a Prometheus Histogram. The
-// histogram is automatically registered via prometheus.Register.
-//
-// For more information on Prometheus histograms and summaries, refer to
-// http://prometheus.io/docs/practices/histograms.
-func NewHistogram(opts prometheus.HistogramOpts, fieldKeys []string) metrics.Histogram {
-	m := prometheus.NewHistogramVec(opts, fieldKeys)
-	prometheus.MustRegister(m)
-	return histogram{
-		HistogramVec: m,
-		name:         opts.Name,
-		Pairs:        pairsFrom(fieldKeys),
+// NewHistogram wraps the HistogramVec and returns a usable Histogram object.
+func NewHistogram(hv *prometheus.HistogramVec) *Histogram {
+	return &Histogram{
+		hv: hv,
 	}
 }
 
-func (h histogram) Name() string { return h.name }
-
-func (h histogram) With(f metrics.Field) metrics.Histogram {
-	return histogram{
-		HistogramVec: h.HistogramVec,
-		name:         h.name,
-		Pairs:        merge(h.Pairs, f),
+// With implements Histogram.
+func (h *Histogram) With(labelValues ...string) metrics.Histogram {
+	return &Histogram{
+		hv:  h.hv,
+		lvs: h.lvs.With(labelValues...),
 	}
 }
 
-func (h histogram) Observe(value int64) {
-	h.HistogramVec.With(prometheus.Labels(h.Pairs)).Observe(float64(value))
-}
-
-func (h histogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
-	// TODO(pb): see https://github.com/prometheus/client_golang/issues/58
-	return []metrics.Bucket{}, []metrics.Quantile{}
-}
-
-func pairsFrom(fieldKeys []string) map[string]string {
-	p := map[string]string{}
-	for _, fieldName := range fieldKeys {
-		p[fieldName] = PrometheusLabelValueUnknown
-	}
-	return p
-}
-
-func merge(orig map[string]string, f metrics.Field) map[string]string {
-	if _, ok := orig[f.Key]; !ok {
-		return orig
-	}
-
-	newPairs := make(map[string]string, len(orig))
-	for k, v := range orig {
-		newPairs[k] = v
-	}
-
-	newPairs[f.Key] = f.Value
-	return newPairs
+// Observe implements Histogram.
+func (h *Histogram) Observe(value float64) {
+	h.hv.WithLabelValues(h.lvs...).Observe(value)
 }

@@ -1,43 +1,37 @@
-// Package discard implements a backend for package metrics that succeeds
-// without doing anything.
+// Package discard provides a no-op metrics backend.
 package discard
 
-import "github.com/go-kit/kit/metrics"
+import "github.com/go-kit/kit/metrics3"
 
-type counter struct {
-	name string
-}
+type counter struct{}
 
-// NewCounter returns a Counter that does nothing.
-func NewCounter(name string) metrics.Counter { return &counter{name} }
+// NewCounter returns a new no-op counter.
+func NewCounter() metrics.Counter { return counter{} }
 
-func (c *counter) Name() string                       { return c.name }
-func (c *counter) With(metrics.Field) metrics.Counter { return c }
-func (c *counter) Add(delta uint64)                   {}
+// With implements Counter.
+func (c counter) With(labelValues ...string) metrics.Counter { return c }
 
-type gauge struct {
-	name string
-}
+// Add implements Counter.
+func (c counter) Add(delta float64) {}
 
-// NewGauge returns a Gauge that does nothing.
-func NewGauge(name string) metrics.Gauge { return &gauge{name} }
+type gauge struct{}
 
-func (g *gauge) Name() string                     { return g.name }
-func (g *gauge) With(metrics.Field) metrics.Gauge { return g }
-func (g *gauge) Set(value float64)                {}
-func (g *gauge) Add(delta float64)                {}
-func (g *gauge) Get() float64                     { return 0 }
+// NewGauge returns a new no-op gauge.
+func NewGauge() metrics.Gauge { return gauge{} }
 
-type histogram struct {
-	name string
-}
+// With implements Gauge.
+func (g gauge) With(labelValues ...string) metrics.Gauge { return g }
 
-// NewHistogram returns a Histogram that does nothing.
-func NewHistogram(name string) metrics.Histogram { return &histogram{name} }
+// Set implements Gauge.
+func (g gauge) Set(value float64) {}
 
-func (h *histogram) Name() string                         { return h.name }
-func (h *histogram) With(metrics.Field) metrics.Histogram { return h }
-func (h *histogram) Observe(value int64)                  {}
-func (h *histogram) Distribution() ([]metrics.Bucket, []metrics.Quantile) {
-	return []metrics.Bucket{}, []metrics.Quantile{}
-}
+type histogram struct{}
+
+// NewHistogram returns a new no-op histogram.
+func NewHistogram() metrics.Histogram { return histogram{} }
+
+// With implements Histogram.
+func (h histogram) With(labelValues ...string) metrics.Histogram { return h }
+
+// Observe implements histogram.
+func (h histogram) Observe(value float64) {}
