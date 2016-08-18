@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	// JWTContextKey holds the key used to store a JWT Token in the context
+	// JWTTokenContextKey holds the key used to store a JWT Token in the context
 	JWTTokenContextKey = "JWTToken"
-	// JWTContextKey holds the key used to store a JWT in the context
+	// JWTClaimsContxtKey holds the key used to store the JWT Claims in the context
 	JWTClaimsContextKey = "JWTClaims"
 )
 
