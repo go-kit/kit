@@ -46,7 +46,7 @@ func New(instance string, tracer stdopentracing.Tracer, logger log.Logger) (adds
 			copyURL(u, "/sum"),
 			addsvc.EncodeHTTPGenericRequest,
 			addsvc.DecodeHTTPSumResponse,
-			httptransport.ClientBefore(opentracing.FromHTTPRequest(tracer, "Sum", logger)),
+			httptransport.ClientBefore(opentracing.ToHTTPRequest(tracer, logger)),
 		).Endpoint()
 		sumEndpoint = opentracing.TraceClient(tracer, "Sum")(sumEndpoint)
 		sumEndpoint = limiter(sumEndpoint)
@@ -63,7 +63,7 @@ func New(instance string, tracer stdopentracing.Tracer, logger log.Logger) (adds
 			copyURL(u, "/concat"),
 			addsvc.EncodeHTTPGenericRequest,
 			addsvc.DecodeHTTPConcatResponse,
-			httptransport.ClientBefore(opentracing.FromHTTPRequest(tracer, "Concat", logger)),
+			httptransport.ClientBefore(opentracing.ToHTTPRequest(tracer, logger)),
 		).Endpoint()
 		concatEndpoint = opentracing.TraceClient(tracer, "Concat")(concatEndpoint)
 		concatEndpoint = limiter(concatEndpoint)
