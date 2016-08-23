@@ -54,9 +54,9 @@ func TestRefresh(t *testing.T) {
 
 	// Load some records and lookup again
 	records = []*net.SRV{
-		&net.SRV{Target: "1.0.0.1", Port: 1001},
-		&net.SRV{Target: "1.0.0.2", Port: 1002},
-		&net.SRV{Target: "1.0.0.3", Port: 1003},
+		{Target: "1.0.0.1", Port: 1001},
+		{Target: "1.0.0.2", Port: 1002},
+		{Target: "1.0.0.3", Port: 1003},
 	}
 	tickc <- time.Now()
 

@@ -268,7 +268,7 @@ var getEntriesTestTable = []struct {
 			Dir:   true,
 			Value: "nodevalue",
 			Nodes: []*etcd.Node{
-				&etcd.Node{
+				{
 					Key:           "childnode1",
 					Dir:           false,
 					Value:         "childvalue1",
@@ -278,7 +278,7 @@ var getEntriesTestTable = []struct {
 					Expiration:    nil,
 					TTL:           0,
 				},
-				&etcd.Node{
+				{
 					Key:           "childnode2",
 					Dir:           false,
 					Value:         "childvalue2",
