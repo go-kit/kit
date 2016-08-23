@@ -23,10 +23,14 @@ Metrics and instrumentation tools have coalesced around a few well-defined idiom
 A simple counter, exported via expvar.
 
 ```go
-import "github.com/go-kit/kit/metrics/expvar"
+import (
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/expvar"
+)
 
 func main() {
-	myCount := expvar.NewCounter("my_count")
+	var myCount metrics.Counter
+	myCount = expvar.NewCounter("my_count")
 	myCount.Add(1)
 }
 ```
@@ -36,20 +40,25 @@ A histogram for request duration,
 
 ```go
 import (
+	"time"
+
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/prometheus"
 )
 
-var dur = prometheus.NewSummary(stdprometheus.SummaryOpts{
-	Namespace: "myservice",
-	Subsystem: "api",
-	Name:     "request_duration_seconds",
-	Help:     "Total time spent serving requests.",
-}, []string{})
+func main() {
+	var dur metrics.Histogram = prometheus.NewSummary(stdprometheus.SummaryOpts{
+		Namespace: "myservice",
+		Subsystem: "api",
+		Name:     "request_duration_seconds",
+		Help:     "Total time spent serving requests.",
+	}, []string{})
+	// ...
+}
 
-func handleRequest() {
+func handleRequest(dur metrics.Histogram) {
 	defer func(begin time.Time) { dur.Observe(time.Since(begin).Seconds()) }(time.Now())
 	// handle request
 }
@@ -64,20 +73,23 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/statsd"
-	"github.com/go-kit/kit/log"
 )
 
 func main() {
 	statsd := statsd.New("foo_svc.", log.NewNopLogger())
-
-	report := time.NewTicker(5*time.Second)
+	report := time.NewTicker(5 * time.Second)
 	defer report.Stop()
 	go statsd.SendLoop(report.C, "tcp", "statsd.internal:8125")
-
 	goroutines := statsd.NewGauge("goroutine_count")
+	go exportGoroutines(goroutines)
+	// ...
+}
+
+func exportGoroutines(g metrics.Gauge) {
 	for range time.Tick(time.Second) {
-		goroutines.Set(float64(runtime.NumGoroutine()))
+		g.Set(float64(runtime.NumGoroutine()))
 	}
 }
 ```
