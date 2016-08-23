@@ -2,17 +2,13 @@
 
 First, thank you for contributing! We love and encourage pull requests from everyone.
 
-At this stage, we're still developing the initial drafts of all of the packages, using an
-[RFC workflow](https://github.com/go-kit/kit/tree/master/rfc).
-
 Before submitting major changes, here are a few guidelines to follow:
 
 1. Check the [open issues][issues] and [pull requests][prs] for existing discussions.
-1. Open an [issue][issues] to discuss a new feature.
-1. Write tests.
-1. Make sure the entire test suite passes locally and on Travis CI.
-1. Open a Pull Request.
-1. [Squash your commits][squash] after receiving feedback and add a [great commit message][message].
+1. Open an [issue][issues] first, to discuss a new feature or enhancement.
+1. Write tests, and make sure the test suite passes locally and on CI.
+1. Open a pull request, and reference the relevant issue(s).
+1. After receiving feedback, [squash your commits][squash] and add a [great commit message][message].
 1. Have fun!
 
 [issues]: https://github.com/go-kit/kit/issues
