@@ -42,7 +42,7 @@ func (c *Counter) With(labelValues ...string) metrics.Counter {
 
 // Add implements Counter.
 func (c *Counter) Add(delta float64) {
-	c.cv.WithLabelValues(c.lvs...).Add(delta)
+	c.cv.With(makeLabels(c.lvs...)).Add(delta)
 }
 
 // Gauge implements Gauge, via a Prometheus GaugeVec.
@@ -76,12 +76,12 @@ func (g *Gauge) With(labelValues ...string) metrics.Gauge {
 
 // Set implements Gauge.
 func (g *Gauge) Set(value float64) {
-	g.gv.WithLabelValues(g.lvs...).Set(value)
+	g.gv.With(makeLabels(g.lvs...)).Set(value)
 }
 
 // Add is supported by Prometheus GaugeVecs.
 func (g *Gauge) Add(delta float64) {
-	g.gv.WithLabelValues(g.lvs...).Add(delta)
+	g.gv.With(makeLabels(g.lvs...)).Add(delta)
 }
 
 // Summary implements Histogram, via a Prometheus SummaryVec. The difference
@@ -117,7 +117,7 @@ func (s *Summary) With(labelValues ...string) metrics.Histogram {
 
 // Observe implements Histogram.
 func (s *Summary) Observe(value float64) {
-	s.sv.WithLabelValues(s.lvs...).Observe(value)
+	s.sv.With(makeLabels(s.lvs...)).Observe(value)
 }
 
 // Histogram implements Histogram via a Prometheus HistogramVec. The difference
@@ -153,5 +153,13 @@ func (h *Histogram) With(labelValues ...string) metrics.Histogram {
 
 // Observe implements Histogram.
 func (h *Histogram) Observe(value float64) {
-	h.hv.WithLabelValues(h.lvs...).Observe(value)
+	h.hv.With(makeLabels(h.lvs...)).Observe(value)
+}
+
+func makeLabels(labelValues ...string) prometheus.Labels {
+	labels := prometheus.Labels{}
+	for i := 0; i < len(labelValues); i += 2 {
+		labels[labelValues[i]] = labelValues[i+1]
+	}
+	return labels
 }

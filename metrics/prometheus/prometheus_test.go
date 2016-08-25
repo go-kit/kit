@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,14 +28,14 @@ func TestCounter(t *testing.T) {
 	}
 
 	namespace, subsystem, name := "ns", "ss", "foo"
-	re := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + ` ([0-9\.]+)`)
+	re := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `{alpha="alpha-value",beta="beta-value"} ([0-9\.]+)`)
 
 	counter := NewCounterFrom(stdprometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
 		Name:      name,
 		Help:      "This is the help string.",
-	}, []string{})
+	}, []string{"alpha", "beta"}).With("beta", "beta-value", "alpha", "alpha-value") // order shouldn't matter
 
 	value := func() float64 {
 		matches := re.FindStringSubmatch(scrape())
@@ -58,14 +59,14 @@ func TestGauge(t *testing.T) {
 	}
 
 	namespace, subsystem, name := "aaa", "bbb", "ccc"
-	re := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + ` ([0-9\.]+)`)
+	re := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `{foo="bar"} ([0-9\.]+)`)
 
 	gauge := NewGaugeFrom(stdprometheus.GaugeOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
 		Name:      name,
 		Help:      "This is a different help string.",
-	}, []string{})
+	}, []string{"foo"}).With("foo", "bar")
 
 	value := func() float64 {
 		matches := re.FindStringSubmatch(scrape())
@@ -89,16 +90,16 @@ func TestSummary(t *testing.T) {
 	}
 
 	namespace, subsystem, name := "test", "prometheus", "summary"
-	re50 := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `{quantile="0.5"} ([0-9\.]+)`)
-	re90 := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `{quantile="0.9"} ([0-9\.]+)`)
-	re99 := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `{quantile="0.99"} ([0-9\.]+)`)
+	re50 := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `{a="a",b="b",quantile="0.5"} ([0-9\.]+)`)
+	re90 := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `{a="a",b="b",quantile="0.9"} ([0-9\.]+)`)
+	re99 := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `{a="a",b="b",quantile="0.99"} ([0-9\.]+)`)
 
 	summary := NewSummaryFrom(stdprometheus.SummaryOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
 		Name:      name,
 		Help:      "This is the help string for the summary.",
-	}, []string{})
+	}, []string{"a", "b"}).With("b", "b").With("a", "a")
 
 	quantiles := func() (float64, float64, float64, float64) {
 		buf := scrape()
@@ -133,7 +134,7 @@ func TestHistogram(t *testing.T) {
 	}
 
 	namespace, subsystem, name := "test", "prometheus", "histogram"
-	re := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `_bucket{le="([0-9]+|\+Inf)"} ([0-9\.]+)`)
+	re := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `_bucket{x="1",le="([0-9]+|\+Inf)"} ([0-9\.]+)`)
 
 	numStdev := 3
 	bucketMin := (teststat.Mean - (numStdev * teststat.Stdev))
@@ -154,7 +155,7 @@ func TestHistogram(t *testing.T) {
 		Name:      name,
 		Help:      "This is the help string for the histogram.",
 		Buckets:   buckets,
-	}, []string{})
+	}, []string{"x"}).With("x", "1")
 
 	// Can't TestHistogram, because Prometheus Histograms don't dynamically
 	// compute quantiles. Instead, they fill up buckets. So, let's populate the
@@ -187,6 +188,27 @@ func TestHistogram(t *testing.T) {
 	}
 }
 
-func TestWith(t *testing.T) {
-	t.Skip("TODO")
+func TestInconsistentLabelCardinality(t *testing.T) {
+	defer func() {
+		x := recover()
+		if x == nil {
+			t.Fatal("expected panic, got none")
+		}
+		err, ok := x.(error)
+		if !ok {
+			t.Fatalf("expected error, got %s", reflect.TypeOf(x))
+		}
+		if want, have := "inconsistent label cardinality", err.Error(); want != have {
+			t.Fatalf("want %q, have %q", want, have)
+		}
+	}()
+
+	NewCounterFrom(stdprometheus.CounterOpts{
+		Namespace: "test",
+		Subsystem: "inconsistent_label_cardinality",
+		Name:      "foobar",
+		Help:      "This is the help string for the metric.",
+	}, []string{"a", "b"}).With(
+		"a", "1", "b", "2", "c", "KABOOM!",
+	).Add(123)
 }
