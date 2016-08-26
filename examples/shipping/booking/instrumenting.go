@@ -11,12 +11,12 @@ import (
 
 type instrumentingService struct {
 	requestCount   metrics.Counter
-	requestLatency metrics.TimeHistogram
+	requestLatency metrics.Histogram
 	Service
 }
 
 // NewInstrumentingService returns an instance of an instrumenting Service.
-func NewInstrumentingService(requestCount metrics.Counter, requestLatency metrics.TimeHistogram, s Service) Service {
+func NewInstrumentingService(requestCount metrics.Counter, requestLatency metrics.Histogram, s Service) Service {
 	return &instrumentingService{
 		requestCount:   requestCount,
 		requestLatency: requestLatency,
@@ -26,9 +26,8 @@ func NewInstrumentingService(requestCount metrics.Counter, requestLatency metric
 
 func (s *instrumentingService) BookNewCargo(origin, destination location.UNLocode, arrivalDeadline time.Time) (cargo.TrackingID, error) {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "book"}
-		s.requestCount.With(methodField).Add(1)
-		s.requestLatency.With(methodField).Observe(time.Since(begin))
+		s.requestCount.With("method", "book").Add(1)
+		s.requestLatency.With("method", "book").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
 	return s.Service.BookNewCargo(origin, destination, arrivalDeadline)
@@ -36,9 +35,8 @@ func (s *instrumentingService) BookNewCargo(origin, destination location.UNLocod
 
 func (s *instrumentingService) LoadCargo(id cargo.TrackingID) (c Cargo, err error) {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "load"}
-		s.requestCount.With(methodField).Add(1)
-		s.requestLatency.With(methodField).Observe(time.Since(begin))
+		s.requestCount.With("method", "load").Add(1)
+		s.requestLatency.With("method", "load").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
 	return s.Service.LoadCargo(id)
@@ -46,9 +44,8 @@ func (s *instrumentingService) LoadCargo(id cargo.TrackingID) (c Cargo, err erro
 
 func (s *instrumentingService) RequestPossibleRoutesForCargo(id cargo.TrackingID) []cargo.Itinerary {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "request_routes"}
-		s.requestCount.With(methodField).Add(1)
-		s.requestLatency.With(methodField).Observe(time.Since(begin))
+		s.requestCount.With("method", "request_routes").Add(1)
+		s.requestLatency.With("method", "request_routes").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
 	return s.Service.RequestPossibleRoutesForCargo(id)
@@ -56,9 +53,8 @@ func (s *instrumentingService) RequestPossibleRoutesForCargo(id cargo.TrackingID
 
 func (s *instrumentingService) AssignCargoToRoute(id cargo.TrackingID, itinerary cargo.Itinerary) (err error) {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "assign_to_route"}
-		s.requestCount.With(methodField).Add(1)
-		s.requestLatency.With(methodField).Observe(time.Since(begin))
+		s.requestCount.With("method", "assign_to_route").Add(1)
+		s.requestLatency.With("method", "assign_to_route").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
 	return s.Service.AssignCargoToRoute(id, itinerary)
@@ -66,9 +62,8 @@ func (s *instrumentingService) AssignCargoToRoute(id cargo.TrackingID, itinerary
 
 func (s *instrumentingService) ChangeDestination(id cargo.TrackingID, l location.UNLocode) (err error) {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "change_destination"}
-		s.requestCount.With(methodField).Add(1)
-		s.requestLatency.With(methodField).Observe(time.Since(begin))
+		s.requestCount.With("method", "change_destination").Add(1)
+		s.requestLatency.With("method", "change_destination").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
 	return s.Service.ChangeDestination(id, l)
@@ -76,9 +71,8 @@ func (s *instrumentingService) ChangeDestination(id cargo.TrackingID, l location
 
 func (s *instrumentingService) Cargos() []Cargo {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "list_cargos"}
-		s.requestCount.With(methodField).Add(1)
-		s.requestLatency.With(methodField).Observe(time.Since(begin))
+		s.requestCount.With("method", "list_cargos").Add(1)
+		s.requestLatency.With("method", "list_cargos").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
 	return s.Service.Cargos()
@@ -86,9 +80,8 @@ func (s *instrumentingService) Cargos() []Cargo {
 
 func (s *instrumentingService) Locations() []Location {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "list_locations"}
-		s.requestCount.With(methodField).Add(1)
-		s.requestLatency.With(methodField).Observe(time.Since(begin))
+		s.requestCount.With("method", "list_locations").Add(1)
+		s.requestLatency.With("method", "list_locations").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
 	return s.Service.Locations()

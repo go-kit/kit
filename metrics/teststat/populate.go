@@ -1,23 +1,24 @@
-// Package teststat contains helper functions for statistical testing of
-// metrics implementations.
 package teststat
 
 import (
 	"math"
 	"math/rand"
-	"testing"
 
 	"github.com/go-kit/kit/metrics"
 )
 
-const population = 1234
-
-// PopulateNormalHistogram populates the Histogram with a normal distribution
-// of observations.
-func PopulateNormalHistogram(t *testing.T, h metrics.Histogram, seed int64, mean, stdev int64) {
-	r := rand.New(rand.NewSource(seed))
-	for i := 0; i < population; i++ {
-		sample := int64(r.NormFloat64()*float64(stdev) + float64(mean))
+// PopulateNormalHistogram makes a series of normal random observations into the
+// histogram. The number of observations is determined by Count. The randomness
+// is determined by Mean, Stdev, and the seed parameter.
+//
+// This is a low-level function, exported only for metrics that don't perform
+// dynamic quantile computation, like a Prometheus Histogram (c.f. Summary). In
+// most cases, you don't need to use this function, and can use TestHistogram
+// instead.
+func PopulateNormalHistogram(h metrics.Histogram, seed int) {
+	r := rand.New(rand.NewSource(int64(seed)))
+	for i := 0; i < Count; i++ {
+		sample := r.NormFloat64()*float64(Stdev) + float64(Mean)
 		if sample < 0 {
 			sample = 0
 		}
@@ -25,19 +26,17 @@ func PopulateNormalHistogram(t *testing.T, h metrics.Histogram, seed int64, mean
 	}
 }
 
-// https://en.wikipedia.org/wiki/Normal_distribution#Quantile_function
-func normalValueAtQuantile(mean, stdev int64, quantile int) int64 {
-	return int64(float64(mean) + float64(stdev)*math.Sqrt2*erfinv(2*(float64(quantile)/100)-1))
+func normalQuantiles() (p50, p90, p95, p99 float64) {
+	return nvq(50), nvq(90), nvq(95), nvq(99)
 }
 
-// https://code.google.com/p/gostat/source/browse/stat/normal.go
-func observationsLessThan(mean, stdev int64, x float64, total int) int {
-	cdf := ((1.0 / 2.0) * (1 + math.Erf((x-float64(mean))/(float64(stdev)*math.Sqrt2))))
-	return int(cdf * float64(total))
+func nvq(quantile int) float64 {
+	// https://en.wikipedia.org/wiki/Normal_distribution#Quantile_function
+	return float64(Mean) + float64(Stdev)*math.Sqrt2*erfinv(2*(float64(quantile)/100)-1)
 }
 
-// https://stackoverflow.com/questions/5971830/need-code-for-inverse-error-function
 func erfinv(y float64) float64 {
+	// https://stackoverflow.com/questions/5971830/need-code-for-inverse-error-function
 	if y < -1.0 || y > 1.0 {
 		panic("invalid input")
 	}

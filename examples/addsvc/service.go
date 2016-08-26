@@ -153,12 +153,12 @@ type serviceInstrumentingMiddleware struct {
 
 func (mw serviceInstrumentingMiddleware) Sum(ctx context.Context, a, b int) (int, error) {
 	v, err := mw.next.Sum(ctx, a, b)
-	mw.ints.Add(uint64(v))
+	mw.ints.Add(float64(v))
 	return v, err
 }
 
 func (mw serviceInstrumentingMiddleware) Concat(ctx context.Context, a, b string) (string, error) {
 	v, err := mw.next.Concat(ctx, a, b)
-	mw.chars.Add(uint64(len(v)))
+	mw.chars.Add(float64(len(v)))
 	return v, err
 }
