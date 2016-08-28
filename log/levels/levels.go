@@ -29,6 +29,14 @@ type Levels struct {
 	warnValue  string
 	errorValue string
 	critValue  string
+
+	// Enable filtering
+	debugFilter bool
+	infoFilter  bool
+	warnFilter  bool
+	errorFilter bool
+	critFilter  bool
+	noopLogger  log.Logger
 }
 
 // New creates a new leveled logger, wrapping the passed logger.
@@ -52,38 +60,59 @@ func New(logger log.Logger, options ...Option) Levels {
 // With returns a new leveled logger that includes keyvals in all log events.
 func (l Levels) With(keyvals ...interface{}) Levels {
 	return Levels{
-		ctx:        l.ctx.With(keyvals...),
-		levelKey:   l.levelKey,
-		debugValue: l.debugValue,
-		infoValue:  l.infoValue,
-		warnValue:  l.warnValue,
-		errorValue: l.errorValue,
-		critValue:  l.critValue,
+		ctx:         l.ctx.With(keyvals...),
+		levelKey:    l.levelKey,
+		debugValue:  l.debugValue,
+		infoValue:   l.infoValue,
+		warnValue:   l.warnValue,
+		errorValue:  l.errorValue,
+		critValue:   l.critValue,
+		debugFilter: l.debugFilter,
+		infoFilter:  l.infoFilter,
+		warnFilter:  l.warnFilter,
+		errorFilter: l.errorFilter,
+		critFilter:  l.critFilter,
+		noopLogger:  l.noopLogger,
 	}
 }
 
 // Debug returns a debug level logger.
 func (l Levels) Debug() log.Logger {
+	if l.debugFilter {
+		return l.noopLogger
+	}
 	return l.ctx.WithPrefix(l.levelKey, l.debugValue)
 }
 
 // Info returns an info level logger.
 func (l Levels) Info() log.Logger {
+	if l.infoFilter {
+		return l.noopLogger
+	}
 	return l.ctx.WithPrefix(l.levelKey, l.infoValue)
 }
 
 // Warn returns a warning level logger.
 func (l Levels) Warn() log.Logger {
+	if l.warnFilter {
+		return l.noopLogger
+	}
 	return l.ctx.WithPrefix(l.levelKey, l.warnValue)
 }
 
 // Error returns an error level logger.
 func (l Levels) Error() log.Logger {
+	if l.errorFilter {
+		return l.noopLogger
+	}
 	return l.ctx.WithPrefix(l.levelKey, l.errorValue)
 }
 
 // Crit returns a critical level logger.
 func (l Levels) Crit() log.Logger {
+	if l.critFilter {
+		return l.noopLogger
+	}
 	return l.ctx.WithPrefix(l.levelKey, l.critValue)
 }
 
@@ -124,4 +153,44 @@ func ErrorValue(value string) Option {
 // level. By default, the value is "crit".
 func CritValue(value string) Option {
 	return func(l *Levels) { l.critValue = value }
+}
+
+// DebugFilter toggles filtering on for any Debug-level entries
+func DebugFilter() Option {
+	return func(l *Levels) {
+		l.debugFilter = true
+		l.noopLogger = log.NewNopLogger()
+	}
+}
+
+// InfoFilter toggles filtering on for any Info-level entries
+func InfoFilter() Option {
+	return func(l *Levels) {
+		l.infoFilter = true
+		l.noopLogger = log.NewNopLogger()
+	}
+}
+
+// WarnFilter toggles filtering on for any Warn-level entries
+func WarnFilter() Option {
+	return func(l *Levels) {
+		l.warnFilter = true
+		l.noopLogger = log.NewNopLogger()
+	}
+}
+
+// ErrorFilter toggles filtering on for any Error-level entries
+func ErrorFilter() Option {
+	return func(l *Levels) {
+		l.errorFilter = true
+		l.noopLogger = log.NewNopLogger()
+	}
+}
+
+// CritFilter toggles filtering on for any Crit-level entries
+func CritFilter() Option {
+	return func(l *Levels) {
+		l.critFilter = true
+		l.noopLogger = log.NewNopLogger()
+	}
 }
