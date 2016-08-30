@@ -11,6 +11,11 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const (
+	BEARER        string = "bearer"
+	BEARER_FORMAT string = "Bearer %s"
+)
+
 // moves JWT token from request header to context
 // particularly useful for servers
 func ToHTTPContext() http.RequestFunc {
@@ -71,13 +76,14 @@ func FromGRPCContext() grpc.RequestFunc {
 
 // extractTokenFromAuthHeader returns the token from the value of the Authorzation header
 func extractTokenFromAuthHeader(val string) (token string, ok bool) {
-	if len(val) < 8 || !strings.EqualFold(val[0:7], "BEARER ") {
+	authHeaderParts := strings.Split(val, " ")
+	if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != BEARER {
 		return "", false
 	}
 
-	return val[7:], true
+	return authHeaderParts[1], true
 }
 
 func generateAuthHeaderFromToken(token string) string {
-	return fmt.Sprintf("Bearer %s", token)
+	return fmt.Sprintf(BEARER_FORMAT, token)
 }
