@@ -71,7 +71,7 @@
 // DefaultCaller. A common logger initialization sequence that ensures all log
 // entries contain a timestamp and source location looks like this:
 //
-//    logger := log.NewLogfmtLogger(log.SyncWriter(os.Stdout))
+//    logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stdout))
 //    logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
 //
 // Concurrent Safety
