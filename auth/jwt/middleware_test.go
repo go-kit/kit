@@ -62,6 +62,10 @@ func TestJWTParser(t *testing.T) {
 		t.Error("Parser should have returned an error")
 	}
 
+	if err != ErrTokenContextMissing {
+		t.Errorf("unexpected error returned, expected: %s got: %s", ErrTokenContextMissing, err)
+	}
+
 	// Invalid Token is passed into the parser
 	ctx := context.WithValue(context.Background(), JWTTokenContextKey, invalidKey)
 	_, err = parser(ctx, struct{}{})
@@ -82,6 +86,10 @@ func TestJWTParser(t *testing.T) {
 	_, err = badParser(ctx, struct{}{})
 	if err == nil {
 		t.Error("Parser should have returned an error")
+	}
+
+	if err != ErrUnexpectedSigningMethod {
+		t.Errorf("unexpected error returned, expected: %s got: %s", ErrUnexpectedSigningMethod, err)
 	}
 
 	// Invalid key is used in the parser

@@ -19,7 +19,7 @@ const (
 var (
 	ErrTokenContextMissing     = errors.New("Token up for parsing was not passed through the context")
 	ErrTokenInvalid            = errors.New("JWT Token was invalid")
-	ErrUnexpectedSigningMethod = errors.New("Unexptected signing method")
+	ErrUnexpectedSigningMethod = errors.New("Unexpected signing method")
 	ErrKIDNotFound             = errors.New("Key ID was not found in key set")
 	ErrNoKIDHeader             = errors.New("Token doesn't have 'kid' header")
 )
@@ -90,6 +90,10 @@ func NewParser(keys KeySet) endpoint.Middleware {
 				return key.Key, nil
 			})
 			if err != nil {
+				if e, ok := err.(*jwt.ValidationError); ok && e.Inner != nil {
+					return nil, e.Inner
+				}
+
 				return nil, err
 			}
 
