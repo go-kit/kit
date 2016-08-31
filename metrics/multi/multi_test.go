@@ -82,5 +82,6 @@ type mockHistogram struct {
 }
 
 func (h *mockHistogram) Observe(value float64)            { h.obs = append(h.obs, value) }
+func (h *mockHistogram) StartTimer() metrics.HistogramTimer { return metrics.NewHistogramTimer(h) }
 func (h *mockHistogram) With(...string) metrics.Histogram { return h }
 func (h *mockHistogram) String() string                   { return fmt.Sprintf("%v", h.obs) }

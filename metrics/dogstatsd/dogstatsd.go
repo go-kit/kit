@@ -283,6 +283,11 @@ func (t *Timing) Observe(value float64) {
 	t.obs(t.name, t.lvs, value)
 }
 
+// StartTimer implements metrics.Histogram.
+func (t *Timing) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(t)
+}
+
 // Histogram is a DogStatsD histrogram. Observations are forwarded to a
 // Dogstatsd object, and collected (but not aggregated) per timeseries.
 type Histogram struct {
@@ -303,4 +308,9 @@ func (h *Histogram) With(labelValues ...string) metrics.Histogram {
 // Observe implements metrics.Histogram.
 func (h *Histogram) Observe(value float64) {
 	h.obs(h.name, h.lvs, value)
+}
+
+// StartTimer implements metrics.Histogram.
+func (h *Histogram) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(h)
 }

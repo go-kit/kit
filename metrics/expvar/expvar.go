@@ -89,3 +89,8 @@ func (h *Histogram) Observe(value float64) {
 	h.p95.Set(h.h.Quantile(0.95))
 	h.p99.Set(h.h.Quantile(0.99))
 }
+
+// StartTimer implements Histogram.
+func (h *Histogram) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(h)
+}

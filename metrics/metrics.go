@@ -1,5 +1,7 @@
 package metrics
 
+import "time"
+
 // Counter describes a metric that accumulates values monotonically.
 // An example of a counter is the number of received HTTP requests.
 type Counter interface {
@@ -21,4 +23,30 @@ type Gauge interface {
 type Histogram interface {
 	With(labelValues ...string) Histogram
 	Observe(value float64)
+  // Start a timer used to record a duration in seconds.
+  StartTimer() HistogramTimer
 }
+
+
+// HistogramTimer is used to implement StartTimer.
+type HistogramTimer struct {
+  h Histogram
+  start time.Time
+}
+
+// Start a timer for the given histogram.
+func NewHistogramTimer(h Histogram) HistogramTimer {
+  return HistogramTimer{h: h, start: time.Now()}
+}
+
+// Stop the timer and observe the duration in seconds.
+func (ht *HistogramTimer) ObserveDuration() {
+  duration := time.Since(ht.start).Seconds()
+  if duration < 0 {
+    // Time has gone backwards.
+    duration = 0
+  }
+  ht.h.Observe(duration)
+}
+
+

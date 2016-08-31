@@ -247,3 +247,8 @@ func (h *Histogram) With(labelValues ...string) metrics.Histogram {
 func (h *Histogram) Observe(value float64) {
 	h.obs(h.name, h.lvs, value)
 }
+
+// StartTimer implements Histogram.
+func (h *Histogram) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(h)
+}
