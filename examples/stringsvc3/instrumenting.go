@@ -37,7 +37,7 @@ func (mw instrmw) Uppercase(s string) (output string, err error) {
 
 func (mw instrmw) Count(s string) (n int) {
 	defer func(begin time.Time) {
-		lvs := []string{"method", "uppercase"}
+		lvs := []string{"method", "count"}
 		mw.requestCount.With(lvs...).Add(1)
 		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
 		mw.countResult.Observe(float64(n))
