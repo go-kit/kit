@@ -55,5 +55,6 @@
 //    influx      n    custom                 custom                 custom
 //    prometheus  n    native                 native                 native
 //    circonus    1    native                 native                 native
+//    pcp         1    native                 native 		     native
 //
 package metrics
