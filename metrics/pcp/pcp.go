@@ -12,8 +12,12 @@ type Counter struct {
 }
 
 // NewCounter creates a new Counter
-func NewCounter(name string) *Counter {
-	c, err := speed.NewPCPCounter(0, name)
+//
+// this requires a name parameter
+// and optionally takes a couple of string directions, which
+// are directly passed to speed
+func NewCounter(name string, desc ...string) *Counter {
+	c, err := speed.NewPCPCounter(0, name, desc...)
 	if err != nil {
 		panic(err)
 	}
@@ -44,8 +48,12 @@ type Gauge struct {
 }
 
 // NewGauge creates a new Gauge
-func NewGauge(name string) *Gauge {
-	g, err := speed.NewPCPGauge(0, name)
+//
+// this requires a name parameter
+// and optionally takes a couple of string directions, which
+// are directly passed to speed
+func NewGauge(name string, desc ...string) *Gauge {
+	g, err := speed.NewPCPGauge(0, name, desc...)
 	if err != nil {
 		panic(err)
 	}
@@ -77,8 +85,12 @@ type Histogram struct {
 // NewHistogram creates a new Histogram
 // minimum observeable value is 0
 // maximum observeable value is 3600000000
-func NewHistogram(name string) *Histogram {
-	h, err := speed.NewPCPHistogram(name, 0, 3600000000, 5)
+//
+// this requires a name parameter
+// and optionally takes a couple of string directions, which
+// are directly passed to speed
+func NewHistogram(name string, desc ...string) *Histogram {
+	h, err := speed.NewPCPHistogram(name, 0, 3600000000, 5, desc...)
 	if err != nil {
 		panic(err)
 	}
