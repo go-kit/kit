@@ -23,7 +23,7 @@ func TestGauge(t *testing.T) {
 }
 
 func TestHistogram(t *testing.T) {
-	histogram := NewHistogram("speed_histogram", 0, 50).With("label values", "not supported").(*Histogram)
+	histogram := NewHistogram("speed_histogram").With("label values", "not supported").(*Histogram)
 	quantiles := func() (float64, float64, float64, float64) {
 		p50 := float64(histogram.Percentile(50))
 		p90 := float64(histogram.Percentile(90))

@@ -17,6 +17,12 @@ func NewCounter(name string) *Counter {
 	if err != nil {
 		panic(err)
 	}
+
+	registry.AddMetric(c)
+	if err != nil {
+		panic(err)
+	}
+
 	return &Counter{c}
 }
 
@@ -43,6 +49,12 @@ func NewGauge(name string) *Gauge {
 	if err != nil {
 		panic(err)
 	}
+
+	err = registry.AddMetric(g)
+	if err != nil {
+		panic(err)
+	}
+
 	return &Gauge{g}
 }
 
@@ -65,11 +77,17 @@ type Histogram struct {
 // NewHistogram creates a new Histogram
 // minimum observeable value is 0
 // maximum observeable value is 3600000000
-func NewHistogram(name string, min, max int64) *Histogram {
-	h, err := speed.NewPCPHistogram(name, min, max, 5)
+func NewHistogram(name string) *Histogram {
+	h, err := speed.NewPCPHistogram(name, 0, 3600000000, 5)
 	if err != nil {
 		panic(err)
 	}
+
+	err = registry.AddMetric(h)
+	if err != nil {
+		panic(err)
+	}
+
 	return &Histogram{h}
 }
 
@@ -87,3 +105,37 @@ func (h *Histogram) Mean() float64 { return h.h.Mean() }
 
 // Percentile returns a percentile between 0 and 100
 func (h *Histogram) Percentile(p float64) int64 { return h.h.Percentile(p) }
+
+////////////////////////////////////////////////////////////////////////////
+
+var registry *speed.PCPRegistry
+var client *speed.PCPClient
+
+func init() {
+	registry = speed.NewPCPRegistry()
+}
+
+// StartReporting starts reporting currently registered metrics to the PCP backend
+func StartReporting(appname string) {
+	if client != nil {
+		panic("reporting is already enabled")
+	}
+
+	var err error
+	client, err = speed.NewPCPClientWithRegistry(appname, registry)
+	if err != nil {
+		panic(err)
+	}
+
+	client.MustStart()
+}
+
+// StopReporting stops all reporting
+func StopReporting() {
+	if client == nil {
+		panic("reporting is not active")
+	}
+
+	client.MustStop()
+	client = nil
+}
