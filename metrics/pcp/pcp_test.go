@@ -7,7 +7,8 @@ import (
 )
 
 func TestCounter(t *testing.T) {
-	counter := NewCounter("speed_counter").With("label values", "not supported").(*Counter)
+	r := NewReporter("test_counter")
+	counter := r.NewCounter("speed_counter").With("label values", "not supported").(*Counter)
 	value := func() float64 { f := counter.c.Val(); return float64(f) }
 	if err := teststat.TestCounter(counter, value); err != nil {
 		t.Fatal(err)
@@ -15,7 +16,8 @@ func TestCounter(t *testing.T) {
 }
 
 func TestGauge(t *testing.T) {
-	gauge := NewGauge("speed_gauge").With("label values", "not supported").(*Gauge)
+	r := NewReporter("test_gauge")
+	gauge := r.NewGauge("speed_gauge").With("label values", "not supported").(*Gauge)
 	value := func() float64 { f := gauge.g.Val(); return f }
 	if err := teststat.TestGauge(gauge, value); err != nil {
 		t.Fatal(err)
@@ -23,7 +25,8 @@ func TestGauge(t *testing.T) {
 }
 
 func TestHistogram(t *testing.T) {
-	histogram := NewHistogram("speed_histogram").With("label values", "not supported").(*Histogram)
+	r := NewReporter("test_histogram")
+	histogram := r.NewHistogram("speed_histogram").With("label values", "not supported").(*Histogram)
 	quantiles := func() (float64, float64, float64, float64) {
 		p50 := float64(histogram.Percentile(50))
 		p90 := float64(histogram.Percentile(90))

@@ -5,6 +5,28 @@ import (
 	"github.com/performancecopilot/speed"
 )
 
+// Reporter encapsulates a speed client
+type Reporter struct {
+	c *speed.PCPClient
+}
+
+// NewReporter creates a new reporter instance
+func NewReporter(appname string) *Reporter {
+	c, err := speed.NewPCPClient(appname)
+	if err != nil {
+		panic(err)
+	}
+	return &Reporter{c}
+}
+
+// Start starts reporting currently registered metrics to the backend
+func (r *Reporter) Start() { r.c.MustStart() }
+
+// Stop stops reporting currently registered metrics to the backend
+func (r *Reporter) Stop() { r.c.MustStop() }
+
+////////////////////////////////////////////////////////////////////////////////////////
+
 // Counter implements metrics.Counter via a single dimensional speed.Counter
 // for now, see https://github.com/performancecopilot/speed/issues/32
 type Counter struct {
@@ -16,17 +38,13 @@ type Counter struct {
 // this requires a name parameter
 // and optionally takes a couple of string directions, which
 // are directly passed to speed
-func NewCounter(name string, desc ...string) *Counter {
+func (r *Reporter) NewCounter(name string, desc ...string) *Counter {
 	c, err := speed.NewPCPCounter(0, name, desc...)
 	if err != nil {
 		panic(err)
 	}
 
-	registry.AddMetric(c)
-	if err != nil {
-		panic(err)
-	}
-
+	r.c.MustRegister(c)
 	return &Counter{c}
 }
 
@@ -52,17 +70,13 @@ type Gauge struct {
 // this requires a name parameter
 // and optionally takes a couple of string directions, which
 // are directly passed to speed
-func NewGauge(name string, desc ...string) *Gauge {
+func (r *Reporter) NewGauge(name string, desc ...string) *Gauge {
 	g, err := speed.NewPCPGauge(0, name, desc...)
 	if err != nil {
 		panic(err)
 	}
 
-	err = registry.AddMetric(g)
-	if err != nil {
-		panic(err)
-	}
-
+	r.c.MustRegister(g)
 	return &Gauge{g}
 }
 
@@ -89,17 +103,13 @@ type Histogram struct {
 // this requires a name parameter
 // and optionally takes a couple of string directions, which
 // are directly passed to speed
-func NewHistogram(name string, desc ...string) *Histogram {
+func (r *Reporter) NewHistogram(name string, desc ...string) *Histogram {
 	h, err := speed.NewPCPHistogram(name, 0, 3600000000, 5, desc...)
 	if err != nil {
 		panic(err)
 	}
 
-	err = registry.AddMetric(h)
-	if err != nil {
-		panic(err)
-	}
-
+	r.c.MustRegister(h)
 	return &Histogram{h}
 }
 
@@ -117,37 +127,3 @@ func (h *Histogram) Mean() float64 { return h.h.Mean() }
 
 // Percentile returns a percentile between 0 and 100
 func (h *Histogram) Percentile(p float64) int64 { return h.h.Percentile(p) }
-
-////////////////////////////////////////////////////////////////////////////
-
-var registry *speed.PCPRegistry
-var client *speed.PCPClient
-
-func init() {
-	registry = speed.NewPCPRegistry()
-}
-
-// StartReporting starts reporting currently registered metrics to the PCP backend
-func StartReporting(appname string) {
-	if client != nil {
-		panic("reporting is already enabled")
-	}
-
-	var err error
-	client, err = speed.NewPCPClientWithRegistry(appname, registry)
-	if err != nil {
-		panic(err)
-	}
-
-	client.MustStart()
-}
-
-// StopReporting stops all reporting
-func StopReporting() {
-	if client == nil {
-		panic("reporting is not active")
-	}
-
-	client.MustStop()
-	client = nil
-}
