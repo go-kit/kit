@@ -79,7 +79,7 @@ func NewHistogram(name string, buckets int) *Histogram {
 // With is a no-op.
 func (h *Histogram) With(labelValues ...string) metrics.Histogram { return h }
 
-// Observe impleemts Histogram.
+// Observe implements Histogram.
 func (h *Histogram) Observe(value float64) {
 	h.mtx.Lock()
 	defer h.mtx.Unlock()
