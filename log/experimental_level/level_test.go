@@ -120,3 +120,35 @@ func TestAllowNoLevel(t *testing.T) {
 		t.Errorf("want %q, have %q", want, have)
 	}
 }
+
+func TestLevelContext(t *testing.T) {
+	var buf bytes.Buffer
+
+	// Wrapping the level logger with a context allows users to use
+	// log.DefaultCaller as per normal.
+	var logger log.Logger
+	logger = log.NewLogfmtLogger(&buf)
+	logger = level.New(logger, level.Config{Allowed: level.AllowAll})
+	logger = log.NewContext(logger).With("caller", log.DefaultCaller)
+
+	level.Info(logger).Log("foo", "bar")
+	if want, have := `caller=level_test.go:134 level=info foo=bar`, strings.TrimSpace(buf.String()); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+}
+
+func TestContextLevel(t *testing.T) {
+	var buf bytes.Buffer
+
+	// Wrapping a context with the level logger still works, but requires users
+	// to specify a higher callstack depth value.
+	var logger log.Logger
+	logger = log.NewLogfmtLogger(&buf)
+	logger = log.NewContext(logger).With("caller", log.Caller(5))
+	logger = level.New(logger, level.Config{Allowed: level.AllowAll})
+
+	level.Info(logger).Log("foo", "bar")
+	if want, have := `caller=level_test.go:150 level=info foo=bar`, strings.TrimSpace(buf.String()); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+}
