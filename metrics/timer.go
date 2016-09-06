@@ -9,7 +9,7 @@ type Timer struct {
 	t time.Time
 }
 
-// NewTimer wraps the given histogram and marks the current time.
+// NewTimer wraps the given histogram and records the current time.
 func NewTimer(h Histogram) *Timer {
 	return &Timer{
 		h: h,
