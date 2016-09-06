@@ -70,7 +70,7 @@ func Debug(logger log.Logger) log.Logger {
 type Config struct {
 	// Allowed enumerates the accepted log levels. If a log event is encountered
 	// with a LevelKey set to a value that isn't explicitly allowed, the event
-	// will be equelched, and ErrSquelched returned.
+	// will be squelched, and ErrSquelched returned.
 	Allowed []string
 
 	// ErrSquelched is returned to the caller when Log is invoked with a
