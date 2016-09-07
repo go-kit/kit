@@ -16,3 +16,11 @@ func TestNopLogger(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func BenchmarkNopLoggerSimple(b *testing.B) {
+	benchmarkRunner(b, log.NewNopLogger(), baseMessage)
+}
+
+func BenchmarkNopLoggerContextual(b *testing.B) {
+	benchmarkRunner(b, log.NewNopLogger(), withMessage)
+}
