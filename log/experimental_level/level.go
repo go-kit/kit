@@ -5,86 +5,88 @@ import (
 )
 
 var (
-	// LevelKey is the key part of a level keyval.
-	LevelKey = "level"
-
-	// ErrorLevelValue is the val part of an error-level keyval.
-	ErrorLevelValue = "error"
-
-	// WarnLevelValue is the val part of a warn-level keyval.
-	WarnLevelValue = "warn"
-
-	// InfoLevelValue is the val part of an info-level keyval.
-	InfoLevelValue = "info"
-
-	// DebugLevelValue is the val part of a debug-level keyval.
-	DebugLevelValue = "debug"
+	levelKey        = "level"
+	errorLevelValue = "error"
+	warnLevelValue  = "warn"
+	infoLevelValue  = "info"
+	debugLevelValue = "debug"
 )
 
-var (
-	// AllowAll is an alias for AllowDebugAndAbove.
-	AllowAll = AllowDebugAndAbove
+// AllowAll is an alias for AllowDebugAndAbove.
+func AllowAll() []string {
+	return AllowDebugAndAbove()
+}
 
-	// AllowDebugAndAbove allows all of the four default log levels.
-	// It may be provided as the Allowed parameter in the Config struct.
-	AllowDebugAndAbove = []string{ErrorLevelValue, WarnLevelValue, InfoLevelValue, DebugLevelValue}
+// AllowDebugAndAbove allows all of the four default log levels.
+// Its return value may be provided as the Allowed parameter in the Config.
+func AllowDebugAndAbove() []string {
+	return []string{errorLevelValue, warnLevelValue, infoLevelValue, debugLevelValue}
+}
 
-	// AllowInfoAndAbove allows the default info, warn, and error log levels.
-	// It may be provided as the Allowed parameter in the Config struct.
-	AllowInfoAndAbove = []string{ErrorLevelValue, WarnLevelValue, InfoLevelValue}
+// AllowInfoAndAbove allows the default info, warn, and error log levels.
+// Its return value may be provided as the Allowed parameter in the Config.
+func AllowInfoAndAbove() []string {
+	return []string{errorLevelValue, warnLevelValue, infoLevelValue}
+}
 
-	// AllowWarnAndAbove allows the default warn and error log levels.
-	// It may be provided as the Allowed parameter in the Config struct.
-	AllowWarnAndAbove = []string{ErrorLevelValue, WarnLevelValue}
+// AllowWarnAndAbove allows the default warn and error log levels.
+// Its return value may be provided as the Allowed parameter in the Config.
+func AllowWarnAndAbove() []string {
+	return []string{errorLevelValue, warnLevelValue}
+}
 
-	// AllowErrorOnly allows only the default error log level.
-	// It may be provided as the Allowed parameter in the Config struct.
-	AllowErrorOnly = []string{ErrorLevelValue}
+// AllowErrorOnly allows only the default error log level.
+// Its return value may be provided as the Allowed parameter in the Config.
+func AllowErrorOnly() []string {
+	return []string{errorLevelValue}
+}
 
-	// AllowNone allows none of the default log levels.
-	// It may be provided as the Allowed parameter in the Config struct.
-	AllowNone = []string{}
-)
+// AllowNone allows none of the default log levels.
+// Its return value may be provided as the Allowed parameter in the Config.
+func AllowNone() []string {
+	return []string{}
+}
 
-// Error returns a logger with the LevelKey set to ErrorLevelValue.
+// Error returns a logger with the level key set to ErrorLevelValue.
 func Error(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(LevelKey, ErrorLevelValue)
+	return log.NewContext(logger).With(levelKey, errorLevelValue)
 }
 
-// Warn returns a logger with the LevelKey set to WarnLevelValue.
+// Warn returns a logger with the level key set to WarnLevelValue.
 func Warn(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(LevelKey, WarnLevelValue)
+	return log.NewContext(logger).With(levelKey, warnLevelValue)
 }
 
-// Info returns a logger with the LevelKey set to InfoLevelValue.
+// Info returns a logger with the level key set to InfoLevelValue.
 func Info(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(LevelKey, InfoLevelValue)
+	return log.NewContext(logger).With(levelKey, infoLevelValue)
 }
 
-// Debug returns a logger with the LevelKey set to DebugLevelValue.
+// Debug returns a logger with the level key set to DebugLevelValue.
 func Debug(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(LevelKey, DebugLevelValue)
+	return log.NewContext(logger).With(levelKey, debugLevelValue)
 }
 
 // Config parameterizes the leveled logger.
 type Config struct {
 	// Allowed enumerates the accepted log levels. If a log event is encountered
-	// with a LevelKey set to a value that isn't explicitly allowed, the event
-	// will be squelched, and ErrSquelched returned.
+	// with a level key set to a value that isn't explicitly allowed, the event
+	// will be squelched, and ErrNotAllowed returned.
 	Allowed []string
 
-	// ErrSquelched is returned to the caller when Log is invoked with a
-	// LevelKey that hasn't been explicitly allowed. By default, ErrSquelched is
+	// ErrNotAllowed is returned to the caller when Log is invoked with a level
+	// key that hasn't been explicitly allowed. By default, ErrNotAllowed is
 	// nil; in this case, the log event is squelched with no error.
-	ErrSquelched error
+	ErrNotAllowed error
 
-	// AllowNoLevel will allow log events with no LevelKey to proceed through to
-	// the wrapped logger without error. By default, log events with no LevelKey
-	// will be squelched, and ErrNoLevel returned.
-	AllowNoLevel bool
+	// SquelchNoLevel will squelch log events with no level key, so that they
+	// don't proceed through to the wrapped logger. If SquelchNoLevel is set to
+	// true and a log event is squelched in this way, ErrNoLevel is returned to
+	// the caller.
+	SquelchNoLevel bool
 
-	// ErrNoLevel is returned to the caller when AllowNoLevel is false, and Log
-	// is invoked without a LevelKey. By default, ErrNoLevel is nil; in this
+	// ErrNoLevel is returned to the caller when SquelchNoLevel is true, and Log
+	// is invoked without a level key. By default, ErrNoLevel is nil; in this
 	// case, the log event is squelched with no error.
 	ErrNoLevel error
 }
@@ -93,26 +95,26 @@ type Config struct {
 // Config object for a detailed description of how to configure levels.
 func New(next log.Logger, config Config) log.Logger {
 	return &logger{
-		next:         next,
-		allowed:      makeSet(config.Allowed),
-		errSquelched: config.ErrSquelched,
-		allowNoLevel: config.AllowNoLevel,
-		errNoLevel:   config.ErrNoLevel,
+		next:           next,
+		allowed:        makeSet(config.Allowed),
+		errNotAllowed:  config.ErrNotAllowed,
+		squelchNoLevel: config.SquelchNoLevel,
+		errNoLevel:     config.ErrNoLevel,
 	}
 }
 
 type logger struct {
-	next         log.Logger
-	allowed      map[string]struct{}
-	errSquelched error
-	allowNoLevel bool
-	errNoLevel   error
+	next           log.Logger
+	allowed        map[string]struct{}
+	errNotAllowed  error
+	squelchNoLevel bool
+	errNoLevel     error
 }
 
 func (l *logger) Log(keyvals ...interface{}) error {
 	var hasLevel, levelAllowed bool
 	for i := 0; i < len(keyvals); i += 2 {
-		if k, ok := keyvals[i].(string); !ok || k != LevelKey {
+		if k, ok := keyvals[i].(string); !ok || k != levelKey {
 			continue
 		}
 		hasLevel = true
@@ -126,11 +128,11 @@ func (l *logger) Log(keyvals ...interface{}) error {
 		_, levelAllowed = l.allowed[v]
 		break
 	}
-	if !hasLevel && !l.allowNoLevel {
+	if !hasLevel && l.squelchNoLevel {
 		return l.errNoLevel
 	}
 	if hasLevel && !levelAllowed {
-		return l.errSquelched
+		return l.errNotAllowed
 	}
 	return l.next.Log(keyvals...)
 }

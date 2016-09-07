@@ -16,7 +16,7 @@ func TestVariousLevels(t *testing.T) {
 		want    string
 	}{
 		{
-			level.AllowAll,
+			level.AllowAll(),
 			strings.Join([]string{
 				`{"level":"debug","this is":"debug log"}`,
 				`{"level":"info","this is":"info log"}`,
@@ -25,7 +25,7 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
-			level.AllowDebugAndAbove,
+			level.AllowDebugAndAbove(),
 			strings.Join([]string{
 				`{"level":"debug","this is":"debug log"}`,
 				`{"level":"info","this is":"info log"}`,
@@ -34,7 +34,7 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
-			level.AllowInfoAndAbove,
+			level.AllowInfoAndAbove(),
 			strings.Join([]string{
 				`{"level":"info","this is":"info log"}`,
 				`{"level":"warn","this is":"warn log"}`,
@@ -42,20 +42,20 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
-			level.AllowWarnAndAbove,
+			level.AllowWarnAndAbove(),
 			strings.Join([]string{
 				`{"level":"warn","this is":"warn log"}`,
 				`{"level":"error","this is":"error log"}`,
 			}, "\n"),
 		},
 		{
-			level.AllowErrorOnly,
+			level.AllowErrorOnly(),
 			strings.Join([]string{
 				`{"level":"error","this is":"error log"}`,
 			}, "\n"),
 		},
 		{
-			level.AllowNone,
+			level.AllowNone(),
 			``,
 		},
 	} {
@@ -73,11 +73,11 @@ func TestVariousLevels(t *testing.T) {
 	}
 }
 
-func TestErrSquelch(t *testing.T) {
+func TestErrNotAllowed(t *testing.T) {
 	myError := errors.New("squelched!")
 	logger := level.New(log.NewNopLogger(), level.Config{
-		Allowed:      level.AllowWarnAndAbove,
-		ErrSquelched: myError,
+		Allowed:       level.AllowWarnAndAbove(),
+		ErrNotAllowed: myError,
 	})
 
 	if want, have := myError, level.Info(logger).Log("foo", "bar"); want != have {
@@ -94,8 +94,8 @@ func TestErrNoLevel(t *testing.T) {
 
 	var buf bytes.Buffer
 	logger := level.New(log.NewJSONLogger(&buf), level.Config{
-		AllowNoLevel: false,
-		ErrNoLevel:   myError,
+		SquelchNoLevel: true,
+		ErrNoLevel:     myError,
 	})
 
 	if want, have := myError, logger.Log("foo", "bar"); want != have {
@@ -109,8 +109,8 @@ func TestErrNoLevel(t *testing.T) {
 func TestAllowNoLevel(t *testing.T) {
 	var buf bytes.Buffer
 	logger := level.New(log.NewJSONLogger(&buf), level.Config{
-		AllowNoLevel: true,
-		ErrNoLevel:   errors.New("I should never be returned!"),
+		SquelchNoLevel: false,
+		ErrNoLevel:     errors.New("I should never be returned!"),
 	})
 
 	if want, have := error(nil), logger.Log("foo", "bar"); want != have {
@@ -128,7 +128,7 @@ func TestLevelContext(t *testing.T) {
 	// log.DefaultCaller as per normal.
 	var logger log.Logger
 	logger = log.NewLogfmtLogger(&buf)
-	logger = level.New(logger, level.Config{Allowed: level.AllowAll})
+	logger = level.New(logger, level.Config{Allowed: level.AllowAll()})
 	logger = log.NewContext(logger).With("caller", log.DefaultCaller)
 
 	level.Info(logger).Log("foo", "bar")
@@ -145,7 +145,7 @@ func TestContextLevel(t *testing.T) {
 	var logger log.Logger
 	logger = log.NewLogfmtLogger(&buf)
 	logger = log.NewContext(logger).With("caller", log.Caller(5))
-	logger = level.New(logger, level.Config{Allowed: level.AllowAll})
+	logger = level.New(logger, level.Config{Allowed: level.AllowAll()})
 
 	level.Info(logger).Log("foo", "bar")
 	if want, have := `caller=level_test.go:150 level=info foo=bar`, strings.TrimSpace(buf.String()); want != have {
