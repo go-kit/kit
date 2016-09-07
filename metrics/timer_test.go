@@ -14,7 +14,7 @@ func TestTimerFast(t *testing.T) {
 	h := generic.NewSimpleHistogram()
 	metrics.NewTimer(h).ObserveDuration()
 
-	tolerance := 0.005
+	tolerance := 0.050
 	if want, have := 0.000, h.ApproximateMovingAverage(); math.Abs(want-have) > tolerance {
 		t.Errorf("want %.3f, have %.3f", want, have)
 	}
