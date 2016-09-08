@@ -1,8 +1,6 @@
 package endpoint
 
 import (
-	"errors"
-
 	"golang.org/x/net/context"
 )
 
@@ -16,13 +14,6 @@ func Nop(context.Context, interface{}) (interface{}, error) { return struct{}{},
 
 // Middleware is a chainable behavior modifier for endpoints.
 type Middleware func(Endpoint) Endpoint
-
-// ErrBadCast indicates an unexpected concrete request or response struct was
-// received from an endpoint.
-var ErrBadCast = errors.New("bad cast")
-
-// ErrContextCanceled indicates the request context was canceled.
-var ErrContextCanceled = errors.New("context canceled")
 
 // Chain is a helper function for composing middlewares. Requests will
 // traverse them in the order they're declared. That is, the first middleware
