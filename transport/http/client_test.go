@@ -27,9 +27,9 @@ func TestHTTPClient(t *testing.T) {
 			r.Body.Read(buffer)
 			return TestResponse{r.Body, string(buffer)}, nil
 		}
-		headers   = make(chan string, 1)
-		headerKey = "X-Foo"
-		headerVal = "abcde"
+		headers        = make(chan string, 1)
+		headerKey      = "X-Foo"
+		headerVal      = "abcde"
 		afterHeaderKey = "X-The-Dude"
 		afterHeaderVal = "Abides"
 		afterVal       = ""
