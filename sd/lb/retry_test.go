@@ -88,3 +88,44 @@ func TestRetryTimeout(t *testing.T) {
 		t.Errorf("wanted %v, got none", context.DeadlineExceeded)
 	}
 }
+
+func AbortEarlyCustomMessage_WCB(t *testing.T) {
+    var (
+        cb = func(count int, msg string) (bool, *string) { 
+            ret := "Aborting early"
+            return false, &ret
+        }
+        endpoints = sd.FixedSubscriber{} // no endpoints
+        lb        = loadbalancer.NewRoundRobin(endpoints)
+        retry    = loadbalancer.RetryWithCallback(999, time.Second, lb, cb) // lots of retries
+        ctx       = context.Background()
+    )
+     _, err := retry(ctx, struct{}{})
+     if err == nil {
+        t.Errorf("expected error, got none") // should fail
+    }
+    if err.Error() != "Aborting early" {
+        t.Errorf("expected custom error message, got %v", err)
+    }
+}
+
+func AbortEarlyOnNTries_WCB(t *testing.T) {
+    var (
+        cb = func(count int, msg string) (bool, *string) {
+            if (count >= 4) {
+                t.Errorf("expected retries to abort at 3 but continued to %v", count)
+            } 
+            if (count == 3) {
+                return false, nil
+            }
+            return true, nil
+        }
+        endpoints = sd.FixedSubscriber{} // no endpoints
+        lb        = loadbalancer.NewRoundRobin(endpoints)
+        retry    = loadbalancer.RetryWithCallback(999, time.Second, lb, cb) // lots of retries
+        ctx       = context.Background()
+    )
+    if _, err := retry(ctx, struct{}{}); err == nil {
+        t.Errorf("expected error, got none") // should fail
+    }
+}
