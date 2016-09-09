@@ -3,6 +3,8 @@ package etcd
 import (
 	"time"
 
+	"sync"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -13,12 +15,14 @@ type PeriodicRegistrar struct {
 	logger     log.Logger
 	expiration time.Duration
 	frequency  time.Duration
-	stopC      chan bool
+	stopC      chan chan bool
+	mu         *sync.Mutex // mutex for registered
+	registered bool
 }
 
 // NewPeriodicRegistrar returns a etcd Registrar with recurring registeation acting on the provided catalog
 // registration (service).
-func NewPeriodicRegistrar(client Client, service Service, logger log.Logger, frequencySec, expirationSec int) *PeriodicRegistrar {
+func NewPeriodicRegistrar(client Client, service Service, logger log.Logger, regFrequency, regExpiration time.Duration) *PeriodicRegistrar {
 	return &PeriodicRegistrar{
 		client:  client,
 		service: service,
@@ -26,15 +30,23 @@ func NewPeriodicRegistrar(client Client, service Service, logger log.Logger, fre
 			"key", service.Key,
 			"value", service.Value,
 		),
-		expiration: time.Duration(expirationSec) * time.Second,
-		frequency:  time.Duration(frequencySec) * time.Second,
-		stopC:      make(chan bool),
+		expiration: regExpiration,
+		frequency:  regFrequency,
+		stopC:      make(chan chan bool),
+		mu:         &sync.Mutex{},
 	}
 }
 
 // Register implements the sd.Registrar interface. Call it when you want your
 // service to be registered in etcd, typically at startup.
 func (r *PeriodicRegistrar) Register() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.registered {
+		return
+	}
+	r.registered = true
+	r.logger.Log("action", "register")
 	r.register()
 	go func() {
 		tick := time.Tick(r.frequency)
@@ -42,26 +54,32 @@ func (r *PeriodicRegistrar) Register() {
 			select {
 			case <-tick:
 				r.register()
-			case <-r.stopC:
+			case doneC := <-r.stopC:
 				r.deregister()
+				doneC <- true
 			}
 		}
 	}()
 }
 
 func (r *PeriodicRegistrar) register() {
-	r.stopC <- true
 	if err := r.client.RegisterTTL(r.service, r.expiration); err != nil {
 		r.logger.Log("err", err)
-	} else {
-		r.logger.Log("action", "register")
 	}
 }
 
 // Deregister implements the sd.Registrar interface. Call it when you want your
 // service to be deregistered from etcd, typically just prior to shutdown.
 func (r *PeriodicRegistrar) Deregister() {
-	r.stopC <- true
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.registered {
+		return
+	}
+	done := make(chan bool)
+	r.stopC <- done
+	<-done
+	r.registered = false
 }
 
 func (r *PeriodicRegistrar) deregister() {
