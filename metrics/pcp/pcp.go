@@ -1,129 +1,123 @@
 package pcp
 
 import (
-	"github.com/go-kit/kit/metrics"
 	"github.com/performancecopilot/speed"
+
+	"github.com/go-kit/kit/metrics"
 )
 
-// Reporter encapsulates a speed client
+// Reporter encapsulates a speed client.
 type Reporter struct {
 	c *speed.PCPClient
 }
 
-// NewReporter creates a new reporter instance
-func NewReporter(appname string) *Reporter {
+// NewReporter creates a new Reporter instance.
+// The first parameter is the application name and is used to create the speed client.
+// Hence it should be a valid speed parameter name and should not contain spaces or the path separator
+// for your operating system.
+func NewReporter(appname string) (*Reporter, error) {
 	c, err := speed.NewPCPClient(appname)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &Reporter{c}
+
+	return &Reporter{c}, nil
 }
 
-// Start starts reporting currently registered metrics to the backend
+// Start starts the underlying speed client so it can start reporting registered
+// metrics to your PCP installation.
 func (r *Reporter) Start() { r.c.MustStart() }
 
-// Stop stops reporting currently registered metrics to the backend
+// Stop stops the underlying speed client so it can stop reporting registered
+// metrics to your PCP installation.
 func (r *Reporter) Stop() { r.c.MustStop() }
 
-////////////////////////////////////////////////////////////////////////////////////////
-
-// Counter implements metrics.Counter via a single dimensional speed.Counter
-// for now, see https://github.com/performancecopilot/speed/issues/32
+// Counter implements metrics.Counter via a single dimensional speed.Counter.
 type Counter struct {
 	c speed.Counter
 }
 
-// NewCounter creates a new Counter
+// NewCounter creates a new Counter.
 //
-// this requires a name parameter
-// and optionally takes a couple of string directions, which
-// are directly passed to speed
-func (r *Reporter) NewCounter(name string, desc ...string) *Counter {
+// This requires a name parameter and can optionally take a couple of description
+// strings, that are used to create the underlying speed.Counter and are reported by PCP.
+func (r *Reporter) NewCounter(name string, desc ...string) (*Counter, error) {
 	c, err := speed.NewPCPCounter(0, name, desc...)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	r.c.MustRegister(c)
-	return &Counter{c}
+	return &Counter{c}, nil
 }
 
 // With is a no-op.
 func (c *Counter) With(labelValues ...string) metrics.Counter { return c }
 
 // Add implements Counter.
-// speed Counters only take int64
-// if it is important, instead use speed.SingletonMetric with DoubleType, CounterSemantics and OneUnit
-// but that will mean this will need a mutex, to be safe
+// speed Counters only take int64.
+// speed Gauges can take float64 and Add(float64) is implemented by metrics.Gauge.
 func (c *Counter) Add(delta float64) { c.c.Inc(int64(delta)) }
 
-////////////////////////////////////////////////////////////////////////////////////////
-
-// Gauge implements metrics.Gauge
-// also singleton for now, for same reasons as Counter
+// Gauge implements metrics.Gauge via a single dimensional speed.Gauge.
 type Gauge struct {
 	g speed.Gauge
 }
 
-// NewGauge creates a new Gauge
+// NewGauge creates a new Gauge.
 //
-// this requires a name parameter
-// and optionally takes a couple of string directions, which
-// are directly passed to speed
-func (r *Reporter) NewGauge(name string, desc ...string) *Gauge {
+// This requires a name parameter, and again, can take a couple of optional description strings.
+func (r *Reporter) NewGauge(name string, desc ...string) (*Gauge, error) {
 	g, err := speed.NewPCPGauge(0, name, desc...)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	r.c.MustRegister(g)
-	return &Gauge{g}
+	return &Gauge{g}, nil
 }
 
 // With is a no-op.
 func (g *Gauge) With(labelValues ...string) metrics.Gauge { return g }
 
-// Set sets the value of the gauge
+// Set sets the value of the gauge.
 func (g *Gauge) Set(value float64) { g.g.Set(value) }
 
-// Add adds a value to the gauge
+// Add adds a value to the gauge.
 func (g *Gauge) Add(value float64) { g.g.Inc(value) }
 
-////////////////////////////////////////////////////////////////////////////////////////
-
-// Histogram wraps a PCP Histogram
+// Histogram wraps a speed Histogram.
 type Histogram struct {
 	h speed.Histogram
 }
 
-// NewHistogram creates a new Histogram
-// minimum observeable value is 0
-// maximum observeable value is 3600000000
+// NewHistogram creates a new Histogram.
+// minimum observeable value is 0.
+// maximum observeable value is 3600000000.
 //
-// this requires a name parameter
-// and optionally takes a couple of string directions, which
-// are directly passed to speed
-func (r *Reporter) NewHistogram(name string, desc ...string) *Histogram {
-	h, err := speed.NewPCPHistogram(name, 0, 3600000000, 5, desc...)
+// this requires a name parameter, and again, can take a couple of optional description strings.
+func (r *Reporter) NewHistogram(name string, min, max int64, desc ...string) (*Histogram, error) {
+	h, err := speed.NewPCPHistogram(name, min, max, 5, desc...)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	r.c.MustRegister(h)
-	return &Histogram{h}
+	return &Histogram{h}, nil
 }
 
 // With is a no-op.
 func (h *Histogram) With(labelValues ...string) metrics.Histogram { return h }
 
-// Observe observes a value
+// Observe observes a value.
 //
 // this converts float64 value to int64, as the Histogram in speed
-// is backed using codahale/hdrhistogram, which only observes int64 values
+// is backed using codahale/hdrhistogram, which only observes int64 values.
 func (h *Histogram) Observe(value float64) { h.h.MustRecord(int64(value)) }
 
-// Mean returns the mean of the values observed so far
+// Mean returns the mean of the values observed so far by the Histogram.
 func (h *Histogram) Mean() float64 { return h.h.Mean() }
 
-// Percentile returns a percentile between 0 and 100
+// Percentile returns a percentile value for the given percentile between 0 and 100
+// for all values observed by the histogram.
 func (h *Histogram) Percentile(p float64) int64 { return h.h.Percentile(p) }
