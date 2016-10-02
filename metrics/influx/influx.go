@@ -4,6 +4,7 @@
 package influx
 
 import (
+	"fmt"
 	"time"
 
 	influxdb "github.com/influxdata/influxdb/client/v2"
@@ -108,10 +109,12 @@ func (in *Influx) WriteTo(w BatchPointsWriter) (err error) {
 	now := time.Now()
 
 	in.counters.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		fields := fieldsFrom(lvs)
-		fields["count"] = sum(values)
+		tags := in.tags
+		for k, v := range fieldsFrom(lvs) {
+			tags[k] = fmt.Sprintf("%s", v)
+		}
 		var p *influxdb.Point
-		p, err = influxdb.NewPoint(name, in.tags, fields, now)
+		p, err = influxdb.NewPoint(name, tags, map[string]interface{}{"count": sum(values)}, now)
 		if err != nil {
 			return false
 		}
