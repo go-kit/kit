@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/generic"
 	"github.com/go-kit/kit/metrics/internal/lv"
 )
 
@@ -108,10 +109,10 @@ func (in *Influx) WriteTo(w BatchPointsWriter) (err error) {
 	now := time.Now()
 
 	in.counters.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		fields := fieldsFrom(lvs)
-		fields["count"] = sum(values)
+		tags := mergeTags(in.tags, lvs)
 		var p *influxdb.Point
-		p, err = influxdb.NewPoint(name, in.tags, fields, now)
+		fields := map[string]interface{}{"count": sum(values)}
+		p, err = influxdb.NewPoint(name, tags, fields, now)
 		if err != nil {
 			return false
 		}
@@ -123,10 +124,10 @@ func (in *Influx) WriteTo(w BatchPointsWriter) (err error) {
 	}
 
 	in.gauges.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		fields := fieldsFrom(lvs)
-		fields["value"] = last(values)
+		tags := mergeTags(in.tags, lvs)
 		var p *influxdb.Point
-		p, err = influxdb.NewPoint(name, in.tags, fields, now)
+		fields := map[string]interface{}{"value": last(values)}
+		p, err = influxdb.NewPoint(name, tags, fields, now)
 		if err != nil {
 			return false
 		}
@@ -138,16 +139,23 @@ func (in *Influx) WriteTo(w BatchPointsWriter) (err error) {
 	}
 
 	in.histograms.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		fields := fieldsFrom(lvs)
-		ps := make([]*influxdb.Point, len(values))
-		for i, v := range values {
-			fields["value"] = v // overwrite each time
-			ps[i], err = influxdb.NewPoint(name, in.tags, fields, now)
-			if err != nil {
-				return false
-			}
+		histogram := generic.NewHistogram(name, 50)
+		tags := mergeTags(in.tags, lvs)
+		var p *influxdb.Point
+		for _, v := range values {
+			histogram.Observe(v)
 		}
-		bp.AddPoints(ps)
+		fields := map[string]interface{}{
+			"p50": histogram.Quantile(0.50),
+			"p90": histogram.Quantile(0.90),
+			"p95": histogram.Quantile(0.95),
+			"p99": histogram.Quantile(0.99),
+		}
+		p, err = influxdb.NewPoint(name, tags, fields, now)
+		if err != nil {
+			return false
+		}
+		bp.AddPoint(p)
 		return true
 	})
 	if err != nil {
@@ -157,15 +165,14 @@ func (in *Influx) WriteTo(w BatchPointsWriter) (err error) {
 	return w.Write(bp)
 }
 
-func fieldsFrom(labelValues []string) map[string]interface{} {
+func mergeTags(tags map[string]string, labelValues []string) map[string]string {
 	if len(labelValues)%2 != 0 {
-		panic("fieldsFrom received a labelValues with an odd number of strings")
+		panic("mergeTags received a labelValues with an odd number of strings")
 	}
-	fields := make(map[string]interface{}, len(labelValues)/2)
 	for i := 0; i < len(labelValues); i += 2 {
-		fields[labelValues[i]] = labelValues[i+1]
+		tags[labelValues[i]] = labelValues[i+1]
 	}
-	return fields
+	return tags
 }
 
 func sum(a []float64) float64 {
