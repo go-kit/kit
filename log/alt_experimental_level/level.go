@@ -5,13 +5,6 @@ import (
 )
 
 var (
-	levelKey = "level"
-
-	debugLevelValue = "debug"
-	infoLevelValue  = "info"
-	warnLevelValue  = "warn"
-	errorLevelValue = "error"
-
 	// Alternately, we could use a similarly inert logger that does nothing but
 	// return a given error value.
 	nop = log.NewNopLogger()
@@ -24,22 +17,26 @@ type Leveler interface {
 	Error(logger log.Logger) log.Logger
 }
 
+func withLevel(level string, logger log.Logger) log.Logger {
+	return log.NewContext(logger).With("level", level)
+}
+
 type debugAndAbove struct{}
 
 func (debugAndAbove) Debug(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(levelKey, debugLevelValue)
+	return withLevel("debug", logger)
 }
 
 func (debugAndAbove) Info(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(levelKey, infoLevelValue)
+	return withLevel("info", logger)
 }
 
 func (debugAndAbove) Warn(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(levelKey, warnLevelValue)
+	return withLevel("warn", logger)
 }
 
 func (debugAndAbove) Error(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(levelKey, errorLevelValue)
+	return withLevel("error", logger)
 }
 
 type infoAndAbove struct {
