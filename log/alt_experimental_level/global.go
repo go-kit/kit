@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	global Leveler = errorOnly{}
+	global = AllowingNone()
 	/*
 	   Alternately:
 	   global atomic.Value
@@ -30,23 +30,23 @@ func AllowAll() {
 }
 
 func AllowDebugAndAbove() {
-	resetGlobal(debugAndAbove{})
+	resetGlobal(AllowingDebugAndAbove())
 }
 
 func AllowInfoAndAbove() {
-	resetGlobal(infoAndAbove{})
+	resetGlobal(AllowingInfoAndAbove())
 }
 
 func AllowWarnAndAbove() {
-	resetGlobal(warnAndAbove{})
+	resetGlobal(AllowingWarnAndAbove())
 }
 
 func AllowErrorOnly() {
-	resetGlobal(errorOnly{})
+	resetGlobal(AllowingErrorOnly())
 }
 
 func AllowNone() {
-	resetGlobal(none{})
+	resetGlobal(AllowingNone())
 }
 
 func getGlobal() Leveler {
