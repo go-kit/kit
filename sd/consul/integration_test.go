@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/service"
 	stdconsul "github.com/hashicorp/consul/api"
 )
 
@@ -41,11 +41,11 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Build a subscriber on r.Name + r.Tags.
-	factory := func(instance string) (service.Service, io.Closer, error) {
+	factory := func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		t.Logf("factory invoked for %q", instance)
-		return service.Fixed{}, nil, nil
+		return endpoint.Nop, nil, nil
 	}
-	subscriber, err := NewSubscriber(
+	subscriber := NewSubscriber(
 		client,
 		factory,
 		log.NewContext(logger).With("component", "subscriber"),
@@ -53,18 +53,15 @@ func TestIntegration(t *testing.T) {
 		r.Tags,
 		true,
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	time.Sleep(time.Second)
 
-	// Before we publish, we should have no services.
-	services, err := subscriber.Services()
+	// Before we publish, we should have no endpoints.
+	endpoints, err := subscriber.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}
-	if want, have := 0, len(services); want != have {
+	if want, have := 0, len(endpoints); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
@@ -75,12 +72,12 @@ func TestIntegration(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	// Now we should have one active service.
-	services, err = subscriber.Services()
+	// Now we should have one active endpoints.
+	endpoints, err = subscriber.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}
-	if want, have := 1, len(services); want != have {
+	if want, have := 1, len(endpoints); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
