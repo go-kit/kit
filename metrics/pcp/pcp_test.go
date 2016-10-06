@@ -3,6 +3,8 @@ package pcp
 import (
 	"testing"
 
+	"github.com/performancecopilot/speed"
+
 	"github.com/go-kit/kit/metrics/teststat"
 )
 
@@ -50,7 +52,7 @@ func TestHistogram(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	histogram, err := r.NewHistogram("speed_histogram", 0, 3600000000)
+	histogram, err := r.NewHistogram("speed_histogram", 0, 3600000000, speed.OneUnit)
 	if err != nil {
 		t.Fatal(err)
 	}

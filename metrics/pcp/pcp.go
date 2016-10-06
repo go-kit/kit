@@ -95,9 +95,13 @@ type Histogram struct {
 // minimum observeable value is 0.
 // maximum observeable value is 3600000000.
 //
-// this requires a name parameter, and again, can take a couple of optional description strings.
-func (r *Reporter) NewHistogram(name string, min, max int64, desc ...string) (*Histogram, error) {
-	h, err := speed.NewPCPHistogram(name, min, max, 5, desc...)
+// The required parameters are a metric name,
+// the minimum and maximum observable values,
+// and a metric unit for the units of the observed values.
+//
+// Optionally, it can also take a couple of description strings.
+func (r *Reporter) NewHistogram(name string, min, max int64, unit speed.MetricUnit, desc ...string) (*Histogram, error) {
+	h, err := speed.NewPCPHistogram(name, min, max, 5, unit, desc...)
 	if err != nil {
 		return nil, err
 	}
