@@ -14,8 +14,8 @@ import (
 // encountered. Should return whether the Retry function should continue trying,
 // and a custom error message if desired. The error message may be nil, but a
 // true/false is always expected. In all cases if the error message is supplied,
-// thecurrent error will be replaced.
-type Callback func(n int, err error) (cont bool, cbErr error)
+// the current error will be replaced.
+type Callback func(n int, received error) (keepTrying bool, cbErr error)
 
 // Retry wraps a service load balancer and returns an endpoint oriented load
 // balancer for the specified service method.
