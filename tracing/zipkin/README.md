@@ -2,49 +2,58 @@
 
 ## Development and Testing Set-up
 
-Setting up [Zipkin] is not an easy thing to do. It will also demand quite some
-resources. To help you get started with development and testing we've made a
-docker-compose file available for running a full Zipkin stack.
+Great efforts have been made to make [Zipkin] easier to test, develop and
+experiment against. [Zipkin] can now be run from a single Docker container or by
+running its self-contained executable jar without extensive configuration. In
+its default configuration you will run Zipkin with a HTTP collector, In memory
+Span storage backend and web UI on port 9411.
 
-You will need [docker-compose] 1.6.0+ and [docker-engine] 1.10.0+.
-
-If running on Linux `HOSTNAME` can be set to `localhost`. If running on Mac OS X
-or Windows you probably need to set the hostname environment variable to the
-hostname of the VM running the docker containers.
-
-```sh
-cd tracing/zipkin
-HOSTNAME=localhost docker-compose -f docker-compose-zipkin.yml up
+Example:
+```
+docker run -d -p 9411:9411 openzipkin/zipkin
 ```
 
-[Zipkin]: http://zipkin.io/
-[docker-compose]: https://docs.docker.com/compose/
-[docker-engine]: https://docs.docker.com/engine/
+[zipkin]: http://zipkin.io
 
-As mentioned the [Zipkin] stack is quite heavy and may take a few minutes to
-fully initialize.
-
-The following services have been set-up to run:
-- Apache Cassandra (port: 9160 (thrift), 9042 (native))
-- Apache ZooKeeper (port: 2181)
-- Apache Kafka (port: 9092)
-- Zipkin Collector
-- Zipkin Query
-- Zipkin Web (port: 8080, 9990)
-
+Instrumenting your services with Zipkin distributed tracing using the default
+configuration is now possible with the latest release of [zipkin-go-opentracing]
+as it includes an HTTP transport for sending spans to the [Zipkin] HTTP
+Collector.
 
 ## Middleware Usage
 
 Follow the [addsvc] example to check out how to wire the Zipkin Middleware. The
 changes should be relatively minor.
 
-The [zipkin-go-opentracing] package has support for Kafka and Scribe collectors
-as well as using Go Kit's [Log] package for logging.
+The [zipkin-go-opentracing] package has support for HTTP, Kafka and Scribe
+collectors as well as using Go Kit's [Log] package for logging.
+
+### Configuring for the Zipkin HTTP Collector
+
+To select the transport for the HTTP Collector, you configure the `Recorder`
+with the appropriate collector like this:
+
+```go
+var (
+  debugMode          = false
+  serviceName        = "MyService"
+  serviceHostPort    = "localhost:8000"
+  zipkinHTTPEndpoint = "localhost:9411"
+)
+collector, err = zipkin.NewHTTPCollector(zipkinHTTPEndpoint)
+if err != nil {
+  // handle error
+}
+tracer, err = zipkin.NewTracer(
+  zipkin.NewRecorder(collector, debugMode, serviceHostPort, serviceName),
+  ...
+)
+```
 
 ### Span per Node vs. Span per RPC
 By default Zipkin V1 considers either side of an RPC to have the same identity
 and differs in that respect from many other tracing systems which consider the
-caller to be the parent and the receiver the child. The OpenTracing
+caller to be the parent and the receiver to be the child. The OpenTracing
 specification does not dictate one model over the other, but the Zipkin team is
 looking into these [single-host-spans] to potentially bring Zipkin more in-line
 with the other tracing systems.
@@ -135,6 +144,7 @@ func (svc *Service) GetMeSomeExamples(ctx context.Context, ...) ([]Examples, err
 	parentSpan := opentracing.SpanFromContext(ctx)
 	if parentSpan == nil {
 		parentSpan = opentracing.StartSpan(queryLabel)
+    defer parentSpan.Finish()
 	}
 
 	// create a new span to record the resource interaction
