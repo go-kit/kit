@@ -30,7 +30,7 @@ func TestCounter(t *testing.T) {
 	}
 }
 
-func TestCounter_multipleTags(t *testing.T) {
+func ExampleCounter() {
 	in := New(map[string]string{"a": "b"}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
 	counter := in.NewCounter("influx_counter")
 	counter.Add(10)
@@ -42,14 +42,19 @@ func TestCounter_multipleTags(t *testing.T) {
 	in.WriteTo(client)
 
 	expectedLines := []string{
-		`influx_counter,a=b count=60 [0-9]+`,
-		`influx_counter,a=b,error=true count=1 [0-9]+`,
-		`influx_counter,a=b,error=false count=2 [0-9]+`,
+		`(influx_counter,a=b count=60) [0-9]{19}`,
+		`(influx_counter,a=b,error=true count=1) [0-9]{19}`,
+		`(influx_counter,a=b,error=false count=2) [0-9]{19}`,
 	}
 
-	if err := validateMessage(expectedLines, client.buf.String()); err != nil {
-		t.Error(err.Error())
+	if err := extractAndPrintMessage(expectedLines, client.buf.String()); err != nil {
+		fmt.Println(err.Error())
 	}
+
+	// Output:
+	// influx_counter,a=b count=60
+	// influx_counter,a=b,error=true count=1
+	// influx_counter,a=b,error=false count=2
 }
 
 func TestGauge(t *testing.T) {
@@ -68,7 +73,7 @@ func TestGauge(t *testing.T) {
 	}
 }
 
-func TestGauge_multipleTags(t *testing.T) {
+func ExampleGauge() {
 	in := New(map[string]string{"a": "b"}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
 	gauge := in.NewGauge("influx_gauge")
 	gauge.Set(10)
@@ -81,14 +86,19 @@ func TestGauge_multipleTags(t *testing.T) {
 	in.WriteTo(client)
 
 	expectedLines := []string{
-		`influx_gauge,a=b value=50 [0-9]+`,
-		`influx_gauge,a=b,error=true value=1 [0-9]+`,
-		`influx_gauge,a=b,error=false value=2 [0-9]+`,
+		`(influx_gauge,a=b value=50) [0-9]{19}`,
+		`(influx_gauge,a=b,error=true value=1) [0-9]{19}`,
+		`(influx_gauge,a=b,error=false value=2) [0-9]{19}`,
 	}
 
-	if err := validateMessage(expectedLines, client.buf.String()); err != nil {
-		t.Error(err.Error())
+	if err := extractAndPrintMessage(expectedLines, client.buf.String()); err != nil {
+		fmt.Println(err.Error())
 	}
+
+	// Output:
+	// influx_gauge,a=b value=50
+	// influx_gauge,a=b,error=true value=1
+	// influx_gauge,a=b,error=false value=2
 }
 
 func TestHistogram(t *testing.T) {
@@ -113,7 +123,7 @@ func TestHistogram(t *testing.T) {
 	}
 }
 
-func TestHistogram_multipleTags(t *testing.T) {
+func ExampleHistogram() {
 	in := New(map[string]string{"foo": "alpha"}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
 	histogram := in.NewHistogram("influx_histogram")
 	histogram.Observe(float64(10))
@@ -125,14 +135,19 @@ func TestHistogram_multipleTags(t *testing.T) {
 	in.WriteTo(client)
 
 	expectedLines := []string{
-		`influx_histogram,foo=alpha p50=10,p90=50,p95=50,p99=50 [0-9]+`,
-		`influx_histogram,error=true,foo=alpha p50=1,p90=1,p95=1,p99=1 [0-9]+`,
-		`influx_histogram,error=false,foo=alpha p50=2,p90=2,p95=2,p99=2 [0-9]+`,
+		`(influx_histogram,foo=alpha p50=10,p90=50,p95=50,p99=50) [0-9]{19}`,
+		`(influx_histogram,error=true,foo=alpha p50=1,p90=1,p95=1,p99=1) [0-9]{19}`,
+		`(influx_histogram,error=false,foo=alpha p50=2,p90=2,p95=2,p99=2) [0-9]{19}`,
 	}
 
-	if err := validateMessage(expectedLines, client.buf.String()); err != nil {
-		t.Error(err.Error())
+	if err := extractAndPrintMessage(expectedLines, client.buf.String()); err != nil {
+		fmt.Println(err.Error())
 	}
+
+	// Output:
+	// influx_histogram,foo=alpha p50=10,p90=50,p95=50,p99=50
+	// influx_histogram,error=true,foo=alpha p50=1,p90=1,p95=1,p99=1
+	// influx_histogram,error=false,foo=alpha p50=2,p90=2,p95=2,p99=2
 }
 
 func TestHistogramLabels(t *testing.T) {
@@ -160,13 +175,14 @@ func (w *bufWriter) Write(bp influxdb.BatchPoints) error {
 	return nil
 }
 
-func validateMessage(expected []string, msg string) error {
+func extractAndPrintMessage(expected []string, msg string) error {
 	for _, pattern := range expected {
 		re := regexp.MustCompile(pattern)
 		match := re.FindStringSubmatch(msg)
-		if len(match) != 1 {
-			return fmt.Errorf("Pattern not found! {%s} %s\n", pattern, msg)
+		if len(match) != 2 {
+			return fmt.Errorf("Pattern not found! {%s} [%s]: %v\n", pattern, msg, match)
 		}
+		fmt.Println(match[1])
 	}
 	return nil
 }
