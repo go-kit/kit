@@ -21,13 +21,12 @@ import (
 // one data point per flush, with a "count" field that reflects all adds since
 // the last flush. Gauges are modeled as a timeseries with one data point per
 // flush, with a "value" field that reflects the current state of the gauge.
-// Histograms are modeled as a timeseries with one data point per observation,
-// with a "value" field that reflects each observation; use e.g. the HISTOGRAM
-// aggregate function to compute histograms.
+// Histograms are modeled as a timeseries with one data point per combination of tags,
+// with a set of quantile fields that reflects the p50, p90, p95 & p99.
 //
-// Influx tags are immutable, attached to the Influx object, and given to each
-// metric at construction. Influx fields are mapped to Go kit label values, and
-// may be mutated via With functions. Actual metric values are provided as
+// Influx tags are attached to the Influx object, can be given to each
+// metric at construction and can be updated anytime via With function. Influx fields
+// are mapped to Go kit label values directly by this collector. Actual metric values are provided as
 // fields with specific names depending on the metric.
 //
 // All observations are collected in memory locally, and flushed on demand.
