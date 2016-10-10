@@ -10,11 +10,11 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// Callback function that indicates the current attempt count and the error encountered.
-//  Should return whether the Retry function should continue trying, and a custom
-//  error message if desired. The error message may be nil, but a true/false
-//  is always expected. In all cases if the error message is supplied, the
-//  current error will be replaced.
+// Callback is a function that indicates the current attempt count and the error
+// encountered. Should return whether the Retry function should continue trying,
+// and a custom error message if desired. The error message may be nil, but a
+// true/false is always expected. In all cases if the error message is supplied,
+// thecurrent error will be replaced.
 type Callback func(n int, err error) (cont bool, cbErr error)
 
 // Retry wraps a service load balancer and returns an endpoint oriented load
