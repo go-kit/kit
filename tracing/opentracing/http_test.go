@@ -2,12 +2,12 @@ package opentracing_test
 
 import (
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/mocktracer"
-	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/log"
@@ -74,11 +74,14 @@ func TestToHTTPRequestTags(t *testing.T) {
 
 	kitot.ToHTTPRequest(tracer, log.NewNopLogger())(ctx, req)
 
-	assert.Equal(t, map[string]interface{}{
+	expectedTags := map[string]interface{}{
 		string(ext.HTTPMethod):   "GET",
 		string(ext.HTTPUrl):      "http://test.biz/path",
 		string(ext.PeerHostname): "test.biz",
-	}, span.Tags())
+	}
+	if !reflect.DeepEqual(expectedTags, span.Tags()) {
+		t.Errorf("Want %q, have %q", expectedTags, span.Tags())
+	}
 }
 
 func TestFromHTTPRequestTags(t *testing.T) {
@@ -92,10 +95,15 @@ func TestFromHTTPRequestTags(t *testing.T) {
 	opentracing.SpanFromContext(ctx).Finish()
 
 	childSpan := tracer.FinishedSpans()[0]
-	assert.Equal(t, "op", childSpan.OperationName)
-	assert.Equal(t, map[string]interface{}{
+	expectedTags := map[string]interface{}{
 		string(ext.HTTPMethod): "GET",
 		string(ext.HTTPUrl):    "http://test.biz/path",
 		string(ext.SpanKind):   ext.SpanKindRPCServerEnum,
-	}, childSpan.Tags())
+	}
+	if !reflect.DeepEqual(expectedTags, childSpan.Tags()) {
+		t.Errorf("Want %q, have %q", expectedTags, childSpan.Tags())
+	}
+	if want, have := "op", childSpan.OperationName; want != have {
+		t.Errorf("Want %q, have %q", want, have)
+	}
 }
