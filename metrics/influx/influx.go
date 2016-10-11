@@ -26,8 +26,8 @@ import (
 //
 // Influx tags are attached to the Influx object, can be given to each
 // metric at construction and can be updated anytime via With function. Influx fields
-// are mapped to Go kit label values directly by this collector. Actual metric values are provided as
-// fields with specific names depending on the metric.
+// are mapped to Go kit label values directly by this collector. Actual metric
+// values are provided as fields with specific names depending on the metric.
 //
 // All observations are collected in memory locally, and flushed on demand.
 type Influx struct {
