@@ -30,7 +30,7 @@ func TestTraceGRPCRequestRoundtrip(t *testing.T) {
 	// The Span should not have changed.
 	afterSpan := opentracing.SpanFromContext(afterCtx)
 	if beforeSpan != afterSpan {
-		t.Errorf("Should not swap in a new span")
+		t.Error("Should not swap in a new span")
 	}
 
 	// No spans should have finished yet.

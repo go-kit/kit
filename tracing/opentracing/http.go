@@ -21,7 +21,8 @@ func ToHTTPRequest(tracer opentracing.Tracer, logger log.Logger) kithttp.Request
 		// Try to find a Span in the Context.
 		if span := opentracing.SpanFromContext(ctx); span != nil {
 			// Add standard OpenTracing tags.
-			ext.HTTPMethod.Set(span, req.URL.RequestURI())
+			ext.HTTPMethod.Set(span, req.Method)
+			ext.HTTPUrl.Set(span, req.URL.String())
 			host, portString, err := net.SplitHostPort(req.URL.Host)
 			if err == nil {
 				ext.PeerHostname.Set(span, host)
@@ -61,7 +62,10 @@ func FromHTTPRequest(tracer opentracing.Tracer, operationName string, logger log
 		if err != nil && err != opentracing.ErrSpanContextNotFound {
 			logger.Log("err", err)
 		}
+
 		span = tracer.StartSpan(operationName, ext.RPCServerOption(wireContext))
+		ext.HTTPMethod.Set(span, req.Method)
+		ext.HTTPUrl.Set(span, req.URL.String())
 		return opentracing.ContextWithSpan(ctx, span)
 	}
 }

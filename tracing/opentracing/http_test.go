@@ -2,9 +2,11 @@ package opentracing_test
 
 import (
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/mocktracer"
 	"golang.org/x/net/context"
 
@@ -23,14 +25,14 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	beforeCtx := opentracing.ContextWithSpan(context.Background(), beforeSpan)
 
 	toHTTPFunc := kitot.ToHTTPRequest(tracer, logger)
-	req, _ := http.NewRequest("GET", "http://test.biz/url", nil)
+	req, _ := http.NewRequest("GET", "http://test.biz/path", nil)
 	// Call the RequestFunc.
 	afterCtx := toHTTPFunc(beforeCtx, req)
 
 	// The Span should not have changed.
 	afterSpan := opentracing.SpanFromContext(afterCtx)
 	if beforeSpan != afterSpan {
-		t.Errorf("Should not swap in a new span")
+		t.Error("Should not swap in a new span")
 	}
 
 	// No spans should have finished yet.
@@ -59,6 +61,49 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 		t.Errorf("Want %q, have %q", want, have)
 	}
 	if want, have := "check", joinedSpan.BaggageItem("baggage"); want != have {
+		t.Errorf("Want %q, have %q", want, have)
+	}
+}
+
+func TestToHTTPRequestTags(t *testing.T) {
+	tracer := mocktracer.New()
+	span := tracer.StartSpan("to_inject").(*mocktracer.MockSpan)
+	defer span.Finish()
+	ctx := opentracing.ContextWithSpan(context.Background(), span)
+	req, _ := http.NewRequest("GET", "http://test.biz/path", nil)
+
+	kitot.ToHTTPRequest(tracer, log.NewNopLogger())(ctx, req)
+
+	expectedTags := map[string]interface{}{
+		string(ext.HTTPMethod):   "GET",
+		string(ext.HTTPUrl):      "http://test.biz/path",
+		string(ext.PeerHostname): "test.biz",
+	}
+	if !reflect.DeepEqual(expectedTags, span.Tags()) {
+		t.Errorf("Want %q, have %q", expectedTags, span.Tags())
+	}
+}
+
+func TestFromHTTPRequestTags(t *testing.T) {
+	tracer := mocktracer.New()
+	parentSpan := tracer.StartSpan("to_extract").(*mocktracer.MockSpan)
+	defer parentSpan.Finish()
+	req, _ := http.NewRequest("GET", "http://test.biz/path", nil)
+	tracer.Inject(parentSpan.Context(), opentracing.TextMap, opentracing.HTTPHeadersCarrier(req.Header))
+
+	ctx := kitot.FromHTTPRequest(tracer, "op", log.NewNopLogger())(context.Background(), req)
+	opentracing.SpanFromContext(ctx).Finish()
+
+	childSpan := tracer.FinishedSpans()[0]
+	expectedTags := map[string]interface{}{
+		string(ext.HTTPMethod): "GET",
+		string(ext.HTTPUrl):    "http://test.biz/path",
+		string(ext.SpanKind):   ext.SpanKindRPCServerEnum,
+	}
+	if !reflect.DeepEqual(expectedTags, childSpan.Tags()) {
+		t.Errorf("Want %q, have %q", expectedTags, childSpan.Tags())
+	}
+	if want, have := "op", childSpan.OperationName; want != have {
 		t.Errorf("Want %q, have %q", want, have)
 	}
 }
