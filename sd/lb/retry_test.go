@@ -42,7 +42,7 @@ func TestRetryMaxPartialFail(t *testing.T) {
 		ctx     = context.Background()
 	)
 	if _, err := loadbalancer.Retry(retries, time.Second, lb)(ctx, struct{}{}); err == nil {
-		t.Errorf("expected error, got none")
+		t.Errorf("expected error two, got none")
 	}
 }
 
@@ -98,7 +98,7 @@ func TestAbortEarlyCustomMessage_WCB(t *testing.T) {
 		}
 		endpoints = sd.FixedSubscriber{} // no endpoints
 		lb        = loadbalancer.NewRoundRobin(endpoints)
-		retry     = loadbalancer.RetryWithCallback(999, time.Second, lb, cb) // lots of retries
+		retry     = loadbalancer.RetryWithCallback(time.Second, lb, cb) // lots of retries
 		ctx       = context.Background()
 	)
 	_, err := retry(ctx, struct{}{})
@@ -107,27 +107,6 @@ func TestAbortEarlyCustomMessage_WCB(t *testing.T) {
 	}
 	if err.Error() != "Aborting early" {
 		t.Errorf("expected custom error message, got %v", err)
-	}
-}
-
-func TestAbortEarlyOnNTries_WCB(t *testing.T) {
-	var (
-		cb = func(count int, err error) (bool, error) {
-			if count >= 4 {
-				t.Errorf("expected retries to abort at 3 but continued to %v", count)
-			}
-			if count == 3 {
-				return false, nil
-			}
-			return true, nil
-		}
-		endpoints = sd.FixedSubscriber{} // no endpoints
-		lb        = loadbalancer.NewRoundRobin(endpoints)
-		retry     = loadbalancer.RetryWithCallback(999, time.Second, lb, cb) // lots of retries
-		ctx       = context.Background()
-	)
-	if _, err := retry(ctx, struct{}{}); err == nil {
-		t.Errorf("expected error, got none") // should fail
 	}
 }
 
@@ -145,7 +124,7 @@ func TestErrorPassedUnchangedToCallback_WCB(t *testing.T) {
 		}
 		endpoints = sd.FixedSubscriber{endpoint} // no endpoints
 		lb        = loadbalancer.NewRoundRobin(endpoints)
-		retry     = loadbalancer.RetryWithCallback(999, time.Second, lb, cb) // lots of retries
+		retry     = loadbalancer.RetryWithCallback(time.Second, lb, cb) // lots of retries
 		ctx       = context.Background()
 	)
 	_, _ = retry(ctx, struct{}{})

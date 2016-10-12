@@ -10,7 +10,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// Callback is a function that indicates the current attempt count and the error
+// Callback is a function that is given the current attempt count and the error
 // encountered. Should return whether the Retry function should continue trying,
 // and a custom error message if desired. The error message may be nil, but a
 // true/false is always expected. In all cases if the error message is supplied,
@@ -23,7 +23,17 @@ type Callback func(n int, received error) (keepTrying bool, cbErr error)
 // balancer. Requests that return errors will be retried until they succeed,
 // up to max times, or until the timeout is elapsed, whichever comes first.
 func Retry(max int, timeout time.Duration, b Balancer) endpoint.Endpoint {
-	return RetryWithCallback(max, timeout, b, func(c int, err error) (bool, error) { return true, nil })
+	return RetryWithCallback(timeout, b, maxRetries(max))
+}
+
+// maxRetries returns a callback function that enforces max retries.
+func maxRetries(max int) Callback {
+	return func(n int, err error) (bool, error) {
+		if n < max {
+			return true, nil
+		}
+		return false, nil
+	}
 }
 
 // RetryWithCallback wraps a service load balancer and returns an endpoint oriented load
@@ -32,7 +42,7 @@ func Retry(max int, timeout time.Duration, b Balancer) endpoint.Endpoint {
 // balancer. Requests that return errors will be retried until they succeed,
 // up to max times, until the callback returns false, or until the timeout is elapsed,
 // whichever comes first.
-func RetryWithCallback(max int, timeout time.Duration, b Balancer, cb Callback) endpoint.Endpoint {
+func RetryWithCallback(timeout time.Duration, b Balancer, cb Callback) endpoint.Endpoint {
 	if cb == nil {
 		panic("nil Callback")
 	}
@@ -47,7 +57,7 @@ func RetryWithCallback(max int, timeout time.Duration, b Balancer, cb Callback) 
 			a              = []string{}
 		)
 		defer cancel()
-		for i := 1; i <= max; i++ {
+		for i := 1; ; i++ {
 			go func() {
 				e, err := b.Endpoint()
 				if err != nil {
@@ -83,6 +93,5 @@ func RetryWithCallback(max int, timeout time.Duration, b Balancer, cb Callback) 
 				continue
 			}
 		}
-		return nil, fmt.Errorf("retry attempts exceeded (%s)", strings.Join(a, "; "))
 	}
 }
