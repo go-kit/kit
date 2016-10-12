@@ -129,3 +129,17 @@ func TestErrorPassedUnchangedToCallback_WCB(t *testing.T) {
 	)
 	_, _ = retry(ctx, struct{}{})
 }
+
+func TestHandleNilCallback(t *testing.T) {
+	var (
+		subscriber = sd.FixedSubscriber{
+			func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil /* OK */ },
+		}
+		lb  = loadbalancer.NewRoundRobin(subscriber)
+		ctx = context.Background()
+	)
+	retry := loadbalancer.RetryWithCallback(time.Second, lb, nil)
+	if _, err := retry(ctx, struct{}{}); err != nil {
+		t.Error(err)
+	}
+}

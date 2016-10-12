@@ -44,7 +44,9 @@ func maxRetries(max int) Callback {
 // whichever comes first.
 func RetryWithCallback(timeout time.Duration, b Balancer, cb Callback) endpoint.Endpoint {
 	if cb == nil {
-		panic("nil Callback")
+		cb = func(n int, err error) (bool, error) {
+			return true, nil
+		}
 	}
 	if b == nil {
 		panic("nil Balancer")
