@@ -7,9 +7,8 @@ maintainers. Suggest new ideas, enhancements, and features using the standard
 
 ## Prioritized
 
-1. package metrics refactor (#313, #263, #300)
-2. kitgen code generation (#308, #70)
-3. package pubsub (#298, #295)
+1. kitgen code generation (#308, #70)
+1. package pubsub (#298, #295)
 
 ## Unprioritized
 
