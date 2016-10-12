@@ -11,7 +11,6 @@ import (
 	influxdb "github.com/influxdata/influxdb/client/v2"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics/generic"
 	"github.com/go-kit/kit/metrics/teststat"
 )
 
@@ -49,18 +48,20 @@ func TestGauge(t *testing.T) {
 
 func TestHistogram(t *testing.T) {
 	in := New(map[string]string{"foo": "alpha"}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
-	re := regexp.MustCompile(`influx_histogram,foo=alpha bar="beta",value=([0-9\.]+) [0-9]+`)
+	re := regexp.MustCompile(`influx_histogram,bar=beta,foo=alpha p50=([0-9\.]+),p90=([0-9\.]+),p95=([0-9\.]+),p99=([0-9\.]+) [0-9]+`)
 	histogram := in.NewHistogram("influx_histogram").With("bar", "beta")
 	quantiles := func() (float64, float64, float64, float64) {
 		w := &bufWriter{}
 		in.WriteTo(w)
-		h := generic.NewHistogram("h", 50)
-		matches := re.FindAllStringSubmatch(w.buf.String(), -1)
-		for _, match := range matches {
-			f, _ := strconv.ParseFloat(match[1], 64)
-			h.Observe(f)
+		match := re.FindStringSubmatch(w.buf.String())
+		if len(match) != 5 {
+			t.Errorf("These are not the quantiles you're looking for: %v\n", match)
 		}
-		return h.Quantile(0.50), h.Quantile(0.90), h.Quantile(0.95), h.Quantile(0.99)
+		var result [4]float64
+		for i, q := range match[1:] {
+			result[i], _ = strconv.ParseFloat(q, 64)
+		}
+		return result[0], result[1], result[2], result[3]
 	}
 	if err := teststat.TestHistogram(histogram, quantiles, 0.01); err != nil {
 		t.Fatal(err)
