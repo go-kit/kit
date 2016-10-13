@@ -55,9 +55,9 @@ func (r *Reporter) NewCounter(name string, desc ...string) (*Counter, error) {
 // With is a no-op.
 func (c *Counter) With(labelValues ...string) metrics.Counter { return c }
 
-// Add implements Counter.
+// Add increments Counter.
 // speed Counters only take int64, so delta is converted to int64 before
-// observation. speed Gauges can take float64 and Add(float64)
+// observation. speed Gauges can take float64 and `Add(float64)`
 // is implemented by metrics.Gauge.
 func (c *Counter) Add(delta float64) { c.c.Inc(int64(delta)) }
 
@@ -118,7 +118,7 @@ func (h *Histogram) With(labelValues ...string) metrics.Histogram { return h }
 
 // Observe observes a value.
 //
-// this converts float64 value to int64 before observation, as the Histogram in
+// This converts float64 value to int64 before observation, as the Histogram in
 // speed is backed using codahale/hdrhistogram, which only observes int64
 // values. Additionally, the value is interpreted in the metric unit used to
 // construct the histogram.
