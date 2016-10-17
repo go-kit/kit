@@ -11,10 +11,10 @@ type Reporter struct {
 	c *speed.PCPClient
 }
 
-// NewReporter creates a new Reporter instance.
-// The first parameter is the application name and is used to create
-// the speed client. Hence it should be a valid speed parameter name and
-// should not contain spaces or the path separator for your operating system.
+// NewReporter creates a new Reporter instance. The first parameter is the
+// application name and is used to create the speed client. Hence it should be a
+// valid speed parameter name and should not contain spaces or the path
+// separator for your operating system.
 func NewReporter(appname string) (*Reporter, error) {
 	c, err := speed.NewPCPClient(appname)
 	if err != nil {
@@ -37,11 +37,9 @@ type Counter struct {
 	c speed.Counter
 }
 
-// NewCounter creates a new Counter.
-//
-// This requires a name parameter and can optionally take a couple of
-// description strings, that are used to create the underlying speed.Counter
-// and are reported by PCP.
+// NewCounter creates a new Counter. This requires a name parameter and can
+// optionally take a couple of description strings, that are used to create the
+// underlying speed.Counter and are reported by PCP.
 func (r *Reporter) NewCounter(name string, desc ...string) (*Counter, error) {
 	c, err := speed.NewPCPCounter(0, name, desc...)
 	if err != nil {
@@ -55,10 +53,8 @@ func (r *Reporter) NewCounter(name string, desc ...string) (*Counter, error) {
 // With is a no-op.
 func (c *Counter) With(labelValues ...string) metrics.Counter { return c }
 
-// Add increments Counter.
-// speed Counters only take int64, so delta is converted to int64 before
-// observation. speed Gauges can take float64 and `Add(float64)`
-// is implemented by metrics.Gauge.
+// Add increments Counter. speed.Counters only take int64, so delta is converted
+// to int64 before observation.
 func (c *Counter) Add(delta float64) { c.c.Inc(int64(delta)) }
 
 // Gauge implements metrics.Gauge via a single dimensional speed.Gauge.
@@ -66,10 +62,9 @@ type Gauge struct {
 	g speed.Gauge
 }
 
-// NewGauge creates a new Gauge.
-//
-// This requires a name parameter, and again, can take a couple of
-// optional description strings.
+// NewGauge creates a new Gauge. This requires a name parameter and can
+// optionally take a couple of description strings, that are used to create the
+// underlying speed.Gauge and are reported by PCP.
 func (r *Reporter) NewGauge(name string, desc ...string) (*Gauge, error) {
 	g, err := speed.NewPCPGauge(0, name, desc...)
 	if err != nil {
@@ -94,13 +89,11 @@ type Histogram struct {
 	h speed.Histogram
 }
 
-// NewHistogram creates a new Histogram.
-// Minimum observeable value is 0.
-// Maximum observeable value is 3600000000.
+// NewHistogram creates a new Histogram. The minimum observeable value is 0. The
+// maximum observeable value is 3600000000 (3.6e9).
 //
-// The required parameters are a metric name,
-// the minimum and maximum observable values,
-// and a metric unit for the units of the observed values.
+// The required parameters are a metric name, the minimum and maximum observable
+// values, and a metric unit for the units of the observed values.
 //
 // Optionally, it can also take a couple of description strings.
 func (r *Reporter) NewHistogram(name string, min, max int64, unit speed.MetricUnit, desc ...string) (*Histogram, error) {
