@@ -101,7 +101,7 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Verify test data no longer exists in etcd.
-	entries, err = client.GetEntries(key)
+	_, err = client.GetEntries(key)
 	if err == nil {
 		t.Fatalf("GetEntries(%q): expected error, got none", key)
 	}
