@@ -81,8 +81,13 @@ func TestHistogram(histogram metrics.Histogram, quantiles func() (p50, p90, p95,
 }
 
 var (
+	// Count is the number of observations.
 	Count = 12345
-	Mean  = 500
+
+	// Mean is the center of the normal distribution of observations.
+	Mean = 500
+
+	// Stdev of the normal distribution of observations.
 	Stdev = 25
 )
 

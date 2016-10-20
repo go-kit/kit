@@ -40,7 +40,7 @@ func testFailingEndpoint(
 
 	// Switch the endpoint to start throwing errors.
 	m.err = errors.New("tragedy+disaster")
-	m.thru = 0
+	m.through = 0
 
 	// The first several should be allowed through and yield our error.
 	for i := 0; shouldPass(i); i++ {
@@ -49,7 +49,7 @@ func testFailingEndpoint(
 		}
 		time.Sleep(requestDelay)
 	}
-	thru := m.thru
+	through := m.through
 
 	// But the rest should be blocked by an open circuit.
 	for i := 0; i < 10; i++ {
@@ -60,17 +60,17 @@ func testFailingEndpoint(
 	}
 
 	// Make sure none of those got through.
-	if want, have := thru, m.thru; want != have {
+	if want, have := through, m.through; want != have {
 		t.Errorf("%s: want %d, have %d", caller, want, have)
 	}
 }
 
 type mock struct {
-	thru int
+	through int
 	err  error
 }
 
 func (m *mock) endpoint(context.Context, interface{}) (interface{}, error) {
-	m.thru++
+	m.through++
 	return struct{}{}, m.err
 }

@@ -26,7 +26,7 @@ func TestManager(t *testing.T) {
 		t.Fatal("nil conn")
 	}
 
-	// Write and check it went thru.
+	// Write and check it went through.
 	if _, err := conn.Write([]byte{1, 2, 3}); err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestManager(t *testing.T) {
 		t.Fatal("conn remained nil")
 	}
 
-	// Write and check it went thru.
+	// Write and check it went through.
 	if _, err := conn.Write([]byte{4, 5}); err != nil {
 		t.Fatal(err)
 	}

@@ -47,7 +47,7 @@ func TestClientEndpointEncodeError(t *testing.T) {
 	}
 }
 
-func ExampleErrOutput() {
+func ExampleErrorOutput() {
 	sampleErr := errors.New("oh no, an error")
 	err := httptransport.Error{Domain: httptransport.DomainDo, Err: sampleErr}
 	fmt.Println(err)
