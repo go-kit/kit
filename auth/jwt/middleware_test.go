@@ -21,14 +21,7 @@ var (
 func TestSigner(t *testing.T) {
 	e := func(ctx context.Context, i interface{}) (interface{}, error) { return ctx, nil }
 
-	keys := KeySet{
-		kid: {
-			Method: method,
-			Key:    key,
-		},
-	}
-
-	signer := NewSigner(kid, keys, claims)(e)
+	signer := NewSigner(kid, key, method, claims)(e)
 	ctx, err := signer(context.Background(), struct{}{})
 	if err != nil {
 		t.Fatalf("Signer returned error: %s", err)
@@ -47,14 +40,11 @@ func TestSigner(t *testing.T) {
 func TestJWTParser(t *testing.T) {
 	e := func(ctx context.Context, i interface{}) (interface{}, error) { return ctx, nil }
 
-	keys := KeySet{
-		kid: {
-			Method: method,
-			Key:    key,
-		},
+	keys := func(token *jwt.Token) (interface{}, error) {
+		return key, nil
 	}
 
-	parser := NewParser(keys)(e)
+	parser := NewParser(keys, method)(e)
 
 	// No Token is passed into the parser
 	_, err := parser(context.Background(), struct{}{})
@@ -74,14 +64,7 @@ func TestJWTParser(t *testing.T) {
 	}
 
 	// Invalid Method is used in the parser
-	invalidMethodKeys := KeySet{
-		kid: {
-			Method: invalidMethod,
-			Key:    key,
-		},
-	}
-
-	badParser := NewParser(invalidMethodKeys)(e)
+	badParser := NewParser(keys, invalidMethod)(e)
 	ctx = context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
 	_, err = badParser(ctx, struct{}{})
 	if err == nil {
@@ -93,14 +76,11 @@ func TestJWTParser(t *testing.T) {
 	}
 
 	// Invalid key is used in the parser
-	invalidKeys := KeySet{
-		kid: {
-			Method: method,
-			Key:    []byte("bad"),
-		},
+	invalidKeys := func(token *jwt.Token) (interface{}, error) {
+		return []byte("bad"), nil
 	}
 
-	badParser = NewParser(invalidKeys)(e)
+	badParser = NewParser(invalidKeys, method)(e)
 	ctx = context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
 	_, err = badParser(ctx, struct{}{})
 	if err == nil {

@@ -9,21 +9,22 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-type key string
+type contextKey string
 
 const (
 	// JWTTokenContextKey holds the key used to store a JWT Token in the context
-	JWTTokenContextKey key = "JWTToken"
+	JWTTokenContextKey contextKey = "JWTToken"
 	// JWTClaimsContxtKey holds the key used to store the JWT Claims in the context
-	JWTClaimsContextKey key = "JWTClaims"
+	JWTClaimsContextKey contextKey = "JWTClaims"
 )
 
 var (
 	ErrTokenContextMissing     = errors.New("Token up for parsing was not passed through the context")
 	ErrTokenInvalid            = errors.New("JWT Token was invalid")
+	ErrTokenExpired            = errors.New("JWT Token is expired")
+	ErrTokenMalformed          = errors.New("JWT Token is malformed")
+	ErrTokenNotActive          = errors.New("Token is not valid yet")
 	ErrUnexpectedSigningMethod = errors.New("Unexpected signing method")
-	ErrKIDNotFound             = errors.New("Key ID was not found in key set")
-	ErrNoKIDHeader             = errors.New("Token doesn't have 'kid' header")
 )
 
 type Claims map[string]interface{}
@@ -35,18 +36,14 @@ type KeySet map[string]struct {
 
 // Create a new JWT token generating middleware, specifying signing method and the claims
 // you would like it to contain. Particularly useful for clients.
-func NewSigner(kid string, keys KeySet, claims Claims) endpoint.Middleware {
+func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims Claims) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			key, ok := keys[kid]
-			if !ok {
-				return nil, ErrKIDNotFound
-			}
-
-			token := jwt.NewWithClaims(key.Method, jwt.MapClaims(claims))
+			token := jwt.NewWithClaims(method, jwt.MapClaims(claims))
 			token.Header["kid"] = kid
+
 			// Sign and get the complete encoded token as a string using the secret
-			tokenString, err := token.SignedString(key.Key)
+			tokenString, err := token.SignedString(key)
 			if err != nil {
 				return nil, err
 			}
@@ -60,7 +57,7 @@ func NewSigner(kid string, keys KeySet, claims Claims) endpoint.Middleware {
 // Create a new JWT token parsing middleware, specifying a jwt.Keyfunc interface and the
 // signing method. Adds the resulting claims to endpoint context or returns error on invalid
 // token. Particularly useful for servers.
-func NewParser(keys KeySet) endpoint.Middleware {
+func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// tokenString is stored in the context from the transport handlers
@@ -74,25 +71,26 @@ func NewParser(keys KeySet) endpoint.Middleware {
 			// head of the token to identify which key to use, but the parsed token (head and claims) is provided
 			// to the callback, providing flexibility.
 			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-				kid, ok := token.Header["kid"]
-				if !ok {
-					return nil, ErrNoKIDHeader
-				}
-
-				key, ok := keys[kid.(string)]
-				if !ok {
-					return nil, ErrKIDNotFound
-				}
-
 				// Don't forget to validate the alg is what you expect:
-				if token.Method != key.Method {
+				if token.Method != method {
 					return nil, ErrUnexpectedSigningMethod
 				}
 
-				return key.Key, nil
+				return keyFunc(token)
 			})
 			if err != nil {
 				if e, ok := err.(*jwt.ValidationError); ok && e.Inner != nil {
+					if e.Errors&jwt.ValidationErrorMalformed != 0 {
+						// Token is malformed
+						return nil, ErrTokenMalformed
+					} else if e.Errors&jwt.ValidationErrorExpired != 0 {
+						// Token is expired
+						return nil, ErrTokenExpired
+					} else if e.Errors&jwt.ValidationErrorNotValidYet != 0 {
+						// Token is not active yet
+						return nil, ErrTokenNotActive
+					}
+
 					return nil, e.Inner
 				}
 
