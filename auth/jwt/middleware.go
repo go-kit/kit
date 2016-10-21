@@ -9,11 +9,13 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
+type key string
+
 const (
 	// JWTTokenContextKey holds the key used to store a JWT Token in the context
-	JWTTokenContextKey = "JWTToken"
+	JWTTokenContextKey key = "JWTToken"
 	// JWTClaimsContxtKey holds the key used to store the JWT Claims in the context
-	JWTClaimsContextKey = "JWTClaims"
+	JWTClaimsContextKey key = "JWTClaims"
 )
 
 var (
