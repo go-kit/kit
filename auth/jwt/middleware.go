@@ -29,11 +29,6 @@ var (
 
 type Claims map[string]interface{}
 
-type KeySet map[string]struct {
-	Method jwt.SigningMethod
-	Key    []byte
-}
-
 // Create a new JWT token generating middleware, specifying signing method and the claims
 // you would like it to contain. Particularly useful for clients.
 func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims Claims) endpoint.Middleware {
