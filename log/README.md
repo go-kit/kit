@@ -68,7 +68,7 @@ import (
 )
 
 func main() {
-	logger := kitlog.NewJSONLogger(log.NewSyncWriter(os.Stdout))
+	logger := kitlog.NewJSONLogger(kitlog.NewSyncWriter(os.Stdout))
 	stdlog.SetOutput(kitlog.NewStdlibAdapter(logger))
 	stdlog.Print("I sure like pie")
 }
