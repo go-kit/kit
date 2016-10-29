@@ -57,7 +57,7 @@ func main() {
 
 In order for the parser and the signer to work, the authorization headers need to be passed between the request and the context.
 `ToHTTPContext()`, `FromHTTPContext()`, `ToGRPCContext()`, and `FromGRPCContext()` are given as helpers to do this.
-These function impliment the correlating transport's RequestFunc interface and can be passed as ClientBefore or ServerBefore options.
+These function implement the correlating transport's RequestFunc interface and can be passed as ClientBefore or ServerBefore options.
 
 Example of use in a client:
 
