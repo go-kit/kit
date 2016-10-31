@@ -1,90 +1,89 @@
 # package auth/jwt
 
-`package auth/jwt` provides a set of interfaces for service authorization through [JSON Web Tokens](https://jwt.io/).
+`package auth/jwt` provides a set of interfaces for service authorization
+through [JSON Web Tokens](https://jwt.io/).
 
 ## Usage
 
-NewParser takes a key function and an expected signing method and returns an `endpoint.Middleware`. 
-The middleware will parse a token passed into the context via the `jwt.JWTTokenContextKey`. 
-If the token is valid, any claims will be added to the context via the `jwt.JWTClaimsContextKey`.
+NewParser takes a key function and an expected signing method and returns an
+`endpoint.Middleware`. The middleware will parse a token passed into the
+context via the `jwt.JWTTokenContextKey`. If the token is valid, any claims
+will be added to the context via the `jwt.JWTClaimsContextKey`.
 
 ```go
 import (
 	stdjwt "github.com/dgrijalva/jwt-go"
-    
-    "github.com/go-kit/kit/auth/jwt"
-    "github.com/go-kit/kit/endpoint"
+	
+	"github.com/go-kit/kit/auth/jwt"
+	"github.com/go-kit/kit/endpoint"
 )
 
 func main() {
 	var exampleEndpoint endpoint.Endpoint
 	{
-		keyFunc := func(token *stdjwt.Token) (interface{}, error) { return []byte("SigningString"), nil }
-		jwtParser := jwt.NewParser(keyFunc, stdjwt.SigningMethodHS256)
-        
+		kf := func(token *stdjwt.Token) (interface{}, error) { return []byte("SigningString"), nil }
 		exampleEndpoint = MakeExampleEndpoint(service)
-		exampleEndpoint = jwtParser(exampleEndpoint)
+		exampleEndpoint = jwt.NewParser(kf, stdjwt.SigningMethodHS256)(exampleEndpoint)
 	}
 }
 ```
 
-NewSigner takes a JWT key id header, the signing key, signing method, and a claims object. It returns an `endpoint.Middleware`.
-The middleware will build the token string and add it to the context via the `jwt.JWTTokenContextKey`.
+NewSigner takes a JWT key ID header, the signing key, signing method, and a
+claims object. It returns an `endpoint.Middleware`. The middleware will build
+the token string and add it to the context via the `jwt.JWTTokenContextKey`.
 
 ```go
 import (
 	stdjwt "github.com/dgrijalva/jwt-go"
-    
-    "github.com/go-kit/kit/auth/jwt"
-    "github.com/go-kit/kit/endpoint"
+	
+	"github.com/go-kit/kit/auth/jwt"
+	"github.com/go-kit/kit/endpoint"
 )
 
 func main() {
 	var exampleEndpoint endpoint.Endpoint
 	{
-		jwtSigner := jwt.NewSigner("kid-header", []byte("SigningString"), stdjwt.SigningMethodHS256, jwt.Claims{})
-        
-		exampleEndpoint = grpctransport.NewClient(
-        	. // build client endpoint here
-			.
-			.
-		).Endpoint()
-
-		exampleEndpoint = jwtSigner(exampleEndpoint)
+		exampleEndpoint = grpctransport.NewClient(...).Endpoint()
+		exampleEndpoint = jwt.NewSigner(
+			"kid-header", 
+			[]byte("SigningString"), 
+			stdjwt.SigningMethodHS256, 
+			jwt.Claims{},
+		)(exampleEndpoint)
 	}
 }
 ```
 
-In order for the parser and the signer to work, the authorization headers need to be passed between the request and the context.
-`ToHTTPContext()`, `FromHTTPContext()`, `ToGRPCContext()`, and `FromGRPCContext()` are given as helpers to do this.
-These functions implement the correlating transport's RequestFunc interface and can be passed as ClientBefore or ServerBefore options.
+In order for the parser and the signer to work, the authorization headers need
+to be passed between the request and the context. `ToHTTPContext()`,
+`FromHTTPContext()`, `ToGRPCContext()`, and `FromGRPCContext()` are given as
+helpers to do this. These functions implement the correlating transport's
+RequestFunc interface and can be passed as ClientBefore or ServerBefore
+options.
 
 Example of use in a client:
 
 ```go
 import (
-    stdjwt "github.com/dgrijalva/jwt-go"
-    grpctransport "github.com/go-kit/kit/transport/grpc"
-    
-    "github.com/go-kit/kit/auth/jwt"
-    "github.com/go-kit/kit/endpoint"
+	stdjwt "github.com/dgrijalva/jwt-go"
+
+	grpctransport "github.com/go-kit/kit/transport/grpc"	
+	"github.com/go-kit/kit/auth/jwt"
+	"github.com/go-kit/kit/endpoint"
 )
 
 func main() {
 
-    options := []httptransport.ClientOption{}
+	options := []httptransport.ClientOption{}
 	var exampleEndpoint endpoint.Endpoint
 	{
-		jwtSigner := jwt.NewSigner("kid-header", []byte("SigningString"), stdjwt.SigningMethodHS256, jwt.Claims{})
-       
-		options = append(options, grpctransport.ClientBefore(jwt.FromGRPCContext()))
-		exampleEndpoint = grpctransport.NewClient(
-        	. // build client endpoint here
-			.
-			options....
-		).Endpoint()
-
-		exampleEndpoint = jwtSigner(exampleEndpoint)
+		exampleEndpoint = grpctransport.NewClient(..., grpctransport.ClientBefore(jwt.FromGRPCContext())).Endpoint()
+		exampleEndpoint = jwt.NewSigner(
+			"kid-header",
+			[]byte("SigningString"),
+			stdjwt.SigningMethodHS256,
+			jwt.Claims{},
+		)(exampleEndpoint)
 	}
 }
 ```
