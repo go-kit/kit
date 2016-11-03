@@ -17,7 +17,7 @@ const (
 	bearerFormat string = "Bearer %s"
 )
 
-// ToHTTPContext moves JWT token from request header to contexti. Particularly
+// ToHTTPContext moves JWT token from request header to context. Particularly
 // useful for servers
 func ToHTTPContext() http.RequestFunc {
 	return func(ctx context.Context, r *stdhttp.Request) context.Context {
