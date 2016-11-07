@@ -10,10 +10,11 @@ import (
 
 	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"
+	kithttp "github.com/go-kit/kit/transport/http"
+
 	"github.com/go-kit/kit/examples/shipping/cargo"
 	"github.com/go-kit/kit/examples/shipping/location"
 	"github.com/go-kit/kit/examples/shipping/voyage"
-	kithttp "github.com/go-kit/kit/transport/http"
 )
 
 type proxyService struct {
@@ -56,7 +57,7 @@ func (s proxyService) FetchRoutesForSpecification(rs cargo.RouteSpecification) [
 type ServiceMiddleware func(Service) Service
 
 // NewProxyingMiddleware returns a new instance of a proxying middleware.
-func NewProxyingMiddleware(proxyURL string, ctx context.Context) ServiceMiddleware {
+func NewProxyingMiddleware(ctx context.Context, proxyURL string) ServiceMiddleware {
 	return func(next Service) Service {
 		var e endpoint.Endpoint
 		e = makeFetchRoutesEndpoint(ctx, proxyURL)

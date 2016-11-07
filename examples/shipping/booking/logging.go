@@ -3,9 +3,10 @@ package booking
 import (
 	"time"
 
+	"github.com/go-kit/kit/log"
+
 	"github.com/go-kit/kit/examples/shipping/cargo"
 	"github.com/go-kit/kit/examples/shipping/location"
-	"github.com/go-kit/kit/log"
 )
 
 type loggingService struct {
@@ -18,18 +19,18 @@ func NewLoggingService(logger log.Logger, s Service) Service {
 	return &loggingService{logger, s}
 }
 
-func (s *loggingService) BookNewCargo(origin location.UNLocode, destination location.UNLocode, arrivalDeadline time.Time) (id cargo.TrackingID, err error) {
+func (s *loggingService) BookNewCargo(origin location.UNLocode, destination location.UNLocode, deadline time.Time) (id cargo.TrackingID, err error) {
 	defer func(begin time.Time) {
 		s.logger.Log(
 			"method", "book",
 			"origin", origin,
 			"destination", destination,
-			"arrival_deadline", arrivalDeadline,
+			"arrival_deadline", deadline,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.BookNewCargo(origin, destination, arrivalDeadline)
+	return s.Service.BookNewCargo(origin, destination, deadline)
 }
 
 func (s *loggingService) LoadCargo(id cargo.TrackingID) (c Cargo, err error) {

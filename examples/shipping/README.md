@@ -16,7 +16,7 @@ The application consists of three application services, `booking`, `handling` an
 
 There are also a few pure domain packages that contain some intricate business-logic. They provide domain objects and services that are used by each application service to provide interesting use-cases for the user.
 
-`repository` contains in-memory implementations for the repositories found in the domain packages.
+`inmem` contains in-memory implementations for the repositories found in the domain packages.
 
 The `routing` package provides a _domain service_ that is used to query an external application for possible routes.
 

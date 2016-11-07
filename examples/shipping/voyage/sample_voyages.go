@@ -6,25 +6,25 @@ import "github.com/go-kit/kit/examples/shipping/location"
 var (
 	V100 = New("V100", Schedule{
 		[]CarrierMovement{
-			{DepartureLocation: location.Hongkong, ArrivalLocation: location.Tokyo},
-			{DepartureLocation: location.Tokyo, ArrivalLocation: location.NewYork},
+			{DepartureLocation: location.CNHKG, ArrivalLocation: location.JNTKO},
+			{DepartureLocation: location.JNTKO, ArrivalLocation: location.USNYC},
 		},
 	})
 
 	V300 = New("V300", Schedule{
 		[]CarrierMovement{
-			{DepartureLocation: location.Tokyo, ArrivalLocation: location.Rotterdam},
-			{DepartureLocation: location.Rotterdam, ArrivalLocation: location.Hamburg},
-			{DepartureLocation: location.Hamburg, ArrivalLocation: location.Melbourne},
-			{DepartureLocation: location.Melbourne, ArrivalLocation: location.Tokyo},
+			{DepartureLocation: location.JNTKO, ArrivalLocation: location.NLRTM},
+			{DepartureLocation: location.NLRTM, ArrivalLocation: location.DEHAM},
+			{DepartureLocation: location.DEHAM, ArrivalLocation: location.AUMEL},
+			{DepartureLocation: location.AUMEL, ArrivalLocation: location.JNTKO},
 		},
 	})
 
 	V400 = New("V400", Schedule{
 		[]CarrierMovement{
-			{DepartureLocation: location.Hamburg, ArrivalLocation: location.Stockholm},
-			{DepartureLocation: location.Stockholm, ArrivalLocation: location.Helsinki},
-			{DepartureLocation: location.Helsinki, ArrivalLocation: location.Hamburg},
+			{DepartureLocation: location.DEHAM, ArrivalLocation: location.SESTO},
+			{DepartureLocation: location.SESTO, ArrivalLocation: location.FIHEL},
+			{DepartureLocation: location.FIHEL, ArrivalLocation: location.DEHAM},
 		},
 	})
 )

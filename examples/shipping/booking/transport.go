@@ -9,10 +9,11 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 
-	"github.com/go-kit/kit/examples/shipping/cargo"
-	"github.com/go-kit/kit/examples/shipping/location"
 	kitlog "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
+
+	"github.com/go-kit/kit/examples/shipping/cargo"
+	"github.com/go-kit/kit/examples/shipping/location"
 )
 
 // MakeHandler returns a handler for the booking service.
@@ -81,7 +82,6 @@ func MakeHandler(ctx context.Context, bs Service, logger kitlog.Logger) http.Han
 	r.Handle("/booking/v1/cargos/{id}/assign_to_route", assignToRouteHandler).Methods("POST")
 	r.Handle("/booking/v1/cargos/{id}/change_destination", changeDestinationHandler).Methods("POST")
 	r.Handle("/booking/v1/locations", listLocationsHandler).Methods("GET")
-	r.Handle("/booking/v1/docs", http.StripPrefix("/booking/v1/docs", http.FileServer(http.Dir("booking/docs"))))
 
 	return r
 }

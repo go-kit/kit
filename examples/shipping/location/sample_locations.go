@@ -15,13 +15,13 @@ var (
 
 // Sample locations.
 var (
-	Stockholm = Location{SESTO, "Stockholm"}
-	Melbourne = Location{AUMEL, "Melbourne"}
-	Hongkong  = Location{CNHKG, "Hongkong"}
-	NewYork   = Location{USNYC, "New York"}
-	Chicago   = Location{USCHI, "Chicago"}
-	Tokyo     = Location{JNTKO, "Tokyo"}
-	Hamburg   = Location{DEHAM, "Hamburg"}
-	Rotterdam = Location{NLRTM, "Rotterdam"}
-	Helsinki  = Location{FIHEL, "Helsinki"}
+	Stockholm = &Location{SESTO, "Stockholm"}
+	Melbourne = &Location{AUMEL, "Melbourne"}
+	Hongkong  = &Location{CNHKG, "Hongkong"}
+	NewYork   = &Location{USNYC, "New York"}
+	Chicago   = &Location{USCHI, "Chicago"}
+	Tokyo     = &Location{JNTKO, "Tokyo"}
+	Hamburg   = &Location{DEHAM, "Hamburg"}
+	Rotterdam = &Location{NLRTM, "Rotterdam"}
+	Helsinki  = &Location{FIHEL, "Helsinki"}
 )

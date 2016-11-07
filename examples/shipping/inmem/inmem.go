@@ -1,5 +1,5 @@
-// Package repository provides implementations of all the domain repositories.
-package repository
+// Package inmem provides in-memory implementations of all the domain repositories.
+package inmem
 
 import (
 	"sync"
@@ -21,10 +21,10 @@ func (r *cargoRepository) Store(c *cargo.Cargo) error {
 	return nil
 }
 
-func (r *cargoRepository) Find(trackingID cargo.TrackingID) (*cargo.Cargo, error) {
+func (r *cargoRepository) Find(id cargo.TrackingID) (*cargo.Cargo, error) {
 	r.mtx.RLock()
 	defer r.mtx.RUnlock()
-	if val, ok := r.cargos[trackingID]; ok {
+	if val, ok := r.cargos[id]; ok {
 		return val, nil
 	}
 	return nil, cargo.ErrUnknown
@@ -40,36 +40,36 @@ func (r *cargoRepository) FindAll() []*cargo.Cargo {
 	return c
 }
 
-// NewCargo returns a new instance of a in-memory cargo repository.
-func NewCargo() cargo.Repository {
+// NewCargoRepository returns a new instance of a in-memory cargo repository.
+func NewCargoRepository() cargo.Repository {
 	return &cargoRepository{
 		cargos: make(map[cargo.TrackingID]*cargo.Cargo),
 	}
 }
 
 type locationRepository struct {
-	locations map[location.UNLocode]location.Location
+	locations map[location.UNLocode]*location.Location
 }
 
-func (r *locationRepository) Find(locode location.UNLocode) (location.Location, error) {
+func (r *locationRepository) Find(locode location.UNLocode) (*location.Location, error) {
 	if l, ok := r.locations[locode]; ok {
 		return l, nil
 	}
-	return location.Location{}, location.ErrUnknown
+	return nil, location.ErrUnknown
 }
 
-func (r *locationRepository) FindAll() []location.Location {
-	l := make([]location.Location, 0, len(r.locations))
+func (r *locationRepository) FindAll() []*location.Location {
+	l := make([]*location.Location, 0, len(r.locations))
 	for _, val := range r.locations {
 		l = append(l, val)
 	}
 	return l
 }
 
-// NewLocation returns a new instance of a in-memory location repository.
-func NewLocation() location.Repository {
+// NewLocationRepository returns a new instance of a in-memory location repository.
+func NewLocationRepository() location.Repository {
 	r := &locationRepository{
-		locations: make(map[location.UNLocode]location.Location),
+		locations: make(map[location.UNLocode]*location.Location),
 	}
 
 	r.locations[location.SESTO] = location.Stockholm
@@ -94,8 +94,8 @@ func (r *voyageRepository) Find(voyageNumber voyage.Number) (*voyage.Voyage, err
 	return nil, voyage.ErrUnknown
 }
 
-// NewVoyage returns a new instance of a in-memory voyage repository.
-func NewVoyage() voyage.Repository {
+// NewVoyageRepository returns a new instance of a in-memory voyage repository.
+func NewVoyageRepository() voyage.Repository {
 	r := &voyageRepository{
 		voyages: make(map[voyage.Number]*voyage.Voyage),
 	}
@@ -128,14 +128,14 @@ func (r *handlingEventRepository) Store(e cargo.HandlingEvent) {
 	r.events[e.TrackingID] = append(r.events[e.TrackingID], e)
 }
 
-func (r *handlingEventRepository) QueryHandlingHistory(trackingID cargo.TrackingID) cargo.HandlingHistory {
+func (r *handlingEventRepository) QueryHandlingHistory(id cargo.TrackingID) cargo.HandlingHistory {
 	r.mtx.RLock()
 	defer r.mtx.RUnlock()
-	return cargo.HandlingHistory{HandlingEvents: r.events[trackingID]}
+	return cargo.HandlingHistory{HandlingEvents: r.events[id]}
 }
 
-// NewHandlingEvent returns a new instance of a in-memory handling event repository.
-func NewHandlingEvent() cargo.HandlingEventRepository {
+// NewHandlingEventRepository returns a new instance of a in-memory handling event repository.
+func NewHandlingEventRepository() cargo.HandlingEventRepository {
 	return &handlingEventRepository{
 		events: make(map[cargo.TrackingID][]cargo.HandlingEvent),
 	}

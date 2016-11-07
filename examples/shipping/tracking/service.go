@@ -37,10 +37,10 @@ func (s *service) Track(id string) (Cargo, error) {
 }
 
 // NewService returns a new instance of the default Service.
-func NewService(cargos cargo.Repository, handlingEvents cargo.HandlingEventRepository) Service {
+func NewService(cargos cargo.Repository, events cargo.HandlingEventRepository) Service {
 	return &service{
 		cargos:         cargos,
-		handlingEvents: handlingEvents,
+		handlingEvents: events,
 	}
 }
 
@@ -71,7 +71,7 @@ type Event struct {
 	Expected    bool   `json:"expected"`
 }
 
-func assemble(c *cargo.Cargo, her cargo.HandlingEventRepository) Cargo {
+func assemble(c *cargo.Cargo, events cargo.HandlingEventRepository) Cargo {
 	return Cargo{
 		TrackingID:           string(c.TrackingID),
 		Origin:               string(c.Origin),
@@ -80,7 +80,7 @@ func assemble(c *cargo.Cargo, her cargo.HandlingEventRepository) Cargo {
 		NextExpectedActivity: nextExpectedActivity(c),
 		ArrivalDeadline:      c.RouteSpecification.ArrivalDeadline,
 		StatusText:           assembleStatusText(c),
-		Events:               assembleEvents(c, her),
+		Events:               assembleEvents(c, events),
 	}
 }
 
@@ -129,8 +129,8 @@ func assembleStatusText(c *cargo.Cargo) string {
 	}
 }
 
-func assembleEvents(c *cargo.Cargo, r cargo.HandlingEventRepository) []Event {
-	h := r.QueryHandlingHistory(c.TrackingID)
+func assembleEvents(c *cargo.Cargo, handlingEvents cargo.HandlingEventRepository) []Event {
+	h := handlingEvents.QueryHandlingHistory(c.TrackingID)
 
 	var events []Event
 	for _, e := range h.HandlingEvents {
