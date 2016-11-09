@@ -17,15 +17,15 @@ type instrumentingService struct {
 }
 
 // NewInstrumentingService returns an instance of an instrumenting Service.
-func NewInstrumentingService(requestCount metrics.Counter, requestLatency metrics.Histogram, s Service) Service {
+func NewInstrumentingService(counter metrics.Counter, latency metrics.Histogram, s Service) Service {
 	return &instrumentingService{
-		requestCount:   requestCount,
-		requestLatency: requestLatency,
+		requestCount:   counter,
+		requestLatency: latency,
 		Service:        s,
 	}
 }
 
-func (s *instrumentingService) RegisterHandlingEvent(completionTime time.Time, trackingID cargo.TrackingID, voyage voyage.Number,
+func (s *instrumentingService) RegisterHandlingEvent(completed time.Time, id cargo.TrackingID, voyageNumber voyage.Number,
 	loc location.UNLocode, eventType cargo.HandlingEventType) error {
 
 	defer func(begin time.Time) {
@@ -33,5 +33,5 @@ func (s *instrumentingService) RegisterHandlingEvent(completionTime time.Time, t
 		s.requestLatency.With("method", "register_incident").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return s.Service.RegisterHandlingEvent(completionTime, trackingID, voyage, loc, eventType)
+	return s.Service.RegisterHandlingEvent(completed, id, voyageNumber, loc, eventType)
 }

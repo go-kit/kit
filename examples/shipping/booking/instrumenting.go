@@ -16,21 +16,21 @@ type instrumentingService struct {
 }
 
 // NewInstrumentingService returns an instance of an instrumenting Service.
-func NewInstrumentingService(requestCount metrics.Counter, requestLatency metrics.Histogram, s Service) Service {
+func NewInstrumentingService(counter metrics.Counter, latency metrics.Histogram, s Service) Service {
 	return &instrumentingService{
-		requestCount:   requestCount,
-		requestLatency: requestLatency,
+		requestCount:   counter,
+		requestLatency: latency,
 		Service:        s,
 	}
 }
 
-func (s *instrumentingService) BookNewCargo(origin, destination location.UNLocode, arrivalDeadline time.Time) (cargo.TrackingID, error) {
+func (s *instrumentingService) BookNewCargo(origin, destination location.UNLocode, deadline time.Time) (cargo.TrackingID, error) {
 	defer func(begin time.Time) {
 		s.requestCount.With("method", "book").Add(1)
 		s.requestLatency.With("method", "book").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return s.Service.BookNewCargo(origin, destination, arrivalDeadline)
+	return s.Service.BookNewCargo(origin, destination, deadline)
 }
 
 func (s *instrumentingService) LoadCargo(id cargo.TrackingID) (c Cargo, err error) {

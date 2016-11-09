@@ -24,7 +24,7 @@ type EventHandler interface {
 type Service interface {
 	// RegisterHandlingEvent registers a handling event in the system, and
 	// notifies interested parties that a cargo has been handled.
-	RegisterHandlingEvent(completionTime time.Time, trackingID cargo.TrackingID, voyageNumber voyage.Number,
+	RegisterHandlingEvent(completed time.Time, id cargo.TrackingID, voyageNumber voyage.Number,
 		unLocode location.UNLocode, eventType cargo.HandlingEventType) error
 }
 
@@ -34,13 +34,13 @@ type service struct {
 	handlingEventHandler    EventHandler
 }
 
-func (s *service) RegisterHandlingEvent(completionTime time.Time, trackingID cargo.TrackingID, voyage voyage.Number,
+func (s *service) RegisterHandlingEvent(completed time.Time, id cargo.TrackingID, voyageNumber voyage.Number,
 	loc location.UNLocode, eventType cargo.HandlingEventType) error {
-	if completionTime.IsZero() || trackingID == "" || loc == "" || eventType == cargo.NotHandled {
+	if completed.IsZero() || id == "" || loc == "" || eventType == cargo.NotHandled {
 		return ErrInvalidArgument
 	}
 
-	e, err := s.handlingEventFactory.CreateHandlingEvent(time.Now(), completionTime, trackingID, voyage, loc, eventType)
+	e, err := s.handlingEventFactory.CreateHandlingEvent(time.Now(), completed, id, voyageNumber, loc, eventType)
 	if err != nil {
 		return err
 	}

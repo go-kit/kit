@@ -29,8 +29,8 @@ type Schedule struct {
 
 // CarrierMovement is a vessel voyage from one location to another.
 type CarrierMovement struct {
-	DepartureLocation location.Location
-	ArrivalLocation   location.Location
+	DepartureLocation location.UNLocode
+	ArrivalLocation   location.UNLocode
 	DepartureTime     time.Time
 	ArrivalTime       time.Time
 }

@@ -19,9 +19,9 @@ import (
 	"github.com/go-kit/kit/examples/shipping/booking"
 	"github.com/go-kit/kit/examples/shipping/cargo"
 	"github.com/go-kit/kit/examples/shipping/handling"
+	"github.com/go-kit/kit/examples/shipping/inmem"
 	"github.com/go-kit/kit/examples/shipping/inspection"
 	"github.com/go-kit/kit/examples/shipping/location"
-	"github.com/go-kit/kit/examples/shipping/repository"
 	"github.com/go-kit/kit/examples/shipping/routing"
 	"github.com/go-kit/kit/examples/shipping/tracking"
 )
@@ -50,10 +50,10 @@ func main() {
 	logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC)
 
 	var (
-		cargos         = repository.NewCargo()
-		locations      = repository.NewLocation()
-		voyages        = repository.NewVoyage()
-		handlingEvents = repository.NewHandlingEvent()
+		cargos         = inmem.NewCargoRepository()
+		locations      = inmem.NewLocationRepository()
+		voyages        = inmem.NewVoyageRepository()
+		handlingEvents = inmem.NewHandlingEventRepository()
 	)
 
 	// Configure some questionable dependencies.
@@ -74,7 +74,7 @@ func main() {
 	fieldKeys := []string{"method"}
 
 	var rs routing.Service
-	rs = routing.NewProxyingMiddleware(*routingServiceURL, ctx)(rs)
+	rs = routing.NewProxyingMiddleware(ctx, *routingServiceURL)(rs)
 
 	var bs booking.Service
 	bs = booking.NewService(cargos, locations, handlingEvents, rs)
@@ -186,14 +186,18 @@ func storeTestData(r cargo.Repository) {
 		Destination:     location.SESTO,
 		ArrivalDeadline: time.Now().AddDate(0, 0, 7),
 	})
-	_ = r.Store(test1)
+	if err := r.Store(test1); err != nil {
+		panic(err)
+	}
 
 	test2 := cargo.New("ABC123", cargo.RouteSpecification{
 		Origin:          location.SESTO,
 		Destination:     location.CNHKG,
 		ArrivalDeadline: time.Now().AddDate(0, 0, 14),
 	})
-	_ = r.Store(test2)
+	if err := r.Store(test2); err != nil {
+		panic(err)
+	}
 }
 
 type serializedLogger struct {

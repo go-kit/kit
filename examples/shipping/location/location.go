@@ -22,6 +22,6 @@ var ErrUnknown = errors.New("unknown location")
 
 // Repository provides access a location store.
 type Repository interface {
-	Find(locode UNLocode) (Location, error)
-	FindAll() []Location
+	Find(locode UNLocode) (*Location, error)
+	FindAll() []*Location
 }

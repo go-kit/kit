@@ -14,38 +14,38 @@ type Service interface {
 	// InspectCargo inspects cargo and send relevant notifications to
 	// interested parties, for example if a cargo has been misdirected, or
 	// unloaded at the final destination.
-	InspectCargo(trackingID cargo.TrackingID)
+	InspectCargo(id cargo.TrackingID)
 }
 
 type service struct {
-	cargoRepository         cargo.Repository
-	handlingEventRepository cargo.HandlingEventRepository
-	cargoEventHandler       EventHandler
+	cargos  cargo.Repository
+	events  cargo.HandlingEventRepository
+	handler EventHandler
 }
 
 // TODO: Should be transactional
-func (s *service) InspectCargo(trackingID cargo.TrackingID) {
-	c, err := s.cargoRepository.Find(trackingID)
+func (s *service) InspectCargo(id cargo.TrackingID) {
+	c, err := s.cargos.Find(id)
 	if err != nil {
 		return
 	}
 
-	h := s.handlingEventRepository.QueryHandlingHistory(trackingID)
+	h := s.events.QueryHandlingHistory(id)
 
 	c.DeriveDeliveryProgress(h)
 
 	if c.Delivery.IsMisdirected {
-		s.cargoEventHandler.CargoWasMisdirected(c)
+		s.handler.CargoWasMisdirected(c)
 	}
 
 	if c.Delivery.IsUnloadedAtDestination {
-		s.cargoEventHandler.CargoHasArrived(c)
+		s.handler.CargoHasArrived(c)
 	}
 
-	s.cargoRepository.Store(c)
+	s.cargos.Store(c)
 }
 
 // NewService creates a inspection service with necessary dependencies.
-func NewService(cargoRepository cargo.Repository, handlingEventRepository cargo.HandlingEventRepository, eventHandler EventHandler) Service {
-	return &service{cargoRepository, handlingEventRepository, eventHandler}
+func NewService(cargos cargo.Repository, events cargo.HandlingEventRepository, handler EventHandler) Service {
+	return &service{cargos, events, handler}
 }
