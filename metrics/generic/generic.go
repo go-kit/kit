@@ -208,7 +208,7 @@ func (h *SimpleHistogram) Observe(value float64) {
 // ApproximateMovingAverage returns the approximate moving average of observations.
 func (h *SimpleHistogram) ApproximateMovingAverage() float64 {
 	h.mtx.RLock()
-	h.mtx.RUnlock()
+	defer h.mtx.RUnlock()
 	return h.avg
 }
 
