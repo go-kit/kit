@@ -15,7 +15,8 @@ const (
 	// JWTTokenContextKey holds the key used to store a JWT Token in the
 	// context.
 	JWTTokenContextKey contextKey = "JWTToken"
-	// JWTClaimsContxtKey holds the key used to store the JWT Claims in the
+
+	// JWTClaimsContextKey holds the key used to store the JWT Claims in the
 	// context.
 	JWTClaimsContextKey contextKey = "JWTClaims"
 )
@@ -24,20 +25,26 @@ var (
 	// ErrTokenContextMissing denotes a token was not passed into the parsing
 	// middleware's context.
 	ErrTokenContextMissing = errors.New("token up for parsing was not passed through the context")
+
 	// ErrTokenInvalid denotes a token was not able to be validated.
 	ErrTokenInvalid = errors.New("JWT Token was invalid")
+
 	// ErrTokenExpired denotes a token's expire header (exp) has since passed.
 	ErrTokenExpired = errors.New("JWT Token is expired")
+
 	// ErrTokenMalformed denotes a token was not formatted as a JWT token.
 	ErrTokenMalformed = errors.New("JWT Token is malformed")
+
 	// ErrTokenNotActive denotes a token's not before header (nbf) is in the
 	// future.
 	ErrTokenNotActive = errors.New("token is not valid yet")
-	// ErrUncesptedSigningMethod denotes a token was signed with an unexpected
+
+	// ErrUnexpectedSigningMethod denotes a token was signed with an unexpected
 	// signing method.
 	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
 )
 
+// Claims is a map of arbitrary claim data.
 type Claims map[string]interface{}
 
 // NewSigner creates a new JWT token generating middleware, specifying key ID,
