@@ -42,7 +42,7 @@ const (
 // https://en.wikipedia.org/wiki/ANSI_escape_code#Colors.
 
 var (
-	resetColorBytes = []byte("\x1b[39;49m")
+	resetColorBytes = []byte("\x1b[39;49;22m")
 	fgColorBytes    [][]byte
 	bgColorBytes    [][]byte
 )
