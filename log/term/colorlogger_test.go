@@ -27,7 +27,7 @@ func TestColorLogger(t *testing.T) {
 	if err := logger.Log("a", 1); err != nil {
 		t.Fatal(err)
 	}
-	if want, have := "\x1b[32;1m\x1b[47;1ma=1\n\x1b[39;49m", buf.String(); want != have {
+	if want, have := "\x1b[32;1m\x1b[47;1ma=1\n\x1b[39;49;22m", buf.String(); want != have {
 		t.Errorf("\nwant %#v\nhave %#v", want, have)
 	}
 }
