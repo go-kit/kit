@@ -49,22 +49,22 @@ func AllowNone() []string {
 
 // Error returns a logger with the level key set to ErrorLevelValue.
 func Error(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(levelKey, errorLevelValue)
+	return log.NewContext(logger).WithPrefix(levelKey, errorLevelValue)
 }
 
 // Warn returns a logger with the level key set to WarnLevelValue.
 func Warn(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(levelKey, warnLevelValue)
+	return log.NewContext(logger).WithPrefix(levelKey, warnLevelValue)
 }
 
 // Info returns a logger with the level key set to InfoLevelValue.
 func Info(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(levelKey, infoLevelValue)
+	return log.NewContext(logger).WithPrefix(levelKey, infoLevelValue)
 }
 
 // Debug returns a logger with the level key set to DebugLevelValue.
 func Debug(logger log.Logger) log.Logger {
-	return log.NewContext(logger).With(levelKey, debugLevelValue)
+	return log.NewContext(logger).WithPrefix(levelKey, debugLevelValue)
 }
 
 // Config parameterizes the leveled logger.
