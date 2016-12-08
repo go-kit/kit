@@ -168,10 +168,15 @@ func mergeTags(tags map[string]string, labelValues []string) map[string]string {
 	if len(labelValues)%2 != 0 {
 		panic("mergeTags received a labelValues with an odd number of strings")
 	}
-	for i := 0; i < len(labelValues); i += 2 {
-		tags[labelValues[i]] = labelValues[i+1]
+
+	ret := make(map[string]string, len(tags) + len(labelValues) / 2)
+	for k, v := range tags {
+		ret[k] = v
 	}
-	return tags
+	for i := 0; i < len(labelValues); i += 2 {
+		ret[labelValues[i]] = labelValues[i+1]
+	}
+	return ret
 }
 
 func sum(a []float64) float64 {

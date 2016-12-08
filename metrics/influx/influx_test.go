@@ -30,6 +30,29 @@ func TestCounter(t *testing.T) {
 	}
 }
 
+func TestCounter_RewriteTags(t *testing.T) {
+	in := New(map[string]string{}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
+
+	reFirst := regexp.MustCompile(`influx_counter_first,tag_for_counter_first=first count=([0-9\.]+) [0-9]+`)
+	counterFirst := in.NewCounter("influx_counter_first").With("tag_for_counter_first", "first")
+	counterFirst.Add(11)
+
+	reSecond := regexp.MustCompile(`influx_counter_second,tag_for_counter_second=second count=([0-9\.]+) [0-9]+`)
+	counterSecond := in.NewCounter("influx_counter_second").With("tag_for_counter_second", "second")
+	counterSecond.Add(22)
+
+	client := &bufWriter{}
+	in.WriteTo(client)
+
+	for _, row := range strings.Split(client.buf.String(), string('\n')) {
+		if strings.HasPrefix(row, "influx_counter_first") && !reFirst.MatchString(row) {
+			t.Fatal(`First counter not equal "`, reFirst.String() , `" want "`, row, `"`)
+		} else if strings.HasPrefix(row, "influx_counter_second") && !reSecond.MatchString(row) {
+			t.Fatal(`Second counter not equal "`, reSecond.String() , `" want "`, row, `"`)
+		}
+	}
+}
+
 func TestGauge(t *testing.T) {
 	in := New(map[string]string{"foo": "alpha"}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
 	re := regexp.MustCompile(`influx_gauge,foo=alpha value=([0-9\.]+) [0-9]+`)
