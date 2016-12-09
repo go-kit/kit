@@ -49,7 +49,7 @@ import (
 )
 
 func main() {
-	var dur metrics.Histogram = prometheus.NewSummary(stdprometheus.SummaryOpts{
+	var dur metrics.Histogram = prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 		Namespace: "myservice",
 		Subsystem: "api",
 		Name:     "request_duration_seconds",
