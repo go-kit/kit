@@ -22,7 +22,7 @@ func TestServerBadDecode(t *testing.T) {
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Get(server.URL)
-	if want, have := http.StatusBadRequest, resp.StatusCode; want != have {
+	if want, have := http.StatusInternalServerError, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
@@ -37,7 +37,7 @@ func TestServerBadEndpoint(t *testing.T) {
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Get(server.URL)
-	if want, have := http.StatusServiceUnavailable, resp.StatusCode; want != have {
+	if want, have := http.StatusInternalServerError, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
@@ -60,7 +60,7 @@ func TestServerBadEncode(t *testing.T) {
 func TestServerErrorEncoder(t *testing.T) {
 	errTeapot := errors.New("teapot")
 	code := func(err error) int {
-		if e, ok := err.(httptransport.Error); ok && e.Err == errTeapot {
+		if err == errTeapot {
 			return http.StatusTeapot
 		}
 		return http.StatusInternalServerError
