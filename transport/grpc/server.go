@@ -92,7 +92,7 @@ func (s Server) ServeGRPC(grpcCtx context.Context, req interface{}) (context.Con
 	request, err := s.dec(grpcCtx, req)
 	if err != nil {
 		s.logger.Log("err", err)
-		return grpcCtx, nil, BadRequestError{err}
+		return grpcCtx, nil, err
 	}
 
 	response, err := s.e(ctx, request)
@@ -115,14 +115,4 @@ func (s Server) ServeGRPC(grpcCtx context.Context, req interface{}) (context.Con
 	}
 
 	return grpcCtx, grpcResp, nil
-}
-
-// BadRequestError is an error in decoding the request.
-type BadRequestError struct {
-	Err error
-}
-
-// Error implements the error interface.
-func (err BadRequestError) Error() string {
-	return err.Err.Error()
 }

@@ -79,7 +79,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		req, err := c.enc(ctx, request)
 		if err != nil {
-			return nil, fmt.Errorf("Encode: %v", err)
+			return nil, err
 		}
 
 		md := &metadata.MD{}
@@ -90,12 +90,12 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		grpcReply := reflect.New(c.grpcReply).Interface()
 		if err = grpc.Invoke(ctx, c.method, req, grpcReply, c.client); err != nil {
-			return nil, fmt.Errorf("Invoke: %v", err)
+			return nil, err
 		}
 
 		response, err := c.dec(ctx, grpcReply)
 		if err != nil {
-			return nil, fmt.Errorf("Decode: %v", err)
+			return nil, err
 		}
 		return response, nil
 	}
