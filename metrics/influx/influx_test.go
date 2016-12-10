@@ -30,29 +30,6 @@ func TestCounter(t *testing.T) {
 	}
 }
 
-func TestCounter_RewriteTags(t *testing.T) {
-	in := New(map[string]string{}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
-
-	reFirst := regexp.MustCompile(`influx_counter_first,tag_for_counter_first=first count=([0-9\.]+) [0-9]+`)
-	counterFirst := in.NewCounter("influx_counter_first").With("tag_for_counter_first", "first")
-	counterFirst.Add(11)
-
-	reSecond := regexp.MustCompile(`influx_counter_second,tag_for_counter_second=second count=([0-9\.]+) [0-9]+`)
-	counterSecond := in.NewCounter("influx_counter_second").With("tag_for_counter_second", "second")
-	counterSecond.Add(22)
-
-	client := &bufWriter{}
-	in.WriteTo(client)
-
-	for _, row := range strings.Split(client.buf.String(), string('\n')) {
-		if strings.HasPrefix(row, "influx_counter_first") && !reFirst.MatchString(row) {
-			t.Fatal(`First counter not equal "`, reFirst.String() , `" want "`, row, `"`)
-		} else if strings.HasPrefix(row, "influx_counter_second") && !reSecond.MatchString(row) {
-			t.Fatal(`Second counter not equal "`, reSecond.String() , `" want "`, row, `"`)
-		}
-	}
-}
-
 func TestGauge(t *testing.T) {
 	in := New(map[string]string{"foo": "alpha"}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
 	re := regexp.MustCompile(`influx_gauge,foo=alpha value=([0-9\.]+) [0-9]+`)
@@ -102,6 +79,37 @@ func TestHistogramLabels(t *testing.T) {
 	}
 	if want, have := 2, len(strings.Split(strings.TrimSpace(w.buf.String()), "\n")); want != have {
 		t.Errorf("want %d, have %d", want, have)
+	}
+}
+
+func TestIssue404(t *testing.T) {
+	in := New(map[string]string{}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
+
+	counterOne := in.NewCounter("influx_counter_one").With("a", "b")
+	counterOne.Add(123)
+
+	counterTwo := in.NewCounter("influx_counter_two").With("c", "d")
+	counterTwo.Add(456)
+
+	w := &bufWriter{}
+	in.WriteTo(w)
+
+	lines := strings.Split(strings.TrimSpace(w.buf.String()), "\n")
+	if want, have := 2, len(lines); want != have {
+		t.Fatalf("want %d, have %d", want, have)
+	}
+	for _, line := range lines {
+		if strings.HasPrefix(line, "influx_counter_one") {
+			if !strings.HasPrefix(line, "influx_counter_one,a=b count=123 ") {
+				t.Errorf("invalid influx_counter_one: %s", line)
+			}
+		} else if strings.HasPrefix(line, "influx_counter_two") {
+			if !strings.HasPrefix(line, "influx_counter_two,c=d count=456 ") {
+				t.Errorf("invalid influx_counter_two: %s", line)
+			}
+		} else {
+			t.Errorf("unexpected line: %s", line)
+		}
 	}
 }
 

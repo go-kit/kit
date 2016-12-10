@@ -168,8 +168,7 @@ func mergeTags(tags map[string]string, labelValues []string) map[string]string {
 	if len(labelValues)%2 != 0 {
 		panic("mergeTags received a labelValues with an odd number of strings")
 	}
-
-	ret := make(map[string]string, len(tags) + len(labelValues) / 2)
+	ret := make(map[string]string, len(tags)+len(labelValues)/2)
 	for k, v := range tags {
 		ret[k] = v
 	}
