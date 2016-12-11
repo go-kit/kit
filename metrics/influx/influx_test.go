@@ -82,6 +82,37 @@ func TestHistogramLabels(t *testing.T) {
 	}
 }
 
+func TestIssue404(t *testing.T) {
+	in := New(map[string]string{}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
+
+	counterOne := in.NewCounter("influx_counter_one").With("a", "b")
+	counterOne.Add(123)
+
+	counterTwo := in.NewCounter("influx_counter_two").With("c", "d")
+	counterTwo.Add(456)
+
+	w := &bufWriter{}
+	in.WriteTo(w)
+
+	lines := strings.Split(strings.TrimSpace(w.buf.String()), "\n")
+	if want, have := 2, len(lines); want != have {
+		t.Fatalf("want %d, have %d", want, have)
+	}
+	for _, line := range lines {
+		if strings.HasPrefix(line, "influx_counter_one") {
+			if !strings.HasPrefix(line, "influx_counter_one,a=b count=123 ") {
+				t.Errorf("invalid influx_counter_one: %s", line)
+			}
+		} else if strings.HasPrefix(line, "influx_counter_two") {
+			if !strings.HasPrefix(line, "influx_counter_two,c=d count=456 ") {
+				t.Errorf("invalid influx_counter_two: %s", line)
+			}
+		} else {
+			t.Errorf("unexpected line: %s", line)
+		}
+	}
+}
+
 type bufWriter struct {
 	buf bytes.Buffer
 }
