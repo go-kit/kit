@@ -18,6 +18,7 @@ type Server struct {
 	before       []RequestFunc
 	after        []ServerResponseFunc
 	errorEncoder ErrorEncoder
+	finalizer    ServerFinalizerFunc
 	logger       log.Logger
 }
 
@@ -69,14 +70,29 @@ func ServerErrorEncoder(ee ErrorEncoder) ServerOption {
 }
 
 // ServerErrorLogger is used to log non-terminal errors. By default, no errors
-// are logged.
+// are logged. This is intended as a diagnostic measure. Finer-grained control
+// of error handling, including logging in more detail, should be performed in a
+// custom ServerErrorEncoder or ServerFinalizer, both of which have access to
+// the context.
 func ServerErrorLogger(logger log.Logger) ServerOption {
 	return func(s *Server) { s.logger = logger }
+}
+
+// ServerFinalizer is executed at the end of every HTTP request.
+// By default, no finalizer is registered.
+func ServerFinalizer(f ServerFinalizerFunc) ServerOption {
+	return func(s *Server) { s.finalizer = f }
 }
 
 // ServeHTTP implements http.Handler.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := s.ctx
+
+	if s.finalizer != nil {
+		iw := &interceptingWriter{w, http.StatusOK}
+		defer func() { s.finalizer(ctx, iw.code, r) }()
+		w = iw
+	}
 
 	for _, f := range s.before {
 		ctx = f(ctx, r)
@@ -116,6 +132,11 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // for their own error types. See the example shipping/handling service.
 type ErrorEncoder func(ctx context.Context, err error, w http.ResponseWriter)
 
+// ServerFinalizerFunc can be used to perform work at the end of an HTTP
+// request, after the response has been written to the client. The principal
+// intended use is for request logging.
+type ServerFinalizerFunc func(ctx context.Context, code int, r *http.Request)
+
 func defaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	switch e := err.(type) {
 	case Error:
@@ -130,4 +151,16 @@ func defaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+type interceptingWriter struct {
+	http.ResponseWriter
+	code int
+}
+
+// WriteHeader may not be explicitly called, so care must be taken to
+// initialize w.code to its default value of http.StatusOK.
+func (w *interceptingWriter) WriteHeader(code int) {
+	w.code = code
+	w.ResponseWriter.WriteHeader(code)
 }

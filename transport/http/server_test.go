@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/go-kit/kit/endpoint"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
@@ -88,6 +89,36 @@ func TestServerHappyPath(t *testing.T) {
 	buf, _ := ioutil.ReadAll(resp.Body)
 	if want, have := http.StatusOK, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d (%s)", want, have, buf)
+	}
+}
+
+func TestServerFinalizer(t *testing.T) {
+	c := make(chan int)
+	handler := httptransport.NewServer(
+		context.Background(),
+		endpoint.Nop,
+		func(context.Context, *http.Request) (interface{}, error) {
+			return struct{}{}, nil
+		},
+		func(_ context.Context, w http.ResponseWriter, _ interface{}) error {
+			w.WriteHeader(<-c)
+			return nil
+		},
+		httptransport.ServerFinalizer(func(_ context.Context, code int, _ *http.Request) {
+			c <- code
+		}),
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	go http.Get(server.URL)
+
+	want := http.StatusTeapot
+	c <- want   // give status code to response encoder
+	have := <-c // take status code from finalizer
+
+	if want != have {
+		t.Errorf("want %d, have %d", want, have)
 	}
 }
 
