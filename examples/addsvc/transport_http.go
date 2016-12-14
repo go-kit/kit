@@ -26,14 +26,14 @@ func MakeHTTPHandler(ctx context.Context, endpoints Endpoints, tracer stdopentra
 		httptransport.ServerErrorLogger(logger),
 	}
 	m := http.NewServeMux()
-	m.Handle("/sum", httptransport.NewServer(
+	m.Handle("/addsvc/sum", httptransport.NewServer(
 		ctx,
 		endpoints.SumEndpoint,
 		DecodeHTTPSumRequest,
 		EncodeHTTPGenericResponse,
 		append(options, httptransport.ServerBefore(opentracing.FromHTTPRequest(tracer, "Sum", logger)))...,
 	))
-	m.Handle("/concat", httptransport.NewServer(
+	m.Handle("/addsvc/concat", httptransport.NewServer(
 		ctx,
 		endpoints.ConcatEndpoint,
 		DecodeHTTPConcatRequest,
