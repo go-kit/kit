@@ -405,16 +405,6 @@ func codeFrom(err error) int {
 	case ErrAlreadyExists, ErrInconsistentIDs:
 		return http.StatusBadRequest
 	default:
-		if e, ok := err.(httptransport.Error); ok {
-			switch e.Domain {
-			case httptransport.DomainDecode:
-				return http.StatusBadRequest
-			case httptransport.DomainDo:
-				return http.StatusServiceUnavailable
-			default:
-				return http.StatusInternalServerError
-			}
-		}
 		return http.StatusInternalServerError
 	}
 }
