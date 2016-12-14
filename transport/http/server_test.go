@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"golang.org/x/net/context"
@@ -122,6 +123,40 @@ func TestServerFinalizer(t *testing.T) {
 	}
 }
 
+type enhancedResponse struct {
+	Foo string `json:"foo"`
+}
+
+func (e enhancedResponse) StatusCode() int      { return http.StatusPaymentRequired }
+func (e enhancedResponse) Headers() http.Header { return http.Header{"X-Edward": []string{"Snowden"}} }
+
+func TestEncodeJSONResponse(t *testing.T) {
+	handler := httptransport.NewServer(
+		context.Background(),
+		func(context.Context, interface{}) (interface{}, error) { return enhancedResponse{Foo: "bar"}, nil },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		httptransport.EncodeJSONResponse,
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want, have := http.StatusPaymentRequired, resp.StatusCode; want != have {
+		t.Errorf("StatusCode: want %d, have %d", want, have)
+	}
+	if want, have := "Snowden", resp.Header.Get("X-Edward"); want != have {
+		t.Errorf("X-Edward: want %q, have %q", want, have)
+	}
+	buf, _ := ioutil.ReadAll(resp.Body)
+	if want, have := `{"foo":"bar"}`, strings.TrimSpace(string(buf)); want != have {
+		t.Errorf("Body: want %s, have %s", want, have)
+	}
+}
+
 type enhancedError struct{}
 
 func (e enhancedError) Error() string                { return "enhanced error" }
@@ -129,7 +164,7 @@ func (e enhancedError) StatusCode() int              { return http.StatusTeapot 
 func (e enhancedError) MarshalJSON() ([]byte, error) { return []byte(`{"err":"enhanced"}`), nil }
 func (e enhancedError) Headers() http.Header         { return http.Header{"X-Enhanced": []string{"1"}} }
 
-func TestServerSpecialError(t *testing.T) {
+func TestEnhancedError(t *testing.T) {
 	handler := httptransport.NewServer(
 		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return nil, enhancedError{} },
@@ -152,7 +187,7 @@ func TestServerSpecialError(t *testing.T) {
 		t.Errorf("X-Enhanced: want %q, have %q", want, have)
 	}
 	buf, _ := ioutil.ReadAll(resp.Body)
-	if want, have := `{"err":"enhanced"}`, string(buf); want != have {
+	if want, have := `{"err":"enhanced"}`, strings.TrimSpace(string(buf)); want != have {
 		t.Errorf("Body: want %s, have %s", want, have)
 	}
 }

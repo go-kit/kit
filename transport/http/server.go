@@ -134,34 +134,50 @@ type ErrorEncoder func(ctx context.Context, err error, w http.ResponseWriter)
 // intended use is for request logging.
 type ServerFinalizerFunc func(ctx context.Context, code int, r *http.Request)
 
-// DefaultErrorEncoder writes the error to the ResponseWriter, by default with
-// status code 500, content type of text/plain, and the plain text of the error.
-// If the error implements StatusCoder, the provided StatusCode will be used
-// instead of 500. If the error implements Headerer, the provided headers will
-// be applied to the response writer. If the error implements json.Marshaler,
-// and the marshaling succeeds, a content type of application/json and the JSON
-// encoded form of the error will be used.
-func DefaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
-	code := http.StatusInternalServerError
-	if sc, ok := err.(StatusCoder); ok {
+// EncodeJSONResponse is a EncodeResponseFunc that serializes the response as a
+// JSON object to the ResponseWriter. Many JSON-over-HTTP services can use it as
+// a sensible default. If the response implements Headerer, the provided headers
+// will be applied to the response. If the response implements StatusCoder, the
+// provided StatusCode will be used instead of 200.
+func EncodeJSONResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if headerer, ok := response.(Headerer); ok {
+		for k := range headerer.Headers() {
+			w.Header().Set(k, headerer.Headers().Get(k))
+		}
+	}
+	code := http.StatusOK
+	if sc, ok := response.(StatusCoder); ok {
 		code = sc.StatusCode()
 	}
+	w.WriteHeader(code)
+	return json.NewEncoder(w).Encode(response)
+}
 
+// DefaultErrorEncoder writes the error to the ResponseWriter, by default a
+// content type of text/plain, a body of the plain text of the error, and a
+// status code of 500. If the error implements Headerer, the provided headers
+// will be applied to the response. If the error implements json.Marshaler, and
+// the marshaling succeeds, a content type of application/json and the JSON
+// encoded form of the error will be used. If the error implements StatusCoder,
+// the provided StatusCode will be used instead of 500.
+func DefaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	contentType, body := "text/plain; charset=utf-8", []byte(err.Error())
 	if marshaler, ok := err.(json.Marshaler); ok {
 		if jsonBody, marshalErr := marshaler.MarshalJSON(); marshalErr == nil {
 			contentType, body = "application/json; charset=utf-8", jsonBody
 		}
 	}
-
 	w.Header().Set("Content-Type", contentType)
-
 	if headerer, ok := err.(Headerer); ok {
 		for k := range headerer.Headers() {
 			w.Header().Set(k, headerer.Headers().Get(k))
 		}
 	}
-
+	code := http.StatusInternalServerError
+	if sc, ok := err.(StatusCoder); ok {
+		code = sc.StatusCode()
+	}
 	w.WriteHeader(code)
 	w.Write(body)
 }
