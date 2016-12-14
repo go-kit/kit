@@ -104,7 +104,7 @@ func main() {
 		// HTTP handler, and just install it under a particular path prefix in
 		// our router.
 
-		r.PathPrefix("addsvc/").Handler(addsvc.MakeHTTPHandler(ctx, endpoints, tracer, logger))
+		r.PathPrefix("/addsvc").Handler(http.StripPrefix("/addsvc", addsvc.MakeHTTPHandler(ctx, endpoints, tracer, logger)))
 	}
 
 	// stringsvc routes.
