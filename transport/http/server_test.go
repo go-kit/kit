@@ -122,6 +122,41 @@ func TestServerFinalizer(t *testing.T) {
 	}
 }
 
+type enhancedError struct{}
+
+func (e enhancedError) Error() string                { return "enhanced error" }
+func (e enhancedError) StatusCode() int              { return http.StatusTeapot }
+func (e enhancedError) MarshalJSON() ([]byte, error) { return []byte(`{"err":"enhanced"}`), nil }
+func (e enhancedError) Headers() http.Header         { return http.Header{"X-Enhanced": []string{"1"}} }
+
+func TestServerSpecialError(t *testing.T) {
+	handler := httptransport.NewServer(
+		context.Background(),
+		func(context.Context, interface{}) (interface{}, error) { return nil, enhancedError{} },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		func(_ context.Context, w http.ResponseWriter, _ interface{}) error { return nil },
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if want, have := http.StatusTeapot, resp.StatusCode; want != have {
+		t.Errorf("StatusCode: want %d, have %d", want, have)
+	}
+	if want, have := "1", resp.Header.Get("X-Enhanced"); want != have {
+		t.Errorf("X-Enhanced: want %q, have %q", want, have)
+	}
+	buf, _ := ioutil.ReadAll(resp.Body)
+	if want, have := `{"err":"enhanced"}`, string(buf); want != have {
+		t.Errorf("Body: want %s, have %s", want, have)
+	}
+}
+
 func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) {
 	var (
 		ctx, cancelfn = context.WithCancel(context.Background())
