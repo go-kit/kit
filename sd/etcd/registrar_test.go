@@ -30,7 +30,7 @@ func (tc *testClient) Deregister(s Service) error {
 }
 
 // default service used to build registrar in our tests
-var testService = Service{"testKey", "testValue", nil}
+var testService = Service{"testKey", "testValue", nil, nil}
 
 // NewRegistar should return a registar with a logger using the service key and value
 func TestNewRegistar(t *testing.T) {

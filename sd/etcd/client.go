@@ -156,6 +156,10 @@ func (c *client) Register(s Service) error {
 	if s.Value == "" {
 		return ErrNoValue
 	}
+	if s.TTL != nil {
+		_, err := c.keysAPI.Set(c.ctx, s.Key, s.Value, &etcd.SetOptions{PrevExist: etcd.PrevIgnore, TTL: s.TTL.TTL})
+		return err
+	}
 	_, err := c.keysAPI.Create(c.ctx, s.Key, s.Value)
 	return err
 }
