@@ -11,7 +11,7 @@ dependencies:
 
 test:
   post:
-    - go test -v -race -tags integration ./...:
+    - go test -v -race -tags integration github.com/go-kit/kit/...:
         environment:
           ETCD_ADDR: http://localhost:2379
           CONSUL_ADDR: localhost:8500
