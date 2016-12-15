@@ -8,6 +8,8 @@ dependencies:
   pre:
     - sudo pip install docker-compose
     - docker-compose -f docker-compose-integration.yml up -d --force-recreate
+  override:
+    - go get -d -v -t ./...
 
 test:
   override:
