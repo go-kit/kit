@@ -15,9 +15,6 @@ test:
     - mv /home/ubuntu/kit /home/ubuntu/.go_workspace/src/github.com/go-kit
     - go get github.com/go-kit/kit/...
   override:
-    - go build github.com/go-kit/kit/...
-    - go test github.com/go-kit/kit/...
-  post:
     - go test -v -race -tags integration github.com/go-kit/kit/...:
         environment:
           ETCD_ADDR: http://localhost:2379
