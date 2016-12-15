@@ -1,0 +1,18 @@
+machine:
+  pre:
+    - curl -sSL https://s3.amazonaws.com/circle-downloads/install-circleci-docker.sh | bash -s -- 1.10.0
+  services:
+    - docker
+
+dependencies:
+  pre:
+    - sudo pip install docker-compose
+    - docker-compose -f docker-compose-integration.yml up -d --force-recreate
+
+test:
+  override:
+    - go test -v -race -tags integration ./...:
+        environment:
+          ETCD_ADDR: http://localhost:2379
+          CONSUL_ADDR: localhost:8500
+          ZK_ADDR: localhost:2181
