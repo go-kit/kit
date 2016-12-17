@@ -108,7 +108,7 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 - [Goji](https://github.com/zenazn/goji)
 - [Martini](https://github.com/go-martini/martini)
 - [Beego](http://beego.me/)
-- [Revel](https://revel.github.io/) (considered harmful)
+- [Revel](https://revel.github.io/) (considered [harmful](https://github.com/go-kit/kit/issues/350))
 
 ## Additional reading
 
