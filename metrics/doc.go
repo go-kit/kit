@@ -3,7 +3,7 @@
 // instrumentation, and to help you migrate from a less-capable system like
 // Graphite to a more-capable system like Prometheus. If your organization has
 // already standardized on an instrumentation system like Prometheus, and has no
-// plans to change, it probably makes sense to use that system's instrumentation
+// plans to change, it may make sense to use that system's instrumentation
 // library directly.
 //
 // This package provides three core metric abstractions (Counter, Gauge, and
