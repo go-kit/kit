@@ -1,17 +1,35 @@
-// Package metrics provides a framework for application instrumentation. All
-// metrics are safe for concurrent use. Considerable design influence has been
-// taken from https://github.com/codahale/metrics and https://prometheus.io.
+// Package metrics provides a framework for application instrumentation. It's
+// primarily designed to help you get started with good and robust
+// instrumentation, and to help you migrate from a less-capable system like
+// Graphite to a more-capable system like Prometheus. If your organization has
+// already standardized on an instrumentation system like Prometheus, and has no
+// plans to change, it may make sense to use that system's instrumentation
+// library directly.
 //
-// This package contains the common interfaces. Your code should take these
-// interfaces as parameters. Implementations are provided for different
-// instrumentation systems in the various subdirectories.
+// This package provides three core metric abstractions (Counter, Gauge, and
+// Histogram) and implementations for almost all common instrumentation
+// backends. Each metric has an observation method (Add, Set, or Observe,
+// respectively) used to record values, and a With method to "scope" the
+// observation by various parameters. For example, you might have a Histogram to
+// record request durations, parameterized by the method that's being called.
+//
+//    var requestDuration metrics.Histogram
+//    // ...
+//    requestDuration.With("method", "MyMethod").Observe(time.Since(begin))
+//
+// This allows a single high-level metrics object (requestDuration) to work with
+// many code paths somewhat dynamically. The concept of With is fully supported
+// in some backends like Prometheus, and not supported in other backends like
+// Graphite. So, With may be a no-op, depending on the concrete implementation
+// you choose.
 //
 // Usage
 //
-// Metrics are dependencies and should be passed to the components that need
+// Metrics are dependencies, and should be passed to the components that need
 // them in the same way you'd construct and pass a database handle, or reference
-// to another component. So, create metrics in your func main, using whichever
-// concrete implementation is appropriate for your organization.
+// to another component. Metrics should *not* be created in the global scope.
+// Instead, instantiate metrics in your func main, using whichever concrete
+// implementation is appropriate for your organization.
 //
 //    latency := prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 //        Namespace: "myteam",
@@ -40,7 +58,13 @@
 //    api := NewAPI(store, logger, latency)
 //    http.ListenAndServe("/", api)
 //
+// Note that metrics are "write-only" interfaces.
+//
 // Implementation details
+//
+// All metrics are safe for concurrent use. Considerable design influence has
+// been taken from https://github.com/codahale/metrics and
+// https://prometheus.io.
 //
 // Each telemetry system has different semantics for label values, push vs.
 // pull, support for histograms, etc. These properties influence the design of
