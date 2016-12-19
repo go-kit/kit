@@ -21,7 +21,20 @@
 // many code paths somewhat dynamically. The concept of With is fully supported
 // in some backends like Prometheus, and not supported in other backends like
 // Graphite. So, With may be a no-op, depending on the concrete implementation
-// you choose.
+// you choose. Please check the implementation to know for sure. For
+// implementations that don't provide With, it's necessary to fully parameterize
+// each metric in the metric name, e.g.
+//
+//    // Statsd
+//    c := statsd.NewCounter("request_duration_MyMethod_200")
+//    c.Add(1)
+//
+//    // Prometheus
+//    c := prometheus.NewCounter(stdprometheus.CounterOpts{
+//        Name: "request_duration",
+//        ...
+//    }, []string{"method", "status_code"})
+//    c.With("method", "MyMethod", "status_code", strconv.Itoa(code)).Add(1)
 //
 // Usage
 //
