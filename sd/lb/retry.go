@@ -1,11 +1,10 @@
 package lb
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 )

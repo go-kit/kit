@@ -7,7 +7,7 @@ package addsvc
 // yet. See https://github.com/go-kit/kit/issues/184.
 
 import (
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/go-kit/kit/endpoint"
 	thriftadd "github.com/go-kit/kit/examples/addsvc/thrift/gen-go/addsvc"

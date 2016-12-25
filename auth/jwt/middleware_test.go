@@ -1,11 +1,10 @@
 package jwt
 
 import (
+	"context"
 	"testing"
 
 	jwt "github.com/dgrijalva/jwt-go"
-
-	"golang.org/x/net/context"
 )
 
 var (

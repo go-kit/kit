@@ -1,14 +1,13 @@
 package circuitbreaker_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 )

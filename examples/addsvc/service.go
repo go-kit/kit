@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"

@@ -1,10 +1,10 @@
 package grpc
 
 import (
+	"context"
 	"encoding/base64"
 	"strings"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 )
 

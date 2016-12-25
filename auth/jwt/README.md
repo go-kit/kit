@@ -92,7 +92,7 @@ Example of use in a server:
 
 ```go
 import (
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/log"

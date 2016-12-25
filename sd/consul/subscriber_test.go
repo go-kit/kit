@@ -1,10 +1,10 @@
 package consul
 
 import (
+	"context"
 	"testing"
 
 	consul "github.com/hashicorp/consul/api"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/log"
 )

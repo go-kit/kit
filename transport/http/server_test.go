@@ -1,14 +1,13 @@
 package http_test
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 	httptransport "github.com/go-kit/kit/transport/http"

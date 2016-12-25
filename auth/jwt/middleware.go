@@ -1,10 +1,10 @@
 package jwt
 
 import (
+	"context"
 	"errors"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 )

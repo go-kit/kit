@@ -1,6 +1,8 @@
 package consul
 
-import consul "github.com/hashicorp/consul/api"
+import (
+	consul "github.com/hashicorp/consul/api"
+)
 
 // Client is a wrapper around the Consul API.
 type Client interface {

@@ -4,15 +4,14 @@ package profilesvc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
-
 	"net/url"
 
 	"github.com/gorilla/mux"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"

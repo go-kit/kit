@@ -4,8 +4,8 @@ package addsvc
 // It utilizes the transport/grpc.Server.
 
 import (
+	"context"
 	stdopentracing "github.com/opentracing/opentracing-go"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/examples/addsvc/pb"
 	"github.com/go-kit/kit/log"

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -9,7 +10,6 @@ import (
 
 	jujuratelimit "github.com/juju/ratelimit"
 	"github.com/sony/gobreaker"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"

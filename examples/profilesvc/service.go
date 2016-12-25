@@ -1,10 +1,9 @@
 package profilesvc
 
 import (
+	"context"
 	"errors"
 	"sync"
-
-	"golang.org/x/net/context"
 )
 
 // Service is a simple CRUD interface for user profiles.

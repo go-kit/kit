@@ -1,9 +1,8 @@
 package http
 
 import (
+	"context"
 	"net/http"
-
-	"golang.org/x/net/context"
 )
 
 // RequestFunc may take information from an HTTP request and put it into a

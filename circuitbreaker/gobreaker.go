@@ -1,8 +1,9 @@
 package circuitbreaker
 
 import (
+	"context"
+
 	"github.com/sony/gobreaker"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 )

@@ -1,9 +1,8 @@
 package http
 
 import (
+	"context"
 	"net/http"
-
-	"golang.org/x/net/context"
 )
 
 // DecodeRequestFunc extracts a user-domain request object from an HTTP

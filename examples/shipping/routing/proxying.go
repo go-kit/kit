@@ -1,12 +1,11 @@
 package routing
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"

@@ -2,12 +2,12 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 
-	"golang.org/x/net/context"
 	"golang.org/x/net/context/ctxhttp"
 
 	"github.com/go-kit/kit/endpoint"

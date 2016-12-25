@@ -1,11 +1,11 @@
 package opentracing_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/go-kit/kit/log"

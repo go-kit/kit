@@ -1,7 +1,7 @@
 package endpoint
 
 import (
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Endpoint is the fundamental building block of servers and clients.
