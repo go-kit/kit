@@ -1,6 +1,8 @@
 machine:
   pre:
     - curl -sSL https://s3.amazonaws.com/circle-downloads/install-circleci-docker.sh | bash -s -- 1.10.0
+    - sudo rm -rf /usr/local/go
+    - curl -sSL https://storage.googleapis.com/golang/go1.7.4.linux-amd64.tar.gz | sudo tar xz -C /usr/local
   services:
     - docker
 
@@ -14,6 +16,7 @@ test:
   pre:
     - mkdir -p /home/ubuntu/.go_workspace/src/github.com/go-kit
     - mv /home/ubuntu/kit /home/ubuntu/.go_workspace/src/github.com/go-kit
+    - ln -s /home/ubuntu/.go_workspace/src/github.com/go-kit/kit /home/ubuntu/kit
     - go get github.com/go-kit/kit/...
   override:
     - go test -v -race -tags integration github.com/go-kit/kit/...:
