@@ -1,7 +1,7 @@
 package grpc
 
 import (
-	"context"
+	"golang.org/x/net/context"
 )
 
 // DecodeRequestFunc extracts a user-domain request object from a gRPC request.
