@@ -9,17 +9,16 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-const (
-	minHeartBeatTime = time.Millisecond * 500
-)
+const minHeartBeatTime = 500 * time.Millisecond
 
 // Registrar registers service instance liveness information to etcd.
 type Registrar struct {
 	client  Client
 	service Service
 	logger  log.Logger
+
+	quitmtx sync.Mutex
 	quit    chan struct{}
-	sync.Mutex
 }
 
 // Service holds the instance identifying data you want to publish to etcd. Key
@@ -39,17 +38,18 @@ type TTLOption struct {
 	ttl       time.Duration // e.g. time.Second * 10
 }
 
-// NewTTLOption returns a TTLOption that contains proper ttl settings. param
-// heartbeat is used to refresh lease of the key periodically by a loop goroutine,
-// its value should be at least 500ms. param ttl definite the lease of the key,
-// its value should be greater than heartbeat's.
-// e.g. heartbeat: time.Second * 3, ttl: time.Second * 10.
+// NewTTLOption returns a TTLOption that contains proper TTL settings. Heartbeat
+// is used to refresh the lease of the key periodically; its value should be at
+// least 500ms. TTL defines the lease of the key; its value should be
+// significantly greater than heartbeat.
+//
+// Good default values might be 3s heartbeat, 10s TTL.
 func NewTTLOption(heartbeat, ttl time.Duration) *TTLOption {
 	if heartbeat <= minHeartBeatTime {
 		heartbeat = minHeartBeatTime
 	}
 	if ttl <= heartbeat {
-		ttl = heartbeat * 3
+		ttl = 3 * heartbeat
 	}
 	return &TTLOption{
 		heartbeat: heartbeat,
@@ -84,21 +84,23 @@ func (r *Registrar) Register() {
 }
 
 func (r *Registrar) loop() {
-	r.Lock()
+	r.quitmtx.Lock()
+	if r.quit != nil {
+		return // already running
+	}
 	r.quit = make(chan struct{})
-	r.Unlock()
+	r.quitmtx.Unlock()
 
 	tick := time.NewTicker(r.service.TTL.heartbeat)
 	defer tick.Stop()
-
 	for {
 		select {
-		case <-r.quit:
-			return
 		case <-tick.C:
 			if err := r.client.Register(r.service); err != nil {
 				r.logger.Log("err", err)
 			}
+		case <-r.quit:
+			return
 		}
 	}
 }
@@ -111,8 +113,9 @@ func (r *Registrar) Deregister() {
 	} else {
 		r.logger.Log("action", "deregister")
 	}
-	r.Lock()
-	defer r.Unlock()
+
+	r.quitmtx.Lock()
+	defer r.quitmtx.Unlock()
 	if r.quit != nil {
 		close(r.quit)
 		r.quit = nil
