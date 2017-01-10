@@ -7,6 +7,7 @@ package generic_test
 import (
 	"math"
 	"math/rand"
+	"sync"
 	"testing"
 
 	"github.com/go-kit/kit/metrics/generic"
@@ -50,6 +51,27 @@ func TestHistogram(t *testing.T) {
 	if err := teststat.TestHistogram(histogram, quantiles, 0.01); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestIssue424(t *testing.T) {
+	var (
+		histogram   = generic.NewHistogram("dont_panic", 50)
+		concurrency = 100
+		operations  = 1000
+		wg          sync.WaitGroup
+	)
+
+	wg.Add(concurrency)
+	for i := 0; i < concurrency; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < operations; j++ {
+				histogram.Observe(float64(j))
+				histogram.Observe(histogram.Quantile(0.5))
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 func TestSimpleHistogram(t *testing.T) {
