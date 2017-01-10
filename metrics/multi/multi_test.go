@@ -33,8 +33,9 @@ func TestMultiGauge(t *testing.T) {
 	mg.Set(9)
 	mg.Set(8)
 	mg.Set(7)
+	mg.Add(3)
 
-	want := "[9 8 7]"
+	want := "[9 8 7 10]"
 	for i, m := range []fmt.Stringer{g1, g2, g3} {
 		if have := m.String(); want != have {
 			t.Errorf("g%d: want %q, have %q", i+1, want, have)
@@ -76,6 +77,15 @@ type mockGauge struct {
 func (g *mockGauge) Set(value float64)            { g.obs = append(g.obs, value) }
 func (g *mockGauge) With(...string) metrics.Gauge { return g }
 func (g *mockGauge) String() string               { return fmt.Sprintf("%v", g.obs) }
+func (g *mockGauge) Add(delta float64) {
+	var value float64
+	if len(g.obs) > 0 {
+		value = g.obs[len(g.obs)-1] + delta
+	} else {
+		value = delta
+	}
+	g.obs = append(g.obs, value)
+}
 
 type mockHistogram struct {
 	obs []float64

@@ -72,6 +72,7 @@ func (d *Dogstatsd) NewGauge(name string) *Gauge {
 	return &Gauge{
 		name: d.prefix + name,
 		obs:  d.gauges.Observe,
+		add:  d.gauges.Add,
 	}
 }
 
@@ -244,6 +245,7 @@ type Gauge struct {
 	name string
 	lvs  lv.LabelValues
 	obs  observeFunc
+	add  observeFunc
 }
 
 // With implements metrics.Gauge.
@@ -252,12 +254,18 @@ func (g *Gauge) With(labelValues ...string) metrics.Gauge {
 		name: g.name,
 		lvs:  g.lvs.With(labelValues...),
 		obs:  g.obs,
+		add:  g.add,
 	}
 }
 
 // Set implements metrics.Gauge.
 func (g *Gauge) Set(value float64) {
 	g.obs(g.name, g.lvs, value)
+}
+
+// Add implements metrics.Gauge.
+func (g *Gauge) Add(delta float64) {
+	g.add(g.name, g.lvs, delta)
 }
 
 // Timing is a DogStatsD timing, or metrics.Histogram. Observations are

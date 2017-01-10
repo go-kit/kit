@@ -105,6 +105,20 @@ func (g *Gauge) Set(value float64) {
 	atomic.StoreUint64(&g.bits, math.Float64bits(value))
 }
 
+// Add implements metrics.Gauge.
+func (g *Gauge) Add(delta float64) {
+	for {
+		var (
+			old  = atomic.LoadUint64(&g.bits)
+			newf = math.Float64frombits(old) + delta
+			new  = math.Float64bits(newf)
+		)
+		if atomic.CompareAndSwapUint64(&g.bits, old, new) {
+			break
+		}
+	}
+}
+
 // Value returns the current value of the gauge.
 func (g *Gauge) Value() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&g.bits))

@@ -82,7 +82,7 @@ func (g *Gauge) With(labelValues ...string) metrics.Gauge { return g }
 func (g *Gauge) Set(value float64) { g.g.Set(value) }
 
 // Add adds a value to the gauge.
-func (g *Gauge) Add(value float64) { g.g.Inc(value) }
+func (g *Gauge) Add(delta float64) { g.g.Inc(delta) }
 
 // Histogram wraps a speed Histogram.
 type Histogram struct {
