@@ -2,6 +2,8 @@
 package circonus
 
 import (
+	"sync"
+
 	"github.com/circonus-labs/circonus-gometrics"
 
 	"github.com/go-kit/kit/metrics"
@@ -63,6 +65,8 @@ func (c *Counter) Add(delta float64) { c.m.Add(c.name, uint64(delta)) }
 type Gauge struct {
 	name string
 	m    *circonusgometrics.CirconusMetrics
+	val  float64
+	mtx  sync.RWMutex
 }
 
 // With implements Gauge, but is a no-op, because Circonus metrics have no
@@ -70,7 +74,21 @@ type Gauge struct {
 func (g *Gauge) With(labelValues ...string) metrics.Gauge { return g }
 
 // Set implements Gauge.
-func (g *Gauge) Set(value float64) { g.m.SetGauge(g.name, value) }
+func (g *Gauge) Set(value float64) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
+	g.val = value
+	g.m.SetGauge(g.name, value)
+}
+
+// Add implements metrics.Gauge.
+func (g *Gauge) Add(delta float64) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
+	value := g.val + delta
+	g.val = value
+	g.m.SetGauge(g.name, value)
+}
 
 // Histogram is a Circonus implementation of a histogram metric.
 type Histogram struct {

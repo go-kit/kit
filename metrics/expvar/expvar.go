@@ -50,6 +50,9 @@ func (g *Gauge) With(labelValues ...string) metrics.Gauge { return g }
 // Set implements Gauge.
 func (g *Gauge) Set(value float64) { g.f.Set(value) }
 
+// Add implements metrics.Gauge.
+func (g *Gauge) Add(delta float64) { g.f.Add(delta) }
+
 // Histogram implements the histogram metric with a combination of the generic
 // Histogram object and several expvar Floats, one for each of the 50th, 90th,
 // 95th, and 99th quantiles of observed values, with the quantile attached to

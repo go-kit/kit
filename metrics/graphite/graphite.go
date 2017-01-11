@@ -182,6 +182,9 @@ func (g *Gauge) With(...string) metrics.Gauge { return g }
 // Set implements gauge.
 func (g *Gauge) Set(value float64) { g.g.Set(value) }
 
+// Add implements metrics.Gauge.
+func (g *Gauge) Add(delta float64) { g.g.Add(delta) }
+
 // Histogram is a Graphite histogram metric. Observations are bucketed into
 // per-quantile gauges.
 type Histogram struct {

@@ -44,6 +44,12 @@ func TestGauge(gauge metrics.Gauge, value func() float64) error {
 		want = f
 	}
 
+	for i := 0; i < n; i++ {
+		f := float64(a[i])
+		gauge.Add(f)
+		want += f
+	}
+
 	if have := value(); want != have {
 		return fmt.Errorf("want %f, have %f", want, have)
 	}

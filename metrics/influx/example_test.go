@@ -44,11 +44,14 @@ func ExampleGauge() {
 	gauge.With("error", "true").Set(1)
 	gauge.With("error", "false").Set(2)
 	gauge.Set(50)
+	gauge.With("test", "true").Set(1)
+	gauge.With("test", "true").Add(1)
 
 	client := &bufWriter{}
 	in.WriteTo(client)
 
 	expectedLines := []string{
+		`(influx_gauge,a=b,test=true value=2) [0-9]{19}`,
 		`(influx_gauge,a=b value=50) [0-9]{19}`,
 		`(influx_gauge,a=b,error=true value=1) [0-9]{19}`,
 		`(influx_gauge,a=b,error=false value=2) [0-9]{19}`,
@@ -59,6 +62,7 @@ func ExampleGauge() {
 	}
 
 	// Output:
+	// influx_gauge,a=b,test=true value=2
 	// influx_gauge,a=b value=50
 	// influx_gauge,a=b,error=true value=1
 	// influx_gauge,a=b,error=false value=2
