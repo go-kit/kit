@@ -90,4 +90,27 @@
 // handled atomically within the wrapped logger, but it typically serializes
 // both the formatting and output logic. Use a SyncLogger if the formatting
 // logger may perform multiple writes per log event.
+//
+// Error Handling
+//
+// This package relies on the practice of wrapping or decorating loggers with
+// other loggers to provide composable pieces of functionality. It also means
+// that Logger.Log must return an error because some
+// implementations—especially those that output log data to an io.Writer—may
+// encounter errors that cannot be handled locally. This in turn means that
+// Loggers that wrap other loggers should return errors from the wrapped
+// logger up the stack.
+//
+// Fortunately, the decorator pattern also provides a way to avoid the
+// necessity to check for errors every time an application calls Logger.Log.
+// An application required to panic whenever its Logger encounters
+// an error could initialize its logger as follows.
+//
+//    fmtlogger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stdout))
+//    logger := log.LoggerFunc(func(keyvals ...interface{}) error {
+//        if err := fmtlogger.Log(keyvals...); err != nil {
+//            panic(err)
+//        }
+//        return nil
+//    })
 package log
