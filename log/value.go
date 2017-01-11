@@ -42,11 +42,11 @@ func Timestamp(t func() time.Time) Valuer {
 var (
 	// DefaultTimestamp is a Valuer that returns the current wallclock time,
 	// respecting time zones, when bound.
-	DefaultTimestamp Valuer = func() interface{} { return time.Now().Format(time.RFC3339) }
+	DefaultTimestamp Valuer = func() interface{} { return time.Now().Format(time.RFC3339Nano) }
 
 	// DefaultTimestampUTC is a Valuer that returns the current time in UTC
 	// when bound.
-	DefaultTimestampUTC Valuer = func() interface{} { return time.Now().UTC().Format(time.RFC3339) }
+	DefaultTimestampUTC Valuer = func() interface{} { return time.Now().UTC().Format(time.RFC3339Nano) }
 )
 
 // Caller returns a Valuer that returns a file and line from a specified depth
