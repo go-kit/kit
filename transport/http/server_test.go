@@ -157,6 +157,34 @@ func TestEncodeJSONResponse(t *testing.T) {
 	}
 }
 
+type noContentResponse struct{}
+
+func (e noContentResponse) StatusCode() int { return http.StatusNoContent }
+
+func TestEncodeNoContent(t *testing.T) {
+	handler := httptransport.NewServer(
+		context.Background(),
+		func(context.Context, interface{}) (interface{}, error) { return noContentResponse{}, nil },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		httptransport.EncodeJSONResponse,
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want, have := http.StatusNoContent, resp.StatusCode; want != have {
+		t.Errorf("StatusCode: want %d, have %d", want, have)
+	}
+	buf, _ := ioutil.ReadAll(resp.Body)
+	if want, have := 0, len(buf); want != have {
+		t.Errorf("Body: want no content, have %d bytes", have)
+	}
+}
+
 type enhancedError struct{}
 
 func (e enhancedError) Error() string                { return "enhanced error" }
