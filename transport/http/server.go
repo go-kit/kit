@@ -151,6 +151,9 @@ func EncodeJSONResponse(_ context.Context, w http.ResponseWriter, response inter
 		code = sc.StatusCode()
 	}
 	w.WriteHeader(code)
+	if code == http.StatusNoContent {
+		return nil
+	}
 	return json.NewEncoder(w).Encode(response)
 }
 
