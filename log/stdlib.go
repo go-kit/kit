@@ -27,7 +27,7 @@ func (w StdlibWriter) Write(p []byte) (int, error) {
 type StdlibAdapter struct {
 	Logger
 	timestampKey string
-	fileKey      string
+	callerKey    string
 	messageKey   string
 }
 
@@ -39,9 +39,9 @@ func TimestampKey(key string) StdlibAdapterOption {
 	return func(a *StdlibAdapter) { a.timestampKey = key }
 }
 
-// FileKey sets the key for the file and line field. By default, it's "file".
-func FileKey(key string) StdlibAdapterOption {
-	return func(a *StdlibAdapter) { a.fileKey = key }
+// CallerKey sets the key for the file and line field. By default, it's "caller".
+func CallerKey(key string) StdlibAdapterOption {
+	return func(a *StdlibAdapter) { a.callerKey = key }
 }
 
 // MessageKey sets the key for the actual log message. By default, it's "msg".
@@ -55,7 +55,7 @@ func NewStdlibAdapter(logger Logger, options ...StdlibAdapterOption) io.Writer {
 	a := StdlibAdapter{
 		Logger:       logger,
 		timestampKey: "ts",
-		fileKey:      "file",
+		callerKey     "caller",
 		messageKey:   "msg",
 	}
 	for _, option := range options {
@@ -80,8 +80,8 @@ func (a StdlibAdapter) Write(p []byte) (int, error) {
 	if timestamp != "" {
 		keyvals = append(keyvals, a.timestampKey, timestamp)
 	}
-	if file, ok := result["file"]; ok && file != "" {
-		keyvals = append(keyvals, a.fileKey, file)
+	if caller, ok := result["caller"]; ok && caller != "" {
+		keyvals = append(keyvals, a.callerKey, caller)
 	}
 	if msg, ok := result["msg"]; ok {
 		keyvals = append(keyvals, a.messageKey, msg)
@@ -93,14 +93,14 @@ func (a StdlibAdapter) Write(p []byte) (int, error) {
 }
 
 const (
-	logRegexpDate = `(?P<date>[0-9]{4}/[0-9]{2}/[0-9]{2})?[ ]?`
-	logRegexpTime = `(?P<time>[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?)?[ ]?`
-	logRegexpFile = `(?P<file>.+?:[0-9]+)?`
-	logRegexpMsg  = `(: )?(?P<msg>.*)`
+	logRegexpDate   = `(?P<date>[0-9]{4}/[0-9]{2}/[0-9]{2})?[ ]?`
+	logRegexpTime   = `(?P<time>[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?)?[ ]?`
+	logRegexpCaller = `(?P<caller>.+?:[0-9]+)?`
+	logRegexpMsg    = `(: )?(?P<msg>.*)`
 )
 
 var (
-	logRegexp = regexp.MustCompile(logRegexpDate + logRegexpTime + logRegexpFile + logRegexpMsg)
+	logRegexp = regexp.MustCompile(logRegexpDate + logRegexpTime + logRegexpCaller + logRegexpMsg)
 )
 
 func subexps(line []byte) map[string]string {
