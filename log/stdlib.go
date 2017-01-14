@@ -55,7 +55,7 @@ func NewStdlibAdapter(logger Logger, options ...StdlibAdapterOption) io.Writer {
 	a := StdlibAdapter{
 		Logger:       logger,
 		timestampKey: "ts",
-		callerKey     "caller",
+		callerKey:    "caller",
 		messageKey:   "msg",
 	}
 	for _, option := range options {
