@@ -5,6 +5,7 @@ package addsvc
 
 import (
 	"context"
+
 	stdopentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/examples/addsvc/pb"

@@ -4,10 +4,9 @@ package addsvc
 // implementation. It also includes service middlewares.
 
 import (
+	"context"
 	"errors"
 	"time"
-
-	"context"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"

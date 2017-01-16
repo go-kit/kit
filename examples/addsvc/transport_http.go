@@ -5,12 +5,12 @@ package addsvc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
 
-	"context"
 	stdopentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/log"
