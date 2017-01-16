@@ -1,18 +1,20 @@
 package grpc
 
 import (
-	"golang.org/x/net/context"
+	"context"
+
+	oldcontext "golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 )
 
-// Handler which should be called from the grpc binding of the service
+// Handler which should be called from the gRPC binding of the service
 // implementation. The incoming request parameter, and returned response
 // parameter, are both gRPC types, not user-domain.
 type Handler interface {
-	ServeGRPC(ctx context.Context, request interface{}) (context.Context, interface{}, error)
+	ServeGRPC(ctx oldcontext.Context, request interface{}) (oldcontext.Context, interface{}, error)
 }
 
 // Server wraps an endpoint and implements grpc.Handler.
@@ -73,7 +75,7 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 }
 
 // ServeGRPC implements the Handler interface.
-func (s Server) ServeGRPC(grpcCtx context.Context, req interface{}) (context.Context, interface{}, error) {
+func (s Server) ServeGRPC(grpcCtx oldcontext.Context, req interface{}) (oldcontext.Context, interface{}, error) {
 	ctx := s.ctx
 
 	// Retrieve gRPC metadata.
