@@ -101,3 +101,8 @@ func (h *Histogram) With(labelValues ...string) metrics.Histogram { return h }
 
 // Observe implements Histogram. No precision is lost.
 func (h *Histogram) Observe(value float64) { h.h.RecordValue(value) }
+
+// StartTimer implements Histogram.
+func (h *Histogram) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(h)
+}

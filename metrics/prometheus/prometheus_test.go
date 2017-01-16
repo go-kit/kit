@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+  "time"
 
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 
@@ -115,6 +116,40 @@ func TestSummary(t *testing.T) {
 
 	if err := teststat.TestHistogram(summary, quantiles, 0.01); err != nil {
 		t.Fatal(err)
+	}
+}
+
+
+func TestSummaryTimer(t *testing.T) {
+	s := httptest.NewServer(stdprometheus.UninstrumentedHandler())
+	defer s.Close()
+
+	scrape := func() string {
+		resp, _ := http.Get(s.URL)
+		buf, _ := ioutil.ReadAll(resp.Body)
+		return string(buf)
+	}
+
+	namespace, subsystem, name := "test", "prometheus", "summary_timer"
+	re_sum := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `_sum{foo="bar"} ([0-9\.]+)`)
+
+	summary := NewSummaryFrom(stdprometheus.SummaryOpts{
+		Namespace: namespace,
+		Subsystem: subsystem,
+		Name:      name,
+		Help:      "This is the help string for the summary.",
+	}, []string{"foo"}).With("foo", "bar")
+
+  timer := summary.(*Summary).StartTimer()
+  time.Sleep(100 * time.Millisecond)
+  timer.ObserveDuration()
+
+  buf := scrape()
+	match_sum := re_sum.FindStringSubmatch(buf)
+	sum, _ := strconv.ParseFloat(match_sum[1], 64)
+
+	if sum < 0.1 || sum > 0.2 {
+		t.Fatalf("Duration observed was %f seconds, expected around 100ms", sum)
 	}
 }
 

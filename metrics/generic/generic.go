@@ -162,6 +162,11 @@ func (h *Histogram) Observe(value float64) {
 	h.h.Add(value)
 }
 
+// StartTimer implements Histogram.
+func (h *Histogram) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(h)
+}
+
 // Quantile returns the value of the quantile q, 0.0 < q < 1.0.
 func (h *Histogram) Quantile(q float64) float64 {
 	h.h.RLock()
@@ -229,6 +234,11 @@ func (h *SimpleHistogram) Observe(value float64) {
 	h.n++
 	h.avg -= h.avg / float64(h.n)
 	h.avg += value / float64(h.n)
+}
+
+// StartTimer implements Histogram.
+func (h *SimpleHistogram) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(h)
 }
 
 // ApproximateMovingAverage returns the approximate moving average of observations.

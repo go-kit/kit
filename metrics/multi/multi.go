@@ -76,6 +76,11 @@ func (h Histogram) Observe(value float64) {
 	}
 }
 
+// StartTimer implements Histogram.
+func (h Histogram) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(h)
+}
+
 // With implements histogram.
 func (h Histogram) With(labelValues ...string) metrics.Histogram {
 	next := make(Histogram, len(h))

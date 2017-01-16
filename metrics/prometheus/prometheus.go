@@ -120,10 +120,16 @@ func (s *Summary) Observe(value float64) {
 	s.sv.With(makeLabels(s.lvs...)).Observe(value)
 }
 
+// StartTimer implements Histogram.
+func (s *Summary) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(s)
+}
+
 // Histogram implements Histogram via a Prometheus HistogramVec. The difference
 // between a Histogram and a Summary is that Histograms require predefined
 // quantile buckets, and can be statistically aggregated.
 type Histogram struct {
+  metrics.HistogramTimer
 	hv  *prometheus.HistogramVec
 	lvs lv.LabelValues
 }
@@ -154,6 +160,11 @@ func (h *Histogram) With(labelValues ...string) metrics.Histogram {
 // Observe implements Histogram.
 func (h *Histogram) Observe(value float64) {
 	h.hv.With(makeLabels(h.lvs...)).Observe(value)
+}
+
+// StartTimer implements Histogram.
+func (h *Histogram) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(h)
 }
 
 func makeLabels(labelValues ...string) prometheus.Labels {

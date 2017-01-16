@@ -38,3 +38,8 @@ func (h histogram) With(labelValues ...string) metrics.Histogram { return h }
 
 // Observe implements histogram.
 func (h histogram) Observe(value float64) {}
+
+// StartTimer implements Histogram.
+func (h histogram) StartTimer() metrics.HistogramTimer {
+  return metrics.NewHistogramTimer(h)
+}
