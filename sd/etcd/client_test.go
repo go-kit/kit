@@ -1,11 +1,12 @@
 package etcd
 
 import (
-	"context"
 	"errors"
 	"reflect"
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 
 	etcd "github.com/coreos/etcd/client"
 )
