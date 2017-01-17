@@ -91,7 +91,6 @@
 //    expvar      1    atomic                 atomic                 synthetic, batch, in-place expose
 //    influx      n    custom                 custom                 custom
 //    prometheus  n    native                 native                 native
-//    circonus    1    native                 native                 native
 //    pcp         1    native                 native                 native
 //
 package metrics
