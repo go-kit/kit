@@ -1,6 +1,9 @@
 package http
 
 import (
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -112,4 +115,20 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		return response, nil
 	}
+}
+
+// EncodeJSONRequest is an EncodeRequestFunc that serializes the request as a
+// JSON object to the Request body. Many JSON-over-HTTP services can use it as
+// a sensible default. If the request implements Headerer, the provided headers
+// will be applied to the request.
+func EncodeJSONRequest(c context.Context, r *http.Request, request interface{}) error {
+	r.Header.Set("Content-Type", "application/json; charset=utf-8")
+	if headerer, ok := request.(Headerer); ok {
+		for k := range headerer.Headers() {
+			r.Header.Set(k, headerer.Headers().Get(k))
+		}
+	}
+	var b bytes.Buffer
+	r.Body = ioutil.NopCloser(&b)
+	return json.NewEncoder(&b).Encode(request)
 }
