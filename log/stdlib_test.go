@@ -3,6 +3,7 @@ package log
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"testing"
 	"time"
@@ -23,27 +24,33 @@ func TestStdlibWriter(t *testing.T) {
 func TestStdlibAdapterUsage(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := NewLogfmtLogger(buf)
-	writer := NewStdlibAdapter(logger)
-	stdlog := log.New(writer, "", 0)
 
-	now := time.Now()
-	date := now.Format("2006/01/02")
-	time := now.Format("15:04:05")
-
-	for flag, want := range map[int]string{
-		0:                                      "msg=hello\n",
-		log.Ldate:                              "ts=" + date + " msg=hello\n",
-		log.Ltime:                              "ts=" + time + " msg=hello\n",
-		log.Ldate | log.Ltime:                  "ts=\"" + date + " " + time + "\" msg=hello\n",
-		log.Lshortfile:                         "caller=stdlib_test.go:44 msg=hello\n",
-		log.Lshortfile | log.Ldate:             "ts=" + date + " caller=stdlib_test.go:44 msg=hello\n",
-		log.Lshortfile | log.Ldate | log.Ltime: "ts=\"" + date + " " + time + "\" caller=stdlib_test.go:44 msg=hello\n",
+	for _, test := range []struct {
+		writer io.Writer
+		now    time.Time
+		flag   int
+	}{
+		{NewStdlibAdapter(logger), time.Now(), 0},
+		{NewStdlibAdapter(logger, UTC()), time.Now().UTC(), log.LUTC},
 	} {
-		buf.Reset()
-		stdlog.SetFlags(flag)
-		stdlog.Print("hello")
-		if have := buf.String(); want != have {
-			t.Errorf("flag=%d: want %#v, have %#v", flag, want, have)
+		stdlog := log.New(test.writer, "", 0)
+		now := test.now.Format(time.RFC3339)
+
+		for flag, want := range map[int]string{
+			0:                                      "msg=hello\n",
+			log.Ldate:                              "ts=" + now + " msg=hello\n",
+			log.Ltime:                              "ts=" + now + " msg=hello\n",
+			log.Ldate | log.Ltime:                  "ts=" + now + " msg=hello\n",
+			log.Lshortfile:                         "caller=stdlib_test.go:50 msg=hello\n",
+			log.Lshortfile | log.Ldate:             "ts=" + now + " caller=stdlib_test.go:50 msg=hello\n",
+			log.Lshortfile | log.Ldate | log.Ltime: "ts=" + now + " caller=stdlib_test.go:50 msg=hello\n",
+		} {
+			buf.Reset()
+			stdlog.SetFlags(flag | test.flag)
+			stdlog.Print("hello")
+			if have := buf.String(); want != have {
+				t.Errorf("flag=%d, now=%v: want %#v, have %#v", flag, test.now, want, have)
+			}
 		}
 	}
 }
@@ -52,17 +59,24 @@ func TestStdLibAdapterExtraction(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := NewLogfmtLogger(buf)
 	writer := NewStdlibAdapter(logger)
+	now := time.Now()
+	stdday := now.Format(formatStdDate)
+	stdsec := now.Format(formatStdTime)
+	stdmic := now.Format(formatStdTime + formatStdMicro)
+	fmtsec := now.Format(time.RFC3339)
+	fmtmic := now.Format(formatRFC3339Micro)
+
 	for input, want := range map[string]string{
-		"hello":                                            "msg=hello\n",
-		"2009/01/23: hello":                                "ts=2009/01/23 msg=hello\n",
-		"2009/01/23 01:23:23: hello":                       "ts=\"2009/01/23 01:23:23\" msg=hello\n",
-		"01:23:23: hello":                                  "ts=01:23:23 msg=hello\n",
-		"2009/01/23 01:23:23.123123: hello":                "ts=\"2009/01/23 01:23:23.123123\" msg=hello\n",
-		"2009/01/23 01:23:23.123123 /a/b/c/d.go:23: hello": "ts=\"2009/01/23 01:23:23.123123\" caller=/a/b/c/d.go:23 msg=hello\n",
-		"01:23:23.123123 /a/b/c/d.go:23: hello":            "ts=01:23:23.123123 caller=/a/b/c/d.go:23 msg=hello\n",
-		"2009/01/23 01:23:23 /a/b/c/d.go:23: hello":        "ts=\"2009/01/23 01:23:23\" caller=/a/b/c/d.go:23 msg=hello\n",
-		"2009/01/23 /a/b/c/d.go:23: hello":                 "ts=2009/01/23 caller=/a/b/c/d.go:23 msg=hello\n",
-		"/a/b/c/d.go:23: hello":                            "caller=/a/b/c/d.go:23 msg=hello\n",
+		"hello":                                          "msg=hello\n",
+		stdday + ": hello":                               "ts=" + fmtsec + " msg=hello\n",
+		stdday + " " + stdsec + ": hello":                "ts=" + fmtsec + " msg=hello\n",
+		stdsec + ": hello":                               "ts=" + fmtsec + " msg=hello\n",
+		stdday + " " + stdmic + ": hello":                "ts=" + fmtmic + " msg=hello\n",
+		stdday + " " + stdmic + " /a/b/c/d.go:23: hello": "ts=" + fmtmic + " caller=/a/b/c/d.go:23 msg=hello\n",
+		stdmic + " /a/b/c/d.go:23: hello":                "ts=" + fmtmic + " caller=/a/b/c/d.go:23 msg=hello\n",
+		stdday + " " + stdsec + " /a/b/c/d.go:23: hello": "ts=" + fmtsec + " caller=/a/b/c/d.go:23 msg=hello\n",
+		stdday + " /a/b/c/d.go:23: hello":                "ts=" + fmtsec + " caller=/a/b/c/d.go:23 msg=hello\n",
+		"/a/b/c/d.go:23: hello":                          "caller=/a/b/c/d.go:23 msg=hello\n",
 	} {
 		buf.Reset()
 		fmt.Fprint(writer, input)
