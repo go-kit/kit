@@ -60,7 +60,7 @@ var consulState = []*consul.ServiceEntry{
 func TestSubscriber(t *testing.T) {
 	var (
 		logger = log.NewNopLogger()
-		client = newTestClient(consulState)
+		client = newTestClient(consulState, nil)
 	)
 
 	s := NewSubscriber(client, testFactory, logger, "search", []string{"api"}, true)
@@ -79,7 +79,7 @@ func TestSubscriber(t *testing.T) {
 func TestSubscriberNoService(t *testing.T) {
 	var (
 		logger = log.NewNopLogger()
-		client = newTestClient(consulState)
+		client = newTestClient(consulState, nil)
 	)
 
 	s := NewSubscriber(client, testFactory, logger, "feed", []string{}, true)
@@ -98,7 +98,7 @@ func TestSubscriberNoService(t *testing.T) {
 func TestSubscriberWithTags(t *testing.T) {
 	var (
 		logger = log.NewNopLogger()
-		client = newTestClient(consulState)
+		client = newTestClient(consulState, nil)
 	)
 
 	s := NewSubscriber(client, testFactory, logger, "search", []string{"api", "v2"}, true)
@@ -115,7 +115,7 @@ func TestSubscriberWithTags(t *testing.T) {
 }
 
 func TestSubscriberAddressOverride(t *testing.T) {
-	s := NewSubscriber(newTestClient(consulState), testFactory, log.NewNopLogger(), "search", []string{"db"}, true)
+	s := NewSubscriber(newTestClient(consulState, nil), testFactory, log.NewNopLogger(), "search", []string{"db"}, true)
 	defer s.Stop()
 
 	endpoints, err := s.Endpoints()

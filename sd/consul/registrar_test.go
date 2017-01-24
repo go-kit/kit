@@ -2,6 +2,7 @@ package consul
 
 import (
 	"testing"
+	"time"
 
 	stdconsul "github.com/hashicorp/consul/api"
 
@@ -9,7 +10,7 @@ import (
 )
 
 func TestRegistrar(t *testing.T) {
-	client := newTestClient([]*stdconsul.ServiceEntry{})
+	client := newTestClient([]*stdconsul.ServiceEntry{}, []*stdconsul.AgentCheckRegistration{})
 	p := NewRegistrar(client, testRegistration, log.NewNopLogger())
 	if want, have := 0, len(client.entries); want != have {
 		t.Errorf("want %d, have %d", want, have)
@@ -24,4 +25,30 @@ func TestRegistrar(t *testing.T) {
 	if want, have := 0, len(client.entries); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
+
+	p.Register()
+	if want, have := 1, len(client.entries); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	p.AddCheck(testCheck, testTTLCheck)
+	if want, have := 1, len(client.checks); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	p.RemoveCheck(testCheckID)
+	if want, have := 0, len(client.checks); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	p.Deregister()
+	if want, have := 0, len(client.entries); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+}
+
+var testTTLCheck = &TTLCheck{
+	output:  "",
+	status:  "pass",
+	timeout: time.Second,
 }

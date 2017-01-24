@@ -12,6 +12,18 @@ type Client interface {
 
 	// Service
 	Service(service, tag string, passingOnly bool, queryOpts *consul.QueryOptions) ([]*consul.ServiceEntry, *consul.QueryMeta, error)
+
+	// CheckRegister registers a node or service check with the local agent.
+	CheckRegister(ac *consul.AgentCheckRegistration) error
+
+	// CheckDeregister deregisters a node or service check with the local agent.
+	CheckDeregister(id string) error
+
+	// Checks
+	Checks(service string, queryOpts *consul.QueryOptions) (consul.HealthChecks, *consul.QueryMeta, error)
+
+	// UpdateTTL updates a TTL check.
+	UpdateTTL(checkID, output, status string) error
 }
 
 type client struct {
@@ -34,4 +46,20 @@ func (c *client) Deregister(r *consul.AgentServiceRegistration) error {
 
 func (c *client) Service(service, tag string, passingOnly bool, queryOpts *consul.QueryOptions) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
 	return c.consul.Health().Service(service, tag, passingOnly, queryOpts)
+}
+
+func (c *client) CheckRegister(ac *consul.AgentCheckRegistration) error {
+	return c.consul.Agent().CheckRegister(ac)
+}
+
+func (c *client) CheckDeregister(checkID string) error {
+	return c.consul.Agent().CheckDeregister(checkID)
+}
+
+func (c *client) Checks(service string, queryOpts *consul.QueryOptions) (consul.HealthChecks, *consul.QueryMeta, error) {
+	return c.consul.Health().Checks(service, queryOpts)
+}
+
+func (c *client) UpdateTTL(checkID, output, status string) error {
+	return c.consul.Agent().UpdateTTL(checkID, output, status)
 }
