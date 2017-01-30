@@ -11,6 +11,27 @@ type Logger interface {
 	Log(keyvals ...interface{}) error
 }
 
+// Delegate returns the Logger to which the supplied Logger delegates,
+// if any. A logger has a discoverable delegate if it implements the
+// following interface:
+//
+//     type delegator interface {
+//         Delegate() Logger
+//     }
+//
+// If the Logger is nil or does not implement Delegate, it returns
+// nil.
+func Delegate(logger Logger) Logger {
+	type delegator interface {
+		Delegate() Logger
+	}
+
+	if decorator, ok := logger.(delegator); ok {
+		return decorator.Delegate()
+	}
+	return nil
+}
+
 // ErrMissingValue is appended to keyvals slices with odd length to substitute
 // the missing value.
 var ErrMissingValue = errors.New("(MISSING)")
@@ -131,6 +152,11 @@ func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
 		keyvals:   kvs,
 		hasValuer: l.hasValuer || containsValuer(keyvals),
 	}
+}
+
+// Delegate returns the Logger wrapped by the receiver.
+func (l *Context) Delegate() Logger {
+	return l.logger
 }
 
 // LoggerFunc is an adapter to allow use of ordinary functions as Loggers. If
