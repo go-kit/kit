@@ -1,6 +1,7 @@
 package http_test
 
 import (
+	"context"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -8,8 +9,6 @@ import (
 	"net/url"
 	"testing"
 	"time"
-
-	"golang.org/x/net/context"
 
 	httptransport "github.com/go-kit/kit/transport/http"
 )

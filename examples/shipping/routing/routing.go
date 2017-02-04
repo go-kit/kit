@@ -3,7 +3,9 @@
 // bounded context.
 package routing
 
-import "github.com/go-kit/kit/examples/shipping/cargo"
+import (
+	"github.com/go-kit/kit/examples/shipping/cargo"
+)
 
 // Service provides access to an external routing service.
 type Service interface {

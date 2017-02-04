@@ -1,13 +1,12 @@
 package httprp_test
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
-
-	"golang.org/x/net/context"
 
 	httptransport "github.com/go-kit/kit/transport/httprp"
 )

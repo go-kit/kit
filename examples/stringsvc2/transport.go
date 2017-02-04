@@ -1,10 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
-
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 )

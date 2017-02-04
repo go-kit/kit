@@ -1,12 +1,12 @@
 package lb
 
 import (
+	"context"
 	"math"
 	"testing"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/sd"
-	"golang.org/x/net/context"
 )
 
 func TestRandom(t *testing.T) {

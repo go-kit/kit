@@ -1,12 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"net/http"
 	"os"
 
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/log"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"

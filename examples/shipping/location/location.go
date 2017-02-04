@@ -1,7 +1,9 @@
 // Package location provides the Location aggregate.
 package location
 
-import "errors"
+import (
+	"errors"
+)
 
 // UNLocode is the United Nations location code that uniquely identifies a
 // particular location.

@@ -1,14 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/examples/profilesvc"
 	"github.com/go-kit/kit/log"

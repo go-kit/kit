@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	etcd "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
+
+	etcd "github.com/coreos/etcd/client"
 )
 
 func TestNewClient(t *testing.T) {

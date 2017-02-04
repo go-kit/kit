@@ -1,12 +1,12 @@
 package opentracing
 
 import (
+	"context"
 	"encoding/base64"
 	"strings"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/go-kit/kit/log"

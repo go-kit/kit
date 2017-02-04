@@ -1,13 +1,12 @@
 package jwt
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
 	"google.golang.org/grpc/metadata"
-
-	"golang.org/x/net/context"
 )
 
 func TestToHTTPContext(t *testing.T) {

@@ -1,12 +1,12 @@
 package ratelimit_test
 
 import (
+	"context"
 	"math"
 	"testing"
 	"time"
 
 	jujuratelimit "github.com/juju/ratelimit"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/ratelimit"

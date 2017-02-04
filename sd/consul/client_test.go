@@ -1,13 +1,13 @@
 package consul
 
 import (
+	"context"
 	"errors"
 	"io"
 	"reflect"
 	"testing"
 
 	stdconsul "github.com/hashicorp/consul/api"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 )

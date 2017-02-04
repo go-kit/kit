@@ -1,11 +1,10 @@
 package httprp
 
 import (
+	"context"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-
-	"golang.org/x/net/context"
 )
 
 // RequestFunc may take information from an HTTP request and put it into a

@@ -1,11 +1,10 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-
-	"golang.org/x/net/context"
 )
 
 func ExamplePopulateRequestContext() {

@@ -1,13 +1,13 @@
 package opentracing
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"strconv"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"

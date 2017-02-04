@@ -1,10 +1,9 @@
 package http_test
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
-
-	"golang.org/x/net/context"
 
 	httptransport "github.com/go-kit/kit/transport/http"
 )

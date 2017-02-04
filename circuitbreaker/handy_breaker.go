@@ -1,10 +1,10 @@
 package circuitbreaker
 
 import (
+	"context"
 	"time"
 
 	"github.com/streadway/handy/breaker"
-	"golang.org/x/net/context"
 
 	"github.com/go-kit/kit/endpoint"
 )

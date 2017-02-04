@@ -1,11 +1,11 @@
 package jwt
 
 import (
+	"context"
 	"fmt"
 	stdhttp "net/http"
 	"strings"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/go-kit/kit/transport/grpc"
