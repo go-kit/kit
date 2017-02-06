@@ -36,7 +36,7 @@ func TestGauge(t *testing.T) {
 
 func TestHistogram(t *testing.T) {
 	// The histogram test is actually like 4 gauge tests.
-	prefix, name := "statsd.", "histogram_test"
+	prefix, name := "graphite.", "histogram_test"
 	label, value := "abc", "def" // ignored for Graphite
 	re50 := regexp.MustCompile(prefix + name + `.p50 ([0-9\.]+) [0-9]+`)
 	re90 := regexp.MustCompile(prefix + name + `.p90 ([0-9\.]+) [0-9]+`)

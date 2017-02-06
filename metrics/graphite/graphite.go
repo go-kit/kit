@@ -38,7 +38,7 @@ type Graphite struct {
 	logger     log.Logger
 }
 
-// New returns a Statsd object that may be used to create metrics. Prefix is
+// New returns a Graphite object that may be used to create metrics. Prefix is
 // applied to all created metrics. Callers must ensure that regular calls to
 // WriteTo are performed, either manually or with one of the helper methods.
 func New(prefix string, logger log.Logger) *Graphite {
