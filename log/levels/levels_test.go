@@ -63,3 +63,42 @@ func ExampleLevels() {
 	// level=debug msg=hello
 	// level=warn context=foo err=error
 }
+
+func TestFilteredLevels(t *testing.T) {
+	buf := bytes.Buffer{}
+
+	// Arbitrarily choose Info and Error levels to be filtered
+	logger := levels.New(
+		log.NewLogfmtLogger(&buf),
+		levels.InfoFilter(),
+		levels.ErrorFilter(),
+	)
+
+	// The two filtered levels should not output
+	logger.Info().Log("test1", "1")
+	if buf.Len() != 0 {
+		t.Errorf("Unexpected output: %s", buf)
+	}
+	logger.Info().Log("test2", "2")
+	if buf.Len() != 0 {
+		t.Errorf("Unexpected output: %s", buf)
+	}
+
+	// All the rest of the levels should output
+	logger.Debug().Log("test3", "3")
+	if buf.Len() == 0 {
+		t.Errorf("Expected output")
+	}
+	buf.Reset()
+
+	logger.Warn().Log("test4", "4")
+	if buf.Len() == 0 {
+		t.Errorf("Expected output")
+	}
+	buf.Reset()
+
+	logger.Crit().Log("test5", "5")
+	if buf.Len() == 0 {
+		t.Errorf("Expected output")
+	}
+}
