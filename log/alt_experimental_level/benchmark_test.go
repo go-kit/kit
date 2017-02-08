@@ -57,3 +57,19 @@ func benchmarkRunner(b *testing.B, logger log.Logger) {
 		level.Debug(logger).Log("foo", "bar")
 	}
 }
+
+func BenchmarkManyDroppedRecords(b *testing.B) {
+	logger := level.AllowingInfoAndAbove(log.NewJSONLogger(ioutil.Discard))
+	b.ResetTimer()
+	b.ReportAllocs()
+	debug := level.Debug(logger)
+	info := level.Info(logger)
+	for i := 0; i < b.N; i++ {
+		debug.Log("foo", "1")
+		// Only this one will be retained.
+		info.Log("baz", "quux")
+		debug.Log("foo", "2")
+		debug.Log("foo", "3")
+		debug.Log("foo", "4")
+	}
+}
