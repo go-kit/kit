@@ -12,7 +12,7 @@ type leveler interface {
 type level byte
 
 const (
-	levelDebug level = iota
+	levelDebug level = 1 << iota
 	levelInfo
 	levelWarn
 	levelError
@@ -70,11 +70,11 @@ func Error(logger log.Logger) log.Logger {
 	return withLevel(valError, logger)
 }
 
-func rejectLevelsLowerThan(minLevel level) log.Projection {
+func rejectLevelsOtherThan(mask level) log.Projection {
 	return func(keyvals []interface{}) ([]interface{}, bool) {
 		for i, end := 1, len(keyvals); i < end; i += 2 {
 			if l, ok := keyvals[i].(*levelValue); ok {
-				if l.level < minLevel {
+				if l.level&mask == 0 {
 					return nil, false
 				}
 				break
@@ -85,9 +85,9 @@ func rejectLevelsLowerThan(minLevel level) log.Projection {
 }
 
 var (
-	preserveInfoAndAbove = rejectLevelsLowerThan(levelInfo)
-	preserveWarnAndAbove = rejectLevelsLowerThan(levelWarn)
-	preserveErrorOnly    = rejectLevelsLowerThan(levelError)
+	preserveInfoAndAbove = rejectLevelsOtherThan(levelInfo | levelWarn | levelError)
+	preserveWarnAndAbove = rejectLevelsOtherThan(levelWarn | levelError)
+	preserveErrorOnly    = rejectLevelsOtherThan(levelError)
 )
 
 // AllowingAll returns a logger allowed to emit log records at all
