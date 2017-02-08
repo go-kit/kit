@@ -62,15 +62,30 @@ func NewContext(logger Logger) *Context {
 // containing a Valuer with their generated value for each call to its Log
 // method.
 type Context struct {
-	logger    Logger
-	keyvals   []interface{}
-	hasValuer bool
+	logger     Logger
+	keyvals    []interface{}
+	hasValuer  bool
+	projection Projection
 }
 
 // Log replaces all value elements (odd indexes) containing a Valuer in the
 // stored context with their generated value, appends keyvals, and passes the
 // result to the wrapped Logger.
 func (l *Context) Log(keyvals ...interface{}) error {
+	if l == nil {
+		return nil
+	}
+	if l.projection != nil {
+		if len(keyvals)%2 != 0 {
+			keyvals = append(keyvals, ErrMissingValue)
+		}
+		// TODO(seh): Allocate a defensive copy here and allow in-place mutation?
+		projected, preserve := l.projection(keyvals)
+		if !preserve {
+			return nil
+		}
+		keyvals = projected
+	}
 	kvs := append(l.keyvals, keyvals...)
 	if len(kvs)%2 != 0 {
 		kvs = append(kvs, ErrMissingValue)
@@ -88,8 +103,19 @@ func (l *Context) Log(keyvals ...interface{}) error {
 
 // With returns a new Context with keyvals appended to those of the receiver.
 func (l *Context) With(keyvals ...interface{}) *Context {
-	if len(keyvals) == 0 {
+	if len(keyvals) == 0 || l == nil {
 		return l
+	}
+	if l.projection != nil {
+		if len(keyvals)%2 != 0 {
+			keyvals = append(keyvals, ErrMissingValue)
+		}
+		// TODO(seh): Allocate a defensive copy here and allow in-place mutation?
+		projected, preserve := l.projection(keyvals)
+		if !preserve {
+			return nil
+		}
+		keyvals = projected
 	}
 	kvs := append(l.keyvals, keyvals...)
 	if len(kvs)%2 != 0 {
@@ -101,16 +127,28 @@ func (l *Context) With(keyvals ...interface{}) *Context {
 		// backing array is created if the slice must grow in Log or With.
 		// Using the extra capacity without copying risks a data race that
 		// would violate the Logger interface contract.
-		keyvals:   kvs[:len(kvs):len(kvs)],
-		hasValuer: l.hasValuer || containsValuer(keyvals),
+		keyvals:    kvs[:len(kvs):len(kvs)],
+		hasValuer:  l.hasValuer || containsValuer(keyvals),
+		projection: l.projection,
 	}
 }
 
 // WithPrefix returns a new Context with keyvals prepended to those of the
 // receiver.
 func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
-	if len(keyvals) == 0 {
+	if len(keyvals) == 0 || l == nil {
 		return l
+	}
+	if l.projection != nil {
+		if len(keyvals)%2 != 0 {
+			keyvals = append(keyvals, ErrMissingValue)
+		}
+		// TODO(seh): Allocate a defensive copy here and allow in-place mutation?
+		projected, preserve := l.projection(keyvals)
+		if !preserve {
+			return nil
+		}
+		keyvals = projected
 	}
 	// Limiting the capacity of the stored keyvals ensures that a new
 	// backing array is created if the slice must grow in Log or With.
@@ -127,9 +165,59 @@ func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
 	}
 	kvs = append(kvs, l.keyvals...)
 	return &Context{
-		logger:    l.logger,
-		keyvals:   kvs,
-		hasValuer: l.hasValuer || containsValuer(keyvals),
+		logger:     l.logger,
+		keyvals:    kvs,
+		hasValuer:  l.hasValuer || containsValuer(keyvals),
+		projection: l.projection,
+	}
+}
+
+// TODO(seh): Document this type.
+type Projection func(keyvals []interface{}) (kvs []interface{}, preserve bool)
+
+// TODO(seh): Document this function.
+func (l *Context) WithPreProjection(p Projection) *Context {
+	if p == nil || l == nil {
+		return l
+	}
+	if outer := l.projection; outer != nil {
+		inner := p
+		p = func(keyvals []interface{}) ([]interface{}, bool) {
+			kvs, preserve := inner(keyvals)
+			if !preserve {
+				return nil, false
+			}
+			return outer(kvs)
+		}
+	}
+	return &Context{
+		logger:     l.logger,
+		keyvals:    l.keyvals,
+		hasValuer:  l.hasValuer,
+		projection: p,
+	}
+}
+
+// TODO(seh): Document this function.
+func (l *Context) WithPostProjection(p Projection) *Context {
+	if p == nil || l == nil {
+		return l
+	}
+	if inner := l.projection; inner != nil {
+		outer := p
+		p = func(keyvals []interface{}) ([]interface{}, bool) {
+			kvs, preserve := inner(keyvals)
+			if !preserve {
+				return nil, false
+			}
+			return outer(kvs)
+		}
+	}
+	return &Context{
+		logger:     l.logger,
+		keyvals:    l.keyvals,
+		hasValuer:  l.hasValuer,
+		projection: p,
 	}
 }
 
