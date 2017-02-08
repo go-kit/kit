@@ -65,7 +65,7 @@ type Context struct {
 	logger     Logger
 	keyvals    []interface{}
 	hasValuer  bool
-	projection Projection
+	projection *deferrableProjection
 }
 
 // Log replaces all value elements (odd indexes) containing a Valuer in the
@@ -75,16 +75,20 @@ func (l *Context) Log(keyvals ...interface{}) error {
 	if l == nil {
 		return nil
 	}
+	applyDeferredProjection := false
 	if l.projection != nil {
-		if len(keyvals)%2 != 0 {
-			keyvals = append(keyvals, ErrMissingValue)
+		if l.projection.deferred {
+			applyDeferredProjection = true
+		} else {
+			if len(keyvals)%2 != 0 {
+				keyvals = append(keyvals, ErrMissingValue)
+			}
+			projected, preserve := l.projection.Projection(keyvals)
+			if !preserve {
+				return nil
+			}
+			keyvals = projected
 		}
-		// TODO(seh): Allocate a defensive copy here and allow in-place mutation?
-		projected, preserve := l.projection(keyvals)
-		if !preserve {
-			return nil
-		}
-		keyvals = projected
 	}
 	kvs := append(l.keyvals, keyvals...)
 	if len(kvs)%2 != 0 {
@@ -98,6 +102,17 @@ func (l *Context) Log(keyvals ...interface{}) error {
 		}
 		bindValues(kvs[:len(l.keyvals)])
 	}
+	if applyDeferredProjection {
+		projected, preserve := l.projection.Projection(kvs)
+		if !preserve {
+			return nil
+		}
+		if len(projected)%2 != 0 {
+			kvs = append(projected, ErrMissingValue)
+		} else {
+			kvs = projected
+		}
+	}
 	return l.logger.Log(kvs...)
 }
 
@@ -106,12 +121,11 @@ func (l *Context) With(keyvals ...interface{}) *Context {
 	if len(keyvals) == 0 || l == nil {
 		return l
 	}
-	if l.projection != nil {
+	if l.projection != nil && !l.projection.deferred {
 		if len(keyvals)%2 != 0 {
 			keyvals = append(keyvals, ErrMissingValue)
 		}
-		// TODO(seh): Allocate a defensive copy here and allow in-place mutation?
-		projected, preserve := l.projection(keyvals)
+		projected, preserve := l.projection.Projection(keyvals)
 		if !preserve {
 			return nil
 		}
@@ -139,12 +153,11 @@ func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
 	if len(keyvals) == 0 || l == nil {
 		return l
 	}
-	if l.projection != nil {
+	if l.projection != nil && !l.projection.deferred {
 		if len(keyvals)%2 != 0 {
 			keyvals = append(keyvals, ErrMissingValue)
 		}
-		// TODO(seh): Allocate a defensive copy here and allow in-place mutation?
-		projected, preserve := l.projection(keyvals)
+		projected, preserve := l.projection.Projection(keyvals)
 		if !preserve {
 			return nil
 		}
@@ -172,41 +185,76 @@ func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
 	}
 }
 
-// TODO(seh): Document this type.
+// A Projection inspects a proposed set of keys and values for a log
+// record, deciding whether to preserve or drop the record and
+// optionally proposing a different set of keys and values to use
+// instead.
+//
+// It must not modify the supplied slice, and should return an even
+// number of keys and values paired in an alternating sequence.
 type Projection func(keyvals []interface{}) (kvs []interface{}, preserve bool)
 
-// TODO(seh): Document this function.
-func (l *Context) WithPreProjection(p Projection) *Context {
+type deferrableProjection struct {
+	Projection
+	deferred bool
+}
+
+// WithPreProjection returns a new Context that applies the supplied
+// projection function before any other such functions already bound
+// to the original Context.
+//
+// If deferred, it waits to apply the function only to complete log
+// records before submitting them first to any other projection
+// functions and then to its downstream logger. Otherwise, it applies
+// the function to keys and values as they accumulate in calls to
+// With, WithPrefix, and Log, before interpolating any contributions
+// from Valuers.
+func (l *Context) WithPreProjection(p Projection, deferred bool) *Context {
 	if p == nil || l == nil {
 		return l
 	}
 	if outer := l.projection; outer != nil {
+		if !deferred && outer.deferred {
+			deferred = true
+		}
 		inner := p
 		p = func(keyvals []interface{}) ([]interface{}, bool) {
 			kvs, preserve := inner(keyvals)
 			if !preserve {
 				return nil, false
 			}
-			return outer(kvs)
+			return outer.Projection(kvs)
 		}
 	}
 	return &Context{
 		logger:     l.logger,
 		keyvals:    l.keyvals,
 		hasValuer:  l.hasValuer,
-		projection: p,
+		projection: &deferrableProjection{p, deferred},
 	}
 }
 
-// TODO(seh): Document this function.
-func (l *Context) WithPostProjection(p Projection) *Context {
+// WithPostProjection returns a new Context that applies the supplied
+// projection function after any other such functions already bound
+// to the original Context.
+//
+// If deferred, it waits to apply the function only to complete log
+// records as returned from any other projection functions, and
+// submits the result to its downstream logger. Otherwise, it applies
+// the function to keys and values as they accumulate in calls to
+// With, WithPrefix, and Log, before interpolating any contributions
+// from Valuers.
+func (l *Context) WithPostProjection(p Projection, deferred bool) *Context {
 	if p == nil || l == nil {
 		return l
 	}
 	if inner := l.projection; inner != nil {
+		if !deferred && inner.deferred {
+			deferred = true
+		}
 		outer := p
 		p = func(keyvals []interface{}) ([]interface{}, bool) {
-			kvs, preserve := inner(keyvals)
+			kvs, preserve := inner.Projection(keyvals)
 			if !preserve {
 				return nil, false
 			}
@@ -217,7 +265,7 @@ func (l *Context) WithPostProjection(p Projection) *Context {
 		logger:     l.logger,
 		keyvals:    l.keyvals,
 		hasValuer:  l.hasValuer,
-		projection: p,
+		projection: &deferrableProjection{p, deferred},
 	}
 }
 

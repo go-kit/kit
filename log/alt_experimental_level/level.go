@@ -112,7 +112,7 @@ func AllowingDebugAndAbove(logger log.Logger) log.Logger {
 // the supplied logger is already restricted to some narrower set of
 // levels, in which case it retains that restriction.
 func AllowingInfoAndAbove(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPreProjection(preserveInfoAndAbove)
+	return log.NewContext(logger).WithPreProjection(preserveInfoAndAbove, false)
 }
 
 // AllowingWarnAndAbove returns a logger allowed to emit log records
@@ -120,7 +120,7 @@ func AllowingInfoAndAbove(logger log.Logger) log.Logger {
 // records, unless the supplied logger is already restricted to some
 // narrower set of levels, in which case it retains that restriction.
 func AllowingWarnAndAbove(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPreProjection(preserveWarnAndAbove)
+	return log.NewContext(logger).WithPreProjection(preserveWarnAndAbove, false)
 }
 
 // AllowingErrorOnly returns a logger allowed to emit log records only
@@ -128,7 +128,7 @@ func AllowingWarnAndAbove(logger log.Logger) log.Logger {
 // records, unless the supplied logger is already restricted to some
 // narrower set of levels, in which case it retains that restriction.
 func AllowingErrorOnly(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPreProjection(preserveErrorOnly)
+	return log.NewContext(logger).WithPreProjection(preserveErrorOnly, false)
 }
 
 // AllowingNone returns a logger that drops log records at all levels.
@@ -140,5 +140,5 @@ func AllowingNone(logger log.Logger) log.Logger {
 			}
 		}
 		return keyvals, true
-	})
+	}, false)
 }
