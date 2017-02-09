@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -131,4 +132,19 @@ func EncodeJSONRequest(c context.Context, r *http.Request, request interface{}) 
 	var b bytes.Buffer
 	r.Body = ioutil.NopCloser(&b)
 	return json.NewEncoder(&b).Encode(request)
+}
+
+// EncodeXMLRequest is an EncodeRequestFunc that serializes the request as a
+// XML object to the Request body. If the request implements Headerer,
+// the provided headers will be applied to the request.
+func EncodeXMLRequest(c context.Context, r *http.Request, request interface{}) error {
+	r.Header.Set("Content-Type", "text/xml; charset=utf-8")
+	if headerer, ok := request.(Headerer); ok {
+		for k := range headerer.Headers() {
+			r.Header.Set(k, headerer.Headers().Get(k))
+		}
+	}
+	var b bytes.Buffer
+	r.Body = ioutil.NopCloser(&b)
+	return xml.NewEncoder(&b).Encode(request)
 }
