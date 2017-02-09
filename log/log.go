@@ -213,17 +213,18 @@ func (l *Context) WithPreProjection(p Projection, deferred bool) *Context {
 	if p == nil || l == nil {
 		return l
 	}
-	if outer := l.projection; outer != nil {
-		if !deferred && outer.deferred {
+	if preceding := l.projection; preceding != nil {
+		if !deferred && preceding.deferred {
 			deferred = true
 		}
 		inner := p
+		outer := preceding.Projection
 		p = func(keyvals []interface{}) ([]interface{}, bool) {
 			kvs, preserve := inner(keyvals)
 			if !preserve {
 				return nil, false
 			}
-			return outer.Projection(kvs)
+			return outer(kvs)
 		}
 	}
 	return &Context{
@@ -248,13 +249,14 @@ func (l *Context) WithPostProjection(p Projection, deferred bool) *Context {
 	if p == nil || l == nil {
 		return l
 	}
-	if inner := l.projection; inner != nil {
-		if !deferred && inner.deferred {
+	if preceding := l.projection; preceding != nil {
+		if !deferred && preceding.deferred {
 			deferred = true
 		}
 		outer := p
+		inner := preceding.Projection
 		p = func(keyvals []interface{}) ([]interface{}, bool) {
-			kvs, preserve := inner.Projection(keyvals)
+			kvs, preserve := inner(keyvals)
 			if !preserve {
 				return nil, false
 			}
