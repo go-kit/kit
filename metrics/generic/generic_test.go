@@ -15,7 +15,11 @@ import (
 )
 
 func TestCounter(t *testing.T) {
-	counter := generic.NewCounter("my_counter").With("label", "counter").(*generic.Counter)
+	name := "my_counter"
+	counter := generic.NewCounter(name).With("label", "counter").(*generic.Counter)
+	if want, have := name, counter.Name; want != have {
+		t.Errorf("Name: want %q, have %q", want, have)
+	}
 	value := func() float64 { return counter.Value() }
 	if err := teststat.TestCounter(counter, value); err != nil {
 		t.Fatal(err)
@@ -36,7 +40,11 @@ func TestValueReset(t *testing.T) {
 }
 
 func TestGauge(t *testing.T) {
-	gauge := generic.NewGauge("my_gauge").With("label", "gauge").(*generic.Gauge)
+	name := "my_gauge"
+	gauge := generic.NewGauge(name).With("label", "gauge").(*generic.Gauge)
+	if want, have := name, gauge.Name; want != have {
+		t.Errorf("Name: want %q, have %q", want, have)
+	}
 	value := func() float64 { return gauge.Value() }
 	if err := teststat.TestGauge(gauge, value); err != nil {
 		t.Fatal(err)
@@ -44,7 +52,11 @@ func TestGauge(t *testing.T) {
 }
 
 func TestHistogram(t *testing.T) {
-	histogram := generic.NewHistogram("my_histogram", 50).With("label", "histogram").(*generic.Histogram)
+	name := "my_histogram"
+	histogram := generic.NewHistogram(name, 50).With("label", "histogram").(*generic.Histogram)
+	if want, have := name, histogram.Name; want != have {
+		t.Errorf("Name: want %q, have %q", want, have)
+	}
 	quantiles := func() (float64, float64, float64, float64) {
 		return histogram.Quantile(0.50), histogram.Quantile(0.90), histogram.Quantile(0.95), histogram.Quantile(0.99)
 	}

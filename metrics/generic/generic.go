@@ -33,6 +33,7 @@ func NewCounter(name string) *Counter {
 // With implements Counter.
 func (c *Counter) With(labelValues ...string) metrics.Counter {
 	return &Counter{
+		Name: c.Name,
 		bits: atomic.LoadUint64(&c.bits),
 		lvs:  c.lvs.With(labelValues...),
 	}
@@ -95,6 +96,7 @@ func NewGauge(name string) *Gauge {
 // With implements Gauge.
 func (g *Gauge) With(labelValues ...string) metrics.Gauge {
 	return &Gauge{
+		Name: g.Name,
 		bits: atomic.LoadUint64(&g.bits),
 		lvs:  g.lvs.With(labelValues...),
 	}
@@ -150,8 +152,9 @@ func NewHistogram(name string, buckets int) *Histogram {
 // With implements Histogram.
 func (h *Histogram) With(labelValues ...string) metrics.Histogram {
 	return &Histogram{
-		lvs: h.lvs.With(labelValues...),
-		h:   h.h,
+		Name: h.Name,
+		lvs:  h.lvs.With(labelValues...),
+		h:    h.h,
 	}
 }
 
