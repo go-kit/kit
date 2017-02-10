@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -93,7 +94,13 @@ func TestServerHappyPath(t *testing.T) {
 }
 
 func TestServerFinalizer(t *testing.T) {
-	c := make(chan int)
+	var (
+		headerKey    = "X-Henlo-Lizer"
+		headerVal    = "Helllo you stinky lizard"
+		statusCode   = http.StatusTeapot
+		responseBody = "go eat a fly ugly\n"
+		done         = make(chan struct{})
+	)
 	handler := httptransport.NewServer(
 		context.Background(),
 		endpoint.Nop,
@@ -101,11 +108,27 @@ func TestServerFinalizer(t *testing.T) {
 			return struct{}{}, nil
 		},
 		func(_ context.Context, w http.ResponseWriter, _ interface{}) error {
-			w.WriteHeader(<-c)
+			w.Header().Set(headerKey, headerVal)
+			w.WriteHeader(statusCode)
+			w.Write([]byte(responseBody))
 			return nil
 		},
-		httptransport.ServerFinalizer(func(_ context.Context, code int, _ *http.Request) {
-			c <- code
+		httptransport.ServerFinalizer(func(ctx context.Context, code int, _ *http.Request) {
+			if want, have := statusCode, code; want != have {
+				t.Errorf("StatusCode: want %d, have %d", want, have)
+			}
+
+			responseHeader := ctx.Value(httptransport.ContextKeyResponseHeaders).(http.Header)
+			if want, have := headerVal, responseHeader.Get(headerKey); want != have {
+				t.Errorf("%s: want %q, have %q", headerKey, want, have)
+			}
+
+			responseSize := ctx.Value(httptransport.ContextKeyResponseSize).(int64)
+			if want, have := int64(len(responseBody)), responseSize; want != have {
+				t.Errorf("response size: want %d, have %d", want, have)
+			}
+
+			close(done)
 		}),
 	)
 
@@ -113,12 +136,10 @@ func TestServerFinalizer(t *testing.T) {
 	defer server.Close()
 	go http.Get(server.URL)
 
-	want := http.StatusTeapot
-	c <- want   // give status code to response encoder
-	have := <-c // take status code from finalizer
-
-	if want != have {
-		t.Errorf("want %d, have %d", want, have)
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for finalizer")
 	}
 }
 
