@@ -69,6 +69,8 @@ func Debug(logger log.Logger) log.Logger {
 
 // New wraps the logger and implements level checking. See the commentary on the
 // Option functions for a detailed description of how to configure levels.
+// If no options are provided, all leveled log events created with level.Debug,
+// Info, Warn or Error helper methods will be squelched.
 func New(next log.Logger, options ...Option) log.Logger {
 	l := logger{
 		next: next,
