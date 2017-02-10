@@ -112,6 +112,20 @@ func TestContextLevel(t *testing.T) {
 	}
 }
 
+func TestLevelRestrictionOverLeveledContext(t *testing.T) {
+	var buf bytes.Buffer
+
+	var logger log.Logger
+	logger = log.NewLogfmtLogger(&buf)
+	logger = level.Debug(logger)
+	logger = level.AllowingInfoAndAbove(logger)
+	logger.Log("this is", "debug log")
+
+	if buf.Len() > 0 {
+		t.Errorf("want no output, have %q", buf.String())
+	}
+}
+
 func TestLevelLayerRestrictions(t *testing.T) {
 	factories := []struct {
 		name string
