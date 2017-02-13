@@ -88,8 +88,12 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := s.ctx
 
 	if s.finalizer != nil {
-		iw := &interceptingWriter{w, http.StatusOK}
-		defer func() { s.finalizer(ctx, iw.code, r) }()
+		iw := &interceptingWriter{w, http.StatusOK, 0}
+		defer func() {
+			ctx = context.WithValue(ctx, ContextKeyResponseHeaders, iw.Header())
+			ctx = context.WithValue(ctx, ContextKeyResponseSize, iw.written)
+			s.finalizer(ctx, iw.code, r)
+		}()
 		w = iw
 	}
 
@@ -130,7 +134,9 @@ type ErrorEncoder func(ctx context.Context, err error, w http.ResponseWriter)
 
 // ServerFinalizerFunc can be used to perform work at the end of an HTTP
 // request, after the response has been written to the client. The principal
-// intended use is for request logging.
+// intended use is for request logging. In addition to the response code
+// provided in the function signature, additional response parameters are
+// provided in the context under keys with the ContextKeyResponse prefix.
 type ServerFinalizerFunc func(ctx context.Context, code int, r *http.Request)
 
 // EncodeJSONResponse is a EncodeResponseFunc that serializes the response as a
@@ -200,7 +206,8 @@ type Headerer interface {
 
 type interceptingWriter struct {
 	http.ResponseWriter
-	code int
+	code    int
+	written int64
 }
 
 // WriteHeader may not be explicitly called, so care must be taken to
@@ -208,4 +215,10 @@ type interceptingWriter struct {
 func (w *interceptingWriter) WriteHeader(code int) {
 	w.code = code
 	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w *interceptingWriter) Write(p []byte) (int, error) {
+	n, err := w.ResponseWriter.Write(p)
+	w.written += int64(n)
+	return n, err
 }
