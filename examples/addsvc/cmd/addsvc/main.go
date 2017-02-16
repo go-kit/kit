@@ -40,7 +40,8 @@ func main() {
 		thriftProtocol   = flag.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
 		thriftBufferSize = flag.Int("thrift.buffer.size", 0, "0 for unbuffered")
 		thriftFramed     = flag.Bool("thrift.framed", false, "true to enable framing")
-		zipkinAddr       = flag.String("zipkin.addr", "", "Enable Zipkin tracing via a Kafka server host:port")
+		zipkinAddr       = flag.String("zipkin.addr", "", "Enable Zipkin tracing via a Zipkin HTTP Collector endpoint")
+		zipkinKafkaAddr  = flag.String("zipkin.kafka.addr", "", "Enable Zipkin tracing via a Kafka server host:port")
 		appdashAddr      = flag.String("appdash.addr", "", "Enable Appdash tracing via an Appdash server host:port")
 		lightstepToken   = flag.String("lightstep.token", "", "Enable LightStep tracing via a LightStep access token")
 	)
@@ -85,16 +86,38 @@ func main() {
 	var tracer stdopentracing.Tracer
 	{
 		if *zipkinAddr != "" {
-			logger := log.NewContext(logger).With("tracer", "Zipkin")
+			logger := log.NewContext(logger).With("tracer", "ZipkinHTTP")
 			logger.Log("addr", *zipkinAddr)
-			collector, err := zipkin.NewKafkaCollector(
-				strings.Split(*zipkinAddr, ","),
-				zipkin.KafkaLogger(logger),
+
+			// endpoint typically looks like: http://zipkinhost:9411/api/v1/spans
+			collector, err := zipkin.NewHTTPCollector(*zipkinAddr)
+			if err != nil {
+				logger.Log("err", err)
+				os.Exit(1)
+			}
+			defer collector.Close()
+
+			tracer, err = zipkin.NewTracer(
+				zipkin.NewRecorder(collector, false, "localhost:80", "addsvc"),
 			)
 			if err != nil {
 				logger.Log("err", err)
 				os.Exit(1)
 			}
+		} else if *zipkinKafkaAddr != "" {
+			logger := log.NewContext(logger).With("tracer", "ZipkinKafka")
+			logger.Log("addr", *zipkinKafkaAddr)
+
+			collector, err := zipkin.NewKafkaCollector(
+				strings.Split(*zipkinKafkaAddr, ","),
+				zipkin.KafkaLogger(log.NewNopLogger()),
+			)
+			if err != nil {
+				logger.Log("err", err)
+				os.Exit(1)
+			}
+			defer collector.Close()
+
 			tracer, err = zipkin.NewTracer(
 				zipkin.NewRecorder(collector, false, "localhost:80", "addsvc"),
 			)
