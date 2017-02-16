@@ -93,6 +93,99 @@ func TestServerHappyPath(t *testing.T) {
 	}
 }
 
+
+func TestMultipleServerBefore(t *testing.T) {
+	var (
+		headerKey    = "X-Henlo-Lizer"
+		headerVal    = "Helllo you stinky lizard"
+		statusCode   = http.StatusTeapot
+		responseBody = "go eat a fly ugly\n"
+		done         = make(chan struct{})
+	)
+	handler := httptransport.NewServer(
+		context.Background(),
+		endpoint.Nop,
+		func(context.Context, *http.Request) (interface{}, error) {
+			return struct{}{}, nil
+		},
+		func(_ context.Context, w http.ResponseWriter, _ interface{}) error {
+			w.Header().Set(headerKey, headerVal)
+			w.WriteHeader(statusCode)
+			w.Write([]byte(responseBody))
+			return nil
+		},
+		httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context {
+			ctx = context.WithValue(ctx, "one", 1)
+
+			return ctx
+		}),
+		httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context {
+			if _, ok := ctx.Value("one").(int); !ok {
+				t.Error("Value was not set properly when multiple ServerBefores are used")
+			}
+
+			close(done)
+			return ctx
+		}),
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	go http.Get(server.URL)
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for finalizer")
+	}
+}
+
+func TestMultipleServerAfter(t *testing.T) {
+	var (
+		headerKey    = "X-Henlo-Lizer"
+		headerVal    = "Helllo you stinky lizard"
+		statusCode   = http.StatusTeapot
+		responseBody = "go eat a fly ugly\n"
+		done         = make(chan struct{})
+	)
+	handler := httptransport.NewServer(
+		context.Background(),
+		endpoint.Nop,
+		func(context.Context, *http.Request) (interface{}, error) {
+			return struct{}{}, nil
+		},
+		func(_ context.Context, w http.ResponseWriter, _ interface{}) error {
+			w.Header().Set(headerKey, headerVal)
+			w.WriteHeader(statusCode)
+			w.Write([]byte(responseBody))
+			return nil
+		},
+		httptransport.ServerAfter(func(ctx context.Context, w http.ResponseWriter) context.Context {
+			ctx = context.WithValue(ctx, "one", 1)
+
+			return ctx
+		}),
+		httptransport.ServerAfter(func(ctx context.Context, w http.ResponseWriter) context.Context {
+			if _, ok := ctx.Value("one").(int); !ok {
+				t.Error("Value was not set properly when multiple ServerAfters are used")
+			}
+
+			close(done)
+			return ctx
+		}),
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	go http.Get(server.URL)
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for finalizer")
+	}
+}
+
 func TestServerFinalizer(t *testing.T) {
 	var (
 		headerKey    = "X-Henlo-Lizer"
