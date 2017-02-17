@@ -51,13 +51,13 @@ type ServerOption func(*Server)
 // ServerBefore functions are executed on the HTTP request object before the
 // request is decoded.
 func ServerBefore(before ...RequestFunc) ServerOption {
-	return func(s *Server) { s.before = before }
+	return func(s *Server) { s.before = append(s.before, before...) }
 }
 
 // ServerAfter functions are executed on the HTTP response writer after the
 // endpoint is invoked, but before anything is written to the client.
 func ServerAfter(after ...ServerResponseFunc) ServerOption {
-	return func(s *Server) { s.after = after }
+	return func(s *Server) { s.after = append(s.after, after...) }
 }
 
 // ServerErrorEncoder is used to encode errors to the http.ResponseWriter
