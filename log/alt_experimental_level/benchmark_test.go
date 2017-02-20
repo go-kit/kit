@@ -78,7 +78,7 @@ func manyRecordBenchmarkRunner(b *testing.B, logger log.Logger, droppedRecords u
 	for i := 0; i < b.N; i++ {
 		// Only this one will be retained.
 		info.Log("foo", "bar")
-		for ; droppedRecords != 0; droppedRecords-- {
+		for dropped := droppedRecords; dropped != 0; dropped-- {
 			debug.Log("baz", "quux")
 		}
 	}
