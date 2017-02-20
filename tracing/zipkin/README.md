@@ -155,7 +155,7 @@ func (svc *Service) GetMeSomeExamples(ctx context.Context, ...) ([]Examples, err
 
 	// this will label the span's service & hostPort (called Endpoint in Zipkin)
 	ext.PeerService.Set(span, serviceName)
-	ext.PeerHostname,Set(span, serviceHost)
+	ext.PeerHostname.Set(span, serviceHost)
 	ext.PeerPort.Set(span, servicePort)
 
 	// a Tag is the equivalent of a Zipkin Binary Annotation (key:value pair)
