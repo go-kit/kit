@@ -8,52 +8,65 @@ import (
 	"github.com/go-kit/kit/log/experimental_level"
 )
 
-func BenchmarkNopBaseline(b *testing.B) {
-	benchmarkRunner(b, log.NewNopLogger())
-}
+func Benchmark(b *testing.B) {
+	contexts := []struct {
+		name    string
+		context func(log.Logger) log.Logger
+	}{
+		{"NoContext", func(l log.Logger) log.Logger {
+			return l
+		}},
+		{"TimeContext", func(l log.Logger) log.Logger {
+			return log.NewContext(l).With("time", log.DefaultTimestampUTC)
+		}},
+		{"CallerContext", func(l log.Logger) log.Logger {
+			return log.NewContext(l).With("caller", log.DefaultCaller)
+		}},
+		{"TimeCallerReqIDContext", func(l log.Logger) log.Logger {
+			return log.NewContext(l).With("time", log.DefaultTimestampUTC, "caller", log.DefaultCaller, "reqID", 29)
+		}},
+	}
 
-func BenchmarkNopDisallowedLevel(b *testing.B) {
-	benchmarkRunner(b, level.New(log.NewNopLogger(),
-		level.Allowed(level.AllowInfoAndAbove())))
-}
+	loggers := []struct {
+		name   string
+		logger log.Logger
+	}{
+		{"Nop", log.NewNopLogger()},
+		{"Logfmt", log.NewLogfmtLogger(ioutil.Discard)},
+		{"JSON", log.NewJSONLogger(ioutil.Discard)},
+	}
 
-func BenchmarkNopAllowedLevel(b *testing.B) {
-	benchmarkRunner(b, level.New(log.NewNopLogger(),
-		level.Allowed(level.AllowAll())))
-}
+	filters := []struct {
+		name   string
+		filter func(log.Logger) log.Logger
+	}{
+		{"Baseline", func(l log.Logger) log.Logger {
+			return l
+		}},
+		{"DisallowedLevel", func(l log.Logger) log.Logger {
+			return level.New(l, level.Allowed(level.AllowInfoAndAbove()))
+		}},
+		{"AllowedLevel", func(l log.Logger) log.Logger {
+			return level.New(l, level.Allowed(level.AllowAll()))
+		}},
+	}
 
-func BenchmarkJSONBaseline(b *testing.B) {
-	benchmarkRunner(b, log.NewJSONLogger(ioutil.Discard))
-}
-
-func BenchmarkJSONDisallowedLevel(b *testing.B) {
-	benchmarkRunner(b, level.New(log.NewJSONLogger(ioutil.Discard),
-		level.Allowed(level.AllowInfoAndAbove())))
-}
-
-func BenchmarkJSONAllowedLevel(b *testing.B) {
-	benchmarkRunner(b, level.New(log.NewJSONLogger(ioutil.Discard),
-		level.Allowed(level.AllowAll())))
-}
-
-func BenchmarkLogfmtBaseline(b *testing.B) {
-	benchmarkRunner(b, log.NewLogfmtLogger(ioutil.Discard))
-}
-
-func BenchmarkLogfmtDisallowedLevel(b *testing.B) {
-	benchmarkRunner(b, level.New(log.NewLogfmtLogger(ioutil.Discard),
-		level.Allowed(level.AllowInfoAndAbove())))
-}
-
-func BenchmarkLogfmtAllowedLevel(b *testing.B) {
-	benchmarkRunner(b, level.New(log.NewLogfmtLogger(ioutil.Discard),
-		level.Allowed(level.AllowAll())))
-}
-
-func benchmarkRunner(b *testing.B, logger log.Logger) {
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		level.Debug(logger).Log("foo", "bar")
+	for _, c := range contexts {
+		b.Run(c.name, func(b *testing.B) {
+			for _, f := range filters {
+				b.Run(f.name, func(b *testing.B) {
+					for _, l := range loggers {
+						b.Run(l.name, func(b *testing.B) {
+							logger := c.context(f.filter(l.logger))
+							b.ResetTimer()
+							b.ReportAllocs()
+							for i := 0; i < b.N; i++ {
+								level.Debug(logger).Log("foo", "bar")
+							}
+						})
+					}
+				})
+			}
+		})
 	}
 }
