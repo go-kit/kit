@@ -44,10 +44,10 @@ func Benchmark(b *testing.B) {
 			return l
 		}},
 		{"DisallowedLevel", func(l log.Logger) log.Logger {
-			return level.New(l, level.Allowed(level.AllowInfoAndAbove()))
+			return level.NewFilter(l, level.AllowInfoAndAbove())
 		}},
 		{"AllowedLevel", func(l log.Logger) log.Logger {
-			return level.New(l, level.Allowed(level.AllowAll()))
+			return level.NewFilter(l, level.AllowAll())
 		}},
 	}
 
