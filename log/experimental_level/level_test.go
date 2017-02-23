@@ -3,6 +3,7 @@ package level_test
 import (
 	"bytes"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -104,7 +105,7 @@ func TestErrNoLevel(t *testing.T) {
 		t.Errorf("want %v, have %v", want, have)
 	}
 	if want, have := ``, strings.TrimSpace(buf.String()); want != have {
-		t.Errorf("want %q, have %q", want, have)
+		t.Errorf("\nwant '%s'\nhave '%s'", want, have)
 	}
 }
 
@@ -120,7 +121,7 @@ func TestAllowNoLevel(t *testing.T) {
 		t.Errorf("want %v, have %v", want, have)
 	}
 	if want, have := `{"foo":"bar"}`, strings.TrimSpace(buf.String()); want != have {
-		t.Errorf("want %q, have %q", want, have)
+		t.Errorf("\nwant '%s'\nhave '%s'", want, have)
 	}
 }
 
@@ -135,8 +136,8 @@ func TestLevelContext(t *testing.T) {
 	logger = log.NewContext(logger).With("caller", log.DefaultCaller)
 
 	level.Info(logger).Log("foo", "bar")
-	if want, have := `level=info caller=level_test.go:137 foo=bar`, strings.TrimSpace(buf.String()); want != have {
-		t.Errorf("want %q, have %q", want, have)
+	if want, have := `level=info caller=level_test.go:138 foo=bar`, strings.TrimSpace(buf.String()); want != have {
+		t.Errorf("\nwant '%s'\nhave '%s'", want, have)
 	}
 }
 
@@ -151,7 +152,38 @@ func TestContextLevel(t *testing.T) {
 	logger = level.NewFilter(logger, level.AllowAll())
 
 	level.Info(logger).Log("foo", "bar")
-	if want, have := `caller=level_test.go:153 level=info foo=bar`, strings.TrimSpace(buf.String()); want != have {
-		t.Errorf("want %q, have %q", want, have)
+	if want, have := `caller=level_test.go:154 level=info foo=bar`, strings.TrimSpace(buf.String()); want != have {
+		t.Errorf("\nwant '%s'\nhave '%s'", want, have)
+	}
+}
+
+func TestLevelFormatting(t *testing.T) {
+	testCases := []struct {
+		name   string
+		format func(io.Writer) log.Logger
+		output string
+	}{
+		{
+			name:   "logfmt",
+			format: log.NewLogfmtLogger,
+			output: `level=info foo=bar`,
+		},
+		{
+			name:   "JSON",
+			format: log.NewJSONLogger,
+			output: `{"foo":"bar","level":"info"}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+
+			logger := tc.format(&buf)
+			level.Info(logger).Log("foo", "bar")
+			if want, have := tc.output, strings.TrimSpace(buf.String()); want != have {
+				t.Errorf("\nwant: '%s'\nhave '%s'", want, have)
+			}
+		})
 	}
 }
