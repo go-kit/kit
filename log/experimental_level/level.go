@@ -122,13 +122,12 @@ func ErrNoLevel(err error) Option {
 	return func(l *logger) { l.errNoLevel = err }
 }
 
-const levelKey = "level"
-
 var (
-	errorLevelValue = &levelValue{level: levelError, name: "error"}
-	warnLevelValue  = &levelValue{level: levelWarn, name: "warn"}
-	infoLevelValue  = &levelValue{level: levelInfo, name: "info"}
-	debugLevelValue = &levelValue{level: levelDebug, name: "debug"}
+	levelKey        interface{} = "level"
+	errorLevelValue             = &levelValue{level: levelError, name: "error"}
+	warnLevelValue              = &levelValue{level: levelWarn, name: "warn"}
+	infoLevelValue              = &levelValue{level: levelInfo, name: "info"}
+	debugLevelValue             = &levelValue{level: levelDebug, name: "debug"}
 )
 
 type level byte
