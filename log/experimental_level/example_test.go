@@ -11,7 +11,7 @@ import (
 func Example_basic() {
 	// setup logger with level filter
 	logger := log.NewLogfmtLogger(os.Stdout)
-	logger = level.NewFilter(logger, level.AllowInfoAndAbove())
+	logger = level.NewFilter(logger, level.AllowInfo())
 	logger = log.NewContext(logger).With("caller", log.DefaultCaller)
 
 	// use level helpers to log at different levels

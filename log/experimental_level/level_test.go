@@ -26,7 +26,7 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
-			level.AllowDebugAndAbove(),
+			level.AllowDebug(),
 			strings.Join([]string{
 				`{"level":"debug","this is":"debug log"}`,
 				`{"level":"info","this is":"info log"}`,
@@ -35,7 +35,7 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
-			level.AllowInfoAndAbove(),
+			level.AllowInfo(),
 			strings.Join([]string{
 				`{"level":"info","this is":"info log"}`,
 				`{"level":"warn","this is":"warn log"}`,
@@ -43,14 +43,14 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
-			level.AllowWarnAndAbove(),
+			level.AllowWarn(),
 			strings.Join([]string{
 				`{"level":"warn","this is":"warn log"}`,
 				`{"level":"error","this is":"error log"}`,
 			}, "\n"),
 		},
 		{
-			level.AllowErrorOnly(),
+			level.AllowError(),
 			strings.Join([]string{
 				`{"level":"error","this is":"error log"}`,
 			}, "\n"),
@@ -77,7 +77,7 @@ func TestVariousLevels(t *testing.T) {
 func TestErrNotAllowed(t *testing.T) {
 	myError := errors.New("squelched!")
 	opts := []level.Option{
-		level.AllowWarnAndAbove(),
+		level.AllowWarn(),
 		level.ErrNotAllowed(myError),
 	}
 	logger := level.NewFilter(log.NewNopLogger(), opts...)

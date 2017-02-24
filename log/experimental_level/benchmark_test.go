@@ -44,7 +44,7 @@ func Benchmark(b *testing.B) {
 			return l
 		}},
 		{"DisallowedLevel", func(l log.Logger) log.Logger {
-			return level.NewFilter(l, level.AllowInfoAndAbove())
+			return level.NewFilter(l, level.AllowInfo())
 		}},
 		{"AllowedLevel", func(l log.Logger) log.Logger {
 			return level.NewFilter(l, level.AllowAll())

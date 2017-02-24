@@ -66,32 +66,32 @@ func (l *logger) Log(keyvals ...interface{}) error {
 // Option sets a parameter for the leveled logger.
 type Option func(*logger)
 
-// AllowAll is an alias for AllowDebugAndAbove.
+// AllowAll is an alias for AllowDebug.
 func AllowAll() Option {
-	return AllowDebugAndAbove()
+	return AllowDebug()
 }
 
-// AllowDebugAndAbove allows all of the four default log levels.
-func AllowDebugAndAbove() Option {
-	return allowed(levelDebug | levelInfo | levelWarn | levelError)
+// AllowDebug allows error, warn, info and debug level log events to pass.
+func AllowDebug() Option {
+	return allowed(levelError | levelWarn | levelInfo | levelDebug)
 }
 
-// AllowInfoAndAbove allows the default info, warn, and error log levels.
-func AllowInfoAndAbove() Option {
-	return allowed(levelInfo | levelWarn | levelError)
+// AllowInfo allows error, warn and info level log events to pass.
+func AllowInfo() Option {
+	return allowed(levelError | levelWarn | levelInfo)
 }
 
-// AllowWarnAndAbove allows the default warn and error log levels.
-func AllowWarnAndAbove() Option {
-	return allowed(levelWarn | levelError)
+// AllowWarn allows error and warn level log events to pass.
+func AllowWarn() Option {
+	return allowed(levelError | levelWarn)
 }
 
-// AllowErrorOnly allows only the default error log level.
-func AllowErrorOnly() Option {
+// AllowError allows only error level log events to pass.
+func AllowError() Option {
 	return allowed(levelError)
 }
 
-// AllowNone allows none of the default log levels.
+// AllowNone allows no leveled log events to pass.
 func AllowNone() Option {
 	return allowed(0)
 }
@@ -101,8 +101,9 @@ func allowed(allowed level) Option {
 }
 
 // ErrNotAllowed sets the error to return from Log when it squelches a log
-// event below the configured filtering level. By default, ErrNotAllowed is
-// nil; in this case, the log event is squelched with no error.
+// event disallowed by the configured Allow[Level] option. By default,
+// ErrNotAllowed is nil; in this case the log event is squelched with no
+// error.
 func ErrNotAllowed(err error) Option {
 	return func(l *logger) { l.errNotAllowed = err }
 }
@@ -116,8 +117,8 @@ func SquelchNoLevel(squelch bool) Option {
 }
 
 // ErrNoLevel sets the error to return from Log when it squelches a log event
-// with no level. By default, ErrNoLevel is nil; in this case, the log event
-// is squelched with no error.
+// with no level. By default, ErrNoLevel is nil; in this case the log event is
+// squelched with no error.
 func ErrNoLevel(err error) Option {
 	return func(l *logger) { l.errNoLevel = err }
 }
