@@ -42,10 +42,10 @@ type loadCargoResponse struct {
 
 func (r loadCargoResponse) error() error { return r.Err }
 
-func makeLoadCargoEndpoint(bs Service) endpoint.Endpoint {
+func makeLoadCargoEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(loadCargoRequest)
-		c, err := bs.LoadCargo(req.ID)
+		c, err := s.LoadCargo(req.ID)
 		return loadCargoResponse{Cargo: &c, Err: err}, nil
 	}
 }
