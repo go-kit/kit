@@ -164,6 +164,38 @@ func TestWithConcurrent(t *testing.T) {
 	}
 }
 
+func TestHasValue(t *testing.T) {
+	expensiveCallWasMade := false
+
+	logger := log.NewContext(log.LoggerFunc(func(kv ...interface{}) error { return nil })).
+		With(
+			"foo", 42,
+			"bar", nil,
+			"baz", log.Valuer(func() interface{} { return "happy" }),
+			"qux", log.Valuer(func() interface{} { return nil }),
+			"corge", log.Valuer(func() interface{} { expensiveCallWasMade = true; return nil }),
+			"grault")
+
+	tests := map[string]bool{
+		"foo":    true,  // Has a value
+		"bar":    false, // Value is nil
+		"baz":    true,  // Has a valuer that evaluates to a value
+		"qux":    false, // Has a valuer that evaluates to nil
+		"grault": false, // Maps to ErrMissingValue
+		"garply": false, // Key isn't in the context at all
+	}
+
+	for key, want := range tests {
+		if have := logger.HasValue(key); want != have {
+			t.Errorf("\nkey: %s, want: %v, have: %v", key, want, have)
+		}
+	}
+
+	if expensiveCallWasMade {
+		t.Error("\nValuer was evaluated unnecessarily")
+	}
+}
+
 func BenchmarkDiscard(b *testing.B) {
 	logger := log.NewNopLogger()
 	b.ReportAllocs()

@@ -133,6 +133,28 @@ func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
 	}
 }
 
+// HasValue returns true if any key (even index) is equal to the argument, and
+// the value associated with that key (subsequent odd index) is not nil or
+// ErrMissingValue.
+func (l *Context) HasValue(key interface{}) bool {
+	kvs := l.keyvals
+	// Loop over all the full key/value pairs. If there is a dangling key
+	// at the end of the list, ignore it: it can't have a value.
+	for i, j, kvl := 0, 1, len(kvs); j < kvl; i, j = i+2, j+2 {
+		if kvs[i] == key {
+			// We found a matching key, so check that the value
+			// is non-nil, potentially evaluating it if it is a
+			// Valuer.
+			val := kvs[j]
+			if vv, isValuer := val.(Valuer); isValuer {
+				val = vv()
+			}
+			return val != nil && val != ErrMissingValue
+		}
+	}
+	return false
+}
+
 // LoggerFunc is an adapter to allow use of ordinary functions as Loggers. If
 // f is a function with the appropriate signature, LoggerFunc(f) is a Logger
 // object that calls f.
