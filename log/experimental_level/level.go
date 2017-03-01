@@ -2,24 +2,24 @@ package level
 
 import "github.com/go-kit/kit/log"
 
-// Error returns a logger that includes an error level keyval.
+// Error returns a logger that includes a Key/ErrorValue pair.
 func Error(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(levelKey, errorLevelValue)
+	return log.NewContext(logger).WithPrefix(key, errorValue)
 }
 
-// Warn returns a logger that includes a warn level keyval.
+// Warn returns a logger that includes a Key/WarnValue pair.
 func Warn(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(levelKey, warnLevelValue)
+	return log.NewContext(logger).WithPrefix(key, warnValue)
 }
 
-// Info returns a logger that includes an info level keyval.
+// Info returns a logger that includes a Key/InfoValue pair.
 func Info(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(levelKey, infoLevelValue)
+	return log.NewContext(logger).WithPrefix(key, infoValue)
 }
 
-// Debug returns a logger that includes a debug level keyval.
+// Debug returns a logger that includes a Key/DebugValue pair.
 func Debug(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(levelKey, debugLevelValue)
+	return log.NewContext(logger).WithPrefix(key, debugValue)
 }
 
 // NewFilter wraps next and implements level filtering. See the commentary on
@@ -123,12 +123,47 @@ func ErrNoLevel(err error) Option {
 	return func(l *logger) { l.errNoLevel = err }
 }
 
+func NewInjector(next log.Logger, level Value) log.Logger {
+	return &injector{
+		next:  next,
+		level: level,
+	}
+}
+
+type injector struct {
+	next  log.Logger
+	level interface{}
+}
+
+func (l *injector) Log(keyvals ...interface{}) error {
+	for i := 1; i < len(keyvals); i += 2 {
+		if _, ok := keyvals[i].(*levelValue); ok {
+			return l.next.Log(keyvals...)
+		}
+	}
+	kvs := make([]interface{}, len(keyvals)+2)
+	kvs[0], kvs[1] = key, l.level
+	copy(kvs[2:], keyvals)
+	return l.next.Log(kvs...)
+}
+
+type Value interface {
+	String() string
+	levelVal()
+}
+
+func Key() interface{}  { return key }
+func ErrorValue() Value { return errorValue }
+func WarnValue() Value  { return warnValue }
+func InfoValue() Value  { return infoValue }
+func DebugValue() Value { return debugValue }
+
 var (
-	levelKey        interface{} = "level"
-	errorLevelValue             = &levelValue{level: levelError, name: "error"}
-	warnLevelValue              = &levelValue{level: levelWarn, name: "warn"}
-	infoLevelValue              = &levelValue{level: levelInfo, name: "info"}
-	debugLevelValue             = &levelValue{level: levelDebug, name: "debug"}
+	key        interface{} = "level"
+	errorValue             = &levelValue{level: levelError, name: "error"}
+	warnValue              = &levelValue{level: levelWarn, name: "warn"}
+	infoValue              = &levelValue{level: levelInfo, name: "info"}
+	debugValue             = &levelValue{level: levelDebug, name: "debug"}
 )
 
 type level byte
@@ -145,6 +180,5 @@ type levelValue struct {
 	level
 }
 
-func (v *levelValue) String() string {
-	return v.name
-}
+func (v *levelValue) String() string { return v.name }
+func (v *levelValue) levelVal()      {}

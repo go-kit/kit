@@ -12,11 +12,13 @@ import (
 )
 
 func TestVariousLevels(t *testing.T) {
-	for _, testcase := range []struct {
+	testCases := []struct {
+		name    string
 		allowed level.Option
 		want    string
 	}{
 		{
+			"AllowAll",
 			level.AllowAll(),
 			strings.Join([]string{
 				`{"level":"debug","this is":"debug log"}`,
@@ -26,6 +28,7 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
+			"AllowDebug",
 			level.AllowDebug(),
 			strings.Join([]string{
 				`{"level":"debug","this is":"debug log"}`,
@@ -35,6 +38,7 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
+			"AllowDebug",
 			level.AllowInfo(),
 			strings.Join([]string{
 				`{"level":"info","this is":"info log"}`,
@@ -43,6 +47,7 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
+			"AllowWarn",
 			level.AllowWarn(),
 			strings.Join([]string{
 				`{"level":"warn","this is":"warn log"}`,
@@ -50,27 +55,33 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
+			"AllowError",
 			level.AllowError(),
 			strings.Join([]string{
 				`{"level":"error","this is":"error log"}`,
 			}, "\n"),
 		},
 		{
+			"AllowNone",
 			level.AllowNone(),
 			``,
 		},
-	} {
-		var buf bytes.Buffer
-		logger := level.NewFilter(log.NewJSONLogger(&buf), testcase.allowed)
+	}
 
-		level.Debug(logger).Log("this is", "debug log")
-		level.Info(logger).Log("this is", "info log")
-		level.Warn(logger).Log("this is", "warn log")
-		level.Error(logger).Log("this is", "error log")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			logger := level.NewFilter(log.NewJSONLogger(&buf), tc.allowed)
 
-		if want, have := testcase.want, strings.TrimSpace(buf.String()); want != have {
-			t.Errorf("given Allowed=%v: want\n%s\nhave\n%s", testcase.allowed, want, have)
-		}
+			level.Debug(logger).Log("this is", "debug log")
+			level.Info(logger).Log("this is", "info log")
+			level.Warn(logger).Log("this is", "warn log")
+			level.Error(logger).Log("this is", "error log")
+
+			if want, have := tc.want, strings.TrimSpace(buf.String()); want != have {
+				t.Errorf("\nwant:\n%s\nhave:\n%s", want, have)
+			}
+		})
 	}
 }
 
@@ -136,7 +147,7 @@ func TestLevelContext(t *testing.T) {
 	logger = log.NewContext(logger).With("caller", log.DefaultCaller)
 
 	level.Info(logger).Log("foo", "bar")
-	if want, have := `level=info caller=level_test.go:138 foo=bar`, strings.TrimSpace(buf.String()); want != have {
+	if want, have := `level=info caller=level_test.go:149 foo=bar`, strings.TrimSpace(buf.String()); want != have {
 		t.Errorf("\nwant '%s'\nhave '%s'", want, have)
 	}
 }
@@ -152,7 +163,7 @@ func TestContextLevel(t *testing.T) {
 	logger = level.NewFilter(logger, level.AllowAll())
 
 	level.Info(logger).Log("foo", "bar")
-	if want, have := `caller=level_test.go:154 level=info foo=bar`, strings.TrimSpace(buf.String()); want != have {
+	if want, have := `caller=level_test.go:165 level=info foo=bar`, strings.TrimSpace(buf.String()); want != have {
 		t.Errorf("\nwant '%s'\nhave '%s'", want, have)
 	}
 }
@@ -185,5 +196,28 @@ func TestLevelFormatting(t *testing.T) {
 				t.Errorf("\nwant: '%s'\nhave '%s'", want, have)
 			}
 		})
+	}
+}
+
+func TestInjector(t *testing.T) {
+	var (
+		output []interface{}
+		logger log.Logger
+	)
+
+	logger = log.LoggerFunc(func(keyvals ...interface{}) error {
+		output = keyvals
+		return nil
+	})
+	logger = level.NewInjector(logger, level.InfoValue())
+
+	logger.Log("foo", "bar")
+	if got, want := len(output), 4; got != want {
+		t.Errorf("missing level not injected: got len==%d, want len==%d", got, want)
+	}
+
+	level.Error(logger).Log("foo", "bar")
+	if got, want := len(output), 4; got != want {
+		t.Errorf("leveled record modified: got len==%d, want len==%d", got, want)
 	}
 }
