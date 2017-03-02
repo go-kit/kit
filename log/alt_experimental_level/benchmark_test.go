@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/experimental_level"
+	"github.com/go-kit/kit/log/alt_experimental_level"
 )
 
 func BenchmarkNopBaseline(b *testing.B) {
@@ -14,13 +14,13 @@ func BenchmarkNopBaseline(b *testing.B) {
 }
 
 func BenchmarkNopDisallowedLevel(b *testing.B) {
-	singleRecordBenchmarkRunner(b, level.New(log.NewNopLogger(),
-		level.Allowed(level.AllowInfoAndAbove())))
+	singleRecordBenchmarkRunner(b,
+		level.AllowingInfoAndAbove(log.NewNopLogger()))
 }
 
 func BenchmarkNopAllowedLevel(b *testing.B) {
-	singleRecordBenchmarkRunner(b, level.New(log.NewNopLogger(),
-		level.Allowed(level.AllowAll())))
+	singleRecordBenchmarkRunner(b,
+		level.AllowingAll(log.NewNopLogger()))
 }
 
 func BenchmarkJSONBaseline(b *testing.B) {
@@ -28,13 +28,13 @@ func BenchmarkJSONBaseline(b *testing.B) {
 }
 
 func BenchmarkJSONDisallowedLevel(b *testing.B) {
-	singleRecordBenchmarkRunner(b, level.New(log.NewJSONLogger(ioutil.Discard),
-		level.Allowed(level.AllowInfoAndAbove())))
+	singleRecordBenchmarkRunner(b,
+		level.AllowingInfoAndAbove(log.NewJSONLogger(ioutil.Discard)))
 }
 
 func BenchmarkJSONAllowedLevel(b *testing.B) {
-	singleRecordBenchmarkRunner(b, level.New(log.NewJSONLogger(ioutil.Discard),
-		level.Allowed(level.AllowAll())))
+	singleRecordBenchmarkRunner(b,
+		level.AllowingAll(log.NewJSONLogger(ioutil.Discard)))
 }
 
 func BenchmarkLogfmtBaseline(b *testing.B) {
@@ -42,13 +42,13 @@ func BenchmarkLogfmtBaseline(b *testing.B) {
 }
 
 func BenchmarkLogfmtDisallowedLevel(b *testing.B) {
-	singleRecordBenchmarkRunner(b, level.New(log.NewLogfmtLogger(ioutil.Discard),
-		level.Allowed(level.AllowInfoAndAbove())))
+	singleRecordBenchmarkRunner(b,
+		level.AllowingInfoAndAbove(log.NewLogfmtLogger(ioutil.Discard)))
 }
 
 func BenchmarkLogfmtAllowedLevel(b *testing.B) {
-	singleRecordBenchmarkRunner(b, level.New(log.NewLogfmtLogger(ioutil.Discard),
-		level.Allowed(level.AllowAll())))
+	singleRecordBenchmarkRunner(b,
+		level.AllowingAll(log.NewLogfmtLogger(ioutil.Discard)))
 }
 
 func singleRecordBenchmarkRunner(b *testing.B, logger log.Logger) {
@@ -70,7 +70,7 @@ func BenchmarkDroppedRecords(b *testing.B) {
 }
 
 func manyRecordBenchmarkRunner(b *testing.B, logger log.Logger, droppedRecords uint) {
-	logger = level.New(logger, level.Allowed(level.AllowInfoAndAbove()))
+	logger = level.AllowingInfoAndAbove(logger)
 	debug := level.Debug(logger)
 	info := level.Info(logger)
 	b.ResetTimer()

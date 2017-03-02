@@ -62,15 +62,29 @@ func NewContext(logger Logger) *Context {
 // containing a Valuer with their generated value for each call to its Log
 // method.
 type Context struct {
-	logger    Logger
-	keyvals   []interface{}
-	hasValuer bool
+	logger     Logger
+	keyvals    []interface{}
+	hasValuer  bool
+	projection Projection
 }
 
 // Log replaces all value elements (odd indexes) containing a Valuer in the
 // stored context with their generated value, appends keyvals, and passes the
 // result to the wrapped Logger.
 func (l *Context) Log(keyvals ...interface{}) error {
+	if l == nil {
+		return nil
+	}
+	if l.projection != nil {
+		if len(keyvals)%2 != 0 {
+			keyvals = append(keyvals, ErrMissingValue)
+		}
+		projected, preserve := l.projection(keyvals)
+		if !preserve {
+			return nil
+		}
+		keyvals = projected
+	}
 	kvs := append(l.keyvals, keyvals...)
 	if len(kvs)%2 != 0 {
 		kvs = append(kvs, ErrMissingValue)
@@ -88,8 +102,18 @@ func (l *Context) Log(keyvals ...interface{}) error {
 
 // With returns a new Context with keyvals appended to those of the receiver.
 func (l *Context) With(keyvals ...interface{}) *Context {
-	if len(keyvals) == 0 {
+	if len(keyvals) == 0 || l == nil {
 		return l
+	}
+	if l.projection != nil {
+		if len(keyvals)%2 != 0 {
+			keyvals = append(keyvals, ErrMissingValue)
+		}
+		projected, preserve := l.projection(keyvals)
+		if !preserve {
+			return nil
+		}
+		keyvals = projected
 	}
 	kvs := append(l.keyvals, keyvals...)
 	if len(kvs)%2 != 0 {
@@ -97,39 +121,102 @@ func (l *Context) With(keyvals ...interface{}) *Context {
 	}
 	return &Context{
 		logger: l.logger,
-		// Limiting the capacity of the stored keyvals ensures that a new
-		// backing array is created if the slice must grow in Log or With.
-		// Using the extra capacity without copying risks a data race that
-		// would violate the Logger interface contract.
-		keyvals:   kvs[:len(kvs):len(kvs)],
-		hasValuer: l.hasValuer || containsValuer(keyvals),
+		// Limiting the capacity of the stored keyvals ensures that a
+		// new backing array is created if the slice must grow in Log,
+		// With, or WithProjection. Using the extra capacity without
+		// copying risks a data race that would violate the Logger
+		// interface contract.
+		keyvals:    kvs[:len(kvs):len(kvs)],
+		hasValuer:  l.hasValuer || containsValuer(keyvals),
+		projection: l.projection,
 	}
 }
 
 // WithPrefix returns a new Context with keyvals prepended to those of the
 // receiver.
 func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
-	if len(keyvals) == 0 {
+	if len(keyvals) == 0 || l == nil {
 		return l
 	}
+	if l.projection != nil {
+		if len(keyvals)%2 != 0 {
+			keyvals = append(keyvals, ErrMissingValue)
+		}
+		projected, preserve := l.projection(keyvals)
+		if !preserve {
+			return nil
+		}
+		keyvals = projected
+	}
 	// Limiting the capacity of the stored keyvals ensures that a new
-	// backing array is created if the slice must grow in Log or With.
-	// Using the extra capacity without copying risks a data race that
-	// would violate the Logger interface contract.
+	// backing array is created if the slice must grow in Log, With,
+	// or WithProjection. Using the extra capacity without copying
+	// risks a data race that would violate the Logger interface
+	// contract.
 	n := len(l.keyvals) + len(keyvals)
+	valueMissing := false
 	if len(keyvals)%2 != 0 {
+		valueMissing = true
 		n++
 	}
-	kvs := make([]interface{}, 0, n)
-	kvs = append(kvs, keyvals...)
-	if len(kvs)%2 != 0 {
-		kvs = append(kvs, ErrMissingValue)
+	kvs := make([]interface{}, n)
+	base := copy(kvs, keyvals)
+	if valueMissing {
+		kvs[base] = ErrMissingValue
+		base++
 	}
-	kvs = append(kvs, l.keyvals...)
+	copy(kvs[base:], l.keyvals)
 	return &Context{
-		logger:    l.logger,
-		keyvals:   kvs,
-		hasValuer: l.hasValuer || containsValuer(keyvals),
+		logger:     l.logger,
+		keyvals:    kvs,
+		hasValuer:  l.hasValuer || containsValuer(keyvals),
+		projection: l.projection,
+	}
+}
+
+// A Projection inspects a proposed set of keys and values for a log
+// record, deciding whether to preserve or drop the record and
+// optionally proposing a different set of keys and values to use
+// instead.
+//
+// It must not modify the supplied slice, and should return an even
+// number of keys and values paired in an alternating sequence.
+type Projection func(keyvals []interface{}) (kvs []interface{}, preserve bool)
+
+// WithProjection returns a new Context that applies the supplied
+// projection function before any other such functions already bound
+// to the original Context.
+func (l *Context) WithProjection(p Projection) *Context {
+	if p == nil || l == nil {
+		return l
+	}
+	if preceding := l.projection; preceding != nil {
+		inner := p
+		p = func(keyvals []interface{}) ([]interface{}, bool) {
+			kvs, preserve := inner(keyvals)
+			if !preserve {
+				return nil, false
+			}
+			return preceding(kvs)
+		}
+	}
+	projected, preserve := p(l.keyvals)
+	if !preserve {
+		return nil
+	}
+	if len(projected)%2 != 0 {
+		projected = append(projected, ErrMissingValue)
+	}
+	return &Context{
+		logger: l.logger,
+		// Limiting the capacity of the stored keyvals ensures that a
+		// new backing array is created if the slice must grow in Log,
+		// With, or WithProjection. Using the extra capacity without
+		// copying risks a data race that would violate the Logger
+		// interface contract.
+		keyvals:    projected[:len(projected):len(projected)],
+		hasValuer:  l.hasValuer,
+		projection: p,
 	}
 }
 
