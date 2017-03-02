@@ -215,9 +215,21 @@ func TestInjector(t *testing.T) {
 	if got, want := len(output), 4; got != want {
 		t.Errorf("missing level not injected: got len==%d, want len==%d", got, want)
 	}
+	if got, want := output[0], level.Key(); got != want {
+		t.Errorf("wrong level key: got %#v, want %#v", got, want)
+	}
+	if got, want := output[1], level.InfoValue(); got != want {
+		t.Errorf("wrong level value: got %#v, want %#v", got, want)
+	}
 
 	level.Error(logger).Log("foo", "bar")
 	if got, want := len(output), 4; got != want {
 		t.Errorf("leveled record modified: got len==%d, want len==%d", got, want)
+	}
+	if got, want := output[0], level.Key(); got != want {
+		t.Errorf("wrong level key: got %#v, want %#v", got, want)
+	}
+	if got, want := output[1], level.ErrorValue(); got != want {
+		t.Errorf("wrong level value: got %#v, want %#v", got, want)
 	}
 }

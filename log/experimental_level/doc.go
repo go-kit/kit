@@ -18,7 +18,7 @@
 //        level.Error(logger).Log("value", value)
 //    }
 //
-// The leveled logger allows precise control over what should happen if a log
-// event is emitted without a level key, or if a squelched level is used.
-// Check the Option functions for details.
+// NewFilter allows precise control over what happens when a log event is
+// emitted without a level key, or if a squelched level is used. Check the
+// Option functions for details.
 package level

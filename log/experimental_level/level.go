@@ -4,22 +4,22 @@ import "github.com/go-kit/kit/log"
 
 // Error returns a logger that includes a Key/ErrorValue pair.
 func Error(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(key, errorValue)
+	return log.NewContext(logger).WithPrefix(Key(), ErrorValue())
 }
 
 // Warn returns a logger that includes a Key/WarnValue pair.
 func Warn(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(key, warnValue)
+	return log.NewContext(logger).WithPrefix(Key(), WarnValue())
 }
 
 // Info returns a logger that includes a Key/InfoValue pair.
 func Info(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(key, infoValue)
+	return log.NewContext(logger).WithPrefix(Key(), InfoValue())
 }
 
 // Debug returns a logger that includes a Key/DebugValue pair.
 func Debug(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(key, debugValue)
+	return log.NewContext(logger).WithPrefix(Key(), DebugValue())
 }
 
 // NewFilter wraps next and implements level filtering. See the commentary on
@@ -123,6 +123,8 @@ func ErrNoLevel(err error) Option {
 	return func(l *logger) { l.errNoLevel = err }
 }
 
+// NewInjector wraps next and returns a logger that adds a Key/level pair to
+// the beginning of log events that don't already contain a level.
 func NewInjector(next log.Logger, level Value) log.Logger {
 	return &injector{
 		next:  next,
@@ -147,23 +149,41 @@ func (l *injector) Log(keyvals ...interface{}) error {
 	return l.next.Log(kvs...)
 }
 
+// Value is the interface that each of the canonical level values implement.
+// It contains unexported methods that prevent types from other packages from
+// implementing it and guaranteeing that NewFilter can distinguish the levels
+// defined in this package from all other values.
 type Value interface {
 	String() string
 	levelVal()
 }
 
-func Key() interface{}  { return key }
+// Key returns the unique key added to log events by the loggers in this
+// package.
+func Key() interface{} { return key }
+
+// ErrorValue returns the unique value added to log events by Error.
 func ErrorValue() Value { return errorValue }
-func WarnValue() Value  { return warnValue }
-func InfoValue() Value  { return infoValue }
+
+// WarnValue returns the unique value added to log events by Warn.
+func WarnValue() Value { return warnValue }
+
+// InfoValue returns the unique value added to log events by Info.
+func InfoValue() Value { return infoValue }
+
+// DebugValue returns the unique value added to log events by Warn.
 func DebugValue() Value { return debugValue }
 
 var (
-	key        interface{} = "level"
-	errorValue             = &levelValue{level: levelError, name: "error"}
-	warnValue              = &levelValue{level: levelWarn, name: "warn"}
-	infoValue              = &levelValue{level: levelInfo, name: "info"}
-	debugValue             = &levelValue{level: levelDebug, name: "debug"}
+	// key is of type interfae{} so that it allocates once during package
+	// initialization and avoids allocating every type the value is added to a
+	// []interface{} later.
+	key interface{} = "level"
+
+	errorValue = &levelValue{level: levelError, name: "error"}
+	warnValue  = &levelValue{level: levelWarn, name: "warn"}
+	infoValue  = &levelValue{level: levelInfo, name: "info"}
+	debugValue = &levelValue{level: levelDebug, name: "debug"}
 )
 
 type level byte
