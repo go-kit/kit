@@ -12,20 +12,26 @@ const (
 	binHdrSuffix = "-bin"
 )
 
-// RequestFunc may take information from an gRPC request and put it into a
-// request context. In Servers, BeforeFuncs are executed prior to invoking the
-// endpoint. In Clients, BeforeFuncs are executed after creating the request
+// RequestFunc may take information from a gRPC request and put it into a
+// request context. In Servers, RequestFuncs are executed prior to invoking the
+// endpoint. In Clients, RequestFuncs are executed after creating the request
 // but prior to invoking the gRPC client.
 type RequestFunc func(context.Context, *metadata.MD) context.Context
 
-// ResponseFunc may take information from a request context and use it to
+// ServerResponseFunc may take information from a request context and use it to
 // manipulate the gRPC metadata header. ResponseFuncs are only executed in
 // servers, after invoking the endpoint but prior to writing a response.
-type ResponseFunc func(context.Context, *metadata.MD)
+type ServerResponseFunc func(context.Context, *metadata.MD)
+
+// ClientResponseFunc may take information from a gRPC metadata header and/or
+// trailer and make the responses available for consumption. ClientResponseFuncs
+// are only executed in clients, after a request has been made, but prior to it
+// being decoded.
+type ClientResponseFunc func(ctx context.Context, header *metadata.MD, trailer *metadata.MD) context.Context
 
 // SetResponseHeader returns a ResponseFunc that sets the specified metadata
 // key-value pair.
-func SetResponseHeader(key, val string) ResponseFunc {
+func SetResponseHeader(key, val string) ServerResponseFunc {
 	return func(_ context.Context, md *metadata.MD) {
 		key, val := EncodeKeyValue(key, val)
 		(*md)[key] = append((*md)[key], val)
