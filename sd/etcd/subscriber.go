@@ -62,7 +62,7 @@ func (s *Subscriber) loop() {
 }
 
 // Instances implements the Discoverer interface.
-func (s *Subscriber) Instances() ([]endpoint.Endpoint, error) {
+func (s *Subscriber) Instances() ([]string, error) {
 	return s.cache.Instances(), nil
 }
 
