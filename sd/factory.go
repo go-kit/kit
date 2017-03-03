@@ -6,6 +6,8 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
+// TODO move this to endpoint/
+
 // Factory is a function that converts an instance string (e.g. host:port) to a
 // specific endpoint. Instances that provide multiple endpoints require multiple
 // factories. A factory also returns an io.Closer that's invoked when the
