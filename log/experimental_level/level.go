@@ -1,142 +1,58 @@
 package level
 
-import (
-	"github.com/go-kit/kit/log"
-)
+import "github.com/go-kit/kit/log"
 
-var (
-	levelKey        = "level"
-	errorLevelValue = "error"
-	warnLevelValue  = "warn"
-	infoLevelValue  = "info"
-	debugLevelValue = "debug"
-)
-
-// AllowAll is an alias for AllowDebugAndAbove.
-func AllowAll() []string {
-	return AllowDebugAndAbove()
-}
-
-// AllowDebugAndAbove allows all of the four default log levels.
-// Its return value may be provided with the Allowed Option.
-func AllowDebugAndAbove() []string {
-	return []string{errorLevelValue, warnLevelValue, infoLevelValue, debugLevelValue}
-}
-
-// AllowInfoAndAbove allows the default info, warn, and error log levels.
-// Its return value may be provided with the Allowed Option.
-func AllowInfoAndAbove() []string {
-	return []string{errorLevelValue, warnLevelValue, infoLevelValue}
-}
-
-// AllowWarnAndAbove allows the default warn and error log levels.
-// Its return value may be provided with the Allowed Option.
-func AllowWarnAndAbove() []string {
-	return []string{errorLevelValue, warnLevelValue}
-}
-
-// AllowErrorOnly allows only the default error log level.
-// Its return value may be provided with the Allowed Option.
-func AllowErrorOnly() []string {
-	return []string{errorLevelValue}
-}
-
-// AllowNone allows none of the default log levels.
-// Its return value may be provided with the Allowed Option.
-func AllowNone() []string {
-	return []string{}
-}
-
-// Error returns a logger with the level key set to ErrorLevelValue.
+// Error returns a logger that includes a Key/ErrorValue pair.
 func Error(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(levelKey, errorLevelValue)
+	return log.NewContext(logger).WithPrefix(Key(), ErrorValue())
 }
 
-// Warn returns a logger with the level key set to WarnLevelValue.
+// Warn returns a logger that includes a Key/WarnValue pair.
 func Warn(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(levelKey, warnLevelValue)
+	return log.NewContext(logger).WithPrefix(Key(), WarnValue())
 }
 
-// Info returns a logger with the level key set to InfoLevelValue.
+// Info returns a logger that includes a Key/InfoValue pair.
 func Info(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(levelKey, infoLevelValue)
+	return log.NewContext(logger).WithPrefix(Key(), InfoValue())
 }
 
-// Debug returns a logger with the level key set to DebugLevelValue.
+// Debug returns a logger that includes a Key/DebugValue pair.
 func Debug(logger log.Logger) log.Logger {
-	return log.NewContext(logger).WithPrefix(levelKey, debugLevelValue)
+	return log.NewContext(logger).WithPrefix(Key(), DebugValue())
 }
 
-// New wraps the logger and implements level checking. See the commentary on the
-// Option functions for a detailed description of how to configure levels.
-// If no options are provided, all leveled log events created with level.Debug,
-// Info, Warn or Error helper methods will be squelched.
-func New(next log.Logger, options ...Option) log.Logger {
-	l := logger{
+// NewFilter wraps next and implements level filtering. See the commentary on
+// the Option functions for a detailed description of how to configure levels.
+// If no options are provided, all leveled log events created with Debug,
+// Info, Warn or Error helper methods are squelched and non-leveled log
+// events are passed to next unmodified.
+func NewFilter(next log.Logger, options ...Option) log.Logger {
+	l := &logger{
 		next: next,
 	}
 	for _, option := range options {
-		option(&l)
+		option(l)
 	}
-	return &l
+	return l
 }
-
-// Allowed enumerates the accepted log levels. If a log event is encountered
-// with a level key set to a value that isn't explicitly allowed, the event
-// will be squelched, and ErrNotAllowed returned.
-func Allowed(allowed []string) Option {
-	return func(l *logger) { l.allowed = makeSet(allowed) }
-}
-
-// ErrNoLevel is returned to the caller when SquelchNoLevel is true, and Log
-// is invoked without a level key. By default, ErrNoLevel is nil; in this
-// case, the log event is squelched with no error.
-func ErrNotAllowed(err error) Option {
-	return func(l *logger) { l.errNotAllowed = err }
-}
-
-// SquelchNoLevel will squelch log events with no level key, so that they
-// don't proceed through to the wrapped logger. If SquelchNoLevel is set to
-// true and a log event is squelched in this way, ErrNoLevel is returned to
-// the caller.
-func SquelchNoLevel(squelch bool) Option {
-	return func(l *logger) { l.squelchNoLevel = squelch }
-}
-
-// ErrNoLevel is returned to the caller when SquelchNoLevel is true, and Log
-// is invoked without a level key. By default, ErrNoLevel is nil; in this
-// case, the log event is squelched with no error.
-func ErrNoLevel(err error) Option {
-	return func(l *logger) { l.errNoLevel = err }
-}
-
-// Option sets a parameter for the leveled logger.
-type Option func(*logger)
 
 type logger struct {
 	next           log.Logger
-	allowed        map[string]struct{}
-	errNotAllowed  error
+	allowed        level
 	squelchNoLevel bool
+	errNotAllowed  error
 	errNoLevel     error
 }
 
 func (l *logger) Log(keyvals ...interface{}) error {
 	var hasLevel, levelAllowed bool
-	for i := 0; i < len(keyvals); i += 2 {
-		if k, ok := keyvals[i].(string); !ok || k != levelKey {
-			continue
+	for i := 1; i < len(keyvals); i += 2 {
+		if v, ok := keyvals[i].(*levelValue); ok {
+			hasLevel = true
+			levelAllowed = l.allowed&v.level != 0
+			break
 		}
-		hasLevel = true
-		if i >= len(keyvals) {
-			continue
-		}
-		v, ok := keyvals[i+1].(string)
-		if !ok {
-			continue
-		}
-		_, levelAllowed = l.allowed[v]
-		break
 	}
 	if !hasLevel && l.squelchNoLevel {
 		return l.errNoLevel
@@ -147,10 +63,143 @@ func (l *logger) Log(keyvals ...interface{}) error {
 	return l.next.Log(keyvals...)
 }
 
-func makeSet(a []string) map[string]struct{} {
-	m := make(map[string]struct{}, len(a))
-	for _, s := range a {
-		m[s] = struct{}{}
-	}
-	return m
+// Option sets a parameter for the leveled logger.
+type Option func(*logger)
+
+// AllowAll is an alias for AllowDebug.
+func AllowAll() Option {
+	return AllowDebug()
 }
+
+// AllowDebug allows error, warn, info and debug level log events to pass.
+func AllowDebug() Option {
+	return allowed(levelError | levelWarn | levelInfo | levelDebug)
+}
+
+// AllowInfo allows error, warn and info level log events to pass.
+func AllowInfo() Option {
+	return allowed(levelError | levelWarn | levelInfo)
+}
+
+// AllowWarn allows error and warn level log events to pass.
+func AllowWarn() Option {
+	return allowed(levelError | levelWarn)
+}
+
+// AllowError allows only error level log events to pass.
+func AllowError() Option {
+	return allowed(levelError)
+}
+
+// AllowNone allows no leveled log events to pass.
+func AllowNone() Option {
+	return allowed(0)
+}
+
+func allowed(allowed level) Option {
+	return func(l *logger) { l.allowed = allowed }
+}
+
+// ErrNotAllowed sets the error to return from Log when it squelches a log
+// event disallowed by the configured Allow[Level] option. By default,
+// ErrNotAllowed is nil; in this case the log event is squelched with no
+// error.
+func ErrNotAllowed(err error) Option {
+	return func(l *logger) { l.errNotAllowed = err }
+}
+
+// SquelchNoLevel instructs Log to squelch log events with no level, so that
+// they don't proceed through to the wrapped logger. If SquelchNoLevel is set
+// to true and a log event is squelched in this way, the error value
+// configured with ErrNoLevel is returned to the caller.
+func SquelchNoLevel(squelch bool) Option {
+	return func(l *logger) { l.squelchNoLevel = squelch }
+}
+
+// ErrNoLevel sets the error to return from Log when it squelches a log event
+// with no level. By default, ErrNoLevel is nil; in this case the log event is
+// squelched with no error.
+func ErrNoLevel(err error) Option {
+	return func(l *logger) { l.errNoLevel = err }
+}
+
+// NewInjector wraps next and returns a logger that adds a Key/level pair to
+// the beginning of log events that don't already contain a level. In effect,
+// this gives a default level to logs without a level.
+func NewInjector(next log.Logger, level Value) log.Logger {
+	return &injector{
+		next:  next,
+		level: level,
+	}
+}
+
+type injector struct {
+	next  log.Logger
+	level interface{}
+}
+
+func (l *injector) Log(keyvals ...interface{}) error {
+	for i := 1; i < len(keyvals); i += 2 {
+		if _, ok := keyvals[i].(*levelValue); ok {
+			return l.next.Log(keyvals...)
+		}
+	}
+	kvs := make([]interface{}, len(keyvals)+2)
+	kvs[0], kvs[1] = key, l.level
+	copy(kvs[2:], keyvals)
+	return l.next.Log(kvs...)
+}
+
+// Value is the interface that each of the canonical level values implement.
+// It contains unexported methods that prevent types from other packages from
+// implementing it and guaranteeing that NewFilter can distinguish the levels
+// defined in this package from all other values.
+type Value interface {
+	String() string
+	levelVal()
+}
+
+// Key returns the unique key added to log events by the loggers in this
+// package.
+func Key() interface{} { return key }
+
+// ErrorValue returns the unique value added to log events by Error.
+func ErrorValue() Value { return errorValue }
+
+// WarnValue returns the unique value added to log events by Warn.
+func WarnValue() Value { return warnValue }
+
+// InfoValue returns the unique value added to log events by Info.
+func InfoValue() Value { return infoValue }
+
+// DebugValue returns the unique value added to log events by Warn.
+func DebugValue() Value { return debugValue }
+
+var (
+	// key is of type interfae{} so that it allocates once during package
+	// initialization and avoids allocating every type the value is added to a
+	// []interface{} later.
+	key interface{} = "level"
+
+	errorValue = &levelValue{level: levelError, name: "error"}
+	warnValue  = &levelValue{level: levelWarn, name: "warn"}
+	infoValue  = &levelValue{level: levelInfo, name: "info"}
+	debugValue = &levelValue{level: levelDebug, name: "debug"}
+)
+
+type level byte
+
+const (
+	levelDebug level = 1 << iota
+	levelInfo
+	levelWarn
+	levelError
+)
+
+type levelValue struct {
+	name string
+	level
+}
+
+func (v *levelValue) String() string { return v.name }
+func (v *levelValue) levelVal()      {}
