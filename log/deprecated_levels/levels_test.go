@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/levels"
+	levels "github.com/go-kit/kit/log/deprecated_levels"
 )
 
 func TestDefaultLevels(t *testing.T) {
