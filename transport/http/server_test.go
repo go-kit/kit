@@ -206,6 +206,47 @@ func TestServerFinalizer(t *testing.T) {
 			w.Write([]byte(responseBody))
 			return nil
 		},
+		httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context {
+			ctx = context.WithValue(ctx, "one", 1)
+		}),
+		httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context {
+			if one, ok := ctx.Value("one").(int); !ok {
+				t.Error("Value was not set properly when multiple ServerBefores are used")
+			}
+		}),
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	go http.Get(server.URL)
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for finalizer")
+	}
+}
+
+func TestServerBefore(t *testing.T) {
+	var (
+		headerKey    = "X-Henlo-Lizer"
+		headerVal    = "Helllo you stinky lizard"
+		statusCode   = http.StatusTeapot
+		responseBody = "go eat a fly ugly\n"
+		done         = make(chan struct{})
+	)
+	handler := httptransport.NewServer(
+		context.Background(),
+		endpoint.Nop,
+		func(context.Context, *http.Request) (interface{}, error) {
+			return struct{}{}, nil
+		},
+		func(_ context.Context, w http.ResponseWriter, _ interface{}) error {
+			w.Header().Set(headerKey, headerVal)
+			w.WriteHeader(statusCode)
+			w.Write([]byte(responseBody))
+			return nil
+		},
 		httptransport.ServerFinalizer(func(ctx context.Context, code int, _ *http.Request) {
 			if want, have := statusCode, code; want != have {
 				t.Errorf("StatusCode: want %d, have %d", want, have)
