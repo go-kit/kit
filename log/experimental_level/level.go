@@ -124,7 +124,8 @@ func ErrNoLevel(err error) Option {
 }
 
 // NewInjector wraps next and returns a logger that adds a Key/level pair to
-// the beginning of log events that don't already contain a level.
+// the beginning of log events that don't already contain a level. In effect,
+// this gives a default level to logs without a level.
 func NewInjector(next log.Logger, level Value) log.Logger {
 	return &injector{
 		next:  next,
