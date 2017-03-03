@@ -83,7 +83,7 @@ func (p *Subscriber) loop(t *time.Ticker, lookup Lookup) {
 }
 
 // Instances implements the Discoverer interface.
-func (p *Subscriber) Instances() ([]endpoint.Endpoint, error) {
+func (p *Subscriber) Instances() ([]string, error) {
 	return p.cache.Instances(), nil
 }
 
