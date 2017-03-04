@@ -107,7 +107,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		}
 
 		for _, f := range c.after {
-			ctx = f(ctx, &header, &trailer)
+			ctx = f(ctx, header, trailer)
 		}
 
 		response, err := c.dec(ctx, grpcReply)

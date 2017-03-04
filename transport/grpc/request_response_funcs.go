@@ -27,7 +27,7 @@ type ServerResponseFunc func(context.Context, *metadata.MD)
 // trailer and make the responses available for consumption. ClientResponseFuncs
 // are only executed in clients, after a request has been made, but prior to it
 // being decoded.
-type ClientResponseFunc func(ctx context.Context, header *metadata.MD, trailer *metadata.MD) context.Context
+type ClientResponseFunc func(ctx context.Context, header metadata.MD, trailer metadata.MD) context.Context
 
 // SetResponseHeader returns a ResponseFunc that sets the specified metadata
 // key-value pair.

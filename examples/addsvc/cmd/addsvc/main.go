@@ -222,7 +222,7 @@ func main() {
 			return
 		}
 
-		srv := addsvc.MakeGRPCServer(ctx, endpoints, tracer, logger)
+		srv := addsvc.MakeGRPCServer(endpoints, tracer, logger)
 		s := grpc.NewServer()
 		pb.RegisterAddServer(s, srv)
 

@@ -1,8 +1,6 @@
 package grpc
 
 import (
-	"context"
-
 	oldcontext "golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 
@@ -19,7 +17,6 @@ type Handler interface {
 
 // Server wraps an endpoint and implements grpc.Handler.
 type Server struct {
-	ctx    context.Context
 	e      endpoint.Endpoint
 	dec    DecodeRequestFunc
 	enc    EncodeResponseFunc
@@ -34,14 +31,12 @@ type Server struct {
 // definitions to individual handlers. Request and response objects are from the
 // caller business domain, not gRPC request and reply types.
 func NewServer(
-	ctx context.Context,
 	e endpoint.Endpoint,
 	dec DecodeRequestFunc,
 	enc EncodeResponseFunc,
 	options ...ServerOption,
 ) *Server {
 	s := &Server{
-		ctx:    ctx,
 		e:      e,
 		dec:    dec,
 		enc:    enc,
@@ -75,11 +70,9 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 }
 
 // ServeGRPC implements the Handler interface.
-func (s Server) ServeGRPC(grpcCtx oldcontext.Context, req interface{}) (oldcontext.Context, interface{}, error) {
-	ctx := s.ctx
-
+func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.Context, interface{}, error) {
 	// Retrieve gRPC metadata.
-	md, ok := metadata.FromContext(grpcCtx)
+	md, ok := metadata.FromContext(ctx)
 	if !ok {
 		md = metadata.MD{}
 	}
@@ -89,18 +82,18 @@ func (s Server) ServeGRPC(grpcCtx oldcontext.Context, req interface{}) (oldconte
 	}
 
 	// Store potentially updated metadata in the gRPC context.
-	grpcCtx = metadata.NewContext(grpcCtx, md)
+	ctx = metadata.NewContext(ctx, md)
 
-	request, err := s.dec(grpcCtx, req)
+	request, err := s.dec(ctx, req)
 	if err != nil {
 		s.logger.Log("err", err)
-		return grpcCtx, nil, err
+		return ctx, nil, err
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
 		s.logger.Log("err", err)
-		return grpcCtx, nil, err
+		return ctx, nil, err
 	}
 
 	for _, f := range s.after {
@@ -108,13 +101,13 @@ func (s Server) ServeGRPC(grpcCtx oldcontext.Context, req interface{}) (oldconte
 	}
 
 	// Store potentially updated metadata in the gRPC context.
-	grpcCtx = metadata.NewContext(grpcCtx, md)
+	ctx = metadata.NewContext(ctx, md)
 
-	grpcResp, err := s.enc(grpcCtx, response)
+	grpcResp, err := s.enc(ctx, response)
 	if err != nil {
 		s.logger.Log("err", err)
-		return grpcCtx, nil, err
+		return ctx, nil, err
 	}
 
-	return grpcCtx, grpcResp, nil
+	return ctx, grpcResp, nil
 }
