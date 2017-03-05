@@ -41,7 +41,7 @@ func TestTraceGRPCRequestRoundtrip(t *testing.T) {
 
 	// Use FromGRPCRequest to verify that we can join with the trace given MD.
 	fromGRPCFunc := kitot.FromGRPCRequest(tracer, "joined", logger)
-	joinCtx := fromGRPCFunc(afterCtx, &md)
+	joinCtx := fromGRPCFunc(afterCtx, md)
 	joinedSpan := opentracing.SpanFromContext(joinCtx).(*mocktracer.MockSpan)
 
 	joinedContext := joinedSpan.Context().(mocktracer.MockSpanContext)

@@ -44,10 +44,10 @@ func FromHTTPContext() http.RequestFunc {
 
 // ToGRPCContext moves JWT token from grpc metadata to context. Particularly
 // userful for servers.
-func ToGRPCContext() grpc.RequestFunc {
-	return func(ctx context.Context, md *metadata.MD) context.Context {
+func ToGRPCContext() grpc.ServerRequestFunc {
+	return func(ctx context.Context, md metadata.MD) context.Context {
 		// capital "Key" is illegal in HTTP/2.
-		authHeader, ok := (*md)["authorization"]
+		authHeader, ok := md["authorization"]
 		if !ok {
 			return ctx
 		}
@@ -63,7 +63,7 @@ func ToGRPCContext() grpc.RequestFunc {
 
 // FromGRPCContext moves JWT token from context to grpc metadata. Particularly
 // useful for clients.
-func FromGRPCContext() grpc.RequestFunc {
+func FromGRPCContext() grpc.ClientRequestFunc {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		token, ok := ctx.Value(JWTTokenContextKey).(string)
 		if ok {
