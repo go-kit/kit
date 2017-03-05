@@ -49,7 +49,7 @@ func TestIntegration(t *testing.T) {
 	registrar := NewRegistrar(client, Service{
 		Key:   key,
 		Value: value,
-	}, log.NewContext(log.NewLogfmtLogger(os.Stderr)).With("component", "registrar"))
+	}, log.With(log.NewLogfmtLogger(os.Stderr), "component", "registrar"))
 
 	// Register our instance.
 	registrar.Register()
@@ -71,7 +71,7 @@ func TestIntegration(t *testing.T) {
 		client,
 		prefix,
 		func(string) (endpoint.Endpoint, io.Closer, error) { return endpoint.Nop, nil, nil },
-		log.NewContext(log.NewLogfmtLogger(os.Stderr)).With("component", "subscriber"),
+		log.With(log.NewLogfmtLogger(os.Stderr), "component", "subscriber"),
 	)
 	if err != nil {
 		t.Fatalf("NewSubscriber: %v", err)

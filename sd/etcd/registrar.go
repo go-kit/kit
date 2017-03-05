@@ -63,10 +63,7 @@ func NewRegistrar(client Client, service Service, logger log.Logger) *Registrar 
 	return &Registrar{
 		client:  client,
 		service: service,
-		logger: log.NewContext(logger).With(
-			"key", service.Key,
-			"value", service.Value,
-		),
+		logger:  log.With(logger, "key", service.Key, "value", service.Value),
 	}
 }
 

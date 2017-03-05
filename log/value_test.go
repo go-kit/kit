@@ -24,7 +24,7 @@ func TestValueBinding(t *testing.T) {
 		return now
 	}
 
-	lc := log.NewContext(logger).With("ts", log.Timestamp(mocktime), "caller", log.DefaultCaller)
+	lc := log.With(logger, "ts", log.Timestamp(mocktime), "caller", log.DefaultCaller)
 
 	lc.Log("foo", "bar")
 	timestamp, ok := output[1].(time.Time)
@@ -68,7 +68,7 @@ func TestValueBinding_loggingZeroKeyvals(t *testing.T) {
 		return now
 	}
 
-	logger = log.NewContext(logger).With("ts", log.Timestamp(mocktime))
+	logger = log.With(logger, "ts", log.Timestamp(mocktime))
 
 	logger.Log()
 	timestamp, ok := output[1].(time.Time)
@@ -92,7 +92,7 @@ func TestValueBinding_loggingZeroKeyvals(t *testing.T) {
 
 func BenchmarkValueBindingTimestamp(b *testing.B) {
 	logger := log.NewNopLogger()
-	lc := log.NewContext(logger).With("ts", log.DefaultTimestamp)
+	lc := log.With(logger, "ts", log.DefaultTimestamp)
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -102,7 +102,7 @@ func BenchmarkValueBindingTimestamp(b *testing.B) {
 
 func BenchmarkValueBindingCaller(b *testing.B) {
 	logger := log.NewNopLogger()
-	lc := log.NewContext(logger).With("caller", log.DefaultCaller)
+	lc := log.With(logger, "caller", log.DefaultCaller)
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

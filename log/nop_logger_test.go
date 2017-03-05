@@ -12,7 +12,7 @@ func TestNopLogger(t *testing.T) {
 	if err := logger.Log("abc", 123); err != nil {
 		t.Error(err)
 	}
-	if err := log.NewContext(logger).With("def", "ghi").Log(); err != nil {
+	if err := log.With(logger, "def", "ghi").Log(); err != nil {
 		t.Error(err)
 	}
 }

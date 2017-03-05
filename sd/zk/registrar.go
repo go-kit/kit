@@ -24,7 +24,7 @@ func NewRegistrar(client Client, service Service, logger log.Logger) *Registrar 
 	return &Registrar{
 		client:  client,
 		service: service,
-		logger: log.NewContext(logger).With(
+		logger: log.With(logger,
 			"service", service.Name,
 			"path", service.Path,
 			"data", string(service.Data),

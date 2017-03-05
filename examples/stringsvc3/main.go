@@ -22,7 +22,7 @@ func main() {
 
 	var logger log.Logger
 	logger = log.NewLogfmtLogger(os.Stderr)
-	logger = log.NewContext(logger).With("listen", *listen).With("caller", log.DefaultCaller)
+	logger = log.With(logger, "listen", *listen, "caller", log.DefaultCaller)
 
 	fieldKeys := []string{"method", "error"}
 	requestCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{

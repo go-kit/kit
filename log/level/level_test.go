@@ -144,7 +144,7 @@ func TestLevelContext(t *testing.T) {
 	var logger log.Logger
 	logger = log.NewLogfmtLogger(&buf)
 	logger = level.NewFilter(logger, level.AllowAll())
-	logger = log.NewContext(logger).With("caller", log.DefaultCaller)
+	logger = log.With(logger, "caller", log.DefaultCaller)
 
 	level.Info(logger).Log("foo", "bar")
 	if want, have := `level=info caller=level_test.go:149 foo=bar`, strings.TrimSpace(buf.String()); want != have {
@@ -159,7 +159,7 @@ func TestContextLevel(t *testing.T) {
 	// to specify a higher callstack depth value.
 	var logger log.Logger
 	logger = log.NewLogfmtLogger(&buf)
-	logger = log.NewContext(logger).With("caller", log.Caller(5))
+	logger = log.With(logger, "caller", log.Caller(5))
 	logger = level.NewFilter(logger, level.AllowAll())
 
 	level.Info(logger).Log("foo", "bar")

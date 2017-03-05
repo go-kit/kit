@@ -42,7 +42,7 @@
 // resulting log output. We can use a context to improve the RunTask example.
 //
 //    func RunTask(task Task, logger log.Logger) string {
-//        logger = log.NewContext(logger).With("taskID", task.ID)
+//        logger = log.With(logger, "taskID", task.ID)
 //        logger.Log("event", "starting task")
 //        ...
 //        taskHelper(task.Cmd, logger)
@@ -72,7 +72,7 @@
 // entries contain a timestamp and source location looks like this:
 //
 //    logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stdout))
-//    logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
+//    logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
 //
 // Concurrent Safety
 //

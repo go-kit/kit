@@ -15,12 +15,12 @@ type Logger interface {
 // the missing value.
 var ErrMissingValue = errors.New("(MISSING)")
 
-// NewContext returns a new Context that logs to logger.
-func NewContext(logger Logger) *Context {
-	if c, ok := logger.(*Context); ok {
+// newContext returns a new context that logs to logger.
+func newContext(logger Logger) *context {
+	if c, ok := logger.(*context); ok {
 		return c
 	}
-	return &Context{logger: logger}
+	return &context{logger: logger}
 }
 
 // Context must always have the same number of stack frames between calls to
@@ -57,11 +57,11 @@ func NewContext(logger Logger) *Context {
 // Context.Log through a variable with type Context. Using pointer receivers
 // avoids this problem.
 
-// A Context wraps a Logger and holds keyvals that it includes in all log
-// events. When logging, a Context replaces all value elements (odd indexes)
+// A context wraps a Logger and holds keyvals that it includes in all log
+// events. When logging, a context replaces all value elements (odd indexes)
 // containing a Valuer with their generated value for each call to its Log
 // method.
-type Context struct {
+type context struct {
 	logger    Logger
 	keyvals   []interface{}
 	hasValuer bool
@@ -70,7 +70,7 @@ type Context struct {
 // Log replaces all value elements (odd indexes) containing a Valuer in the
 // stored context with their generated value, appends keyvals, and passes the
 // result to the wrapped Logger.
-func (l *Context) Log(keyvals ...interface{}) error {
+func (l *context) Log(keyvals ...interface{}) error {
 	kvs := append(l.keyvals, keyvals...)
 	if len(kvs)%2 != 0 {
 		kvs = append(kvs, ErrMissingValue)
@@ -86,16 +86,17 @@ func (l *Context) Log(keyvals ...interface{}) error {
 	return l.logger.Log(kvs...)
 }
 
-// With returns a new Context with keyvals appended to those of the receiver.
-func (l *Context) With(keyvals ...interface{}) *Context {
+// With returns a new context with keyvals appended to those of the receiver.
+func With(logger Logger, keyvals ...interface{}) Logger {
 	if len(keyvals) == 0 {
-		return l
+		return logger
 	}
+	l := newContext(logger)
 	kvs := append(l.keyvals, keyvals...)
 	if len(kvs)%2 != 0 {
 		kvs = append(kvs, ErrMissingValue)
 	}
-	return &Context{
+	return &context{
 		logger: l.logger,
 		// Limiting the capacity of the stored keyvals ensures that a new
 		// backing array is created if the slice must grow in Log or With.
@@ -106,12 +107,13 @@ func (l *Context) With(keyvals ...interface{}) *Context {
 	}
 }
 
-// WithPrefix returns a new Context with keyvals prepended to those of the
+// WithPrefix returns a new context with keyvals prepended to those of the
 // receiver.
-func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
+func WithPrefix(logger Logger, keyvals ...interface{}) Logger {
 	if len(keyvals) == 0 {
-		return l
+		return logger
 	}
+	l := newContext(logger)
 	// Limiting the capacity of the stored keyvals ensures that a new
 	// backing array is created if the slice must grow in Log or With.
 	// Using the extra capacity without copying risks a data race that
@@ -126,7 +128,7 @@ func (l *Context) WithPrefix(keyvals ...interface{}) *Context {
 		kvs = append(kvs, ErrMissingValue)
 	}
 	kvs = append(kvs, l.keyvals...)
-	return &Context{
+	return &context{
 		logger:    l.logger,
 		keyvals:   kvs,
 		hasValuer: l.hasValuer || containsValuer(keyvals),

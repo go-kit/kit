@@ -12,7 +12,7 @@ func Example_basic() {
 	// setup logger with level filter
 	logger := log.NewLogfmtLogger(os.Stdout)
 	logger = level.NewFilter(logger, level.AllowInfo())
-	logger = log.NewContext(logger).With("caller", log.DefaultCaller)
+	logger = log.With(logger, "caller", log.DefaultCaller)
 
 	// use level helpers to log at different levels
 	level.Error(logger).Log("err", errors.New("bad data"))

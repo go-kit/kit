@@ -36,7 +36,7 @@ func NewSubscriber(client Client, factory sd.Factory, logger log.Logger, service
 	s := &Subscriber{
 		cache:       cache.New(factory, logger),
 		client:      client,
-		logger:      log.NewContext(logger).With("service", service, "tags", fmt.Sprint(tags)),
+		logger:      log.With(logger, "service", service, "tags", fmt.Sprint(tags)),
 		service:     service,
 		tags:        tags,
 		passingOnly: passingOnly,

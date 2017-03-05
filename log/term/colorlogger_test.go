@@ -56,7 +56,7 @@ func TestColorLoggerConcurrency(t *testing.T) {
 
 // copied from log/benchmark_test.go
 func benchmarkRunner(b *testing.B, logger log.Logger, f func(log.Logger)) {
-	lc := log.NewContext(logger).With("common_key", "common_value")
+	lc := log.With(logger, "common_key", "common_value")
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -66,7 +66,7 @@ func benchmarkRunner(b *testing.B, logger log.Logger, f func(log.Logger)) {
 
 var (
 	baseMessage = func(logger log.Logger) { logger.Log("foo_key", "foo_value") }
-	withMessage = func(logger log.Logger) { log.NewContext(logger).With("a", "b").Log("c", "d") }
+	withMessage = func(logger log.Logger) { log.With(logger, "a", "b").Log("c", "d") }
 )
 
 // copied from log/concurrency_test.go

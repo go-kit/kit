@@ -43,7 +43,7 @@ func Example_context() {
 	}
 
 	RunTask := func(task Task, logger log.Logger) {
-		logger = log.NewContext(logger).With("taskID", task.ID)
+		logger = log.With(logger, "taskID", task.ID)
 		logger.Log("event", "starting task")
 
 		taskHelper(task.Cmd, logger)
@@ -68,7 +68,7 @@ func Example_valuer() {
 		return count
 	}
 
-	logger = log.NewContext(logger).With("count", log.Valuer(counter))
+	logger = log.With(logger, "count", log.Valuer(counter))
 
 	logger.Log("call", "first")
 	logger.Log("call", "second")
@@ -88,7 +88,7 @@ func Example_debugInfo() {
 		return baseTime
 	}
 
-	logger = log.NewContext(logger).With("time", log.Timestamp(mockTime), "caller", log.DefaultCaller)
+	logger = log.With(logger, "time", log.Timestamp(mockTime), "caller", log.DefaultCaller)
 
 	logger.Log("call", "first")
 	logger.Log("call", "second")

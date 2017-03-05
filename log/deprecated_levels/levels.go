@@ -7,7 +7,7 @@ import "github.com/go-kit/kit/log"
 // want a different set of levels, you can create your own levels type very
 // easily, and you can elide the configuration.
 type Levels struct {
-	ctx      *log.Context
+	logger   log.Logger
 	levelKey string
 
 	// We have a choice between storing level values in string fields or
@@ -34,7 +34,7 @@ type Levels struct {
 // New creates a new leveled logger, wrapping the passed logger.
 func New(logger log.Logger, options ...Option) Levels {
 	l := Levels{
-		ctx:      log.NewContext(logger),
+		logger:   logger,
 		levelKey: "level",
 
 		debugValue: "debug",
@@ -52,7 +52,7 @@ func New(logger log.Logger, options ...Option) Levels {
 // With returns a new leveled logger that includes keyvals in all log events.
 func (l Levels) With(keyvals ...interface{}) Levels {
 	return Levels{
-		ctx:        l.ctx.With(keyvals...),
+		logger:     log.With(l.logger, keyvals...),
 		levelKey:   l.levelKey,
 		debugValue: l.debugValue,
 		infoValue:  l.infoValue,
@@ -64,27 +64,27 @@ func (l Levels) With(keyvals ...interface{}) Levels {
 
 // Debug returns a debug level logger.
 func (l Levels) Debug() log.Logger {
-	return l.ctx.WithPrefix(l.levelKey, l.debugValue)
+	return log.WithPrefix(l.logger, l.levelKey, l.debugValue)
 }
 
 // Info returns an info level logger.
 func (l Levels) Info() log.Logger {
-	return l.ctx.WithPrefix(l.levelKey, l.infoValue)
+	return log.WithPrefix(l.logger, l.levelKey, l.infoValue)
 }
 
 // Warn returns a warning level logger.
 func (l Levels) Warn() log.Logger {
-	return l.ctx.WithPrefix(l.levelKey, l.warnValue)
+	return log.WithPrefix(l.logger, l.levelKey, l.warnValue)
 }
 
 // Error returns an error level logger.
 func (l Levels) Error() log.Logger {
-	return l.ctx.WithPrefix(l.levelKey, l.errorValue)
+	return log.WithPrefix(l.logger, l.levelKey, l.errorValue)
 }
 
 // Crit returns a critical level logger.
 func (l Levels) Crit() log.Logger {
-	return l.ctx.WithPrefix(l.levelKey, l.critValue)
+	return log.WithPrefix(l.logger, l.levelKey, l.critValue)
 }
 
 // Option sets a parameter for leveled loggers.
