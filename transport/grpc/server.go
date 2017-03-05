@@ -21,7 +21,7 @@ type Server struct {
 	e      endpoint.Endpoint
 	dec    DecodeRequestFunc
 	enc    EncodeResponseFunc
-	before []RequestFunc
+	before []ServerRequestFunc
 	after  []ServerResponseFunc
 	logger log.Logger
 }
@@ -54,7 +54,7 @@ type ServerOption func(*Server)
 
 // ServerBefore functions are executed on the HTTP request object before the
 // request is decoded.
-func ServerBefore(before ...RequestFunc) ServerOption {
+func ServerBefore(before ...ServerRequestFunc) ServerOption {
 	return func(s *Server) { s.before = append(s.before, before...) }
 }
 
@@ -79,11 +79,8 @@ func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.C
 	}
 
 	for _, f := range s.before {
-		ctx = f(ctx, &md)
+		ctx = f(ctx, md)
 	}
-
-	// Store potentially updated metadata in the gRPC context.
-	ctx = metadata.NewContext(ctx, md)
 
 	request, err := s.dec(ctx, req)
 	if err != nil {
@@ -99,7 +96,7 @@ func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.C
 
 	var mdHeader, mdTrailer metadata.MD
 	for _, f := range s.after {
-		f(ctx, &mdHeader, &mdTrailer)
+		ctx = f(ctx, &mdHeader, &mdTrailer)
 	}
 
 	grpcResp, err := s.enc(ctx, response)

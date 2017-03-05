@@ -38,8 +38,8 @@ func displayClientRequestHeaders(ctx context.Context, md *metadata.MD) context.C
 
 /* server before functions */
 
-func extractCorrelationID(ctx context.Context, md *metadata.MD) context.Context {
-	if hdr, ok := (*md)[string(correlationID)]; ok {
+func extractCorrelationID(ctx context.Context, md metadata.MD) context.Context {
+	if hdr, ok := md[string(correlationID)]; ok {
 		cID := hdr[len(hdr)-1]
 		ctx = context.WithValue(ctx, correlationID, cID)
 		fmt.Printf("\tServer received correlationID %q in metadata header, set context\n", cID)
@@ -47,10 +47,10 @@ func extractCorrelationID(ctx context.Context, md *metadata.MD) context.Context 
 	return ctx
 }
 
-func displayServerRequestHeaders(ctx context.Context, md *metadata.MD) context.Context {
-	if len(*md) > 0 {
+func displayServerRequestHeaders(ctx context.Context, md metadata.MD) context.Context {
+	if len(md) > 0 {
 		fmt.Println("\tServer << Request Headers:")
-		for key, val := range *md {
+		for key, val := range md {
 			fmt.Printf("\t\t%s: %s\n", key, val[len(val)-1])
 		}
 	}
@@ -59,37 +59,42 @@ func displayServerRequestHeaders(ctx context.Context, md *metadata.MD) context.C
 
 /* server after functions */
 
-func injectResponseHeader(ctx context.Context, md *metadata.MD, _ *metadata.MD) {
+func injectResponseHeader(ctx context.Context, md *metadata.MD, _ *metadata.MD) context.Context {
 	*md = metadata.Join(*md, metadata.Pairs(string(responseHDR), "has-a-value"))
+	return ctx
 }
 
-func displayServerResponseHeaders(ctx context.Context, md *metadata.MD, _ *metadata.MD) {
+func displayServerResponseHeaders(ctx context.Context, md *metadata.MD, _ *metadata.MD) context.Context {
 	if len(*md) > 0 {
 		fmt.Println("\tServer >> Response Headers:")
 		for key, val := range *md {
 			fmt.Printf("\t\t%s: %s\n", key, val[len(val)-1])
 		}
 	}
+	return ctx
 }
 
-func injectResponseTrailer(ctx context.Context, _ *metadata.MD, md *metadata.MD) {
+func injectResponseTrailer(ctx context.Context, _ *metadata.MD, md *metadata.MD) context.Context {
 	*md = metadata.Join(*md, metadata.Pairs(string(responseTRLR), "has-a-value-too"))
+	return ctx
 }
 
-func injectConsumedCorrelationID(ctx context.Context, _ *metadata.MD, md *metadata.MD) {
+func injectConsumedCorrelationID(ctx context.Context, _ *metadata.MD, md *metadata.MD) context.Context {
 	if hdr, ok := ctx.Value(correlationID).(string); ok {
 		fmt.Printf("\tServer found correlationID %q in context, set consumed trailer\n", hdr)
 		*md = metadata.Join(*md, metadata.Pairs(string(correlationIDTRLR), hdr))
 	}
+	return ctx
 }
 
-func displayServerResponseTrailers(ctx context.Context, _ *metadata.MD, md *metadata.MD) {
+func displayServerResponseTrailers(ctx context.Context, _ *metadata.MD, md *metadata.MD) context.Context {
 	if len(*md) > 0 {
 		fmt.Println("\tServer >> Response Trailers:")
 		for key, val := range *md {
 			fmt.Printf("\t\t%s: %s\n", key, val[len(val)-1])
 		}
 	}
+	return ctx
 }
 
 /* client after functions */

@@ -21,7 +21,7 @@ type Client struct {
 	enc         EncodeRequestFunc
 	dec         DecodeResponseFunc
 	grpcReply   reflect.Type
-	before      []RequestFunc
+	before      []ClientRequestFunc
 	after       []ClientResponseFunc
 }
 
@@ -54,7 +54,7 @@ func NewClient(
 				reflect.ValueOf(grpcReply),
 			).Interface(),
 		),
-		before: []RequestFunc{},
+		before: []ClientRequestFunc{},
 		after:  []ClientResponseFunc{},
 	}
 	for _, option := range options {
@@ -68,7 +68,7 @@ type ClientOption func(*Client)
 
 // ClientBefore sets the RequestFuncs that are applied to the outgoing gRPC
 // request before it's invoked.
-func ClientBefore(before ...RequestFunc) ClientOption {
+func ClientBefore(before ...ClientRequestFunc) ClientOption {
 	return func(c *Client) { c.before = append(c.before, before...) }
 }
 
