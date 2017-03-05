@@ -17,7 +17,7 @@ import (
 )
 
 // MakeHandler returns a handler for the handling service.
-func MakeHandler(ctx context.Context, hs Service, logger kitlog.Logger) http.Handler {
+func MakeHandler(hs Service, logger kitlog.Logger) http.Handler {
 	r := mux.NewRouter()
 
 	opts := []kithttp.ServerOption{
@@ -26,7 +26,6 @@ func MakeHandler(ctx context.Context, hs Service, logger kitlog.Logger) http.Han
 	}
 
 	registerIncidentHandler := kithttp.NewServer(
-		ctx,
 		makeRegisterIncidentEndpoint(hs),
 		decodeRegisterIncidentRequest,
 		encodeResponse,

@@ -24,8 +24,6 @@ func main() {
 	logger = log.NewLogfmtLogger(os.Stderr)
 	logger = log.NewContext(logger).With("listen", *listen).With("caller", log.DefaultCaller)
 
-	ctx := context.Background()
-
 	fieldKeys := []string{"method", "error"}
 	requestCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Namespace: "my_group",
@@ -48,18 +46,16 @@ func main() {
 
 	var svc StringService
 	svc = stringService{}
-	svc = proxyingMiddleware(*proxy, ctx, logger)(svc)
+	svc = proxyingMiddleware(context.Background(), *proxy, logger)(svc)
 	svc = loggingMiddleware(logger)(svc)
 	svc = instrumentingMiddleware(requestCount, requestLatency, countResult)(svc)
 
 	uppercaseHandler := httptransport.NewServer(
-		ctx,
 		makeUppercaseEndpoint(svc),
 		decodeUppercaseRequest,
 		encodeResponse,
 	)
 	countHandler := httptransport.NewServer(
-		ctx,
 		makeCountEndpoint(svc),
 		decodeCountRequest,
 		encodeResponse,

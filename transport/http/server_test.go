@@ -16,7 +16,6 @@ import (
 
 func TestServerBadDecode(t *testing.T) {
 	handler := httptransport.NewServer(
-		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, errors.New("dang") },
 		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
@@ -31,7 +30,6 @@ func TestServerBadDecode(t *testing.T) {
 
 func TestServerBadEndpoint(t *testing.T) {
 	handler := httptransport.NewServer(
-		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errors.New("dang") },
 		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
@@ -46,7 +44,6 @@ func TestServerBadEndpoint(t *testing.T) {
 
 func TestServerBadEncode(t *testing.T) {
 	handler := httptransport.NewServer(
-		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, http.ResponseWriter, interface{}) error { return errors.New("dang") },
@@ -68,7 +65,6 @@ func TestServerErrorEncoder(t *testing.T) {
 		return http.StatusInternalServerError
 	}
 	handler := httptransport.NewServer(
-		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errTeapot },
 		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
@@ -83,7 +79,7 @@ func TestServerErrorEncoder(t *testing.T) {
 }
 
 func TestServerHappyPath(t *testing.T) {
-	_, step, response := testServer(t)
+	step, response := testServer(t)
 	step()
 	resp := <-response
 	defer resp.Body.Close()
@@ -92,7 +88,6 @@ func TestServerHappyPath(t *testing.T) {
 		t.Errorf("want %d, have %d (%s)", want, have, buf)
 	}
 }
-
 
 func TestMultipleServerBefore(t *testing.T) {
 	var (
@@ -103,7 +98,6 @@ func TestMultipleServerBefore(t *testing.T) {
 		done         = make(chan struct{})
 	)
 	handler := httptransport.NewServer(
-		context.Background(),
 		endpoint.Nop,
 		func(context.Context, *http.Request) (interface{}, error) {
 			return struct{}{}, nil
@@ -149,7 +143,6 @@ func TestMultipleServerAfter(t *testing.T) {
 		done         = make(chan struct{})
 	)
 	handler := httptransport.NewServer(
-		context.Background(),
 		endpoint.Nop,
 		func(context.Context, *http.Request) (interface{}, error) {
 			return struct{}{}, nil
@@ -195,7 +188,6 @@ func TestServerFinalizer(t *testing.T) {
 		done         = make(chan struct{})
 	)
 	handler := httptransport.NewServer(
-		context.Background(),
 		endpoint.Nop,
 		func(context.Context, *http.Request) (interface{}, error) {
 			return struct{}{}, nil
@@ -245,7 +237,6 @@ func (e enhancedResponse) Headers() http.Header { return http.Header{"X-Edward":
 
 func TestEncodeJSONResponse(t *testing.T) {
 	handler := httptransport.NewServer(
-		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return enhancedResponse{Foo: "bar"}, nil },
 		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 		httptransport.EncodeJSONResponse,
@@ -276,7 +267,6 @@ func (e noContentResponse) StatusCode() int { return http.StatusNoContent }
 
 func TestEncodeNoContent(t *testing.T) {
 	handler := httptransport.NewServer(
-		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return noContentResponse{}, nil },
 		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 		httptransport.EncodeJSONResponse,
@@ -307,7 +297,6 @@ func (e enhancedError) Headers() http.Header         { return http.Header{"X-Enh
 
 func TestEnhancedError(t *testing.T) {
 	handler := httptransport.NewServer(
-		context.Background(),
 		func(context.Context, interface{}) (interface{}, error) { return nil, enhancedError{} },
 		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 		func(_ context.Context, w http.ResponseWriter, _ interface{}) error { return nil },
@@ -333,14 +322,12 @@ func TestEnhancedError(t *testing.T) {
 	}
 }
 
-func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) {
+func testServer(t *testing.T) (step func(), resp <-chan *http.Response) {
 	var (
-		ctx, cancelfn = context.WithCancel(context.Background())
-		stepch        = make(chan bool)
-		endpoint      = func(context.Context, interface{}) (interface{}, error) { <-stepch; return struct{}{}, nil }
-		response      = make(chan *http.Response)
-		handler       = httptransport.NewServer(
-			ctx,
+		stepch   = make(chan bool)
+		endpoint = func(context.Context, interface{}) (interface{}, error) { <-stepch; return struct{}{}, nil }
+		response = make(chan *http.Response)
+		handler  = httptransport.NewServer(
 			endpoint,
 			func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 			func(context.Context, http.ResponseWriter, interface{}) error { return nil },
@@ -358,5 +345,5 @@ func testServer(t *testing.T) (cancel, step func(), resp <-chan *http.Response) 
 		}
 		response <- resp
 	}()
-	return cancelfn, func() { stepch <- true }, response
+	return func() { stepch <- true }, response
 }

@@ -15,7 +15,7 @@ import (
 )
 
 // MakeHandler returns a handler for the tracking service.
-func MakeHandler(ctx context.Context, ts Service, logger kitlog.Logger) http.Handler {
+func MakeHandler(ts Service, logger kitlog.Logger) http.Handler {
 	r := mux.NewRouter()
 
 	opts := []kithttp.ServerOption{
@@ -24,7 +24,6 @@ func MakeHandler(ctx context.Context, ts Service, logger kitlog.Logger) http.Han
 	}
 
 	trackCargoHandler := kithttp.NewServer(
-		ctx,
 		makeTrackCargoEndpoint(ts),
 		decodeTrackCargoRequest,
 		encodeResponse,

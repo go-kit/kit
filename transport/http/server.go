@@ -11,7 +11,6 @@ import (
 
 // Server wraps an endpoint and implements http.Handler.
 type Server struct {
-	ctx          context.Context
 	e            endpoint.Endpoint
 	dec          DecodeRequestFunc
 	enc          EncodeResponseFunc
@@ -25,14 +24,12 @@ type Server struct {
 // NewServer constructs a new server, which implements http.Server and wraps
 // the provided endpoint.
 func NewServer(
-	ctx context.Context,
 	e endpoint.Endpoint,
 	dec DecodeRequestFunc,
 	enc EncodeResponseFunc,
 	options ...ServerOption,
 ) *Server {
 	s := &Server{
-		ctx:          ctx,
 		e:            e,
 		dec:          dec,
 		enc:          enc,
@@ -85,7 +82,7 @@ func ServerFinalizer(f ServerFinalizerFunc) ServerOption {
 
 // ServeHTTP implements http.Handler.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := s.ctx
+	ctx := r.Context()
 
 	if s.finalizer != nil {
 		iw := &interceptingWriter{w, http.StatusOK, 0}

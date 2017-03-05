@@ -20,21 +20,19 @@ import (
 
 // MakeHTTPHandler returns a handler that makes a set of endpoints available
 // on predefined paths.
-func MakeHTTPHandler(ctx context.Context, endpoints Endpoints, tracer stdopentracing.Tracer, logger log.Logger) http.Handler {
+func MakeHTTPHandler(endpoints Endpoints, tracer stdopentracing.Tracer, logger log.Logger) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorEncoder(errorEncoder),
 		httptransport.ServerErrorLogger(logger),
 	}
 	m := http.NewServeMux()
 	m.Handle("/sum", httptransport.NewServer(
-		ctx,
 		endpoints.SumEndpoint,
 		DecodeHTTPSumRequest,
 		EncodeHTTPGenericResponse,
 		append(options, httptransport.ServerBefore(opentracing.FromHTTPRequest(tracer, "Sum", logger)))...,
 	))
 	m.Handle("/concat", httptransport.NewServer(
-		ctx,
 		endpoints.ConcatEndpoint,
 		DecodeHTTPConcatRequest,
 		EncodeHTTPGenericResponse,

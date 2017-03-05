@@ -207,7 +207,7 @@ func main() {
 	// HTTP transport.
 	go func() {
 		logger := log.NewContext(logger).With("transport", "HTTP")
-		h := addsvc.MakeHTTPHandler(ctx, endpoints, tracer, logger)
+		h := addsvc.MakeHTTPHandler(endpoints, tracer, logger)
 		logger.Log("addr", *httpAddr)
 		errc <- http.ListenAndServe(*httpAddr, h)
 	}()
