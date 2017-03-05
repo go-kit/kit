@@ -16,20 +16,18 @@ import (
 )
 
 // MakeGRPCServer makes a set of endpoints available as a gRPC AddServer.
-func MakeGRPCServer(ctx context.Context, endpoints Endpoints, tracer stdopentracing.Tracer, logger log.Logger) pb.AddServer {
+func MakeGRPCServer(endpoints Endpoints, tracer stdopentracing.Tracer, logger log.Logger) pb.AddServer {
 	options := []grpctransport.ServerOption{
 		grpctransport.ServerErrorLogger(logger),
 	}
 	return &grpcServer{
 		sum: grpctransport.NewServer(
-			ctx,
 			endpoints.SumEndpoint,
 			DecodeGRPCSumRequest,
 			EncodeGRPCSumResponse,
 			append(options, grpctransport.ServerBefore(opentracing.FromGRPCRequest(tracer, "Sum", logger)))...,
 		),
 		concat: grpctransport.NewServer(
-			ctx,
 			endpoints.ConcatEndpoint,
 			DecodeGRPCConcatRequest,
 			EncodeGRPCConcatResponse,

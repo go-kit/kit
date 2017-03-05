@@ -1,9 +1,8 @@
 package grpc
 
 import (
-	"context"
-
 	oldcontext "golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/go-kit/kit/endpoint"
@@ -19,12 +18,11 @@ type Handler interface {
 
 // Server wraps an endpoint and implements grpc.Handler.
 type Server struct {
-	ctx    context.Context
 	e      endpoint.Endpoint
 	dec    DecodeRequestFunc
 	enc    EncodeResponseFunc
-	before []RequestFunc
-	after  []ResponseFunc
+	before []ServerRequestFunc
+	after  []ServerResponseFunc
 	logger log.Logger
 }
 
@@ -34,14 +32,12 @@ type Server struct {
 // definitions to individual handlers. Request and response objects are from the
 // caller business domain, not gRPC request and reply types.
 func NewServer(
-	ctx context.Context,
 	e endpoint.Endpoint,
 	dec DecodeRequestFunc,
 	enc EncodeResponseFunc,
 	options ...ServerOption,
 ) *Server {
 	s := &Server{
-		ctx:    ctx,
 		e:      e,
 		dec:    dec,
 		enc:    enc,
@@ -58,13 +54,13 @@ type ServerOption func(*Server)
 
 // ServerBefore functions are executed on the HTTP request object before the
 // request is decoded.
-func ServerBefore(before ...RequestFunc) ServerOption {
+func ServerBefore(before ...ServerRequestFunc) ServerOption {
 	return func(s *Server) { s.before = append(s.before, before...) }
 }
 
 // ServerAfter functions are executed on the HTTP response writer after the
 // endpoint is invoked, but before anything is written to the client.
-func ServerAfter(after ...ResponseFunc) ServerOption {
+func ServerAfter(after ...ServerResponseFunc) ServerOption {
 	return func(s *Server) { s.after = append(s.after, after...) }
 }
 
@@ -75,46 +71,53 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 }
 
 // ServeGRPC implements the Handler interface.
-func (s Server) ServeGRPC(grpcCtx oldcontext.Context, req interface{}) (oldcontext.Context, interface{}, error) {
-	ctx := s.ctx
-
+func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.Context, interface{}, error) {
 	// Retrieve gRPC metadata.
-	md, ok := metadata.FromContext(grpcCtx)
+	md, ok := metadata.FromContext(ctx)
 	if !ok {
 		md = metadata.MD{}
 	}
 
 	for _, f := range s.before {
-		ctx = f(ctx, &md)
+		ctx = f(ctx, md)
 	}
 
-	// Store potentially updated metadata in the gRPC context.
-	grpcCtx = metadata.NewContext(grpcCtx, md)
-
-	request, err := s.dec(grpcCtx, req)
+	request, err := s.dec(ctx, req)
 	if err != nil {
 		s.logger.Log("err", err)
-		return grpcCtx, nil, err
+		return ctx, nil, err
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
 		s.logger.Log("err", err)
-		return grpcCtx, nil, err
+		return ctx, nil, err
 	}
 
+	var mdHeader, mdTrailer metadata.MD
 	for _, f := range s.after {
-		f(ctx, &md)
+		ctx = f(ctx, &mdHeader, &mdTrailer)
 	}
 
-	// Store potentially updated metadata in the gRPC context.
-	grpcCtx = metadata.NewContext(grpcCtx, md)
-
-	grpcResp, err := s.enc(grpcCtx, response)
+	grpcResp, err := s.enc(ctx, response)
 	if err != nil {
 		s.logger.Log("err", err)
-		return grpcCtx, nil, err
+		return ctx, nil, err
 	}
 
-	return grpcCtx, grpcResp, nil
+	if len(mdHeader) > 0 {
+		if err = grpc.SendHeader(ctx, mdHeader); err != nil {
+			s.logger.Log("err", err)
+			return ctx, nil, err
+		}
+	}
+
+	if len(mdTrailer) > 0 {
+		if err = grpc.SetTrailer(ctx, mdTrailer); err != nil {
+			s.logger.Log("err", err)
+			return ctx, nil, err
+		}
+	}
+
+	return ctx, grpcResp, nil
 }

@@ -69,7 +69,7 @@ func TestToGRPCContext(t *testing.T) {
 	reqFunc := ToGRPCContext()
 
 	// No Authorization header is passed
-	ctx := reqFunc(context.Background(), &md)
+	ctx := reqFunc(context.Background(), md)
 	token := ctx.Value(JWTTokenContextKey)
 	if token != nil {
 		t.Error("Context should not contain a JWT Token")
@@ -77,7 +77,7 @@ func TestToGRPCContext(t *testing.T) {
 
 	// Invalid Authorization header is passed
 	md["authorization"] = []string{fmt.Sprintf("%s", signedKey)}
-	ctx = reqFunc(context.Background(), &md)
+	ctx = reqFunc(context.Background(), md)
 	token = ctx.Value(JWTTokenContextKey)
 	if token != nil {
 		t.Error("Context should not contain a JWT Token")
@@ -85,7 +85,7 @@ func TestToGRPCContext(t *testing.T) {
 
 	// Authorization header is correct
 	md["authorization"] = []string{fmt.Sprintf("Bearer %s", signedKey)}
-	ctx = reqFunc(context.Background(), &md)
+	ctx = reqFunc(context.Background(), md)
 	token, ok := ctx.Value(JWTTokenContextKey).(string)
 	if !ok {
 		t.Fatal("JWT Token not passed to context correctly")

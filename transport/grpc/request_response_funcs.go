@@ -12,30 +12,53 @@ const (
 	binHdrSuffix = "-bin"
 )
 
-// RequestFunc may take information from an gRPC request and put it into a
-// request context. In Servers, BeforeFuncs are executed prior to invoking the
-// endpoint. In Clients, BeforeFuncs are executed after creating the request
-// but prior to invoking the gRPC client.
-type RequestFunc func(context.Context, *metadata.MD) context.Context
+// ClientRequestFunc may take information from context and use it to construct
+// metadata headers to be transported to the server. ClientRequestFuncs are
+// executed after creating the request but prior to sending the gRPC request to
+// the server.
+type ClientRequestFunc func(context.Context, *metadata.MD) context.Context
 
-// ResponseFunc may take information from a request context and use it to
-// manipulate the gRPC metadata header. ResponseFuncs are only executed in
-// servers, after invoking the endpoint but prior to writing a response.
-type ResponseFunc func(context.Context, *metadata.MD)
+// ServerRequestFunc may take information from the received metadata header and
+// use it to place items in the request scoped context. ServerRequestFuncs are
+// executed prior to invoking the endpoint.
+type ServerRequestFunc func(context.Context, metadata.MD) context.Context
 
-// SetResponseHeader returns a ResponseFunc that sets the specified metadata
+// ServerResponseFunc may take information from a request context and use it to
+// manipulate the gRPC response metadata headers and trailers. ResponseFuncs are
+// only executed in servers, after invoking the endpoint but prior to writing a
+// response.
+type ServerResponseFunc func(ctx context.Context, header *metadata.MD, trailer *metadata.MD) context.Context
+
+// ClientResponseFunc may take information from a gRPC metadata header and/or
+// trailer and make the responses available for consumption. ClientResponseFuncs
+// are only executed in clients, after a request has been made, but prior to it
+// being decoded.
+type ClientResponseFunc func(ctx context.Context, header metadata.MD, trailer metadata.MD) context.Context
+
+// SetRequestHeader returns a ClientRequestFunc that sets the specified metadata
 // key-value pair.
-func SetResponseHeader(key, val string) ResponseFunc {
-	return func(_ context.Context, md *metadata.MD) {
+func SetRequestHeader(key, val string) ClientRequestFunc {
+	return func(ctx context.Context, md *metadata.MD) context.Context {
 		key, val := EncodeKeyValue(key, val)
 		(*md)[key] = append((*md)[key], val)
+		return ctx
 	}
 }
 
-// SetRequestHeader returns a RequestFunc that sets the specified metadata
+// SetResponseHeader returns a ResponseFunc that sets the specified metadata
 // key-value pair.
-func SetRequestHeader(key, val string) RequestFunc {
-	return func(ctx context.Context, md *metadata.MD) context.Context {
+func SetResponseHeader(key, val string) ServerResponseFunc {
+	return func(ctx context.Context, md *metadata.MD, _ *metadata.MD) context.Context {
+		key, val := EncodeKeyValue(key, val)
+		(*md)[key] = append((*md)[key], val)
+		return ctx
+	}
+}
+
+// SetResponseTrailer returns a ResponseFunc that sets the specified metadata
+// key-value pair.
+func SetResponseTrailer(key, val string) ServerResponseFunc {
+	return func(ctx context.Context, _ *metadata.MD, md *metadata.MD) context.Context {
 		key, val := EncodeKeyValue(key, val)
 		(*md)[key] = append((*md)[key], val)
 		return ctx
