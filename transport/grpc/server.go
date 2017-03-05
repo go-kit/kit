@@ -2,6 +2,7 @@ package grpc
 
 import (
 	oldcontext "golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/go-kit/kit/endpoint"
@@ -96,17 +97,29 @@ func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.C
 		return ctx, nil, err
 	}
 
+	var mdHeader, mdTrailer metadata.MD
 	for _, f := range s.after {
-		f(ctx, &md)
+		f(ctx, &mdHeader, &mdTrailer)
 	}
-
-	// Store potentially updated metadata in the gRPC context.
-	ctx = metadata.NewContext(ctx, md)
 
 	grpcResp, err := s.enc(ctx, response)
 	if err != nil {
 		s.logger.Log("err", err)
 		return ctx, nil, err
+	}
+
+	if len(mdHeader) > 0 {
+		if err = grpc.SendHeader(ctx, mdHeader); err != nil {
+			s.logger.Log("err", err)
+			return ctx, nil, err
+		}
+	}
+
+	if len(mdTrailer) > 0 {
+		if err = grpc.SetTrailer(ctx, mdTrailer); err != nil {
+			s.logger.Log("err", err)
+			return ctx, nil, err
+		}
 	}
 
 	return ctx, grpcResp, nil

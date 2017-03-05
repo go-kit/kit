@@ -32,8 +32,19 @@ func NewClient(cc *grpc.ClientConn) Service {
 			encodeRequest,
 			decodeResponse,
 			&pb.TestResponse{},
-			grpctransport.ClientBefore(clientBefore),
-			grpctransport.ClientAfter(clientAfter),
+			grpctransport.ClientBefore(
+				injectCorrelationID,
+			),
+			grpctransport.ClientBefore(
+				displayClientRequestHeaders,
+			),
+			grpctransport.ClientAfter(
+				displayClientResponseHeaders,
+				displayClientResponseTrailers,
+			),
+			grpctransport.ClientAfter(
+				extractConsumedCorrelationID,
+			),
 		).Endpoint(),
 	}
 }

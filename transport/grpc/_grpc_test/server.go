@@ -50,8 +50,21 @@ func NewBinding(svc Service) *serverBinding {
 			makeTestEndpoint(svc),
 			decodeRequest,
 			encodeResponse,
-			grpctransport.ServerBefore(serverBefore),
-			grpctransport.ServerAfter(serverAfter),
+			grpctransport.ServerBefore(
+				extractCorrelationID,
+			),
+			grpctransport.ServerBefore(
+				displayServerRequestHeaders,
+			),
+			grpctransport.ServerAfter(
+				injectResponseHeader,
+				injectResponseTrailer,
+				injectConsumedCorrelationID,
+			),
+			grpctransport.ServerAfter(
+				displayServerResponseHeaders,
+				displayServerResponseTrailers,
+			),
 		),
 	}
 }
