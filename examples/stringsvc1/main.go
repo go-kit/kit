@@ -32,18 +32,15 @@ func (stringService) Count(s string) int {
 }
 
 func main() {
-	ctx := context.Background()
 	svc := stringService{}
 
 	uppercaseHandler := httptransport.NewServer(
-		ctx,
 		makeUppercaseEndpoint(svc),
 		decodeUppercaseRequest,
 		encodeResponse,
 	)
 
 	countHandler := httptransport.NewServer(
-		ctx,
 		makeCountEndpoint(svc),
 		decodeCountRequest,
 		encodeResponse,

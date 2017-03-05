@@ -104,7 +104,7 @@ func main() {
 		// HTTP handler, and just install it under a particular path prefix in
 		// our router.
 
-		r.PathPrefix("/addsvc").Handler(http.StripPrefix("/addsvc", addsvc.MakeHTTPHandler(ctx, endpoints, tracer, logger)))
+		r.PathPrefix("/addsvc").Handler(http.StripPrefix("/addsvc", addsvc.MakeHTTPHandler(endpoints, tracer, logger)))
 	}
 
 	// stringsvc routes.
@@ -140,8 +140,8 @@ func main() {
 		// have to do provide it with the encode and decode functions for our
 		// stringsvc methods.
 
-		r.Handle("/stringsvc/uppercase", httptransport.NewServer(ctx, uppercase, decodeUppercaseRequest, encodeJSONResponse))
-		r.Handle("/stringsvc/count", httptransport.NewServer(ctx, count, decodeCountRequest, encodeJSONResponse))
+		r.Handle("/stringsvc/uppercase", httptransport.NewServer(uppercase, decodeUppercaseRequest, encodeJSONResponse))
+		r.Handle("/stringsvc/count", httptransport.NewServer(count, decodeCountRequest, encodeJSONResponse))
 	}
 
 	// Interrupt handler.

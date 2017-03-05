@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -26,11 +25,6 @@ func main() {
 		logger = log.NewContext(logger).With("caller", log.DefaultCaller)
 	}
 
-	var ctx context.Context
-	{
-		ctx = context.Background()
-	}
-
 	var s profilesvc.Service
 	{
 		s = profilesvc.NewInmemService()
@@ -39,7 +33,7 @@ func main() {
 
 	var h http.Handler
 	{
-		h = profilesvc.MakeHTTPHandler(ctx, s, log.NewContext(logger).With("component", "HTTP"))
+		h = profilesvc.MakeHTTPHandler(s, log.NewContext(logger).With("component", "HTTP"))
 	}
 
 	errs := make(chan error)

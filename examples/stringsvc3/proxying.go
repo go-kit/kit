@@ -20,7 +20,7 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
-func proxyingMiddleware(instances string, ctx context.Context, logger log.Logger) ServiceMiddleware {
+func proxyingMiddleware(ctx context.Context, instances string, logger log.Logger) ServiceMiddleware {
 	// If instances is empty, don't proxy.
 	if instances == "" {
 		logger.Log("proxy_to", "none")

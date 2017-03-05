@@ -25,7 +25,7 @@ var (
 
 // MakeHTTPHandler mounts all of the service endpoints into an http.Handler.
 // Useful in a profilesvc server.
-func MakeHTTPHandler(ctx context.Context, s Service, logger log.Logger) http.Handler {
+func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 	e := MakeServerEndpoints(s)
 	options := []httptransport.ServerOption{
@@ -44,63 +44,54 @@ func MakeHTTPHandler(ctx context.Context, s Service, logger log.Logger) http.Han
 	// DELETE  /profiles/:id/addresses/:addressID  remove an address
 
 	r.Methods("POST").Path("/profiles/").Handler(httptransport.NewServer(
-		ctx,
 		e.PostProfileEndpoint,
 		decodePostProfileRequest,
 		encodeResponse,
 		options...,
 	))
 	r.Methods("GET").Path("/profiles/{id}").Handler(httptransport.NewServer(
-		ctx,
 		e.GetProfileEndpoint,
 		decodeGetProfileRequest,
 		encodeResponse,
 		options...,
 	))
 	r.Methods("PUT").Path("/profiles/{id}").Handler(httptransport.NewServer(
-		ctx,
 		e.PutProfileEndpoint,
 		decodePutProfileRequest,
 		encodeResponse,
 		options...,
 	))
 	r.Methods("PATCH").Path("/profiles/{id}").Handler(httptransport.NewServer(
-		ctx,
 		e.PatchProfileEndpoint,
 		decodePatchProfileRequest,
 		encodeResponse,
 		options...,
 	))
 	r.Methods("DELETE").Path("/profiles/{id}").Handler(httptransport.NewServer(
-		ctx,
 		e.DeleteProfileEndpoint,
 		decodeDeleteProfileRequest,
 		encodeResponse,
 		options...,
 	))
 	r.Methods("GET").Path("/profiles/{id}/addresses/").Handler(httptransport.NewServer(
-		ctx,
 		e.GetAddressesEndpoint,
 		decodeGetAddressesRequest,
 		encodeResponse,
 		options...,
 	))
 	r.Methods("GET").Path("/profiles/{id}/addresses/{addressID}").Handler(httptransport.NewServer(
-		ctx,
 		e.GetAddressEndpoint,
 		decodeGetAddressRequest,
 		encodeResponse,
 		options...,
 	))
 	r.Methods("POST").Path("/profiles/{id}/addresses/").Handler(httptransport.NewServer(
-		ctx,
 		e.PostAddressEndpoint,
 		decodePostAddressRequest,
 		encodeResponse,
 		options...,
 	))
 	r.Methods("DELETE").Path("/profiles/{id}/addresses/{addressID}").Handler(httptransport.NewServer(
-		ctx,
 		e.DeleteAddressEndpoint,
 		decodeDeleteAddressRequest,
 		encodeResponse,

@@ -17,56 +17,49 @@ import (
 )
 
 // MakeHandler returns a handler for the booking service.
-func MakeHandler(ctx context.Context, bs Service, logger kitlog.Logger) http.Handler {
+func MakeHandler(bs Service, logger kitlog.Logger) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorLogger(logger),
 		kithttp.ServerErrorEncoder(encodeError),
 	}
 
 	bookCargoHandler := kithttp.NewServer(
-		ctx,
 		makeBookCargoEndpoint(bs),
 		decodeBookCargoRequest,
 		encodeResponse,
 		opts...,
 	)
 	loadCargoHandler := kithttp.NewServer(
-		ctx,
 		makeLoadCargoEndpoint(bs),
 		decodeLoadCargoRequest,
 		encodeResponse,
 		opts...,
 	)
 	requestRoutesHandler := kithttp.NewServer(
-		ctx,
 		makeRequestRoutesEndpoint(bs),
 		decodeRequestRoutesRequest,
 		encodeResponse,
 		opts...,
 	)
 	assignToRouteHandler := kithttp.NewServer(
-		ctx,
 		makeAssignToRouteEndpoint(bs),
 		decodeAssignToRouteRequest,
 		encodeResponse,
 		opts...,
 	)
 	changeDestinationHandler := kithttp.NewServer(
-		ctx,
 		makeChangeDestinationEndpoint(bs),
 		decodeChangeDestinationRequest,
 		encodeResponse,
 		opts...,
 	)
 	listCargosHandler := kithttp.NewServer(
-		ctx,
 		makeListCargosEndpoint(bs),
 		decodeListCargosRequest,
 		encodeResponse,
 		opts...,
 	)
 	listLocationsHandler := kithttp.NewServer(
-		ctx,
 		makeListLocationsEndpoint(bs),
 		decodeListLocationsRequest,
 		encodeResponse,

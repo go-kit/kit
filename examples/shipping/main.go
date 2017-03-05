@@ -137,9 +137,9 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/booking/v1/", booking.MakeHandler(ctx, bs, httpLogger))
-	mux.Handle("/tracking/v1/", tracking.MakeHandler(ctx, ts, httpLogger))
-	mux.Handle("/handling/v1/", handling.MakeHandler(ctx, hs, httpLogger))
+	mux.Handle("/booking/v1/", booking.MakeHandler(bs, httpLogger))
+	mux.Handle("/tracking/v1/", tracking.MakeHandler(ts, httpLogger))
+	mux.Handle("/handling/v1/", handling.MakeHandler(hs, httpLogger))
 
 	http.Handle("/", accessControl(mux))
 	http.Handle("/metrics", stdprometheus.Handler())

@@ -9,7 +9,6 @@ import (
 
 func ExamplePopulateRequestContext() {
 	handler := NewServer(
-		context.Background(),
 		func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			fmt.Println("Method", ctx.Value(ContextKeyRequestMethod).(string))
 			fmt.Println("RequestPath", ctx.Value(ContextKeyRequestPath).(string))

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"net/http"
 	"os"
 
@@ -13,7 +12,6 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
 	logger := log.NewLogfmtLogger(os.Stderr)
 
 	fieldKeys := []string{"method", "error"}
@@ -42,14 +40,12 @@ func main() {
 	svc = instrumentingMiddleware{requestCount, requestLatency, countResult, svc}
 
 	uppercaseHandler := httptransport.NewServer(
-		ctx,
 		makeUppercaseEndpoint(svc),
 		decodeUppercaseRequest,
 		encodeResponse,
 	)
 
 	countHandler := httptransport.NewServer(
-		ctx,
 		makeCountEndpoint(svc),
 		decodeCountRequest,
 		encodeResponse,
