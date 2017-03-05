@@ -20,7 +20,6 @@ func TestServerHappyPathSingleServer(t *testing.T) {
 	originURL, _ := url.Parse(originServer.URL)
 
 	handler := httptransport.NewServer(
-		context.Background(),
 		originURL,
 	)
 	proxyServer := httptest.NewServer(handler)
@@ -55,7 +54,6 @@ func TestServerHappyPathSingleServerWithServerOptions(t *testing.T) {
 	originURL, _ := url.Parse(originServer.URL)
 
 	handler := httptransport.NewServer(
-		context.Background(),
 		originURL,
 		httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context {
 			r.Header.Add(headerKey, headerVal)
@@ -82,7 +80,6 @@ func TestServerOriginServerNotFoundResponse(t *testing.T) {
 	originURL, _ := url.Parse(originServer.URL)
 
 	handler := httptransport.NewServer(
-		context.Background(),
 		originURL,
 	)
 	proxyServer := httptest.NewServer(handler)
@@ -103,7 +100,6 @@ func TestServerOriginServerUnreachable(t *testing.T) {
 	originServer.Close()
 
 	handler := httptransport.NewServer(
-		context.Background(),
 		originURL,
 	)
 	proxyServer := httptest.NewServer(handler)
@@ -138,7 +134,6 @@ func TestMultipleServerBefore(t *testing.T) {
 	originURL, _ := url.Parse(originServer.URL)
 
 	handler := httptransport.NewServer(
-		context.Background(),
 		originURL,
 		httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context {
 			r.Header.Add(headerKey, headerVal)

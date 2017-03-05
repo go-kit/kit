@@ -14,7 +14,6 @@ type RequestFunc func(context.Context, *http.Request) context.Context
 
 // Server is a proxying request handler.
 type Server struct {
-	ctx          context.Context
 	proxy        http.Handler
 	before       []RequestFunc
 	errorEncoder func(w http.ResponseWriter, err error)
@@ -25,12 +24,10 @@ type Server struct {
 // If the target's path is "/base" and the incoming request was for "/dir",
 // the target request will be for /base/dir.
 func NewServer(
-	ctx context.Context,
 	baseURL *url.URL,
 	options ...ServerOption,
 ) *Server {
 	s := &Server{
-		ctx:   ctx,
 		proxy: httputil.NewSingleHostReverseProxy(baseURL),
 	}
 	for _, option := range options {
@@ -50,7 +47,7 @@ func ServerBefore(before ...RequestFunc) ServerOption {
 
 // ServeHTTP implements http.Handler.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := s.ctx
+	ctx := r.Context()
 
 	for _, f := range s.before {
 		ctx = f(ctx, r)
