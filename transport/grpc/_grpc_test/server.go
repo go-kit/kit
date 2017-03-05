@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
-	pb "github.com/go-kit/kit/transport/grpc/_pb"
+	"github.com/go-kit/kit/transport/grpc/_grpc_test/pb"
 )
 
 type service struct{}

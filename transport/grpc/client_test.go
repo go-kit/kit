@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc"
 
 	test "github.com/go-kit/kit/transport/grpc/_grpc_test"
-	pb "github.com/go-kit/kit/transport/grpc/_pb"
+	"github.com/go-kit/kit/transport/grpc/_grpc_test/pb"
 )
 
 const (

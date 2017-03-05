@@ -3,7 +3,7 @@ package test
 import (
 	"context"
 
-	pb "github.com/go-kit/kit/transport/grpc/_pb"
+	"github.com/go-kit/kit/transport/grpc/_grpc_test/pb"
 )
 
 func encodeRequest(ctx context.Context, req interface{}) (interface{}, error) {
