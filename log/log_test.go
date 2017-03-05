@@ -120,6 +120,32 @@ func TestContextStackDepth(t *testing.T) {
 	}
 }
 
+func TestWrappedLoggerDelegation(t *testing.T) {
+	var buf bytes.Buffer
+	inner := log.NewLogfmtLogger(&buf)
+	outer := log.NewContext(inner)
+	tests := []struct {
+		description string
+		delegate    log.Logger
+	}{
+		{"Context.Delegate", outer.Delegate()},
+		{"log.Delegate", log.Delegate(outer)},
+	}
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			if test.delegate != inner {
+				if test.delegate == nil {
+					t.Fatal("have nil, want inner logger")
+				} else if test.delegate == outer {
+					t.Fatal("have self, want inner logger")
+				} else {
+					t.Fatal("have unknown logger, want inner logger")
+				}
+			}
+		})
+	}
+}
+
 // Test that With returns a Logger safe for concurrent use. This test
 // validates that the stored logging context does not get corrupted when
 // multiple clients concurrently log additional keyvals.
