@@ -25,12 +25,14 @@ type colorWriter struct {
 // platform support for ANSI color codes. If w is not a terminal it is
 // returned unmodified.
 func NewColorWriter(w io.Writer) io.Writer {
-	if !IsTerminal(w) {
+	cw := resolveWriter(w)
+
+	if !IsTerminal(cw) {
 		return w
 	}
 
 	var csbi consoleScreenBufferInfo
-	handle := syscall.Handle(w.(fder).Fd())
+	handle := syscall.Handle(cw.(fder).Fd())
 	procGetConsoleScreenBufferInfo.Call(uintptr(handle), uintptr(unsafe.Pointer(&csbi)))
 
 	return &colorWriter{

@@ -42,6 +42,11 @@ type SyncWriter struct {
 	w  io.Writer
 }
 
+// ChildWriter returns the associated child io.Writer.
+func (w *SyncWriter) ChildWriter() io.Writer {
+	return w.w
+}
+
 // NewSyncWriter returns a new SyncWriter. The returned writer is safe for
 // concurrent use by multiple goroutines.
 func NewSyncWriter(w io.Writer) *SyncWriter {
