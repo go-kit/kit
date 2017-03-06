@@ -47,7 +47,7 @@ func main() {
 	var logger log.Logger
 	logger = log.NewLogfmtLogger(os.Stderr)
 	logger = &serializedLogger{Logger: logger}
-	logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC)
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 
 	var (
 		cargos         = inmem.NewCargoRepository()
@@ -78,7 +78,7 @@ func main() {
 
 	var bs booking.Service
 	bs = booking.NewService(cargos, locations, handlingEvents, rs)
-	bs = booking.NewLoggingService(log.NewContext(logger).With("component", "booking"), bs)
+	bs = booking.NewLoggingService(log.With(logger, "component", "booking"), bs)
 	bs = booking.NewInstrumentingService(
 		kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: "api",
@@ -97,7 +97,7 @@ func main() {
 
 	var ts tracking.Service
 	ts = tracking.NewService(cargos, handlingEvents)
-	ts = tracking.NewLoggingService(log.NewContext(logger).With("component", "tracking"), ts)
+	ts = tracking.NewLoggingService(log.With(logger, "component", "tracking"), ts)
 	ts = tracking.NewInstrumentingService(
 		kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: "api",
@@ -116,7 +116,7 @@ func main() {
 
 	var hs handling.Service
 	hs = handling.NewService(handlingEvents, handlingEventFactory, handlingEventHandler)
-	hs = handling.NewLoggingService(log.NewContext(logger).With("component", "handling"), hs)
+	hs = handling.NewLoggingService(log.With(logger, "component", "handling"), hs)
 	hs = handling.NewInstrumentingService(
 		kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: "api",
@@ -133,7 +133,7 @@ func main() {
 		hs,
 	)
 
-	httpLogger := log.NewContext(logger).With("component", "http")
+	httpLogger := log.With(logger, "component", "http")
 
 	mux := http.NewServeMux()
 

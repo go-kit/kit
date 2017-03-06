@@ -17,13 +17,13 @@ func Benchmark(b *testing.B) {
 			return l
 		}},
 		{"TimeContext", func(l log.Logger) log.Logger {
-			return log.NewContext(l).With("time", log.DefaultTimestampUTC)
+			return log.With(l, "time", log.DefaultTimestampUTC)
 		}},
 		{"CallerContext", func(l log.Logger) log.Logger {
-			return log.NewContext(l).With("caller", log.DefaultCaller)
+			return log.With(l, "caller", log.DefaultCaller)
 		}},
 		{"TimeCallerReqIDContext", func(l log.Logger) log.Logger {
-			return log.NewContext(l).With("time", log.DefaultTimestampUTC, "caller", log.DefaultCaller, "reqID", 29)
+			return log.With(l, "time", log.DefaultTimestampUTC, "caller", log.DefaultCaller, "reqID", 29)
 		}},
 	}
 

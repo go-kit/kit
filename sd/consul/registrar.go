@@ -21,7 +21,7 @@ func NewRegistrar(client Client, r *stdconsul.AgentServiceRegistration, logger l
 	return &Registrar{
 		client:       client,
 		registration: r,
-		logger:       log.NewContext(logger).With("service", r.Name, "tags", fmt.Sprint(r.Tags), "address", r.Address),
+		logger:       log.With(logger, "service", r.Name, "tags", fmt.Sprint(r.Tags), "address", r.Address),
 	}
 }
 

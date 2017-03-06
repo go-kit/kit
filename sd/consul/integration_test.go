@@ -46,7 +46,7 @@ func TestIntegration(t *testing.T) {
 	subscriber := NewSubscriber(
 		client,
 		factory,
-		log.NewContext(logger).With("component", "subscriber"),
+		log.With(logger, "component", "subscriber"),
 		r.Name,
 		r.Tags,
 		true,
@@ -64,7 +64,7 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Build a registrar for r.
-	registrar := NewRegistrar(client, r, log.NewContext(logger).With("component", "registrar"))
+	registrar := NewRegistrar(client, r, log.With(logger, "component", "registrar"))
 	registrar.Register()
 	defer registrar.Deregister()
 
