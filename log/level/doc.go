@@ -1,8 +1,6 @@
-// Package level is an EXPERIMENTAL levelled logging package. The API will
-// definitely have breaking changes and may be deleted altogether. Be warned!
-//
-// To use the level package, create a logger as per normal in your func main,
-// and wrap it with level.NewFilter.
+// Package level implements leveled logging on top of package log. To use the
+// level package, create a logger as per normal in your func main, and wrap it
+// with level.NewFilter.
 //
 //    var logger log.Logger
 //    logger = log.NewLogfmtLogger(os.Stderr)
