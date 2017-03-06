@@ -29,7 +29,7 @@ func Example_basic() {
 	// taskID=1 event="task complete"
 }
 
-func Example_context() {
+func Example_contextual() {
 	logger := log.NewLogfmtLogger(os.Stdout)
 
 	type Task struct {

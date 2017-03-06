@@ -56,8 +56,8 @@ func TestContextMissingValue(t *testing.T) {
 	}
 }
 
-// Test that Context.Log has a consistent function stack depth when binding
-// log.Valuers, regardless of how many times Context.With has been called.
+// Test that context.Log has a consistent function stack depth when binding
+// Valuers, regardless of how many times With has been called.
 func TestContextStackDepth(t *testing.T) {
 	t.Parallel()
 	fn := fmt.Sprintf("%n", stack.Caller(0))
