@@ -12,7 +12,7 @@ type SpecializedWriter interface {
 // falls back to returning w if no specialized writer is available.
 func specializedWriter(w io.Writer, keyvals ...interface{}) io.Writer {
 	if ew, ok := w.(SpecializedWriter); ok {
-		w = ew.GetSpecializedWriter(keyvals)
+		w = ew.GetSpecializedWriter(keyvals...)
 	}
 
 	return w

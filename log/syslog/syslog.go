@@ -1,27 +1,27 @@
 // +build linux,!appengine darwin freebsd openbsd
 
-package log
+package syslog
 
 import (
 	"io"
-	"log/syslog"
+	gosyslog "log/syslog"
 
 	"github.com/go-kit/kit/log/level"
 )
 
 type syslogWriter struct {
-	*syslog.Writer
-	selector func(keyvals ...interface{}) syslog.Priority
+	*gosyslog.Writer
+	selector func(keyvals ...interface{}) gosyslog.Priority
 }
 
 type SyslogAdapterOption interface {
 	Apply(*syslogWriter)
 }
 
-func NewSyslogWriter(w *syslog.Writer, options ...SyslogAdapterOption) io.Writer {
+func NewSyslogWriter(w *gosyslog.Writer, options ...SyslogAdapterOption) io.Writer {
 	writer := &syslogWriter{
-		syslog.Writer: w,
-		selector:      defaultSyslogSelector,
+		Writer:   w,
+		selector: defaultSyslogSelector,
 	}
 
 	for _, option := range options {
@@ -43,42 +43,42 @@ func (w syslogWriter) GetSpecializedWriter(keyvals ...interface{}) io.Writer {
 	priority := w.selector(keyvals...)
 
 	switch priority {
-	case syslog.LOG_DEBUG:
-		return syslogWriterAdapter{f: w.Debug}
-	case syslog.LOG_INFO:
-		return syslogWriterAdapter{f: w.Info}
-	case syslog.LOG_WARN:
-		return syslogWriterAdapter{f: w.Warn}
-	case syslog.LOG_ERR:
-		return syslogWriterAdapter{f: w.Error}
+	case gosyslog.LOG_DEBUG:
+		return &syslogWriterAdapter{f: w.Debug}
+	case gosyslog.LOG_INFO:
+		return &syslogWriterAdapter{f: w.Info}
+	case gosyslog.LOG_WARNING:
+		return &syslogWriterAdapter{f: w.Warning}
+	case gosyslog.LOG_ERR:
+		return &syslogWriterAdapter{f: w.Err}
 	}
 
 	return w
 }
 
-func defaultSyslogSelector(keyvals ...interface{}) syslog.Priority {
+func defaultSyslogSelector(keyvals ...interface{}) gosyslog.Priority {
 	for i := 1; i < len(keyvals); i += 2 {
-		if v, ok := keyvals[i].(*Value); ok {
+		if v, ok := keyvals[i].(level.Value); ok {
 			switch v {
 			case level.DebugValue():
-				return syslog.LOG_DEBUG
+				return gosyslog.LOG_DEBUG
 			case level.InfoValue():
-				return syslog.LOG_INFO
+				return gosyslog.LOG_INFO
 			case level.WarnValue():
-				return syslog.LOG_WARN
+				return gosyslog.LOG_WARNING
 			case level.ErrorValue():
-				return syslog.LOG_ERR
+				return gosyslog.LOG_ERR
 			}
 		}
 	}
 
-	return syslog.LOG_INFO
+	return gosyslog.LOG_INFO
 }
 
 // SyslogPrioritySelector is an option that specifies the syslog priority
 // selector.
 type SyslogPrioritySelector struct {
-	PrioritySelector func(keyvals ...interface{}) syslog.Priority
+	PrioritySelector func(keyvals ...interface{}) gosyslog.Priority
 }
 
 func (o SyslogPrioritySelector) Apply(w *syslogWriter) {
