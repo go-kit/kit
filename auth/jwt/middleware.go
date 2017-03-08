@@ -45,7 +45,7 @@ var (
 )
 
 // NewSigner creates a new JWT token generating middleware, specifying key ID,
-// signing string, signing method and the jwt.Claims you would like it to contain.
+// signing string, signing method and the claims you would like it to contain.
 // Tokens are signed with a Key ID header (kid) which is useful for determining
 // the key to use for parsing. Particularly useful for clients.
 func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
@@ -67,8 +67,8 @@ func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims jwt.Clai
 }
 
 // NewParser creates a new JWT token parsing middleware, specifying a
-// jwt.Keyfunc interface, the signing method as well as the claims to parse into.
-// NewParserWithClaims adds the resulting claims to endpoint context or returns error on invalid token.
+// jwt.Keyfunc interface, the signing method and the claims type to be used. NewParser
+// adds the resulting  claims to endpoint context or returns error on invalid token.
 // Particularly useful for servers.
 func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
