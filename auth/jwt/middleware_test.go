@@ -13,7 +13,6 @@ var (
 	key            = []byte("test_signing_key")
 	method         = jwt.SigningMethodHS256
 	invalidMethod  = jwt.SigningMethodRS256
-	claims         = Claims{"user": "go-kit"}
 	mapClaims      = jwt.MapClaims{"user": "go-kit"}
 	standardClaims = jwt.StandardClaims{Audience: "go-kit"}
 	// Signed tokens generated at https://jwt.io/
@@ -41,13 +40,10 @@ func signingValidator(t *testing.T, signer endpoint.Endpoint, expectedKey string
 func TestNewSigner(t *testing.T) {
 	e := func(ctx context.Context, i interface{}) (interface{}, error) { return ctx, nil }
 
-	signer := NewSigner(kid, key, method, claims)(e)
+	signer := NewSigner(kid, key, method, mapClaims)(e)
 	signingValidator(t, signer, signedKey)
 
-	signer = NewSignerWithClaims(kid, key, method, mapClaims)(e)
-	signingValidator(t, signer, signedKey)
-
-	signer = NewSignerWithClaims(kid, key, method, standardClaims)(e)
+	signer = NewSigner(kid, key, method, standardClaims)(e)
 	signingValidator(t, signer, standardSignedKey)
 }
 
@@ -58,7 +54,7 @@ func TestJWTParser(t *testing.T) {
 		return key, nil
 	}
 
-	parser := NewParser(keys, method)(e)
+	parser := NewParser(keys, method, jwt.MapClaims{})(e)
 
 	// No Token is passed into the parser
 	_, err := parser(context.Background(), struct{}{})
@@ -78,7 +74,7 @@ func TestJWTParser(t *testing.T) {
 	}
 
 	// Invalid Method is used in the parser
-	badParser := NewParser(keys, invalidMethod)(e)
+	badParser := NewParser(keys, invalidMethod, jwt.MapClaims{})(e)
 	ctx = context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
 	_, err = badParser(ctx, struct{}{})
 	if err == nil {
@@ -94,7 +90,7 @@ func TestJWTParser(t *testing.T) {
 		return []byte("bad"), nil
 	}
 
-	badParser = NewParser(invalidKeys, method)(e)
+	badParser = NewParser(invalidKeys, method, jwt.MapClaims{})(e)
 	ctx = context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
 	_, err = badParser(ctx, struct{}{})
 	if err == nil {
@@ -108,16 +104,16 @@ func TestJWTParser(t *testing.T) {
 		t.Fatalf("Parser returned error: %s", err)
 	}
 
-	cl, ok := ctx1.(context.Context).Value(JWTClaimsContextKey).(Claims)
+	cl, ok := ctx1.(context.Context).Value(JWTClaimsContextKey).(jwt.MapClaims)
 	if !ok {
 		t.Fatal("Claims were not passed into context correctly")
 	}
 
-	if cl["user"] != claims["user"] {
-		t.Fatalf("JWT Claims.user did not match: expecting %s got %s", claims["user"], cl["user"])
+	if cl["user"] != mapClaims["user"] {
+		t.Fatalf("JWT Claims.user did not match: expecting %s got %s", mapClaims["user"], cl["user"])
 	}
 
-	parser = NewParserWithClaims(keys, method, &jwt.StandardClaims{})(e)
+	parser = NewParser(keys, method, &jwt.StandardClaims{})(e)
 	ctx = context.WithValue(context.Background(), JWTTokenContextKey, standardSignedKey)
 	ctx1, err = parser(ctx, struct{}{})
 	if err != nil {

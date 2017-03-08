@@ -44,14 +44,11 @@ var (
 	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
 )
 
-// Claims is a map of arbitrary claim data.
-type Claims map[string]interface{}
-
-// NewSignerWithClaims creates a new JWT token generating middleware, specifying key ID,
+// NewSigner creates a new JWT token generating middleware, specifying key ID,
 // signing string, signing method and the jwt.Claims you would like it to contain.
 // Tokens are signed with a Key ID header (kid) which is useful for determining
 // the key to use for parsing. Particularly useful for clients.
-func NewSignerWithClaims(kid string, key []byte, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
+func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			token := jwt.NewWithClaims(method, claims)
@@ -69,18 +66,11 @@ func NewSignerWithClaims(kid string, key []byte, method jwt.SigningMethod, claim
 	}
 }
 
-// NewSigner creates a new JWT token generating middleware, specifying key ID,
-// signing string, signing method and the claims you would like it to contain.
-// It passes these values onto NewSignerWithClaims to handle the signing process.
-func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims Claims) endpoint.Middleware {
-	return NewSignerWithClaims(kid, key, method, jwt.MapClaims(claims))
-}
-
-// NewParserWithClaims creates a new JWT token parsing middleware, specifying a
+// NewParser creates a new JWT token parsing middleware, specifying a
 // jwt.Keyfunc interface, the signing method as well as the claims to parse into.
 // NewParserWithClaims adds the resulting claims to endpoint context or returns error on invalid token.
 // Particularly useful for servers.
-func NewParserWithClaims(keyFunc jwt.Keyfunc, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
+func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// tokenString is stored in the context from the transport handlers.
@@ -126,20 +116,9 @@ func NewParserWithClaims(keyFunc jwt.Keyfunc, method jwt.SigningMethod, claims j
 				return nil, ErrTokenInvalid
 			}
 
-			if tokenClaims, ok := token.Claims.(jwt.MapClaims); ok {
-				ctx = context.WithValue(ctx, JWTClaimsContextKey, Claims(tokenClaims))
-			} else {
-				ctx = context.WithValue(ctx, JWTClaimsContextKey, token.Claims)
-			}
+			ctx = context.WithValue(ctx, JWTClaimsContextKey, token.Claims)
 
 			return next(ctx, request)
 		}
 	}
-}
-
-// NewParser creates a new JWT token parsing middleware, specifying a
-// jwt.KeyFunc interface and the signing method. It will utilize NewParserWithClaims
-// and fall back to implementing the jwt.MapClaims type.
-func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middleware {
-	return NewParserWithClaims(keyFunc, method, jwt.MapClaims{})
 }
