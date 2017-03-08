@@ -18,6 +18,7 @@ type CloudWatch struct {
 	prefix   string
 	svc      *cloudwatch.CloudWatch
 	counters map[string]*Counter
+	gauges   map[string]*Gauge
 	logger   log.Logger
 }
 
@@ -27,12 +28,21 @@ func New(prefix string, logger log.Logger, svc *cloudwatch.CloudWatch) *CloudWat
 		prefix:   prefix,
 		svc:      svc,
 		counters: map[string]*Counter{},
+		gauges:   map[string]*Gauge{},
 		logger:   logger,
 	}
 }
 
 func (cw *CloudWatch) NewCounter(name string) *Counter {
 	c := NewCounter(name)
+	cw.mtx.Lock()
+	cw.counters[cw.prefix+name] = c
+	cw.mtx.Unlock()
+	return c
+}
+
+func (cw *CloudWatch) NewGauge(name string) *Gauge {
+	c := NewGauge(name)
 	cw.mtx.Lock()
 	cw.counters[cw.prefix+name] = c
 	cw.mtx.Unlock()
@@ -65,6 +75,23 @@ func (cw *CloudWatch) WriteLoop(c <-chan time.Time) {
 				cw.logger.Log("during", "WriteLoop", "err", err)
 			}
 		}
+
+		for name, g := range cw.gauges {
+			_, err := cw.svc.PutMetricData(&cloudwatch.PutMetricDataInput{
+				Namespace: aws.String(cw.prefix),
+				MetricData: []*cloudwatch.MetricDatum{
+					{
+						MetricName: aws.String(name),
+						Dimensions: makeDimensions(g.g.LabelValues()...),
+						Value:      aws.Float64(g.g.Value()),
+						Timestamp:  aws.Time(now),
+					},
+				},
+			})
+			if err != nil {
+				cw.logger.Log("during", "WriteLoop", "err", err)
+			}
+		}
 	}
 }
 
@@ -88,6 +115,32 @@ func (c *Counter) With(labelValues ...string) metrics.Counter {
 // Add implements counter.
 func (c *Counter) Add(delta float64) {
 	c.c.Add(delta)
+}
+
+// Gauge is a CloudWatch gauge metric.
+type Gauge struct {
+	g *generic.Gauge
+}
+
+// NewGauge returns a new usable gauge metric
+func NewGauge(name string) *Gauge {
+	return &Gauge{
+		g: generic.NewGauge(name),
+	}
+}
+
+func (g *Gauge) With(labelValues ...string) metrics.Gauge {
+	return &Gauge{
+		g: g.g.With(labelValues...),
+	}
+}
+
+func (g *Gauge) Set(value float64) {
+	g.g.Set(value)
+}
+
+func (g *Gauge) Add(delta float64) {
+	g.g.Add(delta)
 }
 
 func makeDimensions(labelValues ...string) []*cloudwatch.Dimension {
