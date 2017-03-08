@@ -216,7 +216,7 @@ func (h *Histogram) Observe(value float64) {
 
 func makeDimensions(labelValues ...string) []*cloudwatch.Dimension {
 	dimensions := make([]*cloudwatch.Dimension, len(labelValues)/2)
-	for i, j := 0, 0; i < len(labelValues); i, j := i+2, j+1 {
+	for i, j := 0, 0; i < len(labelValues); i, j = i+2, j+1 {
 		dimensions[j] = &cloudwatch.Dimension{
 			Name:  aws.String(labelValues[i]),
 			Value: aws.String(labelValues[i+1]),
