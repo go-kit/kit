@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/generic"
@@ -22,7 +23,7 @@ import (
 type CloudWatch struct {
 	mtx        sync.RWMutex
 	namespace  string
-	svc        *cloudwatch.CloudWatch
+	svc        cloudwatchiface.CloudWatchAPI
 	counters   map[string]*Counter
 	gauges     map[string]*Gauge
 	histograms map[string]*Histogram
@@ -32,7 +33,7 @@ type CloudWatch struct {
 // New returns a CloudWatch object that may be used to create metrics. Namespace is
 // applied to all created metrics and maps to the CloudWatch namespace.
 // Callers must ensure that regular calls to Send are performed, either manually or with one of the helper methods.
-func New(namespace string, logger log.Logger, svc *cloudwatch.CloudWatch) *CloudWatch {
+func New(namespace string, logger log.Logger, svc cloudwatchiface.CloudWatchAPI) *CloudWatch {
 	return &CloudWatch{
 		namespace:  namespace,
 		svc:        svc,
@@ -153,7 +154,8 @@ func NewCounter(name string) *Counter {
 
 // With implements counter
 func (c *Counter) With(labelValues ...string) metrics.Counter {
-	return c.c.With(labelValues...)
+	c.c = c.c.With(labelValues...).(*generic.Counter)
+	return c
 }
 
 // Add implements counter.
@@ -175,9 +177,8 @@ func NewGauge(name string) *Gauge {
 
 // With implements gauge
 func (g *Gauge) With(labelValues ...string) metrics.Gauge {
-	return &Gauge{
-		g: g.g.With(labelValues...).(*generic.Gauge),
-	}
+	g.g = g.g.With(labelValues...).(*generic.Gauge)
+	return g
 }
 
 // Set implements gauge
@@ -204,9 +205,8 @@ func NewHistogram(name string, buckets int) *Histogram {
 
 // With implements histogram
 func (h *Histogram) With(labelValues ...string) metrics.Histogram {
-	return &Histogram{
-		h: h.h.With(labelValues...).(*generic.Histogram),
-	}
+	h.h = h.h.With(labelValues...).(*generic.Histogram)
+	return h
 }
 
 // Observe implements histogram
