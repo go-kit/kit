@@ -12,6 +12,7 @@ import (
 	"time"
 
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/go-kit/kit/log"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
@@ -142,7 +143,7 @@ func main() {
 	mux.Handle("/handling/v1/", handling.MakeHandler(hs, httpLogger))
 
 	http.Handle("/", accessControl(mux))
-	http.Handle("/metrics", stdprometheus.Handler())
+	http.Handle("/metrics", promhttp.Handler())
 
 	errs := make(chan error, 2)
 	go func() {
