@@ -4,20 +4,34 @@ import (
 	"context"
 	"testing"
 
+	"crypto/subtle"
+
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/endpoint"
 )
 
+type customClaims struct {
+	MyProperty string `json:"my_property"`
+	jwt.StandardClaims
+}
+
+func (c customClaims) VerifyMyProperty(p string) bool {
+	return subtle.ConstantTimeCompare([]byte(c.MyProperty), []byte(p)) != 0
+}
+
 var (
 	kid            = "kid"
 	key            = []byte("test_signing_key")
+	myProperty     = "some value"
 	method         = jwt.SigningMethodHS256
 	invalidMethod  = jwt.SigningMethodRS256
 	mapClaims      = jwt.MapClaims{"user": "go-kit"}
 	standardClaims = jwt.StandardClaims{Audience: "go-kit"}
+	myCustomClaims = customClaims{MyProperty: myProperty, StandardClaims: standardClaims}
 	// Signed tokens generated at https://jwt.io/
 	signedKey         = "eyJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiZ28ta2l0In0.14M2VmYyApdSlV_LZ88ajjwuaLeIFplB8JpyNy0A19E"
 	standardSignedKey = "eyJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJnby1raXQifQ.L5ypIJjCOOv3jJ8G5SelaHvR04UJuxmcBN5QW3m_aoY"
+	customSignedKey   = "eyJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsInR5cCI6IkpXVCJ9.eyJteV9wcm9wZXJ0eSI6InNvbWUgdmFsdWUiLCJhdWQiOiJnby1raXQifQ.s8F-IDrV4WPJUsqr7qfDi-3GRlcKR0SRnkTeUT_U-i0"
 	invalidKey        = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.e30.vKVCKto-Wn6rgz3vBdaZaCBGfCBDTXOENSo_X2Gq7qA"
 )
 
@@ -45,6 +59,9 @@ func TestNewSigner(t *testing.T) {
 
 	signer = NewSigner(kid, key, method, standardClaims)(e)
 	signingValidator(t, signer, standardSignedKey)
+
+	signer = NewSigner(kid, key, method, myCustomClaims)(e)
+	signingValidator(t, signer, customSignedKey)
 }
 
 func TestJWTParser(t *testing.T) {
@@ -124,6 +141,23 @@ func TestJWTParser(t *testing.T) {
 		t.Fatal("Claims were not passed into context correctly")
 	}
 	if !stdCl.VerifyAudience("go-kit", true) {
-		t.Fatal("JWT jwt.StandardClaims.Audience did not match: expecting %s got %s", standardClaims.Audience, stdCl.Audience)
+		t.Fatalf("JWT jwt.StandardClaims.Audience did not match: expecting %s got %s", standardClaims.Audience, stdCl.Audience)
+	}
+
+	parser = NewParser(keys, method, &customClaims{})(e)
+	ctx = context.WithValue(context.Background(), JWTTokenContextKey, customSignedKey)
+	ctx1, err = parser(ctx, struct{}{})
+	if err != nil {
+		t.Fatalf("Parser returned error: %s", err)
+	}
+	custCl, ok := ctx1.(context.Context).Value(JWTClaimsContextKey).(*customClaims)
+	if !ok {
+		t.Fatal("Claims were not passed into context correctly")
+	}
+	if !custCl.VerifyAudience("go-kit", true) {
+		t.Fatalf("JWT customClaims.Audience did not match: expecting %s got %s", standardClaims.Audience, custCl.Audience)
+	}
+	if !custCl.VerifyMyProperty(myProperty) {
+		t.Fatalf("JWT customClaims.MyProperty did not match: expecting %s got %s", myProperty, custCl.MyProperty)
 	}
 }
