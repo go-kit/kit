@@ -29,9 +29,10 @@ type CloudWatch struct {
 	logger     log.Logger
 }
 
-// New returns a CloudWatch object that may be used to create metrics. Namespace is
-// applied to all created metrics and maps to the CloudWatch namespace.
-// Callers must ensure that regular calls to Send are performed, either manually or with one of the helper methods.
+// New returns a CloudWatch object that may be used to create metrics.
+// Namespace is applied to all created metrics and maps to the CloudWatch namespace.
+// Callers must ensure that regular calls to Send are performed, either
+// manually or with one of the helper methods.
 func New(namespace string, svc cloudwatchiface.CloudWatchAPI, logger log.Logger) *CloudWatch {
 	return &CloudWatch{
 		namespace:  namespace,
@@ -74,10 +75,10 @@ func (cw *CloudWatch) NewHistogram(name string, buckets int) metrics.Histogram {
 	return h
 }
 
-// WriteLoop is a helper method that invokes Send every
-// time the passed channel fires. This method blocks until the channel is
-// closed, so clients probably want to run it in its own goroutine. For typical
-// usage, create a time.Ticker and pass its C channel to this method.
+// WriteLoop is a helper method that invokes Send every time the passed
+// channel fires. This method blocks until the channel is closed, so clients
+// probably want to run it in its own goroutine. For typical usage, create a
+// time.Ticker and pass its C channel to this method.
 func (cw *CloudWatch) WriteLoop(c <-chan time.Time) {
 	for range c {
 		if err := cw.Send(); err != nil {
