@@ -2,14 +2,13 @@ package cloudwatch
 
 import (
 	"errors"
-	"testing"
-
-	"sync"
-
 	"fmt"
+	"sync"
+	"testing"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/teststat"
 )
@@ -65,7 +64,7 @@ func TestCounter(t *testing.T) {
 	namespace, name := "abc", "def"
 	label, value := "label", "value"
 	svc := newMockCloudWatch()
-	cw := New(namespace, log.NewNopLogger(), svc)
+	cw := New(namespace, svc, log.NewNopLogger())
 	counter := cw.NewCounter(name).With(label, value)
 	valuef := func() float64 {
 		err := cw.Send()
@@ -88,7 +87,7 @@ func TestGauge(t *testing.T) {
 	namespace, name := "abc", "def"
 	label, value := "label", "value"
 	svc := newMockCloudWatch()
-	cw := New(namespace, log.NewNopLogger(), svc)
+	cw := New(namespace, svc, log.NewNopLogger())
 	gauge := cw.NewGauge(name).With(label, value)
 	valuef := func() float64 {
 		err := cw.Send()
@@ -111,7 +110,7 @@ func TestHistogram(t *testing.T) {
 	namespace, name := "abc", "def"
 	label, value := "label", "value"
 	svc := newMockCloudWatch()
-	cw := New(namespace, log.NewNopLogger(), svc)
+	cw := New(namespace, svc, log.NewNopLogger())
 	histogram := cw.NewHistogram(name, 50).With(label, value)
 	n50 := fmt.Sprintf("%s_50", name)
 	n90 := fmt.Sprintf("%s_90", name)
