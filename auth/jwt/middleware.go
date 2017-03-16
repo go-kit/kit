@@ -44,17 +44,14 @@ var (
 	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
 )
 
-// Claims is a map of arbitrary claim data.
-type Claims map[string]interface{}
-
 // NewSigner creates a new JWT token generating middleware, specifying key ID,
 // signing string, signing method and the claims you would like it to contain.
 // Tokens are signed with a Key ID header (kid) which is useful for determining
 // the key to use for parsing. Particularly useful for clients.
-func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims Claims) endpoint.Middleware {
+func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			token := jwt.NewWithClaims(method, jwt.MapClaims(claims))
+			token := jwt.NewWithClaims(method, claims)
 			token.Header["kid"] = kid
 
 			// Sign and get the complete encoded token as a string using the secret
@@ -70,10 +67,10 @@ func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims Claims) 
 }
 
 // NewParser creates a new JWT token parsing middleware, specifying a
-// jwt.Keyfunc interface and the signing method. NewParser adds the resulting
-// claims to endpoint context or returns error on invalid token. Particularly
-// useful for servers.
-func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middleware {
+// jwt.Keyfunc interface, the signing method and the claims type to be used. NewParser
+// adds the resulting  claims to endpoint context or returns error on invalid token.
+// Particularly useful for servers.
+func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// tokenString is stored in the context from the transport handlers.
@@ -88,7 +85,7 @@ func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middlewar
 			// of the token to identify which key to use, but the parsed token
 			// (head and claims) is provided to the callback, providing
 			// flexibility.
-			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 				// Don't forget to validate the alg is what you expect:
 				if token.Method != method {
 					return nil, ErrUnexpectedSigningMethod
@@ -119,9 +116,7 @@ func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod) endpoint.Middlewar
 				return nil, ErrTokenInvalid
 			}
 
-			if claims, ok := token.Claims.(jwt.MapClaims); ok {
-				ctx = context.WithValue(ctx, JWTClaimsContextKey, Claims(claims))
-			}
+			ctx = context.WithValue(ctx, JWTClaimsContextKey, token.Claims)
 
 			return next(ctx, request)
 		}
