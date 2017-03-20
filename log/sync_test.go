@@ -70,3 +70,13 @@ func TestSyncWriterConcurrency(t *testing.T) {
 	w = log.NewSyncWriter(w)
 	testConcurrency(t, log.NewLogfmtLogger(w), 10000)
 }
+
+func TestSyncWriterChildWriter(t *testing.T) {
+	want := &bytes.Buffer{}
+	w := log.NewSyncWriter(want)
+	got := w.ChildWriter()
+
+	if got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
