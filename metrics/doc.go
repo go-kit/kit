@@ -92,5 +92,6 @@
 //    influx      n    custom                 custom                 custom
 //    prometheus  n    native                 native                 native
 //    pcp         1    native                 native                 native
+//    cloudwatch  n    batch push-aggregate   batch push-aggregate   synthetic, batch, push-aggregate
 //
 package metrics
