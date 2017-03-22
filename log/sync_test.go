@@ -1,8 +1,9 @@
-package log_test
+﻿package log_test
 
 import (
 	"bytes"
 	"io"
+	"os"
 	"testing"
 
 	"github.com/go-kit/kit/log"
@@ -69,4 +70,14 @@ func TestSyncWriterConcurrency(t *testing.T) {
 	w = &bytes.Buffer{}
 	w = log.NewSyncWriter(w)
 	testConcurrency(t, log.NewLogfmtLogger(w), 10000)
+}
+
+func TestSyncWriterFd(t *testing.T) {
+	_, ok := log.NewSyncWriter(os.Stdout).(interface {
+		Fd() uintptr
+	})
+
+	if !ok {
+		t.Error("NewSyncWriter does not pass through Fd method")
+	}
 }
