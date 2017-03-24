@@ -25,7 +25,7 @@ type colorWriter struct {
 // platform support for ANSI color codes. If w is not a terminal it is
 // returned unmodified.
 func NewColorWriter(w io.Writer) io.Writer {
-	if !IsTerminal(w) {
+	if !IsConsole(w) {
 		return w
 	}
 
