@@ -91,11 +91,11 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			return nil, err
 		}
 
-		md := &metadata.MD{}
+		md,_ := metadata.FromContext(ctx)
 		for _, f := range c.before {
-			ctx = f(ctx, md)
+			ctx = f(ctx, &md)
 		}
-		ctx = metadata.NewContext(ctx, *md)
+		ctx = metadata.NewContext(ctx, md)
 
 		var header, trailer metadata.MD
 		grpcReply := reflect.New(c.grpcReply).Interface()
