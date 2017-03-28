@@ -91,8 +91,8 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			return nil, err
 		}
 
-		md,ok := metadata.FromContext(ctx)
-		if !ok{
+		md, ok := metadata.FromContext(ctx)
+		if !ok {
 			md = metadata.MD{}
 		}
 		for _, f := range c.before {
