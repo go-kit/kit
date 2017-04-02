@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
+	fargo "github.com/hudl/fargo"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	stdeureka "github.com/hudl/fargo"
 )
 
 // Package sd/eureka provides a wrapper around the Netflix Eureka service
@@ -30,12 +31,12 @@ func TestIntegration(t *testing.T) {
 
 	var client Client
 	{
-		var stdConfig stdeureka.Config
-		stdConfig.Eureka.ServiceUrls = []string{eurekaAddr}
-		stdConfig.Eureka.PollIntervalSeconds = 1
+		var fargoConfig fargo.Config
+		fargoConfig.Eureka.ServiceUrls = []string{eurekaAddr}
+		fargoConfig.Eureka.PollIntervalSeconds = 1
 
-		stdConnection := stdeureka.NewConnFromConfig(stdConfig)
-		client = NewClient(&stdConnection)
+		fargoConnection := fargo.NewConnFromConfig(fargoConfig)
+		client = NewClient(&fargoConnection)
 	}
 
 	logger := log.NewLogfmtLogger(os.Stderr)

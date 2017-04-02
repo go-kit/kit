@@ -4,14 +4,15 @@ import (
 	"errors"
 	"reflect"
 
+	fargo "github.com/hudl/fargo"
+
 	"github.com/go-kit/kit/log"
-	stdeureka "github.com/hudl/fargo"
 )
 
 var (
 	errTest       = errors.New("kaboom")
 	loggerTest    = log.NewNopLogger()
-	instanceTest1 = &stdeureka.Instance{
+	instanceTest1 = &fargo.Instance{
 		HostName:         "server1.acme.org",
 		Port:             8080,
 		App:              "go-kit",
@@ -21,11 +22,11 @@ var (
 		HealthCheckUrl:   "http://server1.acme.org:8080/healthz",
 		StatusPageUrl:    "http://server1.acme.org:8080/status",
 		HomePageUrl:      "http://server1.acme.org:8080/",
-		Status:           stdeureka.UP,
-		DataCenterInfo:   stdeureka.DataCenterInfo{Name: stdeureka.MyOwn},
-		LeaseInfo:        stdeureka.LeaseInfo{RenewalIntervalInSecs: 1},
+		Status:           fargo.UP,
+		DataCenterInfo:   fargo.DataCenterInfo{Name: fargo.MyOwn},
+		LeaseInfo:        fargo.LeaseInfo{RenewalIntervalInSecs: 1},
 	}
-	instanceTest2 = &stdeureka.Instance{
+	instanceTest2 = &fargo.Instance{
 		HostName:         "server2.acme.org",
 		Port:             8080,
 		App:              "go-kit",
@@ -35,24 +36,24 @@ var (
 		HealthCheckUrl:   "http://server2.acme.org:8080/healthz",
 		StatusPageUrl:    "http://server2.acme.org:8080/status",
 		HomePageUrl:      "http://server2.acme.org:8080/",
-		Status:           stdeureka.UP,
-		DataCenterInfo:   stdeureka.DataCenterInfo{Name: stdeureka.MyOwn},
+		Status:           fargo.UP,
+		DataCenterInfo:   fargo.DataCenterInfo{Name: fargo.MyOwn},
 	}
-	applicationTest = &stdeureka.Application{
+	applicationTest = &fargo.Application{
 		Name:      "go-kit",
-		Instances: []*stdeureka.Instance{instanceTest1, instanceTest2},
+		Instances: []*fargo.Instance{instanceTest1, instanceTest2},
 	}
 )
 
 type testClient struct {
-	instances      []*stdeureka.Instance
-	application    *stdeureka.Application
+	instances      []*fargo.Instance
+	application    *fargo.Application
 	errInstances   error
 	errApplication error
 	errHeartbeat   error
 }
 
-func (c *testClient) Register(i *stdeureka.Instance) error {
+func (c *testClient) Register(i *fargo.Instance) error {
 	for _, instance := range c.instances {
 		if reflect.DeepEqual(*instance, *i) {
 			return errors.New("already registered")
@@ -63,8 +64,8 @@ func (c *testClient) Register(i *stdeureka.Instance) error {
 	return nil
 }
 
-func (c *testClient) Deregister(i *stdeureka.Instance) error {
-	var newInstances []*stdeureka.Instance
+func (c *testClient) Deregister(i *fargo.Instance) error {
+	var newInstances []*fargo.Instance
 	for _, instance := range c.instances {
 		if reflect.DeepEqual(*instance, *i) {
 			continue
@@ -79,16 +80,16 @@ func (c *testClient) Deregister(i *stdeureka.Instance) error {
 	return nil
 }
 
-func (c *testClient) Heartbeat(i *stdeureka.Instance) (err error) {
+func (c *testClient) Heartbeat(i *fargo.Instance) (err error) {
 	return c.errHeartbeat
 }
 
-func (c *testClient) Instances(app string) ([]*stdeureka.Instance, error) {
+func (c *testClient) Instances(app string) ([]*fargo.Instance, error) {
 	return c.instances, c.errInstances
 }
 
-func (c *testClient) ScheduleUpdates(service string, quitc chan struct{}) <-chan stdeureka.AppUpdate {
-	updatec := make(chan stdeureka.AppUpdate, 1)
-	updatec <- stdeureka.AppUpdate{App: c.application, Err: c.errApplication}
+func (c *testClient) ScheduleUpdates(service string, quitc chan struct{}) <-chan fargo.AppUpdate {
+	updatec := make(chan fargo.AppUpdate, 1)
+	updatec <- fargo.AppUpdate{App: c.application, Err: c.errApplication}
 	return updatec
 }

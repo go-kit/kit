@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
-	stdeureka "github.com/hudl/fargo"
+	fargo "github.com/hudl/fargo"
 )
 
 func TestRegistrar(t *testing.T) {
 	client := &testClient{
-		instances:    []*stdeureka.Instance{},
+		instances:    []*fargo.Instance{},
 		errHeartbeat: errTest,
 	}
 

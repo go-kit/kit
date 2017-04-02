@@ -3,7 +3,7 @@ package eureka
 import (
 	"fmt"
 
-	stdeureka "github.com/hudl/fargo"
+	fargo "github.com/hudl/fargo"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
@@ -25,12 +25,12 @@ var _ sd.Subscriber = &Subscriber{}
 
 // NewSubscriber returns a Eureka subscriber. It will start watching the given
 // app string for changes, and update the endpoints accordingly.
-func NewSubscriber(c Client, f sd.Factory, l log.Logger, app string) *Subscriber {
+func NewSubscriber(c Client, factory sd.Factory, logger log.Logger, app string) *Subscriber {
 	s := &Subscriber{
 		client: c,
-		cache:  cache.New(f, l),
+		cache:  cache.New(factory, logger),
 		app:    app,
-		logger: l,
+		logger: logger,
 		quitc:  make(chan struct{}),
 	}
 
@@ -47,11 +47,11 @@ func NewSubscriber(c Client, f sd.Factory, l log.Logger, app string) *Subscriber
 }
 
 func (s *Subscriber) getInstances() ([]string, error) {
-	stdInstances, err := s.client.Instances(s.app)
+	fargoInstances, err := s.client.Instances(s.app)
 	if err != nil {
 		return nil, err
 	}
-	return convertStdInstances(stdInstances), nil
+	return convertFargoInstances(fargoInstances), nil
 }
 
 func (s *Subscriber) loop() {
@@ -66,7 +66,7 @@ func (s *Subscriber) loop() {
 				continue
 			}
 
-			instances := convertStdApplication(u.App)
+			instances := convertFargoApplication(u.App)
 			s.logger.Log("app", s.app, "instances", len(instances))
 			s.cache.Update(instances)
 		}
@@ -83,17 +83,17 @@ func (s *Subscriber) Stop() {
 	close(s.quitc)
 }
 
-func convertStdApplication(stdApplication *stdeureka.Application) (instances []string) {
-	if stdApplication != nil {
-		instances = convertStdInstances(stdApplication.Instances)
+func convertFargoApplication(fargoApplication *fargo.Application) (instances []string) {
+	if fargoApplication != nil {
+		instances = convertFargoInstances(fargoApplication.Instances)
 	}
 	return instances
 }
 
-func convertStdInstances(stdInstances []*stdeureka.Instance) []string {
-	instances := make([]string, len(stdInstances))
-	for i, stdInstance := range stdInstances {
-		instances[i] = fmt.Sprintf("%s:%d", stdInstance.IPAddr, stdInstance.Port)
+func convertFargoInstances(fargoInstances []*fargo.Instance) []string {
+	instances := make([]string, len(fargoInstances))
+	for i, fargoInstance := range fargoInstances {
+		instances[i] = fmt.Sprintf("%s:%d", fargoInstance.IPAddr, fargoInstance.Port)
 	}
 	return instances
 }

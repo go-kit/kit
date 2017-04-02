@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
+	fargo "github.com/hudl/fargo"
+
 	"github.com/go-kit/kit/endpoint"
-	stdeureka "github.com/hudl/fargo"
 )
 
 func TestSubscriber(t *testing.T) {
@@ -15,7 +16,7 @@ func TestSubscriber(t *testing.T) {
 	}
 
 	client := &testClient{
-		instances:      []*stdeureka.Instance{instanceTest1},
+		instances:      []*fargo.Instance{instanceTest1},
 		application:    applicationTest,
 		errApplication: nil,
 	}
@@ -39,7 +40,7 @@ func TestSubscriberScheduleUpdates(t *testing.T) {
 	}
 
 	client := &testClient{
-		instances:      []*stdeureka.Instance{instanceTest1},
+		instances:      []*fargo.Instance{instanceTest1},
 		application:    applicationTest,
 		errApplication: nil,
 	}
@@ -66,7 +67,7 @@ func TestBadFactory(t *testing.T) {
 	}
 
 	client := &testClient{
-		instances: []*stdeureka.Instance{instanceTest1},
+		instances: []*fargo.Instance{instanceTest1},
 	}
 
 	s := NewSubscriber(client, factory, loggerTest, instanceTest1.App)
@@ -112,7 +113,7 @@ func TestBadSubscriberScheduleUpdates(t *testing.T) {
 	}
 
 	client := &testClient{
-		instances:      []*stdeureka.Instance{instanceTest1},
+		instances:      []*fargo.Instance{instanceTest1},
 		application:    applicationTest,
 		errApplication: errTest,
 	}

@@ -2,10 +2,9 @@ package eureka
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
-	stdeureka "github.com/hudl/fargo"
+	fargo "github.com/hudl/fargo"
 
 	"github.com/go-kit/kit/log"
 )
@@ -13,20 +12,18 @@ import (
 // Registrar maintains service instance liveness information in Eureka.
 type Registrar struct {
 	client   Client
-	instance *stdeureka.Instance
+	instance *fargo.Instance
 	logger   log.Logger
-
-	quitmtx sync.Mutex
-	quit    chan bool
+	quit     chan bool
 }
 
 // NewRegistrar returns an Eureka Registrar acting on behalf of the provided
 // Fargo instance.
-func NewRegistrar(client Client, i *stdeureka.Instance, l log.Logger) *Registrar {
+func NewRegistrar(client Client, i *fargo.Instance, logger log.Logger) *Registrar {
 	return &Registrar{
 		client:   client,
 		instance: i,
-		logger:   log.With(l, "service", i.App, "address", fmt.Sprintf("%s:%d", i.IPAddr, i.Port)),
+		logger:   log.With(logger, "service", i.App, "address", fmt.Sprintf("%s:%d", i.IPAddr, i.Port)),
 	}
 }
 
@@ -40,7 +37,10 @@ func (r *Registrar) Register() {
 
 	if r.instance.LeaseInfo.RenewalIntervalInSecs > 0 {
 		// User has opted for heartbeat functionality in Eureka.
-		go r.loop()
+		if r.quit == nil {
+			r.quit = make(chan bool)
+			go r.loop()
+		}
 	}
 }
 
@@ -52,22 +52,13 @@ func (r *Registrar) Deregister() {
 		r.logger.Log("action", "deregister")
 	}
 
-	r.quitmtx.Lock()
-	defer r.quitmtx.Unlock()
 	if r.quit != nil {
 		r.quit <- true
+		r.quit = nil
 	}
 }
 
 func (r *Registrar) loop() {
-	r.quitmtx.Lock()
-	if r.quit != nil {
-		defer r.quitmtx.Unlock()
-		return // Already running.
-	}
-	r.quit = make(chan bool)
-	r.quitmtx.Unlock()
-
 	tick := time.NewTicker(time.Duration(r.instance.LeaseInfo.RenewalIntervalInSecs) * time.Second)
 	defer tick.Stop()
 	for {
@@ -77,12 +68,6 @@ func (r *Registrar) loop() {
 				r.logger.Log("err", err)
 			}
 		case <-r.quit:
-			r.quitmtx.Lock()
-			defer r.quitmtx.Unlock()
-
-			close(r.quit)
-			r.quit = nil
-
 			return
 		}
 	}
