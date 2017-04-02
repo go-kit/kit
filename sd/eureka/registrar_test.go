@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	fargo "github.com/hudl/fargo"
+	"github.com/hudl/fargo"
 )
 
 func TestRegistrar(t *testing.T) {

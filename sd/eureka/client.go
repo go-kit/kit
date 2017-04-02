@@ -1,7 +1,7 @@
 package eureka
 
 import (
-	fargo "github.com/hudl/fargo"
+	"github.com/hudl/fargo"
 )
 
 // Client is a wrapper around the Eureka API.

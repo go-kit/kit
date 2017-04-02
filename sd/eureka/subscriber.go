@@ -3,7 +3,7 @@ package eureka
 import (
 	"fmt"
 
-	fargo "github.com/hudl/fargo"
+	"github.com/hudl/fargo"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"

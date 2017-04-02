@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	fargo "github.com/hudl/fargo"
+	"github.com/hudl/fargo"
 
 	"github.com/go-kit/kit/endpoint"
 )

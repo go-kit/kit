@@ -2,9 +2,10 @@ package eureka
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
-	fargo "github.com/hudl/fargo"
+	"github.com/hudl/fargo"
 
 	"github.com/go-kit/kit/log"
 )
@@ -15,6 +16,7 @@ type Registrar struct {
 	instance *fargo.Instance
 	logger   log.Logger
 	quit     chan bool
+	quitmtx  sync.Mutex
 }
 
 // NewRegistrar returns an Eureka Registrar acting on behalf of the provided
@@ -37,6 +39,8 @@ func (r *Registrar) Register() {
 
 	if r.instance.LeaseInfo.RenewalIntervalInSecs > 0 {
 		// User has opted for heartbeat functionality in Eureka.
+		r.quitmtx.Lock()
+		defer r.quitmtx.Unlock()
 		if r.quit == nil {
 			r.quit = make(chan bool)
 			go r.loop()
@@ -52,6 +56,8 @@ func (r *Registrar) Deregister() {
 		r.logger.Log("action", "deregister")
 	}
 
+	r.quitmtx.Lock()
+	defer r.quitmtx.Unlock()
 	if r.quit != nil {
 		r.quit <- true
 		r.quit = nil

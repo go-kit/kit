@@ -4,7 +4,7 @@ import (
 	"errors"
 	"reflect"
 
-	fargo "github.com/hudl/fargo"
+	"github.com/hudl/fargo"
 
 	"github.com/go-kit/kit/log"
 )
