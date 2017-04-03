@@ -15,8 +15,8 @@ type Registrar struct {
 	client   Client
 	instance *fargo.Instance
 	logger   log.Logger
-	quit     chan bool
-	quitmtx  sync.Mutex
+	quit     chan struct{}
+	wg       sync.WaitGroup
 }
 
 // NewRegistrar returns an Eureka Registrar acting on behalf of the provided
@@ -39,10 +39,9 @@ func (r *Registrar) Register() {
 
 	if r.instance.LeaseInfo.RenewalIntervalInSecs > 0 {
 		// User has opted for heartbeat functionality in Eureka.
-		r.quitmtx.Lock()
-		defer r.quitmtx.Unlock()
 		if r.quit == nil {
-			r.quit = make(chan bool)
+			r.quit = make(chan struct{})
+			r.wg.Add(1)
 			go r.loop()
 		}
 	}
@@ -56,10 +55,9 @@ func (r *Registrar) Deregister() {
 		r.logger.Log("action", "deregister")
 	}
 
-	r.quitmtx.Lock()
-	defer r.quitmtx.Unlock()
 	if r.quit != nil {
-		r.quit <- true
+		close(r.quit)
+		r.wg.Wait()
 		r.quit = nil
 	}
 }
@@ -67,6 +65,8 @@ func (r *Registrar) Deregister() {
 func (r *Registrar) loop() {
 	tick := time.NewTicker(time.Duration(r.instance.LeaseInfo.RenewalIntervalInSecs) * time.Second)
 	defer tick.Stop()
+	defer r.wg.Done()
+
 	for {
 		select {
 		case <-tick.C:
