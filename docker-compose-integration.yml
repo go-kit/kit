@@ -14,3 +14,9 @@ services:
     image: zookeeper
     ports:
       - "2181:2181"
+  eureka:
+    image: springcloud/eureka
+    environment:
+      eureka.server.responseCacheUpdateIntervalMs: 1000
+    ports:
+      - "8761:8761"

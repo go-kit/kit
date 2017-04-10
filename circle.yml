@@ -24,3 +24,4 @@ test:
           ETCD_ADDR: http://localhost:2379
           CONSUL_ADDR: localhost:8500
           ZK_ADDR: localhost:2181
+          EUREKA_ADDR: http://localhost:8761/eureka
