@@ -15,16 +15,16 @@ func TestSubscriber(t *testing.T) {
 		return endpoint.Nop, nil, nil
 	}
 
-	client := &testClient{
+	connection := &testConnection{
 		instances:      []*fargo.Instance{instanceTest1},
-		application:    applicationTest,
+		application:    appUpdateTest,
 		errApplication: nil,
 	}
 
-	s := NewSubscriber(client, factory, loggerTest, instanceTest1.App)
-	defer s.Stop()
+	subscriber := NewSubscriber(connection, appNameTest, factory, loggerTest)
+	defer subscriber.Stop()
 
-	endpoints, err := s.Endpoints()
+	endpoints, err := subscriber.Endpoints()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,23 +39,23 @@ func TestSubscriberScheduleUpdates(t *testing.T) {
 		return endpoint.Nop, nil, nil
 	}
 
-	client := &testClient{
+	connection := &testConnection{
 		instances:      []*fargo.Instance{instanceTest1},
-		application:    applicationTest,
+		application:    appUpdateTest,
 		errApplication: nil,
 	}
 
-	s := NewSubscriber(client, factory, loggerTest, instanceTest1.App)
-	defer s.Stop()
+	subscriber := NewSubscriber(connection, appNameTest, factory, loggerTest)
+	defer subscriber.Stop()
 
-	endpoints, _ := s.Endpoints()
+	endpoints, _ := subscriber.Endpoints()
 	if want, have := 1, len(endpoints); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	time.Sleep(50 * time.Millisecond)
 
-	endpoints, _ = s.Endpoints()
+	endpoints, _ = subscriber.Endpoints()
 	if want, have := 2, len(endpoints); want != have {
 		t.Errorf("want %v, have %v", want, have)
 	}
@@ -66,14 +66,16 @@ func TestBadFactory(t *testing.T) {
 		return nil, nil, errTest
 	}
 
-	client := &testClient{
-		instances: []*fargo.Instance{instanceTest1},
+	connection := &testConnection{
+		instances:      []*fargo.Instance{instanceTest1},
+		application:    appUpdateTest,
+		errApplication: nil,
 	}
 
-	s := NewSubscriber(client, factory, loggerTest, instanceTest1.App)
-	defer s.Stop()
+	subscriber := NewSubscriber(connection, appNameTest, factory, loggerTest)
+	defer subscriber.Stop()
 
-	endpoints, err := s.Endpoints()
+	endpoints, err := subscriber.Endpoints()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,16 +90,17 @@ func TestBadSubscriberInstances(t *testing.T) {
 		return endpoint.Nop, nil, nil
 	}
 
-	client := &testClient{
+	connection := &testConnection{
+		instances:      []*fargo.Instance{},
 		errInstances:   errTest,
-		application:    applicationTest,
+		application:    appUpdateTest,
 		errApplication: nil,
 	}
 
-	s := NewSubscriber(client, factory, loggerTest, instanceTest1.App)
-	defer s.Stop()
+	subscriber := NewSubscriber(connection, appNameTest, factory, loggerTest)
+	defer subscriber.Stop()
 
-	endpoints, err := s.Endpoints()
+	endpoints, err := subscriber.Endpoints()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,16 +115,16 @@ func TestBadSubscriberScheduleUpdates(t *testing.T) {
 		return endpoint.Nop, nil, nil
 	}
 
-	client := &testClient{
+	connection := &testConnection{
 		instances:      []*fargo.Instance{instanceTest1},
-		application:    applicationTest,
+		application:    appUpdateTest,
 		errApplication: errTest,
 	}
 
-	s := NewSubscriber(client, factory, loggerTest, instanceTest1.App)
-	defer s.Stop()
+	subscriber := NewSubscriber(connection, appNameTest, factory, loggerTest)
+	defer subscriber.Stop()
 
-	endpoints, err := s.Endpoints()
+	endpoints, err := subscriber.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}
@@ -131,7 +134,7 @@ func TestBadSubscriberScheduleUpdates(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	endpoints, err = s.Endpoints()
+	endpoints, err = subscriber.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}

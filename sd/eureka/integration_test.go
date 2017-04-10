@@ -29,37 +29,36 @@ func TestIntegration(t *testing.T) {
 		t.Skip("EUREKA_ADDR is not set")
 	}
 
-	var client Client
-	{
-		var fargoConfig fargo.Config
-		fargoConfig.Eureka.ServiceUrls = []string{eurekaAddr}
-		fargoConfig.Eureka.PollIntervalSeconds = 1
-
-		fargoConnection := fargo.NewConnFromConfig(fargoConfig)
-		client = NewClient(&fargoConnection)
-	}
-
 	logger := log.NewLogfmtLogger(os.Stderr)
 	logger = log.With(logger, "ts", log.DefaultTimestamp)
 
+	var fargoConfig fargo.Config
+	// Target Eureka server(s).
+	fargoConfig.Eureka.ServiceUrls = []string{eurekaAddr}
+	// How often the subscriber should poll for updates.
+	fargoConfig.Eureka.PollIntervalSeconds = 1
+
+	// Create a Fargo connection and a Eureka registrar.
+	fargoConnection := fargo.NewConnFromConfig(fargoConfig)
+	registrar1 := NewRegistrar(&fargoConnection, instanceTest1, log.With(logger, "component", "registrar1"))
+
 	// Register one instance.
-	registrar1 := NewRegistrar(client, instanceTest1, log.With(logger, "component", "registrar1"))
 	registrar1.Register()
 	defer registrar1.Deregister()
 
 	// This should be enough time for the Eureka server response cache to update.
 	time.Sleep(time.Second)
 
-	// Build a subscriber.
+	// Build a Eureka subscriber.
 	factory := func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		t.Logf("factory invoked for %q", instance)
 		return endpoint.Nop, nil, nil
 	}
 	s := NewSubscriber(
-		client,
+		&fargoConnection,
+		appNameTest,
 		factory,
 		log.With(logger, "component", "subscriber"),
-		instanceTest1.App,
 	)
 	defer s.Stop()
 
@@ -73,7 +72,7 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Register a second instance
-	registrar2 := NewRegistrar(client, instanceTest2, log.With(logger, "component", "registrar2"))
+	registrar2 := NewRegistrar(&fargoConnection, instanceTest2, log.With(logger, "component", "registrar2"))
 	registrar2.Register()
 	defer registrar2.Deregister() // In case of exceptional circumstances.
 

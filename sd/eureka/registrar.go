@@ -2,79 +2,126 @@ package eureka
 
 import (
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/hudl/fargo"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/sd"
 )
+
+// Matches official Netflix Java client default.
+const defaultRenewalInterval = 30 * time.Second
+
+// The methods of fargo.Connection used in this package.
+type fargoConnection interface {
+	RegisterInstance(instance *fargo.Instance) error
+	DeregisterInstance(instance *fargo.Instance) error
+	ReregisterInstance(instance *fargo.Instance) error
+	HeartBeatInstance(instance *fargo.Instance) error
+	ScheduleAppUpdates(name string, await bool, done <-chan struct{}) <-chan fargo.AppUpdate
+	GetApp(name string) (*fargo.Application, error)
+}
+
+type fargoUnsuccessfulHTTPResponse struct {
+	statusCode    int
+	messagePrefix string
+}
 
 // Registrar maintains service instance liveness information in Eureka.
 type Registrar struct {
-	client   Client
+	conn     fargoConnection
 	instance *fargo.Instance
 	logger   log.Logger
-	quit     chan struct{}
-	wg       sync.WaitGroup
+	quitc    chan chan struct{}
+	sync.Mutex
 }
+
+var _ sd.Registrar = (*Registrar)(nil)
 
 // NewRegistrar returns an Eureka Registrar acting on behalf of the provided
-// Fargo instance.
-func NewRegistrar(client Client, i *fargo.Instance, logger log.Logger) *Registrar {
+// Fargo connection and instance. See the integration test for usage examples.
+func NewRegistrar(conn fargoConnection, instance *fargo.Instance, logger log.Logger) *Registrar {
 	return &Registrar{
-		client:   client,
-		instance: i,
-		logger:   log.With(logger, "service", i.App, "address", fmt.Sprintf("%s:%d", i.IPAddr, i.Port)),
+		conn:     conn,
+		instance: instance,
+		logger:   log.With(logger, "service", instance.App, "address", fmt.Sprintf("%s:%d", instance.IPAddr, instance.Port)),
 	}
 }
 
-// Register implements sd.Registrar interface.
+// Register implements sd.Registrar.
 func (r *Registrar) Register() {
-	if err := r.client.Register(r.instance); err != nil {
-		r.logger.Log("err", err)
-	} else {
-		r.logger.Log("action", "register")
+	r.Lock()
+	defer r.Unlock()
+
+	if r.quitc != nil {
+		return // Already in the registration loop.
 	}
 
-	if r.instance.LeaseInfo.RenewalIntervalInSecs > 0 {
-		// User has opted for heartbeat functionality in Eureka.
-		if r.quit == nil {
-			r.quit = make(chan struct{})
-			r.wg.Add(1)
-			go r.loop()
-		}
+	if err := r.conn.RegisterInstance(r.instance); err != nil {
+		r.logger.Log("during", "Register", "err", err)
 	}
+
+	r.quitc = make(chan chan struct{})
+	go r.loop()
 }
 
-// Deregister implements sd.Registrar interface.
+// Deregister implements sd.Registrar.
 func (r *Registrar) Deregister() {
-	if err := r.client.Deregister(r.instance); err != nil {
-		r.logger.Log("err", err)
-	} else {
-		r.logger.Log("action", "deregister")
+	r.Lock()
+	defer r.Unlock()
+
+	if r.quitc == nil {
+		return // Already deregistered.
 	}
 
-	if r.quit != nil {
-		close(r.quit)
-		r.wg.Wait()
-		r.quit = nil
-	}
+	q := make(chan struct{})
+	r.quitc <- q
+	<-q
+	r.quitc = nil
 }
 
 func (r *Registrar) loop() {
-	tick := time.NewTicker(time.Duration(r.instance.LeaseInfo.RenewalIntervalInSecs) * time.Second)
-	defer tick.Stop()
-	defer r.wg.Done()
+	var renewalInterval time.Duration
+	if r.instance.LeaseInfo.RenewalIntervalInSecs > 0 {
+		renewalInterval = time.Duration(r.instance.LeaseInfo.RenewalIntervalInSecs) * time.Second
+	} else {
+		renewalInterval = defaultRenewalInterval
+	}
+	ticker := time.NewTicker(renewalInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
-		case <-tick.C:
-			if err := r.client.Heartbeat(r.instance); err != nil {
-				r.logger.Log("err", err)
+		case <-ticker.C:
+			if err := r.heartbeat(); err != nil {
+				r.logger.Log("during", "heartbeat", "err", err)
 			}
-		case <-r.quit:
+
+		case q := <-r.quitc:
+			if err := r.conn.DeregisterInstance(r.instance); err != nil {
+				r.logger.Log("during", "Deregister", "err", err)
+			}
+			close(q)
 			return
 		}
 	}
+}
+
+func (r *Registrar) heartbeat() error {
+	err := r.conn.HeartBeatInstance(r.instance)
+	if err != nil {
+		if u, ok := err.(*fargoUnsuccessfulHTTPResponse); ok && u.statusCode == http.StatusNotFound {
+			// Instance expired (e.g. network partition). Re-register.
+			r.logger.Log("during", "heartbeat", err.Error())
+			return r.conn.ReregisterInstance(r.instance)
+		}
+	}
+	return err
+}
+
+func (u *fargoUnsuccessfulHTTPResponse) Error() string {
+	return fmt.Sprintf("err=%s code=%d", u.messagePrefix, u.statusCode)
 }

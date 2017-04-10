@@ -3,56 +3,100 @@ package eureka
 import (
 	"testing"
 	"time"
-
-	"github.com/hudl/fargo"
 )
 
 func TestRegistrar(t *testing.T) {
-	client := &testClient{
-		instances:    []*fargo.Instance{},
+	connection := &testConnection{
 		errHeartbeat: errTest,
 	}
 
-	r := NewRegistrar(client, instanceTest1, loggerTest)
-	if want, have := 0, len(client.instances); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
+	registrar1 := NewRegistrar(connection, instanceTest1, loggerTest)
+	registrar2 := NewRegistrar(connection, instanceTest2, loggerTest)
 
 	// Not registered.
-	r.Deregister()
-	if want, have := 0, len(client.instances); want != have {
+	registrar1.Deregister()
+	if want, have := 0, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// Register.
-	r.Register()
-	if want, have := 1, len(client.instances); want != have {
+	registrar1.Register()
+	if want, have := 1, len(connection.instances); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	registrar2.Register()
+	if want, have := 2, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// Deregister.
-	r.Deregister()
-	if want, have := 0, len(client.instances); want != have {
+	registrar1.Deregister()
+	if want, have := 1, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// Already registered.
-	r.Register()
-	if want, have := 1, len(client.instances); want != have {
+	registrar1.Register()
+	if want, have := 2, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
-	r.Register()
-	if want, have := 1, len(client.instances); want != have {
+	registrar1.Register()
+	if want, have := 2, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// Wait for a heartbeat failure.
-	time.Sleep(time.Second)
-	if want, have := 1, len(client.instances); want != have {
+	time.Sleep(1010 * time.Millisecond)
+	if want, have := 2, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
-	r.Deregister()
-	if want, have := 0, len(client.instances); want != have {
+	registrar1.Deregister()
+	if want, have := 1, len(connection.instances); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+}
+
+func TestBadRegister(t *testing.T) {
+	connection := &testConnection{
+		errRegister: errTest,
+	}
+
+	registrar := NewRegistrar(connection, instanceTest1, loggerTest)
+	registrar.Register()
+	if want, have := 0, len(connection.instances); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+}
+
+func TestBadDeregister(t *testing.T) {
+	connection := &testConnection{
+		errDeregister: errTest,
+	}
+
+	registrar := NewRegistrar(connection, instanceTest1, loggerTest)
+	registrar.Register()
+	if want, have := 1, len(connection.instances); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+	registrar.Deregister()
+	if want, have := 1, len(connection.instances); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+}
+
+func TestExpiredInstance(t *testing.T) {
+	connection := &testConnection{
+		errHeartbeat: errNotFound,
+	}
+
+	registrar := NewRegistrar(connection, instanceTest1, loggerTest)
+	registrar.Register()
+
+	// Wait for a heartbeat failure.
+	time.Sleep(1010 * time.Millisecond)
+
+	if want, have := 1, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
