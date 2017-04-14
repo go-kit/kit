@@ -12,7 +12,7 @@ type influxProvider struct {
 
 // NewInfluxProvider takes the given Influx object and stop func, and returns
 // a Provider that produces Influx metrics.
-func NewInfluxProvider(in *influx.Influx, stop func()) Provider {
+func NewInfluxProvider(in *influx.Influx, stop func()) metrics.Provider {
 	return &influxProvider{
 		in:   in,
 		stop: stop,

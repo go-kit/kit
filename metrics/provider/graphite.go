@@ -13,7 +13,7 @@ type graphiteProvider struct {
 // NewGraphiteProvider wraps the given Graphite object and stop func and returns
 // a Provider that produces Graphite metrics. A typical stop function would be
 // ticker.Stop from the ticker passed to the SendLoop helper method.
-func NewGraphiteProvider(g *graphite.Graphite, stop func()) Provider {
+func NewGraphiteProvider(g *graphite.Graphite, stop func()) metrics.Provider {
 	return &graphiteProvider{
 		g:    g,
 		stop: stop,

@@ -8,7 +8,7 @@ import (
 type expvarProvider struct{}
 
 // NewExpvarProvider returns a Provider that produces expvar metrics.
-func NewExpvarProvider() Provider {
+func NewExpvarProvider() metrics.Provider {
 	return expvarProvider{}
 }
 

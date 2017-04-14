@@ -13,7 +13,7 @@ type statsdProvider struct {
 // NewStatsdProvider wraps the given Statsd object and stop func and returns a
 // Provider that produces Statsd metrics. A typical stop function would be
 // ticker.Stop from the ticker passed to the SendLoop helper method.
-func NewStatsdProvider(s *statsd.Statsd, stop func()) Provider {
+func NewStatsdProvider(s *statsd.Statsd, stop func()) metrics.Provider {
 	return &statsdProvider{
 		s:    s,
 		stop: stop,

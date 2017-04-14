@@ -13,7 +13,7 @@ type dogstatsdProvider struct {
 // NewDogstatsdProvider wraps the given Dogstatsd object and stop func and
 // returns a Provider that produces Dogstatsd metrics. A typical stop function
 // would be ticker.Stop from the ticker passed to the SendLoop helper method.
-func NewDogstatsdProvider(d *dogstatsd.Dogstatsd, stop func()) Provider {
+func NewDogstatsdProvider(d *dogstatsd.Dogstatsd, stop func()) metrics.Provider {
 	return &dogstatsdProvider{
 		d:    d,
 		stop: stop,

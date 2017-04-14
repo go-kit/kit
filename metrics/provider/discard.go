@@ -9,7 +9,7 @@ type discardProvider struct{}
 
 // NewDiscardProvider returns a provider that produces no-op metrics via the
 // discarding backend.
-func NewDiscardProvider() Provider { return discardProvider{} }
+func NewDiscardProvider() metrics.Provider { return discardProvider{} }
 
 // NewCounter implements Provider.
 func (discardProvider) NewCounter(string) metrics.Counter { return discard.NewCounter() }

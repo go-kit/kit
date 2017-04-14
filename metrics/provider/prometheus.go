@@ -14,7 +14,7 @@ type prometheusProvider struct {
 
 // NewPrometheusProvider returns a Provider that produces Prometheus metrics.
 // Namespace and subsystem are applied to all produced metrics.
-func NewPrometheusProvider(namespace, subsystem string) Provider {
+func NewPrometheusProvider(namespace, subsystem string) metrics.Provider {
 	return &prometheusProvider{
 		namespace: namespace,
 		subsystem: subsystem,
