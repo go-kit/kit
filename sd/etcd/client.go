@@ -40,6 +40,9 @@ type Client interface {
 	// Register a service with etcd.
 	Register(s Service) error
 
+	// Register a service with etcd with a time to leave
+	RegisterTTL(s Service, TTL time.Duration) error
+
 	// Deregister a service with etcd.
 	Deregister(s Service) error
 }
@@ -165,6 +168,17 @@ func (c *client) Register(s Service) error {
 	} else {
 		_, err = c.keysAPI.Create(c.ctx, s.Key, s.Value)
 	}
+	return err
+}
+
+func (c *client) RegisterTTL(s Service, TTL time.Duration) error {
+	if s.Key == "" {
+		return ErrNoKey
+	}
+	if s.Value == "" {
+		return ErrNoValue
+	}
+	_, err := c.keysAPI.Set(c.ctx, s.Key, s.Value, &etcd.SetOptions{PrevExist: etcd.PrevNoExist, TTL: TTL})
 	return err
 }
 
