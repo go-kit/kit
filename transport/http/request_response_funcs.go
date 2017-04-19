@@ -60,6 +60,7 @@ func PopulateRequestContext(ctx context.Context, r *http.Request) context.Contex
 		ContextKeyRequestReferer:         r.Header.Get("Referer"),
 		ContextKeyRequestUserAgent:       r.Header.Get("User-Agent"),
 		ContextKeyRequestXRequestID:      r.Header.Get("X-Request-Id"),
+		ContextKeyRequestAccept:          r.Header.Get("Accept"),
 	} {
 		ctx = context.WithValue(ctx, k, v)
 	}
@@ -116,6 +117,10 @@ const (
 	// ContextKeyRequestXRequestID is populated in the context by
 	// PopulateRequestContext. Its value is r.Header.Get("X-Request-Id").
 	ContextKeyRequestXRequestID
+
+	// ContextKeyRequestAccept is populated in the context by
+	// PopulateRequestContext. Its value is r.Header.Get("Accept").
+	ContextKeyRequestAccept
 
 	// ContextKeyResponseHeaders is populated in the context whenever a
 	// ServerFinalizerFunc is specified. Its value is of type http.Header, and
