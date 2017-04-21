@@ -49,8 +49,8 @@ var (
 
 func init() {
 	// Default
-	fgColorBytes = append(fgColorBytes, []byte("\x1b[39m"))
-	bgColorBytes = append(bgColorBytes, []byte("\x1b[49m"))
+	fgColorBytes = append(fgColorBytes, []byte("\x1b[39;22m"))
+	bgColorBytes = append(bgColorBytes, []byte("\x1b[49;22m"))
 
 	// dark colors
 	for color := Black; color < DarkGray; color++ {
