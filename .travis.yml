@@ -1,8 +1,14 @@
 language: go
 
-script: go test -race -v ./...
+before_install:
+  - go get github.com/mattn/goveralls
+  - go get github.com/modocache/gover
+
+script:
+  - go test -race -v ./...
+  - ./coveralls.bash
 
 go:
-    - 1.7.x
-    - 1.8.x
-    - tip
+  - 1.7.x
+  - 1.8.x
+  - tip
