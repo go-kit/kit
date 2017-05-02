@@ -38,7 +38,7 @@ func TestVariousLevels(t *testing.T) {
 			}, "\n"),
 		},
 		{
-			"AllowDebug",
+			"AllowInfo",
 			level.AllowInfo(),
 			strings.Join([]string{
 				`{"level":"info","this is":"info log"}`,
