@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -46,8 +45,7 @@ func main() {
 	flag.Parse()
 
 	var logger log.Logger
-	logger = log.NewLogfmtLogger(os.Stderr)
-	logger = &serializedLogger{Logger: logger}
+	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 
 	var (
@@ -199,15 +197,4 @@ func storeTestData(r cargo.Repository) {
 	if err := r.Store(test2); err != nil {
 		panic(err)
 	}
-}
-
-type serializedLogger struct {
-	mtx sync.Mutex
-	log.Logger
-}
-
-func (l *serializedLogger) Log(keyvals ...interface{}) error {
-	l.mtx.Lock()
-	defer l.mtx.Unlock()
-	return l.Logger.Log(keyvals...)
 }
