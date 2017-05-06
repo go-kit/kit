@@ -79,6 +79,11 @@ func ClientAfter(after ...ClientResponseFunc) ClientOption {
 	return func(c *Client) { c.after = append(c.after, after...) }
 }
 
+// ClientNoPrefix reverts the auto-prefixing of "pb" to serviceName.
+func ClientNoPrefix() ClientOption {
+	return func(c *Client) { c.method = strings.Replace(c.method, "/pb.", "/", 1) }
+}
+
 // Endpoint returns a usable endpoint that will invoke the gRPC specified by the
 // client.
 func (c Client) Endpoint() endpoint.Endpoint {
