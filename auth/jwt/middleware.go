@@ -94,21 +94,24 @@ func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, claims jwt.Claims)
 				return keyFunc(token)
 			})
 			if err != nil {
-				if e, ok := err.(*jwt.ValidationError); ok && e.Inner != nil {
-					if e.Errors&jwt.ValidationErrorMalformed != 0 {
+				if e, ok := err.(*jwt.ValidationError); ok {
+					switch {
+					case e.Errors&jwt.ValidationErrorMalformed != 0:
 						// Token is malformed
 						return nil, ErrTokenMalformed
-					} else if e.Errors&jwt.ValidationErrorExpired != 0 {
+					case e.Errors&jwt.ValidationErrorExpired != 0:
 						// Token is expired
 						return nil, ErrTokenExpired
-					} else if e.Errors&jwt.ValidationErrorNotValidYet != 0 {
+					case e.Errors&jwt.ValidationErrorNotValidYet != 0:
 						// Token is not active yet
 						return nil, ErrTokenNotActive
+					case e.Inner != nil:
+						// report e.Inner
+						return nil, e.Inner
 					}
-
-					return nil, e.Inner
+					// We have a ValidationError but have no specific Go kit error for it.
+					// Fall through to return original error.
 				}
-
 				return nil, err
 			}
 
