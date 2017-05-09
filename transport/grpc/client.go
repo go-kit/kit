@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -37,9 +36,6 @@ func NewClient(
 	grpcReply interface{},
 	options ...ClientOption,
 ) *Client {
-	if strings.IndexByte(serviceName, '.') == -1 {
-		serviceName = "pb." + serviceName
-	}
 	c := &Client{
 		client: cc,
 		method: fmt.Sprintf("/%s/%s", serviceName, method),

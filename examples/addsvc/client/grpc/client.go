@@ -34,7 +34,7 @@ func New(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger log.Logger)
 	{
 		sumEndpoint = grpctransport.NewClient(
 			conn,
-			"Add",
+			"pb.Add",
 			"Sum",
 			addsvc.EncodeGRPCSumRequest,
 			addsvc.DecodeGRPCSumResponse,
@@ -53,7 +53,7 @@ func New(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger log.Logger)
 	{
 		concatEndpoint = grpctransport.NewClient(
 			conn,
-			"Add",
+			"pb.Add",
 			"Concat",
 			addsvc.EncodeGRPCConcatRequest,
 			addsvc.DecodeGRPCConcatResponse,
