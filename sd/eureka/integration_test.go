@@ -3,16 +3,13 @@
 package eureka
 
 import (
-	"io"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/hudl/fargo"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/sd"
 )
 
 // Package sd/eureka provides a wrapper around the Netflix Eureka service
@@ -50,25 +47,20 @@ func TestIntegration(t *testing.T) {
 	// This should be enough time for the Eureka server response cache to update.
 	time.Sleep(time.Second)
 
-	// Build a Eureka subscriber.
-	factory := func(instance string) (endpoint.Endpoint, io.Closer, error) {
-		t.Logf("factory invoked for %q", instance)
-		return endpoint.Nop, nil, nil
-	}
+	// Build a Eureka instancer.
 	instancer := NewInstancer(
 		&fargoConnection,
 		appNameTest,
 		log.With(logger, "component", "instancer"),
 	)
 	defer instancer.Stop()
-	endpointer := sd.NewEndpointer(instancer, factory, log.With(logger, "component", "endpointer"))
 
-	// We should have one endpoint immediately after subscriber instantiation.
-	endpoints, err := endpointer.Endpoints()
-	if err != nil {
-		t.Error(err)
+	// We should have one instance immediately after subscriber instantiation.
+	state := instancer.State()
+	if state.Err != nil {
+		t.Error(state.Err)
 	}
-	if want, have := 1, len(endpoints); want != have {
+	if want, have := 1, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
@@ -81,12 +73,12 @@ func TestIntegration(t *testing.T) {
 	// configured with the properties mentioned in the function comments.
 	time.Sleep(2 * time.Second)
 
-	// Now we should have two endpoints.
-	endpoints, err = endpointer.Endpoints()
-	if err != nil {
-		t.Error(err)
+	// Now we should have two instances.
+	state = instancer.State()
+	if state.Err != nil {
+		t.Error(state.Err)
 	}
-	if want, have := 2, len(endpoints); want != have {
+	if want, have := 2, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 

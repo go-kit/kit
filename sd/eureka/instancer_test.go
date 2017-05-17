@@ -1,23 +1,17 @@
 package eureka
 
 import (
-	"io"
 	"testing"
 	"time"
 
 	"github.com/hudl/fargo"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/sd"
 )
 
 var _ sd.Instancer = &Instancer{} // API check
 
 func TestInstancer(t *testing.T) {
-	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
-		return endpoint.Nop, nil, nil
-	}
-
 	connection := &testConnection{
 		instances:      []*fargo.Instance{instanceTest1},
 		application:    appUpdateTest,
@@ -27,13 +21,12 @@ func TestInstancer(t *testing.T) {
 	instancer := NewInstancer(connection, appNameTest, loggerTest)
 	defer instancer.Stop()
 
-	endpointer := sd.NewEndpointer(instancer, factory, loggerTest)
-	endpoints, err := endpointer.Endpoints()
-	if err != nil {
-		t.Fatal(err)
+	state := instancer.State()
+	if state.Err != nil {
+		t.Fatal(state.Err)
 	}
 
-	if want, have := 1, len(endpoints); want != have {
+	if want, have := 1, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
