@@ -2,13 +2,12 @@ package etcd
 
 import (
 	"errors"
-	"io"
 	"testing"
 
 	stdetcd "github.com/coreos/etcd/client"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/sd"
 )
 
 var (
@@ -24,48 +23,21 @@ var (
 	}
 )
 
-func TestSubscriber(t *testing.T) {
-	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
-		return endpoint.Nop, nil, nil
-	}
+var _ sd.Instancer = &Instancer{} // API check
 
+func TestInstancer(t *testing.T) {
 	client := &fakeClient{
 		responses: map[string]*stdetcd.Response{"/foo": fakeResponse},
 	}
 
-	s, err := NewSubscriber(client, "/foo", factory, log.NewNopLogger())
+	s, err := NewInstancer(client, "/foo", log.NewNopLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer s.Stop()
 
-	if _, err := s.Endpoints(); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestBadFactory(t *testing.T) {
-	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
-		return nil, nil, errors.New("kaboom")
-	}
-
-	client := &fakeClient{
-		responses: map[string]*stdetcd.Response{"/foo": fakeResponse},
-	}
-
-	s, err := NewSubscriber(client, "/foo", factory, log.NewNopLogger())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer s.Stop()
-
-	endpoints, err := s.Endpoints()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want, have := 0, len(endpoints); want != have {
-		t.Errorf("want %d, have %d", want, have)
+	if state := s.State(); state.Err != nil {
+		t.Fatal(state.Err)
 	}
 }
 

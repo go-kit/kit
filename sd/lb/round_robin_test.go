@@ -22,8 +22,8 @@ func TestRoundRobin(t *testing.T) {
 		}
 	)
 
-	subscriber := sd.FixedSubscriber(endpoints)
-	balancer := NewRoundRobin(subscriber)
+	endpointer := sd.FixedEndpointer(endpoints)
+	balancer := NewRoundRobin(endpointer)
 
 	for i, want := range [][]int{
 		{1, 0, 0},
@@ -46,8 +46,8 @@ func TestRoundRobin(t *testing.T) {
 }
 
 func TestRoundRobinNoEndpoints(t *testing.T) {
-	subscriber := sd.FixedSubscriber{}
-	balancer := NewRoundRobin(subscriber)
+	endpointer := sd.FixedEndpointer{}
+	balancer := NewRoundRobin(endpointer)
 	_, err := balancer.Endpoint()
 	if want, have := ErrNoEndpoints, err; want != have {
 		t.Errorf("want %v, have %v", want, have)
@@ -55,7 +55,7 @@ func TestRoundRobinNoEndpoints(t *testing.T) {
 }
 
 func TestRoundRobinNoRace(t *testing.T) {
-	balancer := NewRoundRobin(sd.FixedSubscriber([]endpoint.Endpoint{
+	balancer := NewRoundRobin(sd.FixedEndpointer([]endpoint.Endpoint{
 		endpoint.Nop,
 		endpoint.Nop,
 		endpoint.Nop,

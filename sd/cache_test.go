@@ -1,4 +1,4 @@
-package cache
+package sd
 
 import (
 	"errors"
@@ -16,11 +16,11 @@ func TestCache(t *testing.T) {
 		cb    = make(closer)
 		c     = map[string]io.Closer{"a": ca, "b": cb}
 		f     = func(instance string) (endpoint.Endpoint, io.Closer, error) { return endpoint.Nop, c[instance], nil }
-		cache = New(f, log.NewNopLogger())
+		cache = newEndpointCache(f, log.NewNopLogger(), endpointerOptions{})
 	)
 
 	// Populate
-	cache.Update([]string{"a", "b"})
+	cache.Update(Event{Instances: []string{"a", "b"}})
 	select {
 	case <-ca:
 		t.Errorf("endpoint a closed, not good")
@@ -29,12 +29,10 @@ func TestCache(t *testing.T) {
 	case <-time.After(time.Millisecond):
 		t.Logf("no closures yet, good")
 	}
-	if want, have := 2, len(cache.Endpoints()); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
+	assertEndpointsLen(t, cache, 2)
 
 	// Duplicate, should be no-op
-	cache.Update([]string{"a", "b"})
+	cache.Update(Event{Instances: []string{"a", "b"}})
 	select {
 	case <-ca:
 		t.Errorf("endpoint a closed, not good")
@@ -43,12 +41,10 @@ func TestCache(t *testing.T) {
 	case <-time.After(time.Millisecond):
 		t.Logf("no closures yet, good")
 	}
-	if want, have := 2, len(cache.Endpoints()); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
+	assertEndpointsLen(t, cache, 2)
 
 	// Delete b
-	go cache.Update([]string{"a"})
+	go cache.Update(Event{Instances: []string{"a"}})
 	select {
 	case <-ca:
 		t.Errorf("endpoint a closed, not good")
@@ -57,12 +53,10 @@ func TestCache(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Errorf("didn't close the deleted instance in time")
 	}
-	if want, have := 1, len(cache.Endpoints()); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
+	assertEndpointsLen(t, cache, 1)
 
 	// Delete a
-	go cache.Update([]string{})
+	go cache.Update(Event{Instances: []string{}})
 	select {
 	// case <-cb: will succeed, as it's closed
 	case <-ca:
@@ -70,18 +64,25 @@ func TestCache(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Errorf("didn't close the deleted instance in time")
 	}
-	if want, have := 0, len(cache.Endpoints()); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
+	assertEndpointsLen(t, cache, 0)
 }
 
 func TestBadFactory(t *testing.T) {
-	cache := New(func(string) (endpoint.Endpoint, io.Closer, error) {
+	cache := newEndpointCache(func(string) (endpoint.Endpoint, io.Closer, error) {
 		return nil, nil, errors.New("bad factory")
-	}, log.NewNopLogger())
+	}, log.NewNopLogger(), endpointerOptions{})
 
-	cache.Update([]string{"foo:1234", "bar:5678"})
-	if want, have := 0, len(cache.Endpoints()); want != have {
+	cache.Update(Event{Instances: []string{"foo:1234", "bar:5678"}})
+	assertEndpointsLen(t, cache, 0)
+}
+
+func assertEndpointsLen(t *testing.T, cache *endpointCache, l int) {
+	endpoints, err := cache.Endpoints()
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+		return
+	}
+	if want, have := l, len(endpoints); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }

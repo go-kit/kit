@@ -107,15 +107,15 @@ func TestCreateParentNodes(t *testing.T) {
 		t.Fatal("expected new Client, got nil")
 	}
 
-	s, err := NewSubscriber(c, "/validpath", newFactory(""), log.NewNopLogger())
+	s, err := NewInstancer(c, "/validpath", log.NewNopLogger())
 	if err != stdzk.ErrNoServer {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if s != nil {
-		t.Error("expected failed new Subscriber")
+		t.Error("expected failed new Instancer")
 	}
 
-	s, err = NewSubscriber(c, "invalidpath", newFactory(""), log.NewNopLogger())
+	s, err = NewInstancer(c, "invalidpath", log.NewNopLogger())
 	if err != stdzk.ErrInvalidPath {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -131,12 +131,12 @@ func TestCreateParentNodes(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	s, err = NewSubscriber(c, "/validpath", newFactory(""), log.NewNopLogger())
+	s, err = NewInstancer(c, "/validpath", log.NewNopLogger())
 	if err != ErrClientClosed {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if s != nil {
-		t.Error("expected failed new Subscriber")
+		t.Error("expected failed new Instancer")
 	}
 
 	c, err = NewClient([]string{"localhost:65500"}, log.NewNopLogger(), Payload(payload))
@@ -147,11 +147,11 @@ func TestCreateParentNodes(t *testing.T) {
 		t.Fatal("expected new Client, got nil")
 	}
 
-	s, err = NewSubscriber(c, "/validpath", newFactory(""), log.NewNopLogger())
+	s, err = NewInstancer(c, "/validpath", log.NewNopLogger())
 	if err != stdzk.ErrNoServer {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if s != nil {
-		t.Error("expected failed new Subscriber")
+		t.Error("expected failed new Instancer")
 	}
 }

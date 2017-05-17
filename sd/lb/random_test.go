@@ -25,8 +25,8 @@ func TestRandom(t *testing.T) {
 		endpoints[i] = func(context.Context, interface{}) (interface{}, error) { counts[i0]++; return struct{}{}, nil }
 	}
 
-	subscriber := sd.FixedSubscriber(endpoints)
-	balancer := NewRandom(subscriber, seed)
+	endpointer := sd.FixedEndpointer(endpoints)
+	balancer := NewRandom(endpointer, seed)
 
 	for i := 0; i < iterations; i++ {
 		endpoint, _ := balancer.Endpoint()
@@ -42,8 +42,8 @@ func TestRandom(t *testing.T) {
 }
 
 func TestRandomNoEndpoints(t *testing.T) {
-	subscriber := sd.FixedSubscriber{}
-	balancer := NewRandom(subscriber, 1415926)
+	endpointer := sd.FixedEndpointer{}
+	balancer := NewRandom(endpointer, 1415926)
 	_, err := balancer.Endpoint()
 	if want, have := ErrNoEndpoints, err; want != have {
 		t.Errorf("want %v, have %v", want, have)

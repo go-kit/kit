@@ -8,9 +8,12 @@ import (
 	"github.com/hudl/fargo"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/sd"
 )
 
-func TestSubscriber(t *testing.T) {
+var _ sd.Instancer = &Instancer{} // API check
+
+func TestInstancer(t *testing.T) {
 	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
 		return endpoint.Nop, nil, nil
 	}
@@ -21,10 +24,11 @@ func TestSubscriber(t *testing.T) {
 		errApplication: nil,
 	}
 
-	subscriber := NewSubscriber(connection, appNameTest, factory, loggerTest)
-	defer subscriber.Stop()
+	instancer := NewInstancer(connection, appNameTest, loggerTest)
+	defer instancer.Stop()
+	endpointer := sd.NewEndpointer(instancer, factory, loggerTest)
 
-	endpoints, err := subscriber.Endpoints()
+	endpoints, err := endpointer.Endpoints()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +38,7 @@ func TestSubscriber(t *testing.T) {
 	}
 }
 
-func TestSubscriberScheduleUpdates(t *testing.T) {
+func TestInstancerScheduleUpdates(t *testing.T) {
 	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
 		return endpoint.Nop, nil, nil
 	}
@@ -45,17 +49,18 @@ func TestSubscriberScheduleUpdates(t *testing.T) {
 		errApplication: nil,
 	}
 
-	subscriber := NewSubscriber(connection, appNameTest, factory, loggerTest)
-	defer subscriber.Stop()
+	instancer := NewInstancer(connection, appNameTest, loggerTest)
+	defer instancer.Stop()
+	endpointer := sd.NewEndpointer(instancer, factory, loggerTest)
 
-	endpoints, _ := subscriber.Endpoints()
+	endpoints, _ := endpointer.Endpoints()
 	if want, have := 1, len(endpoints); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	time.Sleep(50 * time.Millisecond)
 
-	endpoints, _ = subscriber.Endpoints()
+	endpoints, _ = endpointer.Endpoints()
 	if want, have := 2, len(endpoints); want != have {
 		t.Errorf("want %v, have %v", want, have)
 	}
@@ -72,10 +77,11 @@ func TestBadFactory(t *testing.T) {
 		errApplication: nil,
 	}
 
-	subscriber := NewSubscriber(connection, appNameTest, factory, loggerTest)
-	defer subscriber.Stop()
+	instancer := NewInstancer(connection, appNameTest, loggerTest)
+	defer instancer.Stop()
+	endpointer := sd.NewEndpointer(instancer, factory, loggerTest)
 
-	endpoints, err := subscriber.Endpoints()
+	endpoints, err := endpointer.Endpoints()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +91,7 @@ func TestBadFactory(t *testing.T) {
 	}
 }
 
-func TestBadSubscriberInstances(t *testing.T) {
+func TestBadInstancerInstances(t *testing.T) {
 	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
 		return endpoint.Nop, nil, nil
 	}
@@ -97,10 +103,11 @@ func TestBadSubscriberInstances(t *testing.T) {
 		errApplication: nil,
 	}
 
-	subscriber := NewSubscriber(connection, appNameTest, factory, loggerTest)
-	defer subscriber.Stop()
+	instancer := NewInstancer(connection, appNameTest, loggerTest)
+	defer instancer.Stop()
+	endpointer := sd.NewEndpointer(instancer, factory, loggerTest)
 
-	endpoints, err := subscriber.Endpoints()
+	endpoints, err := endpointer.Endpoints()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +117,7 @@ func TestBadSubscriberInstances(t *testing.T) {
 	}
 }
 
-func TestBadSubscriberScheduleUpdates(t *testing.T) {
+func TestBadInstancerScheduleUpdates(t *testing.T) {
 	factory := func(string) (endpoint.Endpoint, io.Closer, error) {
 		return endpoint.Nop, nil, nil
 	}
@@ -121,10 +128,11 @@ func TestBadSubscriberScheduleUpdates(t *testing.T) {
 		errApplication: errTest,
 	}
 
-	subscriber := NewSubscriber(connection, appNameTest, factory, loggerTest)
-	defer subscriber.Stop()
+	instancer := NewInstancer(connection, appNameTest, loggerTest)
+	defer instancer.Stop()
+	endpointer := sd.NewEndpointer(instancer, factory, loggerTest)
 
-	endpoints, err := subscriber.Endpoints()
+	endpoints, err := endpointer.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}
@@ -134,7 +142,7 @@ func TestBadSubscriberScheduleUpdates(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	endpoints, err = subscriber.Endpoints()
+	endpoints, err = endpointer.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}

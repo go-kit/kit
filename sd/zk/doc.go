@@ -1,2 +1,2 @@
-// Package zk provides subscriber and registrar implementations for ZooKeeper.
+// Package zk provides Instancer and Registrar implementations for ZooKeeper.
 package zk

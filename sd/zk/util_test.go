@@ -114,7 +114,7 @@ func newFactory(fakeError string) sd.Factory {
 	}
 }
 
-func asyncTest(timeout time.Duration, want int, s *Subscriber) (err error) {
+func asyncTest(timeout time.Duration, want int, s sd.Endpointer) (err error) {
 	var endpoints []endpoint.Endpoint
 	have := -1 // want can never be <0
 	t := time.After(timeout)

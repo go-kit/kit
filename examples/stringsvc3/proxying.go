@@ -40,7 +40,7 @@ func proxyingMiddleware(ctx context.Context, instances string, logger log.Logger
 	// discovery system.
 	var (
 		instanceList = split(instances)
-		subscriber   sd.FixedSubscriber
+		endpointer   sd.FixedEndpointer
 	)
 	logger.Log("proxy_to", fmt.Sprint(instanceList))
 	for _, instance := range instanceList {
@@ -48,12 +48,12 @@ func proxyingMiddleware(ctx context.Context, instances string, logger log.Logger
 		e = makeUppercaseProxy(ctx, instance)
 		e = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(e)
 		e = ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(float64(qps), int64(qps)))(e)
-		subscriber = append(subscriber, e)
+		endpointer = append(endpointer, e)
 	}
 
 	// Now, build a single, retrying, load-balancing endpoint out of all of
 	// those individual endpoints.
-	balancer := lb.NewRoundRobin(subscriber)
+	balancer := lb.NewRoundRobin(endpointer)
 	retry := lb.Retry(maxAttempts, maxTime, balancer)
 
 	// And finally, return the ServiceMiddleware, implemented by proxymw.

@@ -1,2 +1,2 @@
-// Package dnssrv provides a subscriber implementation for DNS SRV records.
+// Package dnssrv provides an Instancer implementation for DNS SRV records.
 package dnssrv

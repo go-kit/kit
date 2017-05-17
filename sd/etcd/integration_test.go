@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/sd"
 )
 
 // Package sd/etcd provides a wrapper around the etcd key/value store. This
@@ -67,24 +68,28 @@ func TestIntegration(t *testing.T) {
 		t.Fatalf("want %q, have %q", want, have)
 	}
 
-	subscriber, err := NewSubscriber(
+	instancer, err := NewInstancer(
 		client,
 		prefix,
-		func(string) (endpoint.Endpoint, io.Closer, error) { return endpoint.Nop, nil, nil },
-		log.With(log.NewLogfmtLogger(os.Stderr), "component", "subscriber"),
+		log.With(log.NewLogfmtLogger(os.Stderr), "component", "instancer"),
 	)
 	if err != nil {
-		t.Fatalf("NewSubscriber: %v", err)
+		t.Fatalf("NewInstancer: %v", err)
 	}
-	t.Logf("Constructed Subscriber OK")
+	endpointer := sd.NewEndpointer(
+		instancer,
+		func(string) (endpoint.Endpoint, io.Closer, error) { return endpoint.Nop, nil, nil },
+		log.With(log.NewLogfmtLogger(os.Stderr), "component", "instancer"),
+	)
+	t.Logf("Constructed Endpointer OK")
 
 	if !within(time.Second, func() bool {
-		endpoints, err := subscriber.Endpoints()
+		endpoints, err := endpointer.Endpoints()
 		return err == nil && len(endpoints) == 1
 	}) {
-		t.Fatalf("Subscriber didn't see Register in time")
+		t.Fatalf("Endpointer didn't see Register in time")
 	}
-	t.Logf("Subscriber saw Register OK")
+	t.Logf("Endpointer saw Register OK")
 
 	// Deregister first instance of test data.
 	registrar.Deregister()
@@ -92,11 +97,11 @@ func TestIntegration(t *testing.T) {
 
 	// Check it was deregistered.
 	if !within(time.Second, func() bool {
-		endpoints, err := subscriber.Endpoints()
+		endpoints, err := endpointer.Endpoints()
 		t.Logf("Checking Deregister: len(endpoints) = %d, err = %v", len(endpoints), err)
 		return err == nil && len(endpoints) == 0
 	}) {
-		t.Fatalf("Subscriber didn't see Deregister in time")
+		t.Fatalf("Endpointer didn't see Deregister in time")
 	}
 
 	// Verify test data no longer exists in etcd.

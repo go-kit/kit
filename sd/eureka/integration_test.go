@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/sd"
 )
 
 // Package sd/eureka provides a wrapper around the Netflix Eureka service
@@ -54,16 +55,16 @@ func TestIntegration(t *testing.T) {
 		t.Logf("factory invoked for %q", instance)
 		return endpoint.Nop, nil, nil
 	}
-	s := NewSubscriber(
+	instancer := NewInstancer(
 		&fargoConnection,
 		appNameTest,
-		factory,
-		log.With(logger, "component", "subscriber"),
+		log.With(logger, "component", "instancer"),
 	)
-	defer s.Stop()
+	defer instancer.Stop()
+	endpointer := sd.NewEndpointer(instancer, factory, log.With(logger, "component", "endpointer"))
 
 	// We should have one endpoint immediately after subscriber instantiation.
-	endpoints, err := s.Endpoints()
+	endpoints, err := endpointer.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}
@@ -81,7 +82,7 @@ func TestIntegration(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// Now we should have two endpoints.
-	endpoints, err = s.Endpoints()
+	endpoints, err = endpointer.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}
@@ -96,7 +97,7 @@ func TestIntegration(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// And then there was one.
-	endpoints, err = s.Endpoints()
+	endpoints, err = endpointer.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}

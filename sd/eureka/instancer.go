@@ -5,37 +5,32 @@ import (
 
 	"github.com/hudl/fargo"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
-	"github.com/go-kit/kit/sd/cache"
+	"github.com/go-kit/kit/sd/internal/instance"
 )
 
-// Subscriber yields endpoints stored in the Eureka registry for the given app.
-// Changes in that app are watched and will update the Subscriber endpoints.
-type Subscriber struct {
-	conn    fargoConnection
-	app     string
-	factory sd.Factory
-	logger  log.Logger
-	cache   *cache.Cache
-	quitc   chan chan struct{}
+// Instancer yields instances stored in the Eureka registry for the given app.
+// Changes in that app are watched and will update the subscribers.
+type Instancer struct {
+	instance.Cache
+	conn   fargoConnection
+	app    string
+	logger log.Logger
+	quitc  chan chan struct{}
 }
 
-var _ sd.Subscriber = (*Subscriber)(nil)
-
-// NewSubscriber returns a Eureka subscriber. It will start watching the given
-// app string for changes, and update the endpoints accordingly.
-func NewSubscriber(conn fargoConnection, app string, factory sd.Factory, logger log.Logger) *Subscriber {
+// NewInstancer returns a Eureka Instancer. It will start watching the given
+// app string for changes, and update the subscribers accordingly.
+func NewInstancer(conn fargoConnection, app string, logger log.Logger) *Instancer {
 	logger = log.With(logger, "app", app)
 
-	s := &Subscriber{
-		conn:    conn,
-		app:     app,
-		factory: factory,
-		logger:  logger,
-		cache:   cache.New(factory, logger),
-		quitc:   make(chan chan struct{}),
+	s := &Instancer{
+		Cache:  *instance.NewCache(),
+		conn:   conn,
+		app:    app,
+		logger: logger,
+		quitc:  make(chan chan struct{}),
 	}
 
 	instances, err := s.getInstances()
@@ -45,25 +40,20 @@ func NewSubscriber(conn fargoConnection, app string, factory sd.Factory, logger 
 		s.logger.Log("during", "getInstances", "err", err)
 	}
 
-	s.cache.Update(instances)
+	s.Update(sd.Event{Instances: instances, Err: err})
 	go s.loop()
 	return s
 }
 
-// Endpoints implements the Subscriber interface.
-func (s *Subscriber) Endpoints() ([]endpoint.Endpoint, error) {
-	return s.cache.Endpoints(), nil
-}
-
-// Stop terminates the subscriber.
-func (s *Subscriber) Stop() {
+// Stop terminates the Instancer.
+func (s *Instancer) Stop() {
 	q := make(chan struct{})
 	s.quitc <- q
 	<-q
 	s.quitc = nil
 }
 
-func (s *Subscriber) loop() {
+func (s *Instancer) loop() {
 	var (
 		await   = false
 		done    = make(chan struct{})
@@ -76,11 +66,12 @@ func (s *Subscriber) loop() {
 		case update := <-updatec:
 			if update.Err != nil {
 				s.logger.Log("during", "Update", "err", update.Err)
+				s.Update(sd.Event{Err: update.Err})
 				continue
 			}
 			instances := convertFargoAppToInstances(update.App)
 			s.logger.Log("instances", len(instances))
-			s.cache.Update(instances)
+			s.Update(sd.Event{Instances: instances})
 
 		case q := <-s.quitc:
 			close(q)
@@ -89,7 +80,7 @@ func (s *Subscriber) loop() {
 	}
 }
 
-func (s *Subscriber) getInstances() ([]string, error) {
+func (s *Instancer) getInstances() ([]string, error) {
 	app, err := s.conn.GetApp(s.app)
 	if err != nil {
 		return nil, err

@@ -3,18 +3,23 @@ package zk
 import (
 	"testing"
 	"time"
+
+	"github.com/go-kit/kit/sd"
 )
 
-func TestSubscriber(t *testing.T) {
+var _ sd.Instancer = &Instancer{}
+
+func TestInstancer(t *testing.T) {
 	client := newFakeClient()
 
-	s, err := NewSubscriber(client, path, newFactory(""), logger)
+	instancer, err := NewInstancer(client, path, logger)
 	if err != nil {
-		t.Fatalf("failed to create new Subscriber: %v", err)
+		t.Fatalf("failed to create new Instancer: %v", err)
 	}
-	defer s.Stop()
+	defer instancer.Stop()
+	endpointer := sd.NewEndpointer(instancer, newFactory(""), logger)
 
-	if _, err := s.Endpoints(); err != nil {
+	if _, err := endpointer.Endpoints(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -22,11 +27,12 @@ func TestSubscriber(t *testing.T) {
 func TestBadFactory(t *testing.T) {
 	client := newFakeClient()
 
-	s, err := NewSubscriber(client, path, newFactory("kaboom"), logger)
+	instancer, err := NewInstancer(client, path, logger)
 	if err != nil {
-		t.Fatalf("failed to create new Subscriber: %v", err)
+		t.Fatalf("failed to create new Instancer: %v", err)
 	}
-	defer s.Stop()
+	defer instancer.Stop()
+	endpointer := sd.NewEndpointer(instancer, newFactory("kaboom"), logger)
 
 	// instance1 came online
 	client.AddService(path+"/instance1", "kaboom")
@@ -34,7 +40,7 @@ func TestBadFactory(t *testing.T) {
 	// instance2 came online
 	client.AddService(path+"/instance2", "zookeeper_node_data")
 
-	if err = asyncTest(100*time.Millisecond, 1, s); err != nil {
+	if err = asyncTest(100*time.Millisecond, 1, endpointer); err != nil {
 		t.Error(err)
 	}
 }
@@ -42,13 +48,14 @@ func TestBadFactory(t *testing.T) {
 func TestServiceUpdate(t *testing.T) {
 	client := newFakeClient()
 
-	s, err := NewSubscriber(client, path, newFactory(""), logger)
+	instancer, err := NewInstancer(client, path, logger)
 	if err != nil {
-		t.Fatalf("failed to create new Subscriber: %v", err)
+		t.Fatalf("failed to create new Instancer: %v", err)
 	}
-	defer s.Stop()
+	defer instancer.Stop()
+	endpointer := sd.NewEndpointer(instancer, newFactory(""), logger)
 
-	endpoints, err := s.Endpoints()
+	endpoints, err := endpointer.Endpoints()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +70,7 @@ func TestServiceUpdate(t *testing.T) {
 	client.AddService(path+"/instance2", "zookeeper_node_data2")
 
 	// we should have 2 instances
-	if err = asyncTest(100*time.Millisecond, 2, s); err != nil {
+	if err = asyncTest(100*time.Millisecond, 2, endpointer); err != nil {
 		t.Error(err)
 	}
 
@@ -81,7 +88,7 @@ func TestServiceUpdate(t *testing.T) {
 	client.AddService(path+"/instance3", "zookeeper_node_data3")
 
 	// we should have 3 instances
-	if err = asyncTest(100*time.Millisecond, 3, s); err != nil {
+	if err = asyncTest(100*time.Millisecond, 3, endpointer); err != nil {
 		t.Error(err)
 	}
 
@@ -92,26 +99,27 @@ func TestServiceUpdate(t *testing.T) {
 	client.RemoveService(path + "/instance2")
 
 	// we should have 1 instance
-	if err = asyncTest(100*time.Millisecond, 1, s); err != nil {
+	if err = asyncTest(100*time.Millisecond, 1, endpointer); err != nil {
 		t.Error(err)
 	}
 }
 
-func TestBadSubscriberCreate(t *testing.T) {
+func TestBadInstancerCreate(t *testing.T) {
 	client := newFakeClient()
 	client.SendErrorOnWatch()
-	s, err := NewSubscriber(client, path, newFactory(""), logger)
+
+	instancer, err := NewInstancer(client, path, logger)
 	if err == nil {
-		t.Error("expected error on new Subscriber")
+		t.Error("expected error on new Instancer")
 	}
-	if s != nil {
-		t.Error("expected Subscriber not to be created")
+	if instancer != nil {
+		t.Error("expected Instancer not to be created")
 	}
-	s, err = NewSubscriber(client, "BadPath", newFactory(""), logger)
+	instancer, err = NewInstancer(client, "BadPath", logger)
 	if err == nil {
-		t.Error("expected error on new Subscriber")
+		t.Error("expected error on new Instancer")
 	}
-	if s != nil {
-		t.Error("expected Subscriber not to be created")
+	if instancer != nil {
+		t.Error("expected Instancer not to be created")
 	}
 }

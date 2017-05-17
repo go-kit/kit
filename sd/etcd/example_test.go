@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/kit/sd/lb"
 )
 
@@ -44,16 +45,18 @@ func Example() {
 	defer registrar.Deregister()
 
 	// It's likely that we'll also want to connect to other services and call
-	// their methods. We can build a subscriber to listen for changes from etcd
-	// and build endpoints, wrap it with a load-balancer to pick a single
+	// their methods. We can build an Instancer to listen for changes from etcd,
+	// create Endpointer, wrap it with a load-balancer to pick a single
 	// endpoint, and finally wrap it with a retry strategy to get something that
 	// can be used as an endpoint directly.
 	barPrefix := "/services/barsvc"
-	subscriber, err := NewSubscriber(client, barPrefix, barFactory, log.NewNopLogger())
+	logger := log.NewNopLogger()
+	instancer, err := NewInstancer(client, barPrefix, logger)
 	if err != nil {
 		panic(err)
 	}
-	balancer := lb.NewRoundRobin(subscriber)
+	endpointer := sd.NewEndpointer(instancer, barFactory, logger)
+	balancer := lb.NewRoundRobin(endpointer)
 	retry := lb.Retry(3, 3*time.Second, balancer)
 
 	// And now retry can be used like any other endpoint.
