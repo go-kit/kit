@@ -144,7 +144,6 @@ func TestClientFinalizer(t *testing.T) {
 	var (
 		headerKey    = "X-Henlo-Lizer"
 		headerVal    = "Helllo you stinky lizard"
-		statusCode   = http.StatusTeapot
 		responseBody = "go eat a fly ugly\n"
 		done         = make(chan struct{})
 		encode       = func(context.Context, *http.Request, interface{}) error { return nil }
@@ -155,7 +154,6 @@ func TestClientFinalizer(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set(headerKey, headerVal)
-		w.WriteHeader(statusCode)
 		w.Write([]byte(responseBody))
 	}))
 	defer server.Close()
@@ -165,11 +163,7 @@ func TestClientFinalizer(t *testing.T) {
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.ClientFinalizer(func(ctx context.Context, code int, _ *http.Request) {
-			if want, have := statusCode, code; want != have {
-				t.Errorf("StatusCode: want %d, have %d", want, have)
-			}
-
+		httptransport.ClientFinalizer(func(ctx context.Context, err error) {
 			responseHeader := ctx.Value(httptransport.ContextKeyResponseHeaders).(http.Header)
 			if want, have := headerVal, responseHeader.Get(headerKey); want != have {
 				t.Errorf("%s: want %q, have %q", headerKey, want, have)
