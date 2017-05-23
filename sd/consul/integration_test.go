@@ -78,4 +78,35 @@ func TestIntegration(t *testing.T) {
 	if want, have := 1, len(endpoints); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
+
+	// Add a TTL health check
+	c := &stdconsul.AgentCheckRegistration{
+		ID:                "my-check-ID",
+		ServiceID:         "my-service-ID",
+		Name:              "my-check-name",
+		AgentServiceCheck: stdconsul.AgentServiceCheck{TTL: "5s"},
+	}
+	registrar.AddCheck(c, testTTLCheck)
+
+	// We should have a registered check
+	checks, _, err := client.Checks("my-service-name", &stdconsul.QueryOptions{})
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 1, len(checks); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	// Normally we would defer this one right after AddCheck
+	registrar.RemoveCheck("my-check-ID")
+
+	// We should have no registered checks
+	checks, _, err = client.Checks("my-service-name", &stdconsul.QueryOptions{})
+	if err != nil {
+		t.Error(err)
+	}
+	if want, have := 0, len(checks); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
 }
