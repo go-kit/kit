@@ -140,6 +140,56 @@ func TestHTTPClientBufferedStream(t *testing.T) {
 	}
 }
 
+func TestClientFinalizer(t *testing.T) {
+	var (
+		headerKey    = "X-Henlo-Lizer"
+		headerVal    = "Helllo you stinky lizard"
+		responseBody = "go eat a fly ugly\n"
+		done         = make(chan struct{})
+		encode       = func(context.Context, *http.Request, interface{}) error { return nil }
+		decode       = func(_ context.Context, r *http.Response) (interface{}, error) {
+			return TestResponse{r.Body, ""}, nil
+		}
+	)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set(headerKey, headerVal)
+		w.Write([]byte(responseBody))
+	}))
+	defer server.Close()
+
+	client := httptransport.NewClient(
+		"GET",
+		mustParse(server.URL),
+		encode,
+		decode,
+		httptransport.ClientFinalizer(func(ctx context.Context, err error) {
+			responseHeader := ctx.Value(httptransport.ContextKeyResponseHeaders).(http.Header)
+			if want, have := headerVal, responseHeader.Get(headerKey); want != have {
+				t.Errorf("%s: want %q, have %q", headerKey, want, have)
+			}
+
+			responseSize := ctx.Value(httptransport.ContextKeyResponseSize).(int64)
+			if want, have := int64(len(responseBody)), responseSize; want != have {
+				t.Errorf("response size: want %d, have %d", want, have)
+			}
+
+			close(done)
+		}),
+	)
+
+	_, err := client.Endpoint()(context.Background(), struct{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for finalizer")
+	}
+}
+
 func TestEncodeJSONRequest(t *testing.T) {
 	var header http.Header
 	var body string

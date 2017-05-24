@@ -23,6 +23,7 @@ type Client struct {
 	dec            DecodeResponseFunc
 	before         []RequestFunc
 	after          []ClientResponseFunc
+	finalizer      ClientFinalizerFunc
 	bufferedStream bool
 }
 
@@ -72,6 +73,12 @@ func ClientAfter(after ...ClientResponseFunc) ClientOption {
 	return func(c *Client) { c.after = append(c.after, after...) }
 }
 
+// ClientFinalizer is executed at the end of every HTTP request.
+// By default, no finalizer is registered.
+func ClientFinalizer(f ClientFinalizerFunc) ClientOption {
+	return func(s *Client) { s.finalizer = f }
+}
+
 // BufferedStream sets whether the Response.Body is left open, allowing it
 // to be read from later. Useful for transporting a file as a buffered stream.
 func BufferedStream(buffered bool) ClientOption {
@@ -83,6 +90,20 @@ func (c Client) Endpoint() endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
+
+		var (
+			resp *http.Response
+			err  error
+		)
+		if c.finalizer != nil {
+			defer func() {
+				if resp != nil {
+					ctx = context.WithValue(ctx, ContextKeyResponseHeaders, resp.Header)
+					ctx = context.WithValue(ctx, ContextKeyResponseSize, resp.ContentLength)
+				}
+				c.finalizer(ctx, err)
+			}()
+		}
 
 		req, err := http.NewRequest(c.method, c.tgt.String(), nil)
 		if err != nil {
@@ -97,10 +118,11 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			ctx = f(ctx, req)
 		}
 
-		resp, err := ctxhttp.Do(ctx, c.client, req)
+		resp, err = ctxhttp.Do(ctx, c.client, req)
 		if err != nil {
 			return nil, err
 		}
+
 		if !c.bufferedStream {
 			defer resp.Body.Close()
 		}
@@ -117,6 +139,14 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		return response, nil
 	}
 }
+
+// ClientFinalizerFunc can be used to perform work at the end of a client HTTP
+// request, after the response is returned. The principal
+// intended use is for error logging. Additional response parameters are
+// provided in the context under keys with the ContextKeyResponse prefix.
+// Note: err may be nil. There maybe also no additional response parameters depending on
+// when an error occurs.
+type ClientFinalizerFunc func(ctx context.Context, err error)
 
 // EncodeJSONRequest is an EncodeRequestFunc that serializes the request as a
 // JSON object to the Request body. Many JSON-over-HTTP services can use it as
