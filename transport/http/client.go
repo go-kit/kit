@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"golang.org/x/net/context/ctxhttp"
-
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -118,7 +116,8 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			ctx = f(ctx, req)
 		}
 
-		resp, err = ctxhttp.Do(ctx, c.client, req)
+		resp, err = c.client.Do(req.WithContext(ctx))
+
 		if err != nil {
 			return nil, err
 		}
