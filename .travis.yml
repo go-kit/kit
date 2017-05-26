@@ -3,6 +3,6 @@ language: go
 script: go test -race -v ./...
 
 go:
-    - 1.7.5
-    - 1.8
+    - 1.7.x
+    - 1.8.x
     - tip
