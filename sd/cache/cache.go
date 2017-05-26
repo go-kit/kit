@@ -11,16 +11,19 @@ import (
 	"github.com/go-kit/kit/sd"
 )
 
+// TODO move this to endpoint/cache
+
 // Cache collects the most recent set of endpoints from a service discovery
 // system via a subscriber, and makes them available to consumers. Cache is
 // meant to be embedded inside of a concrete subscriber, and can serve Service
 // invocations directly.
 type Cache struct {
-	mtx     sync.RWMutex
-	factory sd.Factory
-	cache   map[string]endpointCloser
-	slice   atomic.Value // []endpoint.Endpoint
-	logger  log.Logger
+	mtx       sync.RWMutex
+	factory   sd.Factory
+	cache     map[string]endpointCloser
+	instances atomic.Value // []string
+	endpoints atomic.Value // []endpoint.Endpoint
+	logger    log.Logger
 }
 
 type endpointCloser struct {
@@ -75,22 +78,29 @@ func (c *Cache) Update(instances []string) {
 	}
 
 	// Populate the slice of endpoints.
-	slice := make([]endpoint.Endpoint, 0, len(cache))
+	endpoints := make([]endpoint.Endpoint, 0, len(cache))
 	for _, instance := range instances {
 		// A bad factory may mean an instance is not present.
 		if _, ok := cache[instance]; !ok {
 			continue
 		}
-		slice = append(slice, cache[instance].Endpoint)
+		endpoints = append(endpoints, cache[instance].Endpoint)
 	}
 
 	// Swap and trigger GC for old copies.
-	c.slice.Store(slice)
+	c.instances.Store(instances)
+	c.endpoints.Store(endpoints)
 	c.cache = cache
 }
 
 // Endpoints yields the current set of (presumably identical) endpoints, ordered
 // lexicographically by the corresponding instance string.
 func (c *Cache) Endpoints() []endpoint.Endpoint {
-	return c.slice.Load().([]endpoint.Endpoint)
+	return c.endpoints.Load().([]endpoint.Endpoint)
+}
+
+// Instances yields the current set of (presumably identical) instance locations,
+// ordered lexicographically.
+func (c *Cache) Instances() []string {
+	return c.instances.Load().([]string)
 }

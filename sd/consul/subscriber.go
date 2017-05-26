@@ -55,6 +55,11 @@ func NewSubscriber(client Client, factory sd.Factory, logger log.Logger, service
 	return s
 }
 
+// Instances implements the Discoverer interface.
+func (s *Subscriber) Instances() ([]string, error) {
+	return s.cache.Instances(), nil
+}
+
 // Endpoints implements the Subscriber interface.
 func (s *Subscriber) Endpoints() ([]endpoint.Endpoint, error) {
 	return s.cache.Endpoints(), nil
