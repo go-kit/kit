@@ -13,7 +13,7 @@ import (
 // Instancer yields instances stored in the Eureka registry for the given app.
 // Changes in that app are watched and will update the subscribers.
 type Instancer struct {
-	instance.Cache
+	cache  *instance.Cache
 	conn   fargoConnection
 	app    string
 	logger log.Logger
@@ -26,7 +26,7 @@ func NewInstancer(conn fargoConnection, app string, logger log.Logger) *Instance
 	logger = log.With(logger, "app", app)
 
 	s := &Instancer{
-		Cache:  *instance.NewCache(),
+		cache:  instance.NewCache(),
 		conn:   conn,
 		app:    app,
 		logger: logger,
@@ -40,7 +40,7 @@ func NewInstancer(conn fargoConnection, app string, logger log.Logger) *Instance
 		s.logger.Log("during", "getInstances", "err", err)
 	}
 
-	s.Update(sd.Event{Instances: instances, Err: err})
+	s.cache.Update(sd.Event{Instances: instances, Err: err})
 	go s.loop()
 	return s
 }
@@ -66,12 +66,12 @@ func (s *Instancer) loop() {
 		case update := <-updatec:
 			if update.Err != nil {
 				s.logger.Log("during", "Update", "err", update.Err)
-				s.Update(sd.Event{Err: update.Err})
+				s.cache.Update(sd.Event{Err: update.Err})
 				continue
 			}
 			instances := convertFargoAppToInstances(update.App)
 			s.logger.Log("instances", len(instances))
-			s.Update(sd.Event{Instances: instances})
+			s.cache.Update(sd.Event{Instances: instances})
 
 		case q := <-s.quitc:
 			close(q)
@@ -94,4 +94,14 @@ func convertFargoAppToInstances(app *fargo.Application) []string {
 		instances[i] = fmt.Sprintf("%s:%d", inst.IPAddr, inst.Port)
 	}
 	return instances
+}
+
+// Register implements Instancer.
+func (s *Instancer) Register(ch chan<- sd.Event) {
+	s.cache.Register(ch)
+}
+
+// Deregister implements Instancer.
+func (s *Instancer) Deregister(ch chan<- sd.Event) {
+	s.cache.Deregister(ch)
 }

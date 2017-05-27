@@ -15,7 +15,7 @@ const defaultIndex = 0
 
 // Instancer yields instances for a service in Consul.
 type Instancer struct {
-	instance.Cache
+	cache       *instance.Cache
 	client      Client
 	logger      log.Logger
 	service     string
@@ -29,7 +29,7 @@ type Instancer struct {
 // are present.
 func NewInstancer(client Client, logger log.Logger, service string, tags []string, passingOnly bool) *Instancer {
 	s := &Instancer{
-		Cache:       *instance.NewCache(),
+		cache:       instance.NewCache(),
 		client:      client,
 		logger:      log.With(logger, "service", service, "tags", fmt.Sprint(tags)),
 		service:     service,
@@ -45,7 +45,7 @@ func NewInstancer(client Client, logger log.Logger, service string, tags []strin
 		s.logger.Log("err", err)
 	}
 
-	s.Update(sd.Event{Instances: instances, Err: err})
+	s.cache.Update(sd.Event{Instances: instances, Err: err})
 	go s.loop(index)
 	return s
 }
@@ -67,9 +67,9 @@ func (s *Instancer) loop(lastIndex uint64) {
 			return // stopped via quitc
 		case err != nil:
 			s.logger.Log("err", err)
-			s.Update(sd.Event{Err: err})
+			s.cache.Update(sd.Event{Err: err})
 		default:
-			s.Update(sd.Event{Instances: instances})
+			s.cache.Update(sd.Event{Instances: instances})
 		}
 	}
 }
@@ -121,6 +121,16 @@ func (s *Instancer) getInstances(lastIndex uint64, interruptc chan struct{}) ([]
 	case <-interruptc:
 		return nil, 0, io.EOF
 	}
+}
+
+// Register implements Instancer.
+func (s *Instancer) Register(ch chan<- sd.Event) {
+	s.cache.Register(ch)
+}
+
+// Deregister implements Instancer.
+func (s *Instancer) Deregister(ch chan<- sd.Event) {
+	s.cache.Deregister(ch)
 }
 
 func filterEntries(entries []*consul.ServiceEntry, tags ...string) []*consul.ServiceEntry {

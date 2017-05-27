@@ -11,7 +11,7 @@ import (
 // Instancer yield instances stored in a certain ZooKeeper path. Any kind of
 // change in that path is watched and will update the subscribers.
 type Instancer struct {
-	instance.Cache
+	cache  *instance.Cache
 	client Client
 	path   string
 	logger log.Logger
@@ -22,7 +22,7 @@ type Instancer struct {
 // the given path for changes and update the Instancer endpoints.
 func NewInstancer(c Client, path string, logger log.Logger) (*Instancer, error) {
 	s := &Instancer{
-		Cache:  *instance.NewCache(),
+		cache:  instance.NewCache(),
 		client: c,
 		path:   path,
 		logger: logger,
@@ -37,11 +37,11 @@ func NewInstancer(c Client, path string, logger log.Logger) (*Instancer, error) 
 	instances, eventc, err := s.client.GetEntries(s.path)
 	if err != nil {
 		logger.Log("path", s.path, "msg", "failed to retrieve entries", "err", err)
-		// TODO why zk constructor exits when other implementations continue?
+		// other implementations continue here, but we exit because we don't know if eventc is valid
 		return nil, err
 	}
 	logger.Log("path", s.path, "instances", len(instances))
-	s.Update(sd.Event{Instances: instances})
+	s.cache.Update(sd.Event{Instances: instances})
 
 	go s.loop(eventc)
 
@@ -62,11 +62,11 @@ func (s *Instancer) loop(eventc <-chan zk.Event) {
 			instances, eventc, err = s.client.GetEntries(s.path)
 			if err != nil {
 				s.logger.Log("path", s.path, "msg", "failed to retrieve entries", "err", err)
-				s.Update(sd.Event{Err: err})
+				s.cache.Update(sd.Event{Err: err})
 				continue
 			}
 			s.logger.Log("path", s.path, "instances", len(instances))
-			s.Update(sd.Event{Instances: instances})
+			s.cache.Update(sd.Event{Instances: instances})
 
 		case <-s.quitc:
 			return
@@ -77,4 +77,14 @@ func (s *Instancer) loop(eventc <-chan zk.Event) {
 // Stop terminates the Instancer.
 func (s *Instancer) Stop() {
 	close(s.quitc)
+}
+
+// Register implements Instancer.
+func (s *Instancer) Register(ch chan<- sd.Event) {
+	s.cache.Register(ch)
+}
+
+// Deregister implements Instancer.
+func (s *Instancer) Deregister(ch chan<- sd.Event) {
+	s.cache.Deregister(ch)
 }

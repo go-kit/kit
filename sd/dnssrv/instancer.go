@@ -13,7 +13,7 @@ import (
 // Instancer yields instances from the named DNS SRV record. The name is
 // resolved on a fixed schedule. Priorities and weights are ignored.
 type Instancer struct {
-	instance.Cache
+	cache  *instance.Cache
 	name   string
 	logger log.Logger
 	quit   chan struct{}
@@ -38,7 +38,7 @@ func NewInstancerDetailed(
 	logger log.Logger,
 ) *Instancer {
 	p := &Instancer{
-		Cache:  *instance.NewCache(),
+		cache:  instance.NewCache(),
 		name:   name,
 		logger: logger,
 		quit:   make(chan struct{}),
@@ -50,7 +50,7 @@ func NewInstancerDetailed(
 	} else {
 		logger.Log("name", name, "err", err)
 	}
-	p.Update(sd.Event{Instances: instances, Err: err})
+	p.cache.Update(sd.Event{Instances: instances, Err: err})
 
 	go p.loop(refresh, lookup)
 	return p
@@ -69,10 +69,10 @@ func (p *Instancer) loop(t *time.Ticker, lookup Lookup) {
 			instances, err := p.resolve(lookup)
 			if err != nil {
 				p.logger.Log("name", p.name, "err", err)
-				p.Update(sd.Event{Err: err})
+				p.cache.Update(sd.Event{Err: err})
 				continue // don't replace potentially-good with bad
 			}
-			p.Update(sd.Event{Instances: instances})
+			p.cache.Update(sd.Event{Instances: instances})
 
 		case <-p.quit:
 			return
@@ -90,4 +90,14 @@ func (p *Instancer) resolve(lookup Lookup) ([]string, error) {
 		instances[i] = net.JoinHostPort(addr.Target, fmt.Sprint(addr.Port))
 	}
 	return instances, nil
+}
+
+// Register implements Instancer.
+func (s *Instancer) Register(ch chan<- sd.Event) {
+	s.cache.Register(ch)
+}
+
+// Deregister implements Instancer.
+func (s *Instancer) Deregister(ch chan<- sd.Event) {
+	s.cache.Deregister(ch)
 }

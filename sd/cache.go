@@ -22,6 +22,7 @@ type endpointCache struct {
 	endpoints          []endpoint.Endpoint
 	logger             log.Logger
 	invalidateDeadline time.Time
+	timeNow            func() time.Time
 }
 
 type endpointCloser struct {
@@ -36,6 +37,7 @@ func newEndpointCache(factory Factory, logger log.Logger, options endpointerOpti
 		factory: factory,
 		cache:   map[string]endpointCloser{},
 		logger:  logger,
+		timeNow: time.Now,
 	}
 }
 
@@ -47,27 +49,24 @@ func (c *endpointCache) Update(event Event) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
+	// Happy path.
 	if event.Err == nil {
 		c.updateCache(event.Instances)
-		c.invalidateDeadline = time.Time{}
 		c.err = nil
+		return
 	}
 
+	// Sad path. Something's gone wrong in sd.
 	c.logger.Log("err", event.Err)
-
 	if c.options.invalidateOnErrorTimeout == nil {
-		// keep returning the last known endpoints on error
-		return
+		return // keep returning the last known endpoints on error
 	}
-
+	if c.err != nil {
+		return // already in the error state, do nothing & keep original error
+	}
 	c.err = event.Err
-
-	if !c.invalidateDeadline.IsZero() {
-		// aleady in the error state, do nothing
-		return
-	}
 	// set new deadline to invalidate Endpoints unless non-error Event is received
-	c.invalidateDeadline = time.Now().Add(*c.options.invalidateOnErrorTimeout)
+	c.invalidateDeadline = c.timeNow().Add(*c.options.invalidateOnErrorTimeout)
 	return
 }
 
@@ -121,7 +120,7 @@ func (c *endpointCache) updateCache(instances []string) {
 func (c *endpointCache) Endpoints() ([]endpoint.Endpoint, error) {
 	c.mtx.RLock()
 
-	if c.err == nil || time.Now().Before(c.invalidateDeadline) {
+	if c.err == nil || c.timeNow().Before(c.invalidateDeadline) {
 		defer c.mtx.RUnlock()
 		return c.endpoints, nil
 	}
@@ -130,7 +129,11 @@ func (c *endpointCache) Endpoints() ([]endpoint.Endpoint, error) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	c.updateCache(nil) // close any remaining active endpoints
+	// Re-check due to a race between RUnlock() and Lock().
+	if c.err == nil || c.timeNow().Before(c.invalidateDeadline) {
+		return c.endpoints, nil
+	}
 
+	c.updateCache(nil) // close any remaining active endpoints
 	return nil, c.err
 }

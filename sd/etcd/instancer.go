@@ -9,7 +9,7 @@ import (
 // Instancer yields instances stored in a certain etcd keyspace. Any kind of
 // change in that keyspace is watched and will update the Instancer's Instancers.
 type Instancer struct {
-	instance.Cache
+	cache  *instance.Cache
 	client Client
 	prefix string
 	logger log.Logger
@@ -22,7 +22,7 @@ func NewInstancer(c Client, prefix string, logger log.Logger) (*Instancer, error
 	s := &Instancer{
 		client: c,
 		prefix: prefix,
-		Cache:  *instance.NewCache(),
+		cache:  instance.NewCache(),
 		logger: logger,
 		quitc:  make(chan struct{}),
 	}
@@ -33,7 +33,7 @@ func NewInstancer(c Client, prefix string, logger log.Logger) (*Instancer, error
 	} else {
 		logger.Log("prefix", s.prefix, "err", err)
 	}
-	s.Update(sd.Event{Instances: instances, Err: err})
+	s.cache.Update(sd.Event{Instances: instances, Err: err})
 
 	go s.loop()
 	return s, nil
@@ -48,10 +48,10 @@ func (s *Instancer) loop() {
 			instances, err := s.client.GetEntries(s.prefix)
 			if err != nil {
 				s.logger.Log("msg", "failed to retrieve entries", "err", err)
-				s.Update(sd.Event{Err: err})
+				s.cache.Update(sd.Event{Err: err})
 				continue
 			}
-			s.Update(sd.Event{Instances: instances})
+			s.cache.Update(sd.Event{Instances: instances})
 
 		case <-s.quitc:
 			return
@@ -62,4 +62,14 @@ func (s *Instancer) loop() {
 // Stop terminates the Instancer.
 func (s *Instancer) Stop() {
 	close(s.quitc)
+}
+
+// Register implements Instancer.
+func (s *Instancer) Register(ch chan<- sd.Event) {
+	s.cache.Register(ch)
+}
+
+// Deregister implements Instancer.
+func (s *Instancer) Deregister(ch chan<- sd.Event) {
+	s.cache.Deregister(ch)
 }

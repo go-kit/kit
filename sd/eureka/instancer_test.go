@@ -21,7 +21,7 @@ func TestInstancer(t *testing.T) {
 	instancer := NewInstancer(connection, appNameTest, loggerTest)
 	defer instancer.Stop()
 
-	state := instancer.State()
+	state := instancer.cache.State()
 	if state.Err != nil {
 		t.Fatal(state.Err)
 	}
@@ -41,14 +41,14 @@ func TestInstancerScheduleUpdates(t *testing.T) {
 	instancer := NewInstancer(connection, appNameTest, loggerTest)
 	defer instancer.Stop()
 
-	state := instancer.State()
+	state := instancer.cache.State()
 	if want, have := 1, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	time.Sleep(50 * time.Millisecond)
 
-	state = instancer.State()
+	state = instancer.cache.State()
 	if want, have := 2, len(state.Instances); want != have {
 		t.Errorf("want %v, have %v", want, have)
 	}
@@ -65,7 +65,7 @@ func TestBadInstancerInstances(t *testing.T) {
 	instancer := NewInstancer(connection, appNameTest, loggerTest)
 	defer instancer.Stop()
 
-	state := instancer.State()
+	state := instancer.cache.State()
 	if state.Err == nil {
 		t.Fatal("expecting error")
 	}
@@ -85,7 +85,7 @@ func TestBadInstancerScheduleUpdates(t *testing.T) {
 	instancer := NewInstancer(connection, appNameTest, loggerTest)
 	defer instancer.Stop()
 
-	state := instancer.State()
+	state := instancer.cache.State()
 	if state.Err != nil {
 		t.Error(state.Err)
 	}
@@ -95,7 +95,7 @@ func TestBadInstancerScheduleUpdates(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	state = instancer.State()
+	state = instancer.cache.State()
 	if state.Err == nil {
 		t.Fatal("expecting error")
 	}

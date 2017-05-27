@@ -32,7 +32,7 @@ func TestRefresh(t *testing.T) {
 	defer instancer.Stop()
 
 	// First lookup, empty
-	state := instancer.State()
+	state := instancer.cache.State()
 	if state.Err != nil {
 		t.Error(state.Err)
 	}
@@ -56,7 +56,7 @@ func TestRefresh(t *testing.T) {
 	// TODO(pb): solve by running the read through the loop goroutine.
 	time.Sleep(100 * time.Millisecond)
 
-	state = instancer.State()
+	state = instancer.cache.State()
 	if state.Err != nil {
 		t.Error(state.Err)
 	}

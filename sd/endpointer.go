@@ -24,16 +24,16 @@ func (s FixedEndpointer) Endpoints() ([]endpoint.Endpoint, error) { return s, ni
 // NewEndpointer creates an Endpointer that subscribes to updates from Instancer src
 // and uses factory f to create Endpoints. If src notifies of an error, the Endpointer
 // keeps returning previously created Endpoints assuming they are still good, unless
-// this behavior is disabled with ResetOnError option.
-func NewEndpointer(src Instancer, f Factory, logger log.Logger, options ...EndpointerOption) Endpointer {
+// this behavior is disabled via InvalidateOnError option.
+func NewEndpointer(src Instancer, f Factory, logger log.Logger, options ...EndpointerOption) *DefaultEndpointer {
 	opts := endpointerOptions{}
 	for _, opt := range options {
 		opt(&opts)
 	}
-	se := &simpleEndpointer{
-		endpointCache: *newEndpointCache(f, logger, opts),
-		instancer:     src,
-		ch:            make(chan Event),
+	se := &DefaultEndpointer{
+		cache:     newEndpointCache(f, logger, opts),
+		instancer: src,
+		ch:        make(chan Event),
 	}
 	go se.receive()
 	src.Register(se.ch)
@@ -60,20 +60,29 @@ type endpointerOptions struct {
 	invalidateOnErrorTimeout *time.Duration
 }
 
-type simpleEndpointer struct {
-	endpointCache
-
+// DefaultEndpointer implements an Endpointer interface.
+// When created with NewEndpointer function, it automatically registers
+// as a subscriber to events from the Instances and maintains a list
+// of active Endpoints.
+type DefaultEndpointer struct {
+	cache     *endpointCache
 	instancer Instancer
 	ch        chan Event
 }
 
-func (se *simpleEndpointer) receive() {
-	for event := range se.ch {
-		se.Update(event)
+func (de *DefaultEndpointer) receive() {
+	for event := range de.ch {
+		de.cache.Update(event)
 	}
 }
 
-func (se *simpleEndpointer) Close() {
-	se.instancer.Deregister(se.ch)
-	close(se.ch)
+// Close de-registeres DefaultEndpointer from the Instancer and stops the internal go-routine.
+func (de *DefaultEndpointer) Close() {
+	de.instancer.Deregister(de.ch)
+	close(de.ch)
+}
+
+// Endpoints implements Endpointer.
+func (de *DefaultEndpointer) Endpoints() ([]endpoint.Endpoint, error) {
+	return de.cache.Endpoints()
 }

@@ -69,7 +69,7 @@ func TestInstancer(t *testing.T) {
 	s := NewInstancer(client, logger, "search", []string{"api"}, true)
 	defer s.Stop()
 
-	state := s.State()
+	state := s.cache.State()
 	if want, have := 2, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
@@ -84,7 +84,7 @@ func TestInstancerNoService(t *testing.T) {
 	s := NewInstancer(client, logger, "feed", []string{}, true)
 	defer s.Stop()
 
-	state := s.State()
+	state := s.cache.State()
 	if want, have := 0, len(state.Instances); want != have {
 		t.Fatalf("want %d, have %d", want, have)
 	}
@@ -99,7 +99,7 @@ func TestInstancerWithTags(t *testing.T) {
 	s := NewInstancer(client, logger, "search", []string{"api", "v2"}, true)
 	defer s.Stop()
 
-	state := s.State()
+	state := s.cache.State()
 	if want, have := 1, len(state.Instances); want != have {
 		t.Fatalf("want %d, have %d", want, have)
 	}
@@ -109,7 +109,7 @@ func TestInstancerAddressOverride(t *testing.T) {
 	s := NewInstancer(newTestClient(consulState), log.NewNopLogger(), "search", []string{"db"}, true)
 	defer s.Stop()
 
-	state := s.State()
+	state := s.cache.State()
 	if want, have := 1, len(state.Instances); want != have {
 		t.Fatalf("want %d, have %d", want, have)
 	}

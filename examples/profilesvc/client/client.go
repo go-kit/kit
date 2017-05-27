@@ -43,28 +43,6 @@ func New(consulAddr string, logger log.Logger) (profilesvc.Service, error) {
 		instancer = consul.NewInstancer(sdclient, logger, consulService, consulTags, passingOnly)
 		endpoints profilesvc.Endpoints
 	)
-	// TODO: thought experiment
-	mapping := []struct {
-		factory  func(s profilesvc.Service) endpoint.Endpoint
-		endpoint *endpoint.Endpoint
-	}{
-		{
-			factory:  profilesvc.MakePostProfileEndpoint,
-			endpoint: &endpoints.PostProfileEndpoint,
-		},
-		{
-			factory:  profilesvc.MakeGetProfileEndpoint,
-			endpoint: &endpoints.GetProfileEndpoint,
-		},
-	}
-	for _, m := range mapping {
-		factory := factoryFor(m.factory)
-		endpointer := sd.NewEndpointer(instancer, factory, logger)
-		balancer := lb.NewRoundRobin(endpointer)
-		retry := lb.Retry(retryMax, retryTimeout, balancer)
-		*m.endpoint = retry
-	}
-	// TODO: why not 2 lines per endpoint registration above instead of 7 lines per endpoint below?
 	{
 		factory := factoryFor(profilesvc.MakePostProfileEndpoint)
 		endpointer := sd.NewEndpointer(instancer, factory, logger)

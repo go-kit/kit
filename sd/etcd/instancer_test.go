@@ -36,7 +36,7 @@ func TestInstancer(t *testing.T) {
 	}
 	defer s.Stop()
 
-	if state := s.State(); state.Err != nil {
+	if state := s.cache.State(); state.Err != nil {
 		t.Fatal(state.Err)
 	}
 }
