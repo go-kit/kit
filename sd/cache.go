@@ -118,6 +118,8 @@ func (c *endpointCache) updateCache(instances []string) {
 // Endpoints yields the current set of (presumably identical) endpoints, ordered
 // lexicographically by the corresponding instance string.
 func (c *endpointCache) Endpoints() ([]endpoint.Endpoint, error) {
+	// in the steady state we're going to have many goroutines calling Endpoints()
+	// concurrently, so to minimize contention we use a shared R-lock.
 	c.mtx.RLock()
 
 	if c.err == nil || c.timeNow().Before(c.invalidateDeadline) {
@@ -126,10 +128,12 @@ func (c *endpointCache) Endpoints() ([]endpoint.Endpoint, error) {
 	}
 
 	c.mtx.RUnlock()
+
+	// in case of an error, switch to an exclusive lock.
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	// Re-check due to a race between RUnlock() and Lock().
+	// re-check condition due to a race between RUnlock() and Lock().
 	if c.err == nil || c.timeNow().Before(c.invalidateDeadline) {
 		return c.endpoints, nil
 	}
