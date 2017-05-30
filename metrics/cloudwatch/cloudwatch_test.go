@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/teststat"
 )
 
@@ -80,6 +81,41 @@ func TestCounter(t *testing.T) {
 	}
 	if err := testDimensions(svc, name, label, value); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCounterLowSendConcurrency(t *testing.T) {
+	namespace := "abc"
+	names := []string{"name1", "name2", "name3", "name4", "name5", "name6"}
+	label, value := "label", "value"
+	svc := newMockCloudWatch()
+	cw := New(namespace, svc, log.NewNopLogger())
+	cw = cw.SetConcurrency(2)
+
+	counters := make(map[string]metrics.Counter)
+	for _, name := range names {
+		counters[name] = cw.NewCounter(name).With(label, value)
+	}
+
+	valuef := func(name string) func() float64 {
+		return func() float64 {
+			err := cw.Send()
+			if err != nil {
+				t.Fatal(err)
+			}
+			svc.mtx.RLock()
+			defer svc.mtx.RUnlock()
+			return svc.valuesReceived[name]
+		}
+	}
+
+	for _, name := range names {
+		if err := teststat.TestCounter(counters[name], valuef(name)); err != nil {
+			t.Fatal(err)
+		}
+		if err := testDimensions(svc, name, label, value); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

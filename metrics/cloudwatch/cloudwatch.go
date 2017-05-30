@@ -20,13 +20,14 @@ import (
 //
 // To regularly report metrics to CloudWatch, use the WriteLoop helper method.
 type CloudWatch struct {
-	mtx        sync.RWMutex
-	namespace  string
-	svc        cloudwatchiface.CloudWatchAPI
-	counters   map[string]*counter
-	gauges     map[string]*gauge
-	histograms map[string]*histogram
-	logger     log.Logger
+	mtx                   sync.RWMutex
+	namespace             string
+	numConcurrentRequests int
+	svc                   cloudwatchiface.CloudWatchAPI
+	counters              map[string]*counter
+	gauges                map[string]*gauge
+	histograms            map[string]*histogram
+	logger                log.Logger
 }
 
 // New returns a CloudWatch object that may be used to create metrics.
@@ -35,13 +36,23 @@ type CloudWatch struct {
 // manually or with one of the helper methods.
 func New(namespace string, svc cloudwatchiface.CloudWatchAPI, logger log.Logger) *CloudWatch {
 	return &CloudWatch{
-		namespace:  namespace,
+		namespace:             namespace,
+		numConcurrentRequests: 10,
 		svc:        svc,
 		counters:   map[string]*counter{},
 		gauges:     map[string]*gauge{},
 		histograms: map[string]*histogram{},
 		logger:     logger,
 	}
+}
+
+// SetConcurrency overrides the default number (10) of concurrent requests sent to CloudWatch.
+// CloudWatch allows a maximum of 20 metrics to be sent per request, so when Send is called,
+// we partition the metrics and concurrently call their API. This parameter sets maximum number
+// of concurrent requests.
+func (cw *CloudWatch) SetConcurrency(numConcurrentRequests int) *CloudWatch {
+	cw.numConcurrentRequests = numConcurrentRequests
+	return cw
 }
 
 // NewCounter returns a counter. Observations are aggregated and emitted once
@@ -133,11 +144,41 @@ func (cw *CloudWatch) Send() error {
 		}
 	}
 
-	_, err := cw.svc.PutMetricData(&cloudwatch.PutMetricDataInput{
-		Namespace:  aws.String(cw.namespace),
-		MetricData: datums,
-	})
-	return err
+	var tokens = make(chan struct{}, cw.numConcurrentRequests)
+	var errors = make(chan error)
+	var n int
+
+	for len(datums) > 0 {
+		var batch []*cloudwatch.MetricDatum
+		lim := min(len(datums), cw.numConcurrentRequests)
+		batch, datums = datums[:lim], datums[lim:]
+		n++
+		go func(batch []*cloudwatch.MetricDatum) {
+			tokens <- struct{}{}
+			_, err := cw.svc.PutMetricData(&cloudwatch.PutMetricDataInput{
+				Namespace:  aws.String(cw.namespace),
+				MetricData: batch,
+			})
+			<-tokens
+			errors <- err
+		}(batch)
+	}
+
+	var firstErr error
+	for ; n > 0; n-- {
+		if err := <-errors; err != nil && firstErr != nil {
+			firstErr = err
+		}
+	}
+
+	return firstErr
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // counter is a CloudWatch counter metric.
