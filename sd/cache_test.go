@@ -86,7 +86,10 @@ func TestCacheErrorAndTimeout(t *testing.T) {
 		c       = map[string]io.Closer{"a": ca, "b": cb}
 		f       = func(instance string) (endpoint.Endpoint, io.Closer, error) { return endpoint.Nop, c[instance], nil }
 		timeOut = 100 * time.Millisecond
-		cache   = newEndpointCache(f, log.NewNopLogger(), endpointerOptions{invalidateOnErrorTimeout: &timeOut})
+		cache   = newEndpointCache(f, log.NewNopLogger(), endpointerOptions{
+			invalidateOnError: true,
+			invalidateTimeout: timeOut,
+		})
 	)
 
 	timeNow := time.Now()

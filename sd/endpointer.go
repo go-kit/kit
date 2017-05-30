@@ -52,12 +52,14 @@ type EndpointerOption func(*endpointerOptions)
 // valid resource instances, the normal operation is resumed.
 func InvalidateOnError(timeout time.Duration) EndpointerOption {
 	return func(opts *endpointerOptions) {
-		opts.invalidateOnErrorTimeout = &timeout
+		opts.invalidateOnError = true
+		opts.invalidateTimeout = timeout
 	}
 }
 
 type endpointerOptions struct {
-	invalidateOnErrorTimeout *time.Duration
+	invalidateOnError bool
+	invalidateTimeout time.Duration
 }
 
 // DefaultEndpointer implements an Endpointer interface.

@@ -58,7 +58,7 @@ func (c *endpointCache) Update(event Event) {
 
 	// Sad path. Something's gone wrong in sd.
 	c.logger.Log("err", event.Err)
-	if c.options.invalidateOnErrorTimeout == nil {
+	if !c.options.invalidateOnError {
 		return // keep returning the last known endpoints on error
 	}
 	if c.err != nil {
@@ -66,7 +66,7 @@ func (c *endpointCache) Update(event Event) {
 	}
 	c.err = event.Err
 	// set new deadline to invalidate Endpoints unless non-error Event is received
-	c.invalidateDeadline = c.timeNow().Add(*c.options.invalidateOnErrorTimeout)
+	c.invalidateDeadline = c.timeNow().Add(c.options.invalidateTimeout)
 	return
 }
 
