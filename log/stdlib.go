@@ -5,6 +5,15 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
+)
+
+const (
+	formatStdDate      = "2006/01/02"
+	formatStdMicro     = ".999999"
+	formatStdTime      = "15:04:05"
+	formatStdAll       = formatStdDate + " " + formatStdTime + formatStdMicro
+	formatRFC3339Micro = "2006-01-02T15:04:05.999999Z07:00"
 )
 
 // StdlibWriter implements io.Writer by invoking the stdlib log.Print. It's
@@ -29,6 +38,7 @@ type StdlibAdapter struct {
 	timestampKey string
 	fileKey      string
 	messageKey   string
+	utc          bool
 }
 
 // StdlibAdapterOption sets a parameter for the StdlibAdapter.
@@ -49,6 +59,11 @@ func MessageKey(key string) StdlibAdapterOption {
 	return func(a *StdlibAdapter) { a.messageKey = key }
 }
 
+// UTC parses times in the UTC time zone instead of the local time zone.
+func UTC() StdlibAdapterOption {
+	return func(a *StdlibAdapter) { a.utc = true }
+}
+
 // NewStdlibAdapter returns a new StdlibAdapter wrapper around the passed
 // logger. It's designed to be passed to log.SetOutput.
 func NewStdlibAdapter(logger Logger, options ...StdlibAdapterOption) io.Writer {
@@ -65,20 +80,30 @@ func NewStdlibAdapter(logger Logger, options ...StdlibAdapterOption) io.Writer {
 }
 
 func (a StdlibAdapter) Write(p []byte) (int, error) {
+	now := time.Now()
+	var loc *time.Location
+	if a.utc {
+		loc = time.UTC
+		now = now.UTC()
+	} else {
+		loc = time.Local
+	}
 	result := subexps(p)
 	keyvals := []interface{}{}
-	var timestamp string
-	if date, ok := result["date"]; ok && date != "" {
-		timestamp = date
+	var timestamp time.Time
+	var err error
+	if d, t := result["date"], result["time"]; d != "" && t != "" {
+		timestamp, err = time.ParseInLocation(formatStdAll, d+" "+t, loc)
+	} else if d != "" {
+		timestamp, err = time.ParseInLocation(formatStdAll, d+" "+now.Format(formatStdTime), loc)
+	} else if t != "" {
+		timestamp, err = time.ParseInLocation(formatStdAll, now.Format(formatStdDate)+" "+t, loc)
 	}
-	if time, ok := result["time"]; ok && time != "" {
-		if timestamp != "" {
-			timestamp += " "
-		}
-		timestamp += time
+	if err != nil {
+		return 0, err
 	}
-	if timestamp != "" {
-		keyvals = append(keyvals, a.timestampKey, timestamp)
+	if timestamp != (time.Time{}) {
+		keyvals = append(keyvals, a.timestampKey, timestamp.Format(formatRFC3339Micro))
 	}
 	if file, ok := result["file"]; ok && file != "" {
 		keyvals = append(keyvals, a.fileKey, file)
