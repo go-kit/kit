@@ -7,7 +7,7 @@
 set -e
 
 function go_files { find . -name '*_test.go' ; }
-function filter { grep -v -e '/_' -e vendor ; }
+function filter { grep -v -e '/_' ; }
 function remove_relative_prefix { sed -e 's/^\.\///g' ; }
 
 function directories {

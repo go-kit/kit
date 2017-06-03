@@ -43,8 +43,3 @@ Session.vim
 # auto-generated tag files
 tags
 
-# dependency management files
-glide.lock
-glide.yaml
-vendor/
-
