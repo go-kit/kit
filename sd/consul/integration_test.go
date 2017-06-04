@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/sd"
 	stdconsul "github.com/hashicorp/consul/api"
 )
 
@@ -38,24 +39,28 @@ func TestIntegration(t *testing.T) {
 		// skipping check(s)
 	}
 
-	// Build a subscriber on r.Name + r.Tags.
+	// Build an Instancer on r.Name + r.Tags.
 	factory := func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		t.Logf("factory invoked for %q", instance)
 		return endpoint.Nop, nil, nil
 	}
-	subscriber := NewSubscriber(
+	instancer := NewInstancer(
 		client,
-		factory,
-		log.With(logger, "component", "subscriber"),
+		log.With(logger, "component", "instancer"),
 		r.Name,
 		r.Tags,
 		true,
+	)
+	endpointer := sd.NewEndpointer(
+		instancer,
+		factory,
+		log.With(logger, "component", "endpointer"),
 	)
 
 	time.Sleep(time.Second)
 
 	// Before we publish, we should have no endpoints.
-	endpoints, err := subscriber.Endpoints()
+	endpoints, err := endpointer.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,7 +76,7 @@ func TestIntegration(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// Now we should have one active endpoints.
-	endpoints, err = subscriber.Endpoints()
+	endpoints, err = endpointer.Endpoints()
 	if err != nil {
 		t.Error(err)
 	}

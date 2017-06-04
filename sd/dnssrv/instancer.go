@@ -5,44 +5,41 @@ import (
 	"net"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
-	"github.com/go-kit/kit/sd/cache"
+	"github.com/go-kit/kit/sd/internal/instance"
 )
 
-// Subscriber yields endpoints taken from the named DNS SRV record. The name is
+// Instancer yields instances from the named DNS SRV record. The name is
 // resolved on a fixed schedule. Priorities and weights are ignored.
-type Subscriber struct {
+type Instancer struct {
+	cache  *instance.Cache
 	name   string
-	cache  *cache.Cache
 	logger log.Logger
 	quit   chan struct{}
 }
 
-// NewSubscriber returns a DNS SRV subscriber.
-func NewSubscriber(
+// NewInstancer returns a DNS SRV instancer.
+func NewInstancer(
 	name string,
 	ttl time.Duration,
-	factory sd.Factory,
 	logger log.Logger,
-) *Subscriber {
-	return NewSubscriberDetailed(name, time.NewTicker(ttl), net.LookupSRV, factory, logger)
+) *Instancer {
+	return NewInstancerDetailed(name, time.NewTicker(ttl), net.LookupSRV, logger)
 }
 
-// NewSubscriberDetailed is the same as NewSubscriber, but allows users to
+// NewInstancerDetailed is the same as NewInstancer, but allows users to
 // provide an explicit lookup refresh ticker instead of a TTL, and specify the
 // lookup function instead of using net.LookupSRV.
-func NewSubscriberDetailed(
+func NewInstancerDetailed(
 	name string,
 	refresh *time.Ticker,
 	lookup Lookup,
-	factory sd.Factory,
 	logger log.Logger,
-) *Subscriber {
-	p := &Subscriber{
+) *Instancer {
+	p := &Instancer{
+		cache:  instance.NewCache(),
 		name:   name,
-		cache:  cache.New(factory, logger),
 		logger: logger,
 		quit:   make(chan struct{}),
 	}
@@ -53,18 +50,18 @@ func NewSubscriberDetailed(
 	} else {
 		logger.Log("name", name, "err", err)
 	}
-	p.cache.Update(instances)
+	p.cache.Update(sd.Event{Instances: instances, Err: err})
 
 	go p.loop(refresh, lookup)
 	return p
 }
 
-// Stop terminates the Subscriber.
-func (p *Subscriber) Stop() {
+// Stop terminates the Instancer.
+func (p *Instancer) Stop() {
 	close(p.quit)
 }
 
-func (p *Subscriber) loop(t *time.Ticker, lookup Lookup) {
+func (p *Instancer) loop(t *time.Ticker, lookup Lookup) {
 	defer t.Stop()
 	for {
 		select {
@@ -72,9 +69,10 @@ func (p *Subscriber) loop(t *time.Ticker, lookup Lookup) {
 			instances, err := p.resolve(lookup)
 			if err != nil {
 				p.logger.Log("name", p.name, "err", err)
+				p.cache.Update(sd.Event{Err: err})
 				continue // don't replace potentially-good with bad
 			}
-			p.cache.Update(instances)
+			p.cache.Update(sd.Event{Instances: instances})
 
 		case <-p.quit:
 			return
@@ -82,19 +80,24 @@ func (p *Subscriber) loop(t *time.Ticker, lookup Lookup) {
 	}
 }
 
-// Endpoints implements the Subscriber interface.
-func (p *Subscriber) Endpoints() ([]endpoint.Endpoint, error) {
-	return p.cache.Endpoints(), nil
-}
-
-func (p *Subscriber) resolve(lookup Lookup) ([]string, error) {
+func (p *Instancer) resolve(lookup Lookup) ([]string, error) {
 	_, addrs, err := lookup("", "", p.name)
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 	instances := make([]string, len(addrs))
 	for i, addr := range addrs {
 		instances[i] = net.JoinHostPort(addr.Target, fmt.Sprint(addr.Port))
 	}
 	return instances, nil
+}
+
+// Register implements Instancer.
+func (s *Instancer) Register(ch chan<- sd.Event) {
+	s.cache.Register(ch)
+}
+
+// Deregister implements Instancer.
+func (s *Instancer) Deregister(ch chan<- sd.Event) {
+	s.cache.Deregister(ch)
 }

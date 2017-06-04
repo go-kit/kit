@@ -1,4 +1,4 @@
-package cache
+package sd
 
 import (
 	"io"
@@ -14,12 +14,12 @@ func BenchmarkEndpoints(b *testing.B) {
 		cb      = make(closer)
 		cmap    = map[string]io.Closer{"a": ca, "b": cb}
 		factory = func(instance string) (endpoint.Endpoint, io.Closer, error) { return endpoint.Nop, cmap[instance], nil }
-		c       = New(factory, log.NewNopLogger())
+		c       = newEndpointCache(factory, log.NewNopLogger(), endpointerOptions{})
 	)
 
 	b.ReportAllocs()
 
-	c.Update([]string{"a", "b"})
+	c.Update(Event{Instances: []string{"a", "b"}})
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {

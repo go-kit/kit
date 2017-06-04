@@ -84,18 +84,19 @@ func main() {
 			tags        = []string{}
 			passingOnly = true
 			endpoints   = addsvc.Endpoints{}
+			instancer   = consulsd.NewInstancer(client, logger, "addsvc", tags, passingOnly)
 		)
 		{
 			factory := addsvcFactory(addsvc.MakeSumEndpoint, tracer, logger)
-			subscriber := consulsd.NewSubscriber(client, factory, logger, "addsvc", tags, passingOnly)
-			balancer := lb.NewRoundRobin(subscriber)
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			endpoints.SumEndpoint = retry
 		}
 		{
 			factory := addsvcFactory(addsvc.MakeConcatEndpoint, tracer, logger)
-			subscriber := consulsd.NewSubscriber(client, factory, logger, "addsvc", tags, passingOnly)
-			balancer := lb.NewRoundRobin(subscriber)
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			endpoints.ConcatEndpoint = retry
 		}
@@ -120,18 +121,19 @@ func main() {
 			passingOnly = true
 			uppercase   endpoint.Endpoint
 			count       endpoint.Endpoint
+			instancer   = consulsd.NewInstancer(client, logger, "stringsvc", tags, passingOnly)
 		)
 		{
 			factory := stringsvcFactory(ctx, "GET", "/uppercase")
-			subscriber := consulsd.NewSubscriber(client, factory, logger, "stringsvc", tags, passingOnly)
-			balancer := lb.NewRoundRobin(subscriber)
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			uppercase = retry
 		}
 		{
 			factory := stringsvcFactory(ctx, "GET", "/count")
-			subscriber := consulsd.NewSubscriber(client, factory, logger, "stringsvc", tags, passingOnly)
-			balancer := lb.NewRoundRobin(subscriber)
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			count = retry
 		}

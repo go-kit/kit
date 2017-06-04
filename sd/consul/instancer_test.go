@@ -7,7 +7,10 @@ import (
 	consul "github.com/hashicorp/consul/api"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/sd"
 )
+
+var _ sd.Instancer = &Instancer{} // API check
 
 var consulState = []*consul.ServiceEntry{
 	{
@@ -57,77 +60,69 @@ var consulState = []*consul.ServiceEntry{
 	},
 }
 
-func TestSubscriber(t *testing.T) {
+func TestInstancer(t *testing.T) {
 	var (
 		logger = log.NewNopLogger()
 		client = newTestClient(consulState)
 	)
 
-	s := NewSubscriber(client, testFactory, logger, "search", []string{"api"}, true)
+	s := NewInstancer(client, logger, "search", []string{"api"}, true)
 	defer s.Stop()
 
-	endpoints, err := s.Endpoints()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want, have := 2, len(endpoints); want != have {
+	state := s.cache.State()
+	if want, have := 2, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
 
-func TestSubscriberNoService(t *testing.T) {
+func TestInstancerNoService(t *testing.T) {
 	var (
 		logger = log.NewNopLogger()
 		client = newTestClient(consulState)
 	)
 
-	s := NewSubscriber(client, testFactory, logger, "feed", []string{}, true)
+	s := NewInstancer(client, logger, "feed", []string{}, true)
 	defer s.Stop()
 
-	endpoints, err := s.Endpoints()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want, have := 0, len(endpoints); want != have {
+	state := s.cache.State()
+	if want, have := 0, len(state.Instances); want != have {
 		t.Fatalf("want %d, have %d", want, have)
 	}
 }
 
-func TestSubscriberWithTags(t *testing.T) {
+func TestInstancerWithTags(t *testing.T) {
 	var (
 		logger = log.NewNopLogger()
 		client = newTestClient(consulState)
 	)
 
-	s := NewSubscriber(client, testFactory, logger, "search", []string{"api", "v2"}, true)
+	s := NewInstancer(client, logger, "search", []string{"api", "v2"}, true)
 	defer s.Stop()
 
-	endpoints, err := s.Endpoints()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want, have := 1, len(endpoints); want != have {
+	state := s.cache.State()
+	if want, have := 1, len(state.Instances); want != have {
 		t.Fatalf("want %d, have %d", want, have)
 	}
 }
 
-func TestSubscriberAddressOverride(t *testing.T) {
-	s := NewSubscriber(newTestClient(consulState), testFactory, log.NewNopLogger(), "search", []string{"db"}, true)
+func TestInstancerAddressOverride(t *testing.T) {
+	s := NewInstancer(newTestClient(consulState), log.NewNopLogger(), "search", []string{"db"}, true)
 	defer s.Stop()
 
-	endpoints, err := s.Endpoints()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want, have := 1, len(endpoints); want != have {
+	state := s.cache.State()
+	if want, have := 1, len(state.Instances); want != have {
 		t.Fatalf("want %d, have %d", want, have)
 	}
 
-	response, err := endpoints[0](context.Background(), struct{}{})
+	endpoint, closer, err := testFactory(state.Instances[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closer != nil {
+		defer closer.Close()
+	}
+
+	response, err := endpoint(context.Background(), struct{}{})
 	if err != nil {
 		t.Fatal(err)
 	}

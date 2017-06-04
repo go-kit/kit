@@ -3,31 +3,28 @@ package zk
 import (
 	"github.com/samuel/go-zookeeper/zk"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
-	"github.com/go-kit/kit/sd/cache"
+	"github.com/go-kit/kit/sd/internal/instance"
 )
 
-// Subscriber yield endpoints stored in a certain ZooKeeper path. Any kind of
-// change in that path is watched and will update the Subscriber endpoints.
-type Subscriber struct {
+// Instancer yield instances stored in a certain ZooKeeper path. Any kind of
+// change in that path is watched and will update the subscribers.
+type Instancer struct {
+	cache  *instance.Cache
 	client Client
 	path   string
-	cache  *cache.Cache
 	logger log.Logger
 	quitc  chan struct{}
 }
 
-var _ sd.Subscriber = &Subscriber{}
-
-// NewSubscriber returns a ZooKeeper subscriber. ZooKeeper will start watching
-// the given path for changes and update the Subscriber endpoints.
-func NewSubscriber(c Client, path string, factory sd.Factory, logger log.Logger) (*Subscriber, error) {
-	s := &Subscriber{
+// NewInstancer returns a ZooKeeper Instancer. ZooKeeper will start watching
+// the given path for changes and update the Instancer endpoints.
+func NewInstancer(c Client, path string, logger log.Logger) (*Instancer, error) {
+	s := &Instancer{
+		cache:  instance.NewCache(),
 		client: c,
 		path:   path,
-		cache:  cache.New(factory, logger),
 		logger: logger,
 		quitc:  make(chan struct{}),
 	}
@@ -40,17 +37,18 @@ func NewSubscriber(c Client, path string, factory sd.Factory, logger log.Logger)
 	instances, eventc, err := s.client.GetEntries(s.path)
 	if err != nil {
 		logger.Log("path", s.path, "msg", "failed to retrieve entries", "err", err)
+		// other implementations continue here, but we exit because we don't know if eventc is valid
 		return nil, err
 	}
 	logger.Log("path", s.path, "instances", len(instances))
-	s.cache.Update(instances)
+	s.cache.Update(sd.Event{Instances: instances})
 
 	go s.loop(eventc)
 
 	return s, nil
 }
 
-func (s *Subscriber) loop(eventc <-chan zk.Event) {
+func (s *Instancer) loop(eventc <-chan zk.Event) {
 	var (
 		instances []string
 		err       error
@@ -64,10 +62,11 @@ func (s *Subscriber) loop(eventc <-chan zk.Event) {
 			instances, eventc, err = s.client.GetEntries(s.path)
 			if err != nil {
 				s.logger.Log("path", s.path, "msg", "failed to retrieve entries", "err", err)
+				s.cache.Update(sd.Event{Err: err})
 				continue
 			}
 			s.logger.Log("path", s.path, "instances", len(instances))
-			s.cache.Update(instances)
+			s.cache.Update(sd.Event{Instances: instances})
 
 		case <-s.quitc:
 			return
@@ -75,12 +74,17 @@ func (s *Subscriber) loop(eventc <-chan zk.Event) {
 	}
 }
 
-// Endpoints implements the Subscriber interface.
-func (s *Subscriber) Endpoints() ([]endpoint.Endpoint, error) {
-	return s.cache.Endpoints(), nil
+// Stop terminates the Instancer.
+func (s *Instancer) Stop() {
+	close(s.quitc)
 }
 
-// Stop terminates the Subscriber.
-func (s *Subscriber) Stop() {
-	close(s.quitc)
+// Register implements Instancer.
+func (s *Instancer) Register(ch chan<- sd.Event) {
+	s.cache.Register(ch)
+}
+
+// Deregister implements Instancer.
+func (s *Instancer) Deregister(ch chan<- sd.Event) {
+	s.cache.Deregister(ch)
 }

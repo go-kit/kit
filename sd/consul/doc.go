@@ -1,2 +1,2 @@
-// Package consul provides subscriber and registrar implementations for Consul.
+// Package consul provides Instancer and Registrar implementations for Consul.
 package consul

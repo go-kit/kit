@@ -6,35 +6,30 @@ import (
 
 	consul "github.com/hashicorp/consul/api"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
-	"github.com/go-kit/kit/sd/cache"
+	"github.com/go-kit/kit/sd/internal/instance"
 )
 
 const defaultIndex = 0
 
-// Subscriber yields endpoints for a service in Consul. Updates to the service
-// are watched and will update the Subscriber endpoints.
-type Subscriber struct {
-	cache       *cache.Cache
+// Instancer yields instances for a service in Consul.
+type Instancer struct {
+	cache       *instance.Cache
 	client      Client
 	logger      log.Logger
 	service     string
 	tags        []string
 	passingOnly bool
-	endpointsc  chan []endpoint.Endpoint
 	quitc       chan struct{}
 }
 
-var _ sd.Subscriber = &Subscriber{}
-
-// NewSubscriber returns a Consul subscriber which returns endpoints for the
+// NewInstancer returns a Consul instancer that publishes instances for the
 // requested service. It only returns instances for which all of the passed tags
 // are present.
-func NewSubscriber(client Client, factory sd.Factory, logger log.Logger, service string, tags []string, passingOnly bool) *Subscriber {
-	s := &Subscriber{
-		cache:       cache.New(factory, logger),
+func NewInstancer(client Client, logger log.Logger, service string, tags []string, passingOnly bool) *Instancer {
+	s := &Instancer{
+		cache:       instance.NewCache(),
 		client:      client,
 		logger:      log.With(logger, "service", service, "tags", fmt.Sprint(tags)),
 		service:     service,
@@ -50,22 +45,17 @@ func NewSubscriber(client Client, factory sd.Factory, logger log.Logger, service
 		s.logger.Log("err", err)
 	}
 
-	s.cache.Update(instances)
+	s.cache.Update(sd.Event{Instances: instances, Err: err})
 	go s.loop(index)
 	return s
 }
 
-// Endpoints implements the Subscriber interface.
-func (s *Subscriber) Endpoints() ([]endpoint.Endpoint, error) {
-	return s.cache.Endpoints(), nil
-}
-
-// Stop terminates the subscriber.
-func (s *Subscriber) Stop() {
+// Stop terminates the instancer.
+func (s *Instancer) Stop() {
 	close(s.quitc)
 }
 
-func (s *Subscriber) loop(lastIndex uint64) {
+func (s *Instancer) loop(lastIndex uint64) {
 	var (
 		instances []string
 		err       error
@@ -77,13 +67,14 @@ func (s *Subscriber) loop(lastIndex uint64) {
 			return // stopped via quitc
 		case err != nil:
 			s.logger.Log("err", err)
+			s.cache.Update(sd.Event{Err: err})
 		default:
-			s.cache.Update(instances)
+			s.cache.Update(sd.Event{Instances: instances})
 		}
 	}
 }
 
-func (s *Subscriber) getInstances(lastIndex uint64, interruptc chan struct{}) ([]string, uint64, error) {
+func (s *Instancer) getInstances(lastIndex uint64, interruptc chan struct{}) ([]string, uint64, error) {
 	tag := ""
 	if len(s.tags) > 0 {
 		tag = s.tags[0]
@@ -130,6 +121,16 @@ func (s *Subscriber) getInstances(lastIndex uint64, interruptc chan struct{}) ([
 	case <-interruptc:
 		return nil, 0, io.EOF
 	}
+}
+
+// Register implements Instancer.
+func (s *Instancer) Register(ch chan<- sd.Event) {
+	s.cache.Register(ch)
+}
+
+// Deregister implements Instancer.
+func (s *Instancer) Deregister(ch chan<- sd.Event) {
+	s.cache.Deregister(ch)
 }
 
 func filterEntries(entries []*consul.ServiceEntry, tags ...string) []*consul.ServiceEntry {

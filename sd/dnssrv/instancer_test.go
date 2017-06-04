@@ -1,15 +1,16 @@
 package dnssrv
 
 import (
-	"io"
 	"net"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/sd"
 )
+
+var _ sd.Instancer = &Instancer{} // API check
 
 func TestRefresh(t *testing.T) {
 	name := "some.service.internal"
@@ -27,28 +28,18 @@ func TestRefresh(t *testing.T) {
 		return "cname", records, nil
 	}
 
-	var generates uint64
-	factory := func(instance string) (endpoint.Endpoint, io.Closer, error) {
-		t.Logf("factory(%q)", instance)
-		atomic.AddUint64(&generates, 1)
-		return endpoint.Nop, nopCloser{}, nil
-	}
-
-	subscriber := NewSubscriberDetailed(name, ticker, lookup, factory, log.NewNopLogger())
-	defer subscriber.Stop()
+	instancer := NewInstancerDetailed(name, ticker, lookup, log.NewNopLogger())
+	defer instancer.Stop()
 
 	// First lookup, empty
-	endpoints, err := subscriber.Endpoints()
-	if err != nil {
-		t.Error(err)
+	state := instancer.cache.State()
+	if state.Err != nil {
+		t.Error(state.Err)
 	}
-	if want, have := 0, len(endpoints); want != have {
+	if want, have := 0, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 	if want, have := uint64(1), atomic.LoadUint64(&lookups); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-	if want, have := uint64(0), atomic.LoadUint64(&generates); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
@@ -60,22 +51,19 @@ func TestRefresh(t *testing.T) {
 	}
 	tickc <- time.Now()
 
-	// There is a race condition where the subscriber.Endpoints call below
+	// There is a race condition where the instancer.State call below
 	// invokes the cache before it is updated by the tick above.
 	// TODO(pb): solve by running the read through the loop goroutine.
 	time.Sleep(100 * time.Millisecond)
 
-	endpoints, err = subscriber.Endpoints()
-	if err != nil {
-		t.Error(err)
+	state = instancer.cache.State()
+	if state.Err != nil {
+		t.Error(state.Err)
 	}
-	if want, have := 3, len(endpoints); want != have {
+	if want, have := 3, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 	if want, have := uint64(2), atomic.LoadUint64(&lookups); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
-	if want, have := uint64(len(records)), atomic.LoadUint64(&generates); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
