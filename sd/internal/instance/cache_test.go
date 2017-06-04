@@ -1,78 +1,79 @@
 package instance
 
 import (
-	"sync"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/sd"
 )
 
 var _ sd.Instancer = &Cache{} // API check
 
+// The test verifies the following:
+//   registering causes initial notification of the current state
+//   notifications delivered to two receivers
+//   identical notifications cause no updates
+//   different update causes new notification
+//   instances are sorted
+//   no updates after de-registering
 func TestCache(t *testing.T) {
-	// TODO this test is not finished yet
+	e1 := sd.Event{Instances: []string{"y", "x"}} // not sorted
+	e2 := sd.Event{Instances: []string{"c", "a", "b"}}
 
 	c := NewCache()
-
-	{
-		state := c.State()
-		if want, have := 0, len(state.Instances); want != have {
-			t.Fatalf("want %v instances, have %v", want, have)
-		}
+	if want, have := 0, len(c.State().Instances); want != have {
+		t.Fatalf("want %v instances, have %v", want, have)
 	}
 
-	notification1 := sd.Event{Instances: []string{"x", "y"}}
-	notification2 := sd.Event{Instances: []string{"a", "b", "c"}}
-
-	c.Update(notification1)
-
-	// times 2 because we have two observers
-	expectedInstances := 2 * (len(notification1.Instances) + len(notification2.Instances))
-
-	wg := sync.WaitGroup{}
-	wg.Add(expectedInstances)
-
-	receiver := func(ch chan sd.Event) {
-		for state := range ch {
-			// count total number of instances received
-			for range state.Instances {
-				wg.Done()
-			}
-		}
+	c.Update(e1) // sets initial state
+	if want, have := 2, len(c.State().Instances); want != have {
+		t.Fatalf("want %v instances, have %v", want, have)
 	}
 
-	f1 := make(chan sd.Event)
-	f2 := make(chan sd.Event)
-	go receiver(f1)
-	go receiver(f2)
+	r1 := make(chan sd.Event)
+	go c.Register(r1)
+	expectUpdate(t, r1, []string{"x", "y"})
 
-	c.Register(f1)
-	c.Register(f2)
+	r2 := make(chan sd.Event)
+	go c.Register(r2)
+	expectUpdate(t, r2, []string{"x", "y"})
 
-	c.Update(notification1)
-	c.Update(notification2)
+	// send the same instances but in different order.
+	// because it's a duplicate it should not cause new notification.
+	// if it did, this call would deadlock trying to send to channels with no readers
+	c.Update(sd.Event{Instances: []string{"x", "y"}})
+	expectNoUpdate(t, r1)
+	expectNoUpdate(t, r2)
 
-	// if state := c.State(); instances == nil {
-	// 	if want, have := len(notification2), len(instances); want != have {
-	// 		t.Errorf("want length %v, have %v", want, have)
-	// 	} else {
-	// 		for i := range notification2 {
-	// 			if want, have := notification2[i], instances[i]; want != have {
-	// 				t.Errorf("want instance %v, have %v", want, have)
-	// 			}
-	// 		}
-	// 	}
-	// }
+	go c.Update(e2) // different set
+	expectUpdate(t, r1, []string{"a", "b", "c"})
+	expectUpdate(t, r2, []string{"a", "b", "c"})
 
-	close(f1)
-	close(f2)
+	c.Deregister(r1)
+	c.Deregister(r2)
+	close(r1)
+	close(r2)
+	// if deregister didn't work, Update would panic on closed channels
+	c.Update(e1)
+}
 
-	wg.Wait()
+func expectUpdate(t *testing.T, r chan sd.Event, expect []string) {
+	select {
+	case e := <-r:
+		if want, have := expect, e.Instances; !reflect.DeepEqual(want, have) {
+			t.Fatalf("want: %v, have: %v", want, have)
+		}
+	case <-time.After(time.Second):
+		t.Fatalf("did not receive expected update")
+	}
+}
 
-	// d.Deregister(f1)
-
-	// d.Unregister(f2)
-	// if want, have := 0, len(d.observers); want != have {
-	// 	t.Fatalf("want %v observers, have %v", want, have)
-	// }
+func expectNoUpdate(t *testing.T, r chan sd.Event) {
+	select {
+	case e := <-r:
+		t.Errorf("received unexpected update %v", e)
+	case <-time.After(time.Millisecond):
+		return // as expected
+	}
 }

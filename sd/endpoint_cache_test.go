@@ -10,7 +10,7 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func TestCache(t *testing.T) {
+func TestEndpointCache(t *testing.T) {
 	var (
 		ca    = make(closer)
 		cb    = make(closer)
@@ -79,7 +79,7 @@ func TestCache(t *testing.T) {
 	assertEndpointsLen(t, cache, 0)
 }
 
-func TestCacheErrorAndTimeout(t *testing.T) {
+func TestEndpointCacheErrorAndTimeout(t *testing.T) {
 	var (
 		ca      = make(closer)
 		cb      = make(closer)
