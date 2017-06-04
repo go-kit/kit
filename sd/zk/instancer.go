@@ -88,3 +88,8 @@ func (s *Instancer) Register(ch chan<- sd.Event) {
 func (s *Instancer) Deregister(ch chan<- sd.Event) {
 	s.cache.Deregister(ch)
 }
+
+// state returns the current state of instance.Cache, only for testing
+func (s *Instancer) state() sd.Event {
+	return s.cache.State()
+}
