@@ -35,17 +35,17 @@ func TestCreateParentNodesOnServer(t *testing.T) {
 	}
 	defer c1.Stop()
 
-	s, err := NewSubscriber(c1, path, newFactory(""), logger)
+	instancer, err := NewInstancer(c1, path, logger)
 	if err != nil {
 		t.Fatalf("Unable to create Subscriber: %v", err)
 	}
-	defer s.Stop()
+	defer instancer.Stop()
 
-	services, err := s.Endpoints()
-	if err != nil {
+	state := instancer.state()
+	if state.Err != nil {
 		t.Fatal(err)
 	}
-	if want, have := 0, len(services); want != have {
+	if want, have := 0, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
@@ -70,7 +70,7 @@ func TestCreateBadParentNodesOnServer(t *testing.T) {
 	c, _ := NewClient(host, logger)
 	defer c.Stop()
 
-	_, err := NewSubscriber(c, "invalid/path", newFactory(""), logger)
+	_, err := NewInstancer(c, "invalid/path", logger)
 
 	if want, have := stdzk.ErrInvalidPath, err; want != have {
 		t.Errorf("want %v, have %v", want, have)
@@ -82,7 +82,7 @@ func TestCredentials1(t *testing.T) {
 	c, _ := NewClient(host, logger, ACL(acl), Credentials("user", "secret"))
 	defer c.Stop()
 
-	_, err := NewSubscriber(c, "/acl-issue-test", newFactory(""), logger)
+	_, err := NewInstancer(c, "/acl-issue-test", logger)
 
 	if err != nil {
 		t.Fatal(err)
@@ -94,7 +94,7 @@ func TestCredentials2(t *testing.T) {
 	c, _ := NewClient(host, logger, ACL(acl))
 	defer c.Stop()
 
-	_, err := NewSubscriber(c, "/acl-issue-test", newFactory(""), logger)
+	_, err := NewInstancer(c, "/acl-issue-test", logger)
 
 	if err != stdzk.ErrNoAuth {
 		t.Errorf("want %v, have %v", stdzk.ErrNoAuth, err)
@@ -105,7 +105,7 @@ func TestConnection(t *testing.T) {
 	c, _ := NewClient(host, logger)
 	c.Stop()
 
-	_, err := NewSubscriber(c, "/acl-issue-test", newFactory(""), logger)
+	_, err := NewInstancer(c, "/acl-issue-test", logger)
 
 	if err != ErrClientClosed {
 		t.Errorf("want %v, have %v", ErrClientClosed, err)
@@ -123,7 +123,7 @@ func TestGetEntriesOnServer(t *testing.T) {
 	defer c1.Stop()
 
 	c2, err := NewClient(host, logger)
-	s, err := NewSubscriber(c2, path, newFactory(""), logger)
+	s, err := NewInstancer(c2, path, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,11 +148,11 @@ func TestGetEntriesOnServer(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	services, err := s.Endpoints()
-	if err != nil {
-		t.Fatal(err)
+	state := s.state()
+	if state.Err != nil {
+		t.Fatal(state.Err)
 	}
-	if want, have := 2, len(services); want != have {
+	if want, have := 2, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }

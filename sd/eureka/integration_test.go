@@ -56,7 +56,7 @@ func TestIntegration(t *testing.T) {
 	defer instancer.Stop()
 
 	// We should have one instance immediately after subscriber instantiation.
-	state := instancer.State()
+	state := instancer.state()
 	if state.Err != nil {
 		t.Error(state.Err)
 	}
@@ -74,7 +74,7 @@ func TestIntegration(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// Now we should have two instances.
-	state = instancer.State()
+	state = instancer.state()
 	if state.Err != nil {
 		t.Error(state.Err)
 	}
@@ -89,11 +89,11 @@ func TestIntegration(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// And then there was one.
-	endpoints, err = endpointer.Endpoints()
-	if err != nil {
-		t.Error(err)
+	state = instancer.state()
+	if state.Err != nil {
+		t.Error(state.Err)
 	}
-	if want, have := 1, len(endpoints); want != have {
+	if want, have := 1, len(state.Instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
