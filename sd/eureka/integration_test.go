@@ -44,9 +44,6 @@ func TestIntegration(t *testing.T) {
 	registrar1.Register()
 	defer registrar1.Deregister()
 
-	// This should be enough time for the Eureka server response cache to update.
-	time.Sleep(time.Second)
-
 	// Build a Eureka instancer.
 	instancer := NewInstancer(
 		&fargoConnection,
@@ -55,14 +52,26 @@ func TestIntegration(t *testing.T) {
 	)
 	defer instancer.Stop()
 
+	// checks every 100ms (fr up to 10s) for the expected number of instances to be reported
+	waitForInstances := func(count int) {
+		for t := 0; t < 100; t++ {
+			state := instancer.state()
+			if len(state.Instances) == count {
+				return
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		state := instancer.state()
+		if state.Err != nil {
+			t.Error(state.Err)
+		}
+		if want, have := 1, len(state.Instances); want != have {
+			t.Errorf("want %d, have %d", want, have)
+		}
+	}
+
 	// We should have one instance immediately after subscriber instantiation.
-	state := instancer.state()
-	if state.Err != nil {
-		t.Error(state.Err)
-	}
-	if want, have := 1, len(state.Instances); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
+	waitForInstances(1)
 
 	// Register a second instance
 	registrar2 := NewRegistrar(&fargoConnection, instanceTest2, log.With(logger, "component", "registrar2"))
@@ -71,29 +80,12 @@ func TestIntegration(t *testing.T) {
 
 	// This should be enough time for a scheduled update assuming Eureka is
 	// configured with the properties mentioned in the function comments.
-	time.Sleep(2 * time.Second)
-
-	// Now we should have two instances.
-	state = instancer.state()
-	if state.Err != nil {
-		t.Error(state.Err)
-	}
-	if want, have := 2, len(state.Instances); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
+	waitForInstances(2)
 
 	// Deregister the second instance.
 	registrar2.Deregister()
 
 	// Wait for another scheduled update.
-	time.Sleep(2 * time.Second)
-
 	// And then there was one.
-	state = instancer.state()
-	if state.Err != nil {
-		t.Error(state.Err)
-	}
-	if want, have := 1, len(state.Instances); want != have {
-		t.Errorf("want %d, have %d", want, have)
-	}
+	waitForInstances(1)
 }
