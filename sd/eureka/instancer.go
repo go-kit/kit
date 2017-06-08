@@ -33,15 +33,10 @@ func NewInstancer(conn fargoConnection, app string, logger log.Logger) *Instance
 		quitc:  make(chan chan struct{}),
 	}
 
-	instances, err := s.getInstances()
-	if err == nil {
-		s.logger.Log("instances", len(instances))
-	} else {
-		s.logger.Log("during", "getInstances", "err", err)
-	}
-
-	s.cache.Update(sd.Event{Instances: instances, Err: err})
-	go s.loop()
+	done := make(chan struct{})
+	updates := conn.ScheduleAppUpdates(app, true, done)
+	s.consume(<-updates)
+	go s.loop(updates, done)
 	return s
 }
 
@@ -53,26 +48,24 @@ func (s *Instancer) Stop() {
 	s.quitc = nil
 }
 
-func (s *Instancer) loop() {
-	var (
-		await   = false
-		done    = make(chan struct{})
-		updatec = s.conn.ScheduleAppUpdates(s.app, await, done)
-	)
+func (s *Instancer) consume(update fargo.AppUpdate) {
+	if update.Err != nil {
+		s.logger.Log("during", "Update", "err", update.Err)
+		s.cache.Update(sd.Event{Err: update.Err})
+		return
+	}
+	instances := convertFargoAppToInstances(update.App)
+	s.logger.Log("instances", len(instances))
+	s.cache.Update(sd.Event{Instances: instances})
+}
+
+func (s *Instancer) loop(updates <-chan fargo.AppUpdate, done chan<- struct{}) {
 	defer close(done)
 
 	for {
 		select {
-		case update := <-updatec:
-			if update.Err != nil {
-				s.logger.Log("during", "Update", "err", update.Err)
-				s.cache.Update(sd.Event{Err: update.Err})
-				continue
-			}
-			instances := convertFargoAppToInstances(update.App)
-			s.logger.Log("instances", len(instances))
-			s.cache.Update(sd.Event{Instances: instances})
-
+		case update := <-updates:
+			s.consume(update)
 		case q := <-s.quitc:
 			close(q)
 			return

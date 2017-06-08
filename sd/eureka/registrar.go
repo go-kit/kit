@@ -30,6 +30,10 @@ type fargoUnsuccessfulHTTPResponse struct {
 	messagePrefix string
 }
 
+func (u *fargoUnsuccessfulHTTPResponse) Error() string {
+	return fmt.Sprintf("err=%s code=%d", u.messagePrefix, u.statusCode)
+}
+
 // Registrar maintains service instance liveness information in Eureka.
 type Registrar struct {
 	conn     fargoConnection
@@ -110,18 +114,30 @@ func (r *Registrar) loop() {
 	}
 }
 
-func (r *Registrar) heartbeat() error {
-	err := r.conn.HeartBeatInstance(r.instance)
-	if err != nil {
-		if u, ok := err.(*fargoUnsuccessfulHTTPResponse); ok && u.statusCode == http.StatusNotFound {
-			// Instance expired (e.g. network partition). Re-register.
-			r.logger.Log("during", "heartbeat", err.Error())
-			return r.conn.ReregisterInstance(r.instance)
-		}
+func httpResponseStatusCode(err error) (code int, present bool) {
+	if code, ok := fargo.HTTPResponseStatusCode(err); ok {
+		return code, true
 	}
-	return err
+	// Allow injection of errors for testing.
+	if u, ok := err.(*fargoUnsuccessfulHTTPResponse); ok {
+		return u.statusCode, true
+	}
+	return 0, false
 }
 
-func (u *fargoUnsuccessfulHTTPResponse) Error() string {
-	return fmt.Sprintf("err=%s code=%d", u.messagePrefix, u.statusCode)
+func isNotFound(err error) bool {
+	code, ok := httpResponseStatusCode(err)
+	return ok && code == http.StatusNotFound
+}
+
+func (r *Registrar) heartbeat() error {
+	err := r.conn.HeartBeatInstance(r.instance)
+	if err == nil {
+		return nil
+	}
+	if isNotFound(err) {
+		// Instance expired (e.g. network partition). Re-register.
+		return r.conn.ReregisterInstance(r.instance)
+	}
+	return err
 }

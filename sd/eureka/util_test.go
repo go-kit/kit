@@ -2,16 +2,19 @@ package eureka
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"sync"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/hudl/fargo"
 )
 
 type testConnection struct {
-	instances      []*fargo.Instance
-	application    *fargo.Application
-	errInstances   error
+	mu        sync.RWMutex
+	instances []*fargo.Instance
+
 	errApplication error
 	errHeartbeat   error
 	errRegister    error
@@ -23,10 +26,6 @@ var (
 	errNotFound   = &fargoUnsuccessfulHTTPResponse{statusCode: 404, messagePrefix: "not found"}
 	loggerTest    = log.NewNopLogger()
 	appNameTest   = "go-kit"
-	appUpdateTest = &fargo.Application{
-		Name:      appNameTest,
-		Instances: []*fargo.Instance{instanceTest1, instanceTest2},
-	}
 	instanceTest1 = &fargo.Instance{
 		HostName:         "serveregistrar1.acme.org",
 		Port:             8080,
@@ -59,16 +58,18 @@ var (
 var _ fargoConnection = (*testConnection)(nil)
 
 func (c *testConnection) RegisterInstance(i *fargo.Instance) error {
-	if c.errRegister == nil {
-		for _, instance := range c.instances {
-			if reflect.DeepEqual(*instance, *i) {
-				return errors.New("already registered")
-			}
-		}
-
-		c.instances = append(c.instances, i)
+	if c.errRegister != nil {
+		return c.errRegister
 	}
-	return c.errRegister
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, instance := range c.instances {
+		if reflect.DeepEqual(*instance, *i) {
+			return errors.New("already registered")
+		}
+	}
+	c.instances = append(c.instances, i)
+	return nil
 }
 
 func (c *testConnection) HeartBeatInstance(i *fargo.Instance) error {
@@ -76,33 +77,76 @@ func (c *testConnection) HeartBeatInstance(i *fargo.Instance) error {
 }
 
 func (c *testConnection) DeregisterInstance(i *fargo.Instance) error {
-	if c.errDeregister == nil {
-		var newInstances []*fargo.Instance
-		for _, instance := range c.instances {
-			if reflect.DeepEqual(*instance, *i) {
-				continue
-			}
-			newInstances = append(newInstances, instance)
-		}
-		if len(newInstances) == len(c.instances) {
-			return errors.New("not registered")
-		}
-
-		c.instances = newInstances
+	if c.errDeregister != nil {
+		return c.errDeregister
 	}
-	return c.errDeregister
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	remaining := make([]*fargo.Instance, 0, len(c.instances))
+	for _, instance := range c.instances {
+		if reflect.DeepEqual(*instance, *i) {
+			continue
+		}
+		remaining = append(remaining, instance)
+	}
+	if len(remaining) == len(c.instances) {
+		return errors.New("not registered")
+	}
+	c.instances = remaining
+	return nil
 }
 
 func (c *testConnection) ReregisterInstance(ins *fargo.Instance) error {
 	return nil
 }
 
-func (c *testConnection) ScheduleAppUpdates(name string, await bool, done <-chan struct{}) <-chan fargo.AppUpdate {
-	updatec := make(chan fargo.AppUpdate, 1)
-	updatec <- fargo.AppUpdate{App: c.application, Err: c.errApplication}
-	return updatec
+func (c *testConnection) instancesForApplication(name string) []*fargo.Instance {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	instances := make([]*fargo.Instance, 0, len(c.instances))
+	for _, i := range c.instances {
+		if i.App == name {
+			instances = append(instances, i)
+		}
+	}
+	return instances
 }
 
 func (c *testConnection) GetApp(name string) (*fargo.Application, error) {
-	return &fargo.Application{Name: appNameTest, Instances: c.instances}, c.errInstances
+	if err := c.errApplication; err != nil {
+		return nil, err
+	}
+	instances := c.instancesForApplication(name)
+	if len(instances) == 0 {
+		return nil, fmt.Errorf("Application not found for name=%s", name)
+	}
+	return &fargo.Application{Name: name, Instances: instances}, nil
+}
+
+func (c *testConnection) ScheduleAppUpdates(name string, await bool, done <-chan struct{}) <-chan fargo.AppUpdate {
+	updatec := make(chan fargo.AppUpdate, 1)
+	send := func() {
+		app, err := c.GetApp(name)
+		select {
+		case updatec <- fargo.AppUpdate{App: app, Err: err}:
+		default:
+		}
+	}
+
+	if await {
+		send()
+	}
+	go func() {
+		ticker := time.NewTicker(100 * time.Millisecond)
+		for {
+			select {
+			case <-ticker.C:
+				send()
+			case <-done:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+	return updatec
 }
