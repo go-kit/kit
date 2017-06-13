@@ -72,6 +72,14 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 
 // ServeGRPC implements the Handler interface.
 func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.Context, interface{}, error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			ctx = oldcontext.WithValue(ctx, ContextKeyRecoveredFromPanic, r)
+			s.logger.Log("panic", r)
+		}
+	}()
+
 	// Retrieve gRPC metadata.
 	md, ok := metadata.FromContext(ctx)
 	if !ok {

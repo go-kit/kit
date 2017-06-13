@@ -10,6 +10,10 @@ import (
 
 const (
 	binHdrSuffix = "-bin"
+
+	// ContextKeyRecoveredFromPanic is populated in the context whenever a
+	// panic is recovered in ServeGRPC. Its value is the one given to panic.
+	ContextKeyRecoveredFromPanic contextKey = iota
 )
 
 // ClientRequestFunc may take information from context and use it to construct
