@@ -131,7 +131,7 @@ const (
 	// ServerFinalizerFunc is specified. Its value is of type int64.
 	ContextKeyResponseSize
 
-	// ContextKeyRecoveredFromPanic is populated in the context whenever a
+	// ContextKeyPanicValue is populated in the context whenever a
 	// panic is recovered in ServeHTTP. Its value is the one given to panic.
-	ContextKeyRecoveredFromPanic
+	ContextKeyPanicValue
 )

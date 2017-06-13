@@ -18,12 +18,13 @@ type Handler interface {
 
 // Server wraps an endpoint and implements grpc.Handler.
 type Server struct {
-	e      endpoint.Endpoint
-	dec    DecodeRequestFunc
-	enc    EncodeResponseFunc
-	before []ServerRequestFunc
-	after  []ServerResponseFunc
-	logger log.Logger
+	e          endpoint.Endpoint
+	dec        DecodeRequestFunc
+	enc        EncodeResponseFunc
+	before     []ServerRequestFunc
+	after      []ServerResponseFunc
+	catchPanic bool
+	logger     log.Logger
 }
 
 // NewServer constructs a new server, which implements wraps the provided
@@ -70,14 +71,23 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 	return func(s *Server) { s.logger = logger }
 }
 
+// ServerCatchPanic is used to enable the panic catching and logging functionality
+// in the server. Panic value will be set in ContextKeyPanicValue context's key.
+// By default, panic handling is left to the standard library.
+func ServerCatchPanic(enabled bool) ServerOption {
+	return func(s *Server) { s.catchPanic = enabled }
+}
+
 // ServeGRPC implements the Handler interface.
 func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.Context, interface{}, error) {
 
-	defer func() {
-		if r := recover(); r != nil {
-			s.logger.Log("panic", r)
-		}
-	}()
+	if s.catchPanic {
+		defer func() {
+			if r := recover(); r != nil {
+				s.logger.Log("panic", r)
+			}
+		}()
+	}
 
 	// Retrieve gRPC metadata.
 	md, ok := metadata.FromContext(ctx)

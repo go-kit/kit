@@ -18,6 +18,7 @@ type Server struct {
 	after        []ServerResponseFunc
 	errorEncoder ErrorEncoder
 	finalizer    ServerFinalizerFunc
+	catchPanic   bool
 	logger       log.Logger
 }
 
@@ -80,6 +81,13 @@ func ServerFinalizer(f ServerFinalizerFunc) ServerOption {
 	return func(s *Server) { s.finalizer = f }
 }
 
+// ServerCatchPanic is used to enable the panic catching and logging functionality
+// in the server. Panic value will be set in ContextKeyPanicValue context's key.
+// By default, panic handling is left to the standard library.
+func ServerCatchPanic(enabled bool) ServerOption {
+	return func(s *Server) { s.catchPanic = enabled }
+}
+
 // ServeHTTP implements http.Handler.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -89,9 +97,11 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			ctx = context.WithValue(ctx, ContextKeyResponseHeaders, iw.Header())
 			ctx = context.WithValue(ctx, ContextKeyResponseSize, iw.written)
-			if r := recover(); r != nil {
-				ctx = context.WithValue(ctx, ContextKeyRecoveredFromPanic, r)
-				s.logger.Log("panic", r)
+			if s.catchPanic {
+				if r := recover(); r != nil {
+					ctx = context.WithValue(ctx, ContextKeyPanicValue, r)
+					s.logger.Log("panic", r)
+				}
 			}
 			s.finalizer(ctx, iw.code, r)
 		}()
