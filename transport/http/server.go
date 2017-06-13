@@ -89,6 +89,10 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			ctx = context.WithValue(ctx, ContextKeyResponseHeaders, iw.Header())
 			ctx = context.WithValue(ctx, ContextKeyResponseSize, iw.written)
+			if r := recover(); r != nil {
+				ctx = context.WithValue(ctx, ContextKeyRecoveredFromPanic, r)
+				s.logger.Log("panic", r)
+			}
 			s.finalizer(ctx, iw.code, r)
 		}()
 		w = iw
