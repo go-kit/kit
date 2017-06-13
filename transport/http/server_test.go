@@ -347,3 +347,21 @@ func testServer(t *testing.T) (step func(), resp <-chan *http.Response) {
 	}()
 	return func() { stepch <- true }, response
 }
+
+func TestServerRecoverPanic(t *testing.T) {
+	handler := httptransport.NewServer(
+		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
+		func(context.Context, *http.Request) (interface{}, error) {
+			panic("generic panic")
+		},
+		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
+		httptransport.ServerFinalizer(func(ctx context.Context, code int, r *http.Request) {
+			if val, ok := ctx.Value(httptransport.ContextKeyRecoveredFromPanic).(string); !ok || val != "generic panic" {
+				t.Error("Panic was not recovered and set properly in context")
+			}
+		}),
+	)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	_, _ = http.Get(server.URL)
+}

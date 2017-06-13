@@ -75,7 +75,6 @@ func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.C
 
 	defer func() {
 		if r := recover(); r != nil {
-			ctx = oldcontext.WithValue(ctx, ContextKeyRecoveredFromPanic, r)
 			s.logger.Log("panic", r)
 		}
 	}()
