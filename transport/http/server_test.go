@@ -371,7 +371,24 @@ func TestServerRecoverPanic(t *testing.T) {
 				}),
 				httptransport.ServerCatchPanic(testCase.catchPanic),
 			)
-			server := httptest.NewServer(handler)
+
+			server := httptest.NewServer(func(http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					defer func() {
+						if !testCase.catchPanic {
+							// Check that panic hasn't been handled by kit/transport/http.Server
+							if r := recover(); r != nil {
+								if r != "generic panic" {
+									t.Error("Unexpected panic value")
+								}
+							} else {
+								t.Error("Expected panic value")
+							}
+						}
+					}()
+					handler.ServeHTTP(w, r)
+				})
+			}(handler))
 			defer server.Close()
 			_, _ = http.Get(server.URL)
 		})
