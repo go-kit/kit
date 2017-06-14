@@ -371,7 +371,6 @@ func TestServerRecoverPanic(t *testing.T) {
 				}),
 				httptransport.ServerCatchPanic(testCase.catchPanic),
 			)
-
 			server := httptest.NewServer(func(http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					defer func() {
