@@ -1,8 +1,9 @@
 # Go kit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=shield)](https://circleci.com/gh/go-kit/kit) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit) [![Coverage Status](https://coveralls.io/repos/go-kit/kit/badge.svg?branch=master&service=github)](https://coveralls.io/github/go-kit/kit?branch=master) [![Go Report Card](https://goreportcard.com/badge/go-kit/kit)](https://goreportcard.com/report/go-kit/kit) [![Sourcegraph](https://sourcegraph.com/github.com/go-kit/kit/-/badge.svg)](https://sourcegraph.com/github.com/go-kit/kit?badge)
 
-**Go kit** is a **distributed programming toolkit** for building microservices
-in large organizations. We solve common problems in distributed systems, so
-you can focus on your business logic.
+**Go kit** is a **programming toolkit** for building microservices 
+(or elegant monoliths) in Go. We solve common problems in distributed 
+systems and application architecture so you can focus on delivering
+business value.
 
 - Website: [gokit.io](https://gokit.io)
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
@@ -11,10 +12,10 @@ you can focus on your business logic.
 ## Motivation
 
 Go has emerged as the language of the server, but it remains underrepresented
-in large, consumer-focused tech companies like Facebook, Twitter, Netflix, and
-SoundCloud. These organizations have largely adopted JVM-based stacks for
-their business logic, owing in large part to libraries and ecosystems that
-directly support their microservice architectures.
+in so-called "modern enterprise" companies like Facebook, Twitter, Netflix, and
+SoundCloud. These organizations have largely adopted JVM-based stacks for their
+business logic, owing in large part to libraries and ecosystems that directly
+support their microservice architectures.
 
 To reach its next level of success, Go needs more than simple primitives and
 idioms. It needs a comprehensive toolkit, for coherent distributed programming
@@ -49,21 +50,19 @@ Thank you, [contributors](https://github.com/go-kit/kit/graphs/contributors)!
 
 ## Dependency management
 
-Go kit is a library, designed to be imported into a binary package.
-Vendoring is currently the best way for binary package authors
- to ensure reliable, reproducible builds.
-Therefore, we strongly recommend our users use vendoring for all of their dependencies,
- including Go kit.
-To avoid compatibility and availability issues,
- Go kit doesn't vendor its own dependencies,
- and doesn't recommend use of third-party import proxies.
+Go kit is a library, designed to be imported into a binary package. Vendoring
+is currently the best way for binary package authors to ensure reliable,
+reproducible builds. Therefore, we strongly recommend our users use vendoring
+for all of their dependencies, including Go kit. To avoid compatibility and
+availability issues, Go kit doesn't vendor its own dependencies, and
+doesn't recommend use of third-party import proxies.
 
 There are several tools which make vendoring easier, including
+ [dep](https://github.com/golang/dep),
  [gb](http://getgb.io),
  [glide](https://github.com/Masterminds/glide),
- [gvt](https://github.com/FiloSottile/gvt),
- [govendor](https://github.com/kardianos/govendor), and
- [vendetta](https://github.com/dpw/vendetta).
+ [gvt](https://github.com/FiloSottile/gvt), and
+ [govendor](https://github.com/kardianos/govendor).
 In addition, Go kit uses a variety of continuous integration providers
  to find and fix compatibility problems as soon as they occur.
 
