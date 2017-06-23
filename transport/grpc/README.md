@@ -2,7 +2,10 @@
 
 [gRPC](http://www.grpc.io/) is an excellent, modern IDL and transport for microservices.
 If you're starting a greenfield project, Go kit strongly recommends gRPC as your default transport.
-And using gRPC and Go kit together is very simple.
+
+One important note is that while gRPC supports streaming requests and replies, go-kit does not. You can still use streams in your service, but their implementation will not be able to take advantage of many go-kit features like middleware.
+
+Using gRPC and Go kit together is very simple.
 
 First, define your service using protobuf3.
 This is explained [in gRPC documentation](http://www.grpc.io/docs/#defining-a-service).
@@ -10,10 +13,12 @@ See [add.proto](https://github.com/go-kit/kit/blob/ec8b02591ee873433565a1ae9d317
 Make sure the proto definition matches your service's Go kit (interface) definition.
 
 Next, get the protoc compiler.
-Unfortunately, this needs to be done from source.
-Fortunately, it's pretty straightforward.
 
-```
+You can download pre-compiled binaries from the [protobuf release page](https://github.com/google/protobuf/releases). You will unzip a folder called `protoc3` with a subdirectory `bin` containing an executable. Move that executable somewhere in your `$PATH` and you're good to go!
+
+It can also be built from source.
+
+```sh
 brew install autoconf automake libtool
 git clone https://github.com/google/protobuf
 cd protobuf
@@ -22,7 +27,7 @@ cd protobuf
 
 Then, compile your service definition, from .proto to .go.
 
-```
+```sh
 protoc add.proto --go_out=plugins=grpc:.
 ```
 
