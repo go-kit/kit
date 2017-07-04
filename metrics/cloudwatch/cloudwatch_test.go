@@ -3,6 +3,7 @@ package cloudwatch
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/teststat"
 )
 
@@ -64,7 +66,7 @@ func TestCounter(t *testing.T) {
 	namespace, name := "abc", "def"
 	label, value := "label", "value"
 	svc := newMockCloudWatch()
-	cw := New(namespace, svc, log.NewNopLogger())
+	cw := New(namespace, svc, 10, log.NewNopLogger())
 	counter := cw.NewCounter(name).With(label, value)
 	valuef := func() float64 {
 		err := cw.Send()
@@ -83,11 +85,45 @@ func TestCounter(t *testing.T) {
 	}
 }
 
+func TestCounterLowSendConcurrency(t *testing.T) {
+	namespace := "abc"
+	var names, labels, values []string
+	for i := 1; i <= 45; i++ {
+		num := strconv.Itoa(i)
+		names = append(names, "name"+num)
+		labels = append(labels, "label"+num)
+		values = append(values, "value"+num)
+	}
+	svc := newMockCloudWatch()
+	cw := New(namespace, svc, 2, log.NewNopLogger())
+
+	counters := make(map[string]metrics.Counter)
+	var wants []float64
+	for i, name := range names {
+		counters[name] = cw.NewCounter(name).With(labels[i], values[i])
+		wants = append(wants, teststat.FillCounter(counters[name]))
+	}
+
+	err := cw.Send()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i, name := range names {
+		if svc.valuesReceived[name] != wants[i] {
+			t.Fatal("want %f, have %f", wants[i], svc.valuesReceived[name])
+		}
+		if err := testDimensions(svc, name, labels[i], values[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestGauge(t *testing.T) {
 	namespace, name := "abc", "def"
 	label, value := "label", "value"
 	svc := newMockCloudWatch()
-	cw := New(namespace, svc, log.NewNopLogger())
+	cw := New(namespace, svc, 10, log.NewNopLogger())
 	gauge := cw.NewGauge(name).With(label, value)
 	valuef := func() float64 {
 		err := cw.Send()
@@ -110,7 +146,7 @@ func TestHistogram(t *testing.T) {
 	namespace, name := "abc", "def"
 	label, value := "label", "value"
 	svc := newMockCloudWatch()
-	cw := New(namespace, svc, log.NewNopLogger())
+	cw := New(namespace, svc, 10, log.NewNopLogger())
 	histogram := cw.NewHistogram(name, 50).With(label, value)
 	n50 := fmt.Sprintf("%s_50", name)
 	n90 := fmt.Sprintf("%s_90", name)
