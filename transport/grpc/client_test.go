@@ -48,7 +48,9 @@ func TestGRPCClient(t *testing.T) {
 	)
 
 	responseCTX, v, err := client.Test(ctx, a, b)
-
+	if err != nil {
+		t.Fatalf("unable to Test: %+v", err)
+	}
 	if want, have := fmt.Sprintf("%s = %d", a, b), v; want != have {
 		t.Fatalf("want %q, have %q", want, have)
 	}
