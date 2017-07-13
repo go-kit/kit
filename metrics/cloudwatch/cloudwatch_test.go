@@ -111,7 +111,7 @@ func TestCounterLowSendConcurrency(t *testing.T) {
 
 	for i, name := range names {
 		if svc.valuesReceived[name] != wants[i] {
-			t.Fatal("want %f, have %f", wants[i], svc.valuesReceived[name])
+			t.Fatalf("want %f, have %f", wants[i], svc.valuesReceived[name])
 		}
 		if err := testDimensions(svc, name, labels[i], values[i]); err != nil {
 			t.Fatal(err)
