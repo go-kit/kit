@@ -13,9 +13,9 @@ business value.
 
 Go has emerged as the language of the server, but it remains underrepresented
 in so-called "modern enterprise" companies like Facebook, Twitter, Netflix, and
-SoundCloud. These organizations have largely adopted JVM-based stacks for their
-business logic, owing in large part to libraries and ecosystems that directly
-support their microservice architectures.
+SoundCloud. Many of these organizations have turned to JVM-based stacks for
+their business logic, owing in large part to libraries and ecosystems that
+directly support their microservice architectures.
 
 To reach its next level of success, Go needs more than simple primitives and
 idioms. It needs a comprehensive toolkit, for coherent distributed programming

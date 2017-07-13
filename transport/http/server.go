@@ -21,7 +21,7 @@ type Server struct {
 	logger       log.Logger
 }
 
-// NewServer constructs a new server, which implements http.Server and wraps
+// NewServer constructs a new server, which implements http.Handler and wraps
 // the provided endpoint.
 func NewServer(
 	e endpoint.Endpoint,
