@@ -66,6 +66,8 @@ func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims jwt.Clai
 	}
 }
 
+// ClaimsFactory is a factory for jwt.Claims.
+// Useful in NewParser middleware.
 type ClaimsFactory func() jwt.Claims
 
 // MapClaimsFactory is a ClaimsFactory that returns 
