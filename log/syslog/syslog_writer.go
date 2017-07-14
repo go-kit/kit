@@ -4,6 +4,7 @@ import (
 	gosyslog "log/syslog"
 )
 
+// SyslogWriter is an interface wrapping stdlib syslog Writer
 type SyslogWriter interface {
 	Write([]byte) (int, error)
 	Close() error

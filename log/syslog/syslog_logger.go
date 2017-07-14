@@ -9,17 +9,12 @@ import (
 	"sync"
 )
 
-// @TODO
-// 1. ~Wrap gosyslog.Writer~
-// 2. ~Provide dummy implementation for tests~
-// 3. ~Test that different levels are sent correctly with default selector~
-// 4. ~Test that all levels are sent with a custom exhaustive selector~
-// 5. ~Test default value~
-// 6. Extract bufLogger - colorLogger
-
-
+// PrioritySelector inspects list of keyvals and select a syslog priority
 type PrioritySelector func(keyvals ...interface{}) gosyslog.Priority
 
+// NewSyslogLogger returns a new Logger which writes to syslog in syslog format.
+// The body of the log message is the formatted output from the Logger returned
+// by newLogger.
 func NewSyslogLogger(w SyslogWriter, newLogger func(io.Writer) log.Logger, options ...Option) log.Logger {
 	l := &syslogLogger{
 		w: w,
@@ -52,7 +47,7 @@ func (l *syslogLogger) Log(keyvals ...interface{}) error {
 	if err := lb.logger.Log(keyvals...); err != nil {
 		return err
 	}
-// @TODO - trim newline?
+
 	switch level {
 	case gosyslog.LOG_EMERG:
 		return l.w.Emerg(lb.buf.String())
@@ -76,28 +71,11 @@ func (l *syslogLogger) Log(keyvals ...interface{}) error {
 	}
 }
 
-type loggerBuf struct {
-	buf    *bytes.Buffer
-	logger log.Logger
-}
-
-func (l *syslogLogger) getLoggerBuf() *loggerBuf {
-	lb := l.bufPool.Get().(*loggerBuf)
-	if lb.buf == nil {
-		lb.buf = &bytes.Buffer{}
-		lb.logger = l.newLogger(lb.buf)
-	} else {
-		lb.buf.Reset()
-	}
-	return lb
-}
-
-func (l *syslogLogger) putLoggerBuf(cb *loggerBuf) {
-	l.bufPool.Put(cb)
-}
-
+// Option sets a parameter for syslog loggers.
 type Option func(*syslogLogger)
 
+// PrioritySelectorOption sets priority selector function to choose syslog
+// priority.
 func PrioritySelectorOption(selector PrioritySelector) Option {
 	return func (l *syslogLogger) { l.prioritySelector = selector }
 }
@@ -121,4 +99,24 @@ func defaultPrioritySelector(keyvals ...interface{}) gosyslog.Priority {
 	}
 
 	return gosyslog.LOG_INFO
+}
+
+type loggerBuf struct {
+	buf    *bytes.Buffer
+	logger log.Logger
+}
+
+func (l *syslogLogger) getLoggerBuf() *loggerBuf {
+	lb := l.bufPool.Get().(*loggerBuf)
+	if lb.buf == nil {
+		lb.buf = &bytes.Buffer{}
+		lb.logger = l.newLogger(lb.buf)
+	} else {
+		lb.buf.Reset()
+	}
+	return lb
+}
+
+func (l *syslogLogger) putLoggerBuf(cb *loggerBuf) {
+	l.bufPool.Put(cb)
 }
