@@ -58,7 +58,7 @@ func (id *RequestID) String() (string, error) {
 type Response struct {
 	JSONRPC string      `json:"jsonrpc"`
 	Result  interface{} `json:"result,omitempty"`
-	Error   Error       `json:"error,omitemty"`
+	Error   *Error      `json:"error,omitemty"`
 }
 
 const (

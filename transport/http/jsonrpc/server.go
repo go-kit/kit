@@ -133,9 +133,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx = f(ctx, w)
 	}
 
-	res := Response{
-		Error: Error{},
-	}
+	res := Response{}
 
 	// Encode the response from the Endpoint
 	resParams, err := ecm.Encode(ctx, response)
@@ -178,7 +176,7 @@ func rpcErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{
 		JSONRPC: Version,
-		Error:   e,
+		Error:   &e,
 	})
 }
 

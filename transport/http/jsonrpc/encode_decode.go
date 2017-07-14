@@ -3,7 +3,7 @@ package jsonrpc
 import (
 	"encoding/json"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // DecodeRequestFunc extracts a user-domain request object from an HTTP
