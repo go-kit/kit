@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rossmcf/kit/transport/http/jsonrpc"
+	"github.com/go-kit/kit/transport/http/jsonrpc"
 )
 
 func addBody() io.Reader {

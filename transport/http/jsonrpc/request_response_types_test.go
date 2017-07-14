@@ -1,9 +1,11 @@
-package jsonrpc
+package jsonrpc_test
 
 import (
 	"encoding/json"
 	"fmt"
 	"testing"
+
+	"github.com/go-kit/kit/transport/http/jsonrpc"
 )
 
 func TestCanUnMarshalID(t *testing.T) {
@@ -18,7 +20,7 @@ func TestCanUnMarshalID(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		r := Request{}
+		r := jsonrpc.Request{}
 		JSON := fmt.Sprintf(`{"id":%s}`, c.JSON)
 
 		var foo interface{}
@@ -94,7 +96,7 @@ func TestCanUnMarshalID(t *testing.T) {
 }
 
 func TestCanUnmarshalNullID(t *testing.T) {
-	r := Request{}
+	r := jsonrpc.Request{}
 	JSON := `{"id":null}`
 	err := json.Unmarshal([]byte(JSON), &r)
 	if err != nil {
