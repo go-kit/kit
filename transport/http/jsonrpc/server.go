@@ -3,6 +3,7 @@ package jsonrpc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -109,9 +110,13 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Get the endpoint and codecs from the map using the method
 	// defined in the JSON  object
-	ecm := s.ecm[req.Method]
-
-	// TODO: Need to handle unregistered methods
+	ecm, ok := s.ecm[req.Method]
+	if !ok {
+		err := methodNotFoundError(fmt.Sprintf("Method %s was not found.", req.Method))
+		s.logger.Log("err", err)
+		rpcErrorEncoder(ctx, err, w)
+		return
+	}
 
 	// Decode the JSON  "params"
 	reqParams, err := ecm.Decode(ctx, req.Params)
@@ -156,8 +161,6 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // encoded form of the error will be used. If the error implements StatusCoder,
 // the provided StatusCode will be used instead of 500.
 func rpcErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
-	body := []byte(err.Error())
-
 	w.Header().Set("Content-Type", ContentType)
 	if headerer, ok := err.(httptransport.Headerer); ok {
 		for k := range headerer.Headers() {
@@ -167,7 +170,7 @@ func rpcErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 
 	e := Error{
 		Code:    InternalError,
-		Message: string(body),
+		Message: err.Error(),
 	}
 	if sc, ok := err.(ErrorCoder); ok {
 		e.Code = sc.ErrorCode()

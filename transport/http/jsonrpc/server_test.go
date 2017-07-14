@@ -89,6 +89,19 @@ func TestServerBadEncode(t *testing.T) {
 	expectErrorCode(t, jsonrpc.InternalError, buf)
 }
 
+func TestServerUnregisteredMethod(t *testing.T) {
+	ecm := jsonrpc.EndpointCodecMap{}
+	handler := jsonrpc.NewServer(context.TODO(), ecm)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	resp, _ := http.Post(server.URL, "application/json", addBody())
+	if want, have := http.StatusOK, resp.StatusCode; want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+	buf, _ := ioutil.ReadAll(resp.Body)
+	expectErrorCode(t, jsonrpc.MethodNotFoundError, buf)
+}
+
 func TestServerHappyPath(t *testing.T) {
 	step, response := testServer(t)
 	step()

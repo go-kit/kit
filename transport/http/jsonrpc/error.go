@@ -53,15 +53,19 @@ func (e *invalidRequestError) ErrorCode() int {
 	return InvalidRequestError
 }
 
-type methodNotFoundError struct{}
+type methodNotFoundError string
 
-func (e *methodNotFoundError) ErrorCode() int {
+func (e methodNotFoundError) Error() string {
+	return string(e)
+}
+
+func (e methodNotFoundError) ErrorCode() int {
 	return MethodNotFoundError
 }
 
 type invalidParamsError struct{}
 
-func (e *invalidParamsError) ErrorCode() int {
+func (e invalidParamsError) ErrorCode() int {
 	return InvalidParamsError
 }
 
