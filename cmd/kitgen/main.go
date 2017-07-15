@@ -1,68 +1,76 @@
 package main
 
 import (
-	"flag"
+	"bytes"
 	"fmt"
+	"go/ast"
+	"go/format"
+	"go/parser"
+	"go/token"
+	"io"
 	"log"
 	"os"
 )
 
-var (
-	// Logf will always output.
-	Logf = log.Printf
+// go get github.com/nyarly/inlinefiles
+//go:generate inlinefiles --vfs=ASTTemplates --glob=* ./templates ast_templates.go
 
-	// Debugf will only output if -debug is passed.
-	Debugf = log.Printf
-)
+func usage() string {
+	return fmt.Sprintf("Usage: %s <filename>", os.Args[0])
+}
 
 func main() {
-	// Set up the flags and usage text.
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage:\n")
-		fmt.Fprintf(os.Stderr, "  %s [flags] <Go source files>\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Flags:\n")
-		flag.PrintDefaults()
+	if len(os.Args) < 2 {
+		log.Fatal(usage())
 	}
-	var (
-		debug = flag.Bool("debug", false, "Print debug information during parse")
-		name  = flag.String("name", "Service", "Interface name to extract")
-	)
-	flag.Parse()
-	if flag.NArg() <= 0 {
-		fmt.Fprintf(os.Stderr, "Error: %s requires at least 1 Go source file as an argument.\n\n", os.Args[0])
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	// Set up our output.
-	log.SetFlags(0)
-	if !*debug {
-		Debugf = func(format string, args ...interface{}) {}
-	}
-
-	// Parse the files for the interface we will implement.
-	imports, iface, err := parseFiles(*name, flag.Args()...)
+	filename := os.Args[1]
+	buf, err := process(filename)
 	if err != nil {
-		Logf("Parse failed: %v", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
-	Logf(
-		"Found interface %s, with %d method(s), requiring %d import(s)",
-		iface.Name,
-		len(iface.Methods),
-		len(imports),
-	)
-	Logf("import (")
-	for _, importStr := range imports {
-		Logf("\t%s", importStr)
-	}
-	Logf(")")
-	Logf("")
-	Logf("%s", iface)
 
-	// TODO(pb): request and response structs
-	// TODO(pb): default interface implementation
-	// TODO(pb): endpoint constructors
-	// TODO(pb): default transport binding
+	io.Copy(os.Stdout, buf)
+}
+
+func process(filename string) (io.Reader, error) {
+	f, err := parseFile("main.go")
+
+	context := &sourceContext{}
+
+	ast.Walk(context, f)
+
+	buf, err := formatNode(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func (s *stripPosVisitor) Visit(n ast.Node) ast.Visitor {
+	switch pd := n.(type) {
+	case *ast.BlockStmt:
+		pd.Lbrace = token.NoPos
+		pd.Rbrace = token.NoPos
+	}
+
+	return s
+}
+
+func parseFile(fname string) (ast.Node, error) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, fname, nil, parser.DeclarationErrors)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func formatNode(node ast.Node) (*bytes.Buffer, error) {
+	outfset := token.NewFileSet()
+	buf := &bytes.Buffer{}
+	err := format.Node(buf, outfset, node)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
 }
