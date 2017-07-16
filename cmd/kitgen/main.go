@@ -34,26 +34,25 @@ func main() {
 
 func process(filename string) (io.Reader, error) {
 	f, err := parseFile("main.go")
-
-	context := &sourceContext{}
-
-	ast.Walk(context, f)
-
-	buf, err := formatNode(f)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-}
-
-func (s *stripPosVisitor) Visit(n ast.Node) ast.Visitor {
-	switch pd := n.(type) {
-	case *ast.BlockStmt:
-		pd.Lbrace = token.NoPos
-		pd.Rbrace = token.NoPos
+	context, err := extractContext(f)
+	if err != nil {
+		return nil, err
 	}
 
-	return s
+	outAST, err := transformAST(context)
+	if err != nil {
+		return nil, err
+	}
+
+	buf, err := formatNode(outAST)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
 }
 
 func parseFile(fname string) (ast.Node, error) {
@@ -63,6 +62,17 @@ func parseFile(fname string) (ast.Node, error) {
 		return nil, err
 	}
 	return f, nil
+}
+
+func extractContext(f ast.Node) (*sourceContext, error) {
+	context := &sourceContext{}
+
+	ast.Walk(context, f)
+
+	return context, context.validate()
+}
+
+func transformAST(ctx *sourceContext) (ast.Node, error) {
 }
 
 func formatNode(node ast.Node) (*bytes.Buffer, error) {
