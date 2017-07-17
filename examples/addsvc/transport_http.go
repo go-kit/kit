@@ -128,23 +128,3 @@ func EncodeHTTPGenericRequest(_ context.Context, r *http.Request, request interf
 func EncodeHTTPGenericResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
-
-// DecodeRPCHTTPSumRequest ...
-func DecodeRPCHTTPSumRequest(_ context.Context, params json.RawMessage) (interface{}, error) {
-	var req sumRequest
-	err := json.Unmarshal(params, &req)
-	return req, err
-}
-
-// DecodeRPCHTTPConcatRequest ...
-func DecodeRPCHTTPConcatRequest(_ context.Context, params json.RawMessage) (interface{}, error) {
-	var req concatRequest
-	err := json.Unmarshal(params, req)
-	return req, err
-}
-
-// EncodeRPCHTTPGenericResponse ...
-func EncodeRPCHTTPGenericResponse(_ context.Context, params interface{}) (json.RawMessage, error) {
-	res, err := json.Marshal(params)
-	return res, err
-}
