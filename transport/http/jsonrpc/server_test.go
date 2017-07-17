@@ -57,7 +57,7 @@ func TestServerBadDecode(t *testing.T) {
 		},
 	}
 	logger := mockLogger{}
-	handler := jsonrpc.NewServer(context.TODO(), ecm, jsonrpc.ServerErrorLogger(&logger))
+	handler := jsonrpc.NewServer(ecm, jsonrpc.ServerErrorLogger(&logger))
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Post(server.URL, "application/json", addBody())
@@ -79,7 +79,7 @@ func TestServerBadEndpoint(t *testing.T) {
 			Encode:   nopEncoder,
 		},
 	}
-	handler := jsonrpc.NewServer(context.TODO(), ecm)
+	handler := jsonrpc.NewServer(ecm)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Post(server.URL, "application/json", addBody())
@@ -98,7 +98,7 @@ func TestServerBadEncode(t *testing.T) {
 			Encode:   func(context.Context, interface{}) (json.RawMessage, error) { return []byte{}, errors.New("oof") },
 		},
 	}
-	handler := jsonrpc.NewServer(context.TODO(), ecm)
+	handler := jsonrpc.NewServer(ecm)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Post(server.URL, "application/json", addBody())
@@ -125,7 +125,6 @@ func TestServerErrorEncoder(t *testing.T) {
 		},
 	}
 	handler := jsonrpc.NewServer(
-		context.TODO(),
 		ecm,
 		jsonrpc.ServerErrorEncoder(func(_ context.Context, err error, w http.ResponseWriter) { w.WriteHeader(code(err)) }),
 	)
@@ -139,7 +138,7 @@ func TestServerErrorEncoder(t *testing.T) {
 
 func TestServerUnregisteredMethod(t *testing.T) {
 	ecm := jsonrpc.EndpointCodecMap{}
-	handler := jsonrpc.NewServer(context.TODO(), ecm)
+	handler := jsonrpc.NewServer(ecm)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Post(server.URL, "application/json", addBody())
@@ -179,7 +178,6 @@ func TestMultipleServerBefore(t *testing.T) {
 		},
 	}
 	handler := jsonrpc.NewServer(
-		context.TODO(),
 		ecm,
 		jsonrpc.ServerBefore(func(ctx context.Context, r *http.Request) context.Context {
 			ctx = context.WithValue(ctx, "one", 1)
@@ -216,7 +214,6 @@ func TestMultipleServerAfter(t *testing.T) {
 		},
 	}
 	handler := jsonrpc.NewServer(
-		context.TODO(),
 		ecm,
 		jsonrpc.ServerAfter(func(ctx context.Context, w http.ResponseWriter) context.Context {
 			ctx = context.WithValue(ctx, "one", 1)
@@ -251,7 +248,6 @@ func testServer(t *testing.T) (step func(), resp <-chan *http.Response) {
 			return struct{}{}, nil
 		}
 		response = make(chan *http.Response)
-		ctx      = context.TODO()
 		ecm      = jsonrpc.EndpointCodecMap{
 			"add": jsonrpc.EndpointCodec{
 				Endpoint: endpoint,
@@ -259,7 +255,7 @@ func testServer(t *testing.T) (step func(), resp <-chan *http.Response) {
 				Encode:   nopEncoder,
 			},
 		}
-		handler = jsonrpc.NewServer(ctx, ecm)
+		handler = jsonrpc.NewServer(ecm)
 	)
 	go func() {
 		server := httptest.NewServer(handler)

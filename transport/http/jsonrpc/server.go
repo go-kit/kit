@@ -25,12 +25,10 @@ type Server struct {
 
 // NewServer constructs a new server, which implements http.Server.
 func NewServer(
-	ctx context.Context,
 	ecm EndpointCodecMap,
 	options ...ServerOption,
 ) *Server {
 	s := &Server{
-		ctx:          ctx,
 		ecm:          ecm,
 		errorEncoder: DefaultErrorEncoder,
 		logger:       log.NewNopLogger(),
@@ -97,7 +95,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "405 must POST\n")
 		return
 	}
-	ctx := s.ctx
+	ctx := r.Context()
 
 	if s.finalizer != nil {
 		iw := &interceptingWriter{w, http.StatusOK}
