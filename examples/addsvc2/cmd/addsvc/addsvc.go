@@ -12,11 +12,14 @@ import (
 	"text/tabwriter"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	lightstep "github.com/lightstep/lightstep-tracer-go"
 	"github.com/oklog/oklog/pkg/group"
 	stdopentracing "github.com/opentracing/opentracing-go"
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"sourcegraph.com/sourcegraph/appdash"
+	appdashot "sourcegraph.com/sourcegraph/appdash/opentracing"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -38,11 +41,13 @@ func main() {
 		debugAddr      = fs.String("debug.addr", ":8080", "Debug and metrics listen address")
 		httpAddr       = fs.String("http-addr", ":8081", "HTTP listen address")
 		grpcAddr       = fs.String("grpc-addr", ":8082", "gRPC listen address")
-		thriftAddr     = fs.String("thrift-addr", ":8082", "Thrift listen address")
+		thriftAddr     = fs.String("thrift-addr", ":8083", "Thrift listen address")
 		thriftProtocol = fs.String("thrift-protocol", "binary", "binary, compact, json, simplejson")
 		thriftBuffer   = fs.Int("thrift-buffer", 0, "0 for unbuffered")
 		thriftFramed   = fs.Bool("thrift-framed", false, "true to enable framing")
-		zipkinURL      = fs.String("zipkin-url", "", "Zipkin collector URL e.g. http://localhost:9411/api/v1/spans")
+		zipkinURL      = fs.String("zipkin-url", "", "Enable Zipkin tracing via a collector URL e.g. http://localhost:9411/api/v1/spans")
+		lightstepToken = flag.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
+		appdashAddr    = flag.String("appdash-addr", "", "Enable Appdash tracing via an Appdash server host:port")
 	)
 	fs.Usage = usageFor(fs, os.Args[0]+" [flags]")
 	fs.Parse(os.Args[1:])
@@ -60,7 +65,7 @@ func main() {
 	var tracer stdopentracing.Tracer
 	{
 		if *zipkinURL != "" {
-			logger.Log("zipkin", *zipkinURL)
+			logger.Log("tracer", "Zipkin", "URL", *zipkinURL)
 			collector, err := zipkin.NewHTTPCollector(*zipkinURL)
 			if err != nil {
 				logger.Log("err", err)
@@ -72,14 +77,23 @@ func main() {
 				hostPort    = "localhost:80"
 				serviceName = "addsvc"
 			)
-			tracer, err = zipkin.NewTracer(zipkin.NewRecorder(
-				collector, debug, hostPort, serviceName,
-			))
+			recorder := zipkin.NewRecorder(collector, debug, hostPort, serviceName)
+			tracer, err = zipkin.NewTracer(recorder)
 			if err != nil {
 				logger.Log("err", err)
 				os.Exit(1)
 			}
+		} else if *lightstepToken != "" {
+			logger.Log("tracer", "LightStep") // probably don't want to print out the token :)
+			tracer = lightstep.NewTracer(lightstep.Options{
+				AccessToken: *lightstepToken,
+			})
+			defer lightstep.FlushLightStepTracer(tracer)
+		} else if *appdashAddr != "" {
+			logger.Log("tracer", "Appdash", "addr", *appdashAddr)
+			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
 		} else {
+			logger.Log("tracer", "none")
 			tracer = stdopentracing.GlobalTracer() // no-op
 		}
 	}
@@ -133,8 +147,12 @@ func main() {
 	// The method is the same for each component: add a new actor to the group
 	// struct, which is a combination of 2 anonymous functions: the first
 	// function actually runs the component, and the second function should
-	// interrupt the first function and cause it to return.
-
+	// interrupt the first function and cause it to return. It's in these
+	// functions that we actually bin the Go kit server/handler structs to the
+	// concrete transports and start them running.
+	//
+	// Putting each component into its own block is mostly for aesthetics: it
+	// clearly demarcates the scope in which each listener/socket may be used.
 	var g group.Group
 	{
 		// The debug listener mounts the http.DefaultServeMux, and serves up
