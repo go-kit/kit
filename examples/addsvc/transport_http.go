@@ -16,7 +16,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/opentracing"
 	httptransport "github.com/go-kit/kit/transport/http"
-	httpjsonrpctransport "github.com/go-kit/kit/transport/http/jsonrpc"
 )
 
 // MakeHTTPHandler returns a handler that makes a set of endpoints available
@@ -39,25 +38,6 @@ func MakeHTTPHandler(endpoints Endpoints, tracer stdopentracing.Tracer, logger l
 		EncodeHTTPGenericResponse,
 		append(options, httptransport.ServerBefore(opentracing.FromHTTPRequest(tracer, "Concat", logger)))...,
 	))
-
-	s := httpjsonrpctransport.NewServer(
-		ctx,
-		httpjsonrpctransport.EndpointCodecMap{
-			"sum": httpjsonrpctransport.EndpointCodec{
-				Endpoint: endpoints.SumEndpoint,
-				Decode:   DecodeRPCHTTPConcatRequest,
-				Encode:   EncodeRPCHTTPGenericResponse,
-			},
-			"concat": httpjsonrpctransport.EndpointCodec{
-				Endpoint: endpoints.SumEndpoint,
-				Decode:   DecodeRPCHTTPConcatRequest,
-				Encode:   EncodeRPCHTTPGenericResponse,
-			},
-		},
-	)
-
-	m.Handle("/rpc", s)
-
 	return m
 }
 
