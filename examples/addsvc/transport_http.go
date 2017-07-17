@@ -16,6 +16,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/opentracing"
 	httptransport "github.com/go-kit/kit/transport/http"
+	httpjsonrpctransport "github.com/go-kit/kit/transport/http/jsonrpc"
 )
 
 // MakeHTTPHandler returns a handler that makes a set of endpoints available
@@ -38,6 +39,25 @@ func MakeHTTPHandler(endpoints Endpoints, tracer stdopentracing.Tracer, logger l
 		EncodeHTTPGenericResponse,
 		append(options, httptransport.ServerBefore(opentracing.FromHTTPRequest(tracer, "Concat", logger)))...,
 	))
+
+	s := httpjsonrpctransport.NewServer(
+		ctx,
+		httpjsonrpctransport.EndpointCodecMap{
+			"sum": httpjsonrpctransport.EndpointCodec{
+				Endpoint: endpoints.SumEndpoint,
+				Decode:   DecodeRPCHTTPConcatRequest,
+				Encode:   EncodeRPCHTTPGenericResponse,
+			},
+			"concat": httpjsonrpctransport.EndpointCodec{
+				Endpoint: endpoints.SumEndpoint,
+				Decode:   DecodeRPCHTTPConcatRequest,
+				Encode:   EncodeRPCHTTPGenericResponse,
+			},
+		},
+	)
+
+	m.Handle("/rpc", s)
+
 	return m
 }
 
@@ -127,4 +147,24 @@ func EncodeHTTPGenericRequest(_ context.Context, r *http.Request, request interf
 // the response as JSON to the response writer. Primarily useful in a server.
 func EncodeHTTPGenericResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
+}
+
+// DecodeRPCHTTPSumRequest ...
+func DecodeRPCHTTPSumRequest(_ context.Context, params json.RawMessage) (interface{}, error) {
+	var req sumRequest
+	err := json.Unmarshal(params, &req)
+	return req, err
+}
+
+// DecodeRPCHTTPConcatRequest ...
+func DecodeRPCHTTPConcatRequest(_ context.Context, params json.RawMessage) (interface{}, error) {
+	var req concatRequest
+	err := json.Unmarshal(params, req)
+	return req, err
+}
+
+// EncodeRPCHTTPGenericResponse ...
+func EncodeRPCHTTPGenericResponse(_ context.Context, params interface{}) (json.RawMessage, error) {
+	res, err := json.Marshal(params)
+	return res, err
 }
