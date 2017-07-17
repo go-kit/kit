@@ -18,60 +18,56 @@ import (
 
 // Counter is an in-memory implementation of a Counter.
 type Counter struct {
-	Name string
-	lvs  lv.LabelValues
-	bits uint64
+	Name  string
+	lvs   lv.LabelValues
+	space *lv.Space
 }
 
 // NewCounter returns a new, usable Counter.
 func NewCounter(name string) *Counter {
 	return &Counter{
-		Name: name,
+		Name:  name,
+		space: lv.NewSpace(),
 	}
 }
 
 // With implements Counter.
 func (c *Counter) With(labelValues ...string) metrics.Counter {
 	return &Counter{
-		Name: c.Name,
-		bits: atomic.LoadUint64(&c.bits),
-		lvs:  c.lvs.With(labelValues...),
+		Name:  c.Name,
+		space: c.space,
+		lvs:   c.lvs.With(labelValues...),
 	}
 }
 
 // Add implements Counter.
 func (c *Counter) Add(delta float64) {
-	for {
-		var (
-			old  = atomic.LoadUint64(&c.bits)
-			newf = math.Float64frombits(old) + delta
-			new  = math.Float64bits(newf)
-		)
-		if atomic.CompareAndSwapUint64(&c.bits, old, new) {
-			break
-		}
+	c.space.Observe(c.Name, c.lvs, delta)
+}
+
+func sum(a []float64) (v float64) {
+	for _, f := range a {
+		v += f
 	}
+	return
 }
 
 // Value returns the current value of the counter.
 func (c *Counter) Value() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&c.bits))
+	var count float64
+	c.space.Walk(func(name string, lvs lv.LabelValues, obs []float64) bool {
+		count = sum(obs)
+		return true
+	})
+	return count
 }
 
 // ValueReset returns the current value of the counter, and resets it to zero.
 // This is useful for metrics backends whose counter aggregations expect deltas,
 // like Graphite.
 func (c *Counter) ValueReset() float64 {
-	for {
-		var (
-			old  = atomic.LoadUint64(&c.bits)
-			newf = 0.0
-			new  = math.Float64bits(newf)
-		)
-		if atomic.CompareAndSwapUint64(&c.bits, old, new) {
-			return math.Float64frombits(old)
-		}
-	}
+	defer c.space.Reset()
+	return c.Value()
 }
 
 // LabelValues returns the set of label values attached to the counter.

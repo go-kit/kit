@@ -10,6 +10,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/generic"
 	"github.com/go-kit/kit/metrics/teststat"
 )
@@ -36,6 +37,22 @@ func TestValueReset(t *testing.T) {
 	}
 	if want, have := float64(0), counter.Value(); want != have {
 		t.Errorf("want %f, have %f", want, have)
+	}
+}
+
+func TestInMemorySharedAcrossWith(t *testing.T) {
+	CounterLookup := func(counter metrics.Counter) {
+		counter.With("method", "lookup").Add(1)
+	}
+
+	var counter metrics.Counter
+	counter = generic.NewCounter("requestCounter")
+
+	CounterLookup(counter)
+	CounterLookup(counter)
+
+	if count := counter.With("method", "lookup").(*generic.Counter).Value(); count != float64(2) {
+		t.Fatalf("want '%d', have '%d'", float64(1), count)
 	}
 }
 
