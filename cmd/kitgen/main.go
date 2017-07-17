@@ -24,16 +24,21 @@ func main() {
 		log.Fatal(usage())
 	}
 	filename := os.Args[1]
-	buf, err := process(filename)
+	file, err := os.Open(filename)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("error while opening %q: %v", filename, err)
+	}
+
+	buf, err := process(filename, file)
+	if err != nil {
+		log.Fatalf(err)
 	}
 
 	io.Copy(os.Stdout, buf)
 }
 
-func process(filename string) (io.Reader, error) {
-	f, err := parseFile("main.go")
+func process(filename string, source io.Reader) (io.Reader, error) {
+	f, err := parseFile(filename, source)
 	if err != nil {
 		return nil, err
 	}
@@ -43,21 +48,20 @@ func process(filename string) (io.Reader, error) {
 		return nil, err
 	}
 
-	outAST, err := transformAST(context)
+	dest, err := transformAST(context)
 	if err != nil {
 		return nil, err
 	}
 
-	buf, err := formatNode(outAST)
+	buf, err := formatNode(dest)
 	if err != nil {
 		return nil, err
 	}
 	return buf, nil
 }
 
-func parseFile(fname string) (ast.Node, error) {
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, fname, nil, parser.DeclarationErrors)
+func parseFile(fname string, source io.Reader) (ast.Node, error) {
+	f, err := parser.ParseFile(token.NewFileSet(), fname, source, parser.DeclarationErrors)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +77,19 @@ func extractContext(f ast.Node) (*sourceContext, error) {
 }
 
 func transformAST(ctx *sourceContext) (ast.Node, error) {
+	tmpl, err := ASTTemplates.Open("full.go")
+	if err != nil {
+		return nil, err
+	}
+
+	root, err := parser.ParseExpr(ioutil.ReadAll(tmpl))
+	if err != nil {
+		return nil, err
+	}
+
+	v := &transformer{src: ctx}
+	ast.Walk(v, root)
+	return root, v.err()
 }
 
 func formatNode(node ast.Node) (*bytes.Buffer, error) {
