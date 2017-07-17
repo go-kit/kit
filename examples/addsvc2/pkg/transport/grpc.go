@@ -15,8 +15,8 @@ import (
 	"github.com/go-kit/kit/examples/addsvc2/pkg/endpoint"
 )
 
-// MakeGRPCServer makes a set of endpoints available as a gRPC AddServer.
-func MakeGRPCServer(endpoints endpoint.Set, tracer stdopentracing.Tracer, logger log.Logger) pb.AddServer {
+// NewGRPCServer makes a set of endpoints available as a gRPC AddServer.
+func NewGRPCServer(endpoints endpoint.Set, tracer stdopentracing.Tracer, logger log.Logger) pb.AddServer {
 	options := []grpctransport.ServerOption{
 		grpctransport.ServerErrorLogger(logger),
 	}

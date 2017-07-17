@@ -9,8 +9,8 @@ import (
 	thriftadd "github.com/go-kit/kit/examples/addsvc2/thrift/gen-go/addsvc"
 )
 
-// MakeThriftHandler makes a set of endpoints available as a Thrift service.
-func MakeThriftHandler(ctx context.Context, endpoints addendpoint.Set) thriftadd.AddService {
+// NewThriftServer makes a set of endpoints available as a Thrift service.
+func NewThriftServer(ctx context.Context, endpoints addendpoint.Set) thriftadd.AddService {
 	return &thriftServer{
 		ctx:       ctx,
 		endpoints: endpoints,
