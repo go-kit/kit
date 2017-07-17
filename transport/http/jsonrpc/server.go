@@ -14,12 +14,13 @@ import (
 
 // Server wraps an endpoint and implements http.Handler.
 type Server struct {
-	ctx       context.Context
-	ecm       EndpointCodecMap
-	before    []httptransport.RequestFunc
-	after     []httptransport.ServerResponseFunc
-	finalizer httptransport.ServerFinalizerFunc
-	logger    log.Logger
+	ctx          context.Context
+	ecm          EndpointCodecMap
+	before       []httptransport.RequestFunc
+	after        []httptransport.ServerResponseFunc
+	errorEncoder httptransport.ErrorEncoder
+	finalizer    httptransport.ServerFinalizerFunc
+	logger       log.Logger
 }
 
 // NewServer constructs a new server, which implements http.Server.
@@ -29,9 +30,10 @@ func NewServer(
 	options ...ServerOption,
 ) *Server {
 	s := &Server{
-		ctx:    ctx,
-		ecm:    ecm,
-		logger: log.NewNopLogger(),
+		ctx:          ctx,
+		ecm:          ecm,
+		errorEncoder: DefaultErrorEncoder,
+		logger:       log.NewNopLogger(),
 	}
 	for _, option := range options {
 		option(s)
@@ -62,6 +64,14 @@ func ServerBefore(before ...httptransport.RequestFunc) ServerOption {
 // endpoint is invoked, but before anything is written to the client.
 func ServerAfter(after ...httptransport.ServerResponseFunc) ServerOption {
 	return func(s *Server) { s.after = append(s.after, after...) }
+}
+
+// ServerErrorEncoder is used to encode errors to the http.ResponseWriter
+// whenever they're encountered in the processing of a request. Clients can
+// use this to provide custom error formatting and response codes. By default,
+// errors will be written with the DefaultErrorEncoder.
+func ServerErrorEncoder(ee httptransport.ErrorEncoder) ServerOption {
+	return func(s *Server) { s.errorEncoder = ee }
 }
 
 // ServerErrorLogger is used to log non-terminal errors. By default, no errors
@@ -104,7 +114,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		s.logger.Log("err", err)
-		rpcErrorEncoder(ctx, err, w)
+		s.errorEncoder(ctx, err, w)
 		return
 	}
 
@@ -114,15 +124,15 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		err := methodNotFoundError(fmt.Sprintf("Method %s was not found.", req.Method))
 		s.logger.Log("err", err)
-		rpcErrorEncoder(ctx, err, w)
+		s.errorEncoder(ctx, err, w)
 		return
 	}
 
-	// Decode the JSON  "params"
+	// Decode the JSON "params"
 	reqParams, err := ecm.Decode(ctx, req.Params)
 	if err != nil {
 		s.logger.Log("err", err)
-		rpcErrorEncoder(ctx, err, w)
+		s.errorEncoder(ctx, err, w)
 		return
 	}
 
@@ -130,7 +140,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	response, err := ecm.Endpoint(ctx, reqParams)
 	if err != nil {
 		s.logger.Log("err", err)
-		rpcErrorEncoder(ctx, err, w)
+		s.errorEncoder(ctx, err, w)
 		return
 	}
 
@@ -144,7 +154,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resParams, err := ecm.Encode(ctx, response)
 	if err != nil {
 		s.logger.Log("err", err)
-		rpcErrorEncoder(ctx, err, w)
+		s.errorEncoder(ctx, err, w)
 		return
 	}
 
@@ -153,14 +163,13 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-// ErrorEncoder writes the error to the ResponseWriter, by default a
-// content type of text/plain, a body of the plain text of the error, and a
-// status code of 500. If the error implements Headerer, the provided headers
-// will be applied to the response. If the error implements json.Marshaler, and
-// the marshaling succeeds, a content type of application/json and the JSON
-// encoded form of the error will be used. If the error implements StatusCoder,
-// the provided StatusCode will be used instead of 500.
-func rpcErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
+// DefaultErrorEncoder writes the error to the ResponseWriter,
+// as a json-rpc error response, with an InternalError status code.
+// The Error() string of the error will be used as the response error message.
+// If the error implements ErrorCoder, the provided code will be set on the
+// response error.
+// If the error implements Headerer, the given headers will be set.
+func DefaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", ContentType)
 	if headerer, ok := err.(httptransport.Headerer); ok {
 		for k := range headerer.Headers() {
