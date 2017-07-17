@@ -1,13 +1,23 @@
 package histogram
 
-type Histogram struct{}
+import (
+	"gopkg.in/caio/go-tdigest.v1"
+)
 
-func New() *Histogram {
-	return &Histogram{}
+type Histogram struct {
+	d *tdigest.TDigest
 }
 
-func (*Histogram) Observe(value float64) {}
+func New() *Histogram {
+	return &Histogram{
+		d: tdigest.New(100),
+	}
+}
 
-func (*Histogram) Quantile(q float64) float64 {
-	return 0.0
+func (h *Histogram) Observe(value float64) {
+	h.d.Add(value, 1)
+}
+
+func (h *Histogram) Quantile(q float64) float64 {
+	return h.d.Quantile(q)
 }
