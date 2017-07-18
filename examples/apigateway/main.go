@@ -16,19 +16,21 @@ import (
 	"syscall"
 	"time"
 
+	consulsd "github.com/go-kit/kit/sd/consul"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/consul/api"
 	stdopentracing "github.com/opentracing/opentracing-go"
+	"google.golang.org/grpc"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/examples/addsvc"
-	addsvcgrpcclient "github.com/go-kit/kit/examples/addsvc/client/grpc"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
-	consulsd "github.com/go-kit/kit/sd/consul"
 	"github.com/go-kit/kit/sd/lb"
 	httptransport "github.com/go-kit/kit/transport/http"
-	"google.golang.org/grpc"
+
+	"github.com/go-kit/kit/examples/addsvc/pkg/addendpoint"
+	"github.com/go-kit/kit/examples/addsvc/pkg/addservice"
+	"github.com/go-kit/kit/examples/addsvc/pkg/addtransport"
 )
 
 func main() {
@@ -79,22 +81,21 @@ func main() {
 		// addsvc client package to construct a complete service. We can then
 		// leverage the addsvc.Make{Sum,Concat}Endpoint constructors to convert
 		// the complete service to specific endpoint.
-
 		var (
 			tags        = []string{}
 			passingOnly = true
-			endpoints   = addsvc.Endpoints{}
+			endpoints   = addendpoint.Set{}
 			instancer   = consulsd.NewInstancer(client, logger, "addsvc", tags, passingOnly)
 		)
 		{
-			factory := addsvcFactory(addsvc.MakeSumEndpoint, tracer, logger)
+			factory := addsvcFactory(addendpoint.MakeSumEndpoint, tracer, logger)
 			endpointer := sd.NewEndpointer(instancer, factory, logger)
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			endpoints.SumEndpoint = retry
 		}
 		{
-			factory := addsvcFactory(addsvc.MakeConcatEndpoint, tracer, logger)
+			factory := addsvcFactory(addendpoint.MakeConcatEndpoint, tracer, logger)
 			endpointer := sd.NewEndpointer(instancer, factory, logger)
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
@@ -105,7 +106,7 @@ func main() {
 		// HTTP handler, and just install it under a particular path prefix in
 		// our router.
 
-		r.PathPrefix("/addsvc").Handler(http.StripPrefix("/addsvc", addsvc.MakeHTTPHandler(endpoints, tracer, logger)))
+		r.PathPrefix("/addsvc").Handler(http.StripPrefix("/addsvc", addtransport.NewHTTPHandler(endpoints, tracer, logger)))
 	}
 
 	// stringsvc routes.
@@ -164,7 +165,7 @@ func main() {
 	logger.Log("exit", <-errc)
 }
 
-func addsvcFactory(makeEndpoint func(addsvc.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, logger log.Logger) sd.Factory {
+func addsvcFactory(makeEndpoint func(addservice.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, logger log.Logger) sd.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		// We could just as easily use the HTTP or Thrift client package to make
 		// the connection to addsvc. We've chosen gRPC arbitrarily. Note that
@@ -175,7 +176,7 @@ func addsvcFactory(makeEndpoint func(addsvc.Service) endpoint.Endpoint, tracer s
 		if err != nil {
 			return nil, nil, err
 		}
-		service := addsvcgrpcclient.New(conn, tracer, logger)
+		service := addtransport.NewGRPCClient(conn, tracer, logger)
 		endpoint := makeEndpoint(service)
 
 		// Notice that the addsvc gRPC client converts the connection to a
