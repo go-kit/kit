@@ -17,6 +17,7 @@ import (
 	stdopentracing "github.com/opentracing/opentracing-go"
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"sourcegraph.com/sourcegraph/appdash"
 	appdashot "sourcegraph.com/sourcegraph/appdash/opentracing"
@@ -126,6 +127,7 @@ func main() {
 			Help:      "Request duration in seconds.",
 		}, []string{"method", "success"})
 	}
+	http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
 
 	// Build the layers of the service "onion" from the inside out. First, the
 	// business logic service; then, the set of endpoints that wrap the service;
@@ -136,7 +138,7 @@ func main() {
 	var (
 		service      = addservice.New(logger, ints, chars)
 		endpoints    = addendpoint.New(service, logger, duration, tracer)
-		httpHandler  = addtransport.NewHTTPHandler(context.Background(), endpoints, logger, tracer)
+		httpHandler  = addtransport.NewHTTPHandler(endpoints, tracer, logger)
 		grpcServer   = addtransport.NewGRPCServer(endpoints, tracer, logger)
 		thriftServer = addtransport.NewThriftServer(context.Background(), endpoints)
 	)

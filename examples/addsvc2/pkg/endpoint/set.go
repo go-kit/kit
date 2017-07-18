@@ -52,6 +52,28 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 	}
 }
 
+// Sum implements the service interface, so Set may be used as a service.
+// This is primarily useful in the context of a client library.
+func (s Set) Sum(ctx context.Context, a, b int) (int, error) {
+	resp, err := s.SumEndpoint(ctx, SumRequest{A: a, B: b})
+	if err != nil {
+		return 0, err
+	}
+	response := resp.(SumResponse)
+	return response.V, response.Err
+}
+
+// Concat implements the service interface, so Set may be used as a
+// service. This is primarily useful in the context of a client library.
+func (s Set) Concat(ctx context.Context, a, b string) (string, error) {
+	resp, err := s.ConcatEndpoint(ctx, ConcatRequest{A: a, B: b})
+	if err != nil {
+		return "", err
+	}
+	response := resp.(ConcatResponse)
+	return response.V, response.Err
+}
+
 // MakeSumEndpoint constructs a Sum endpoint wrapping the service.
 func MakeSumEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
