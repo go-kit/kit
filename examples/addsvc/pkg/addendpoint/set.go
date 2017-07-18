@@ -14,7 +14,7 @@ import (
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
 
-	"github.com/go-kit/kit/examples/addsvc2/pkg/addservice"
+	"github.com/go-kit/kit/examples/addsvc/pkg/addservice"
 )
 
 // Set collects all of the endpoints that compose an add service. It's meant to
