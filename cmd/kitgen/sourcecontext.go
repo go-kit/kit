@@ -1,6 +1,9 @@
 package main
 
-import "go/ast"
+import (
+	"fmt"
+	"go/ast"
+)
 
 type (
 	sourceContext struct {
@@ -55,7 +58,7 @@ type (
 	argVisitor struct {
 		src             *sourceContext
 		node            *ast.TypeSpec
-		params, results *[]param
+		params, results *[]arg
 		isMethod        bool
 	}
 )

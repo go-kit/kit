@@ -8,12 +8,13 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 )
 
 // go get github.com/nyarly/inlinefiles
-//go:generate inlinefiles --vfs=ASTTemplates --glob=* ./templates ast_templates.go
+//go:generate inlinefiles --package=main --vfs=ASTTemplates ./templates ast_templates.gom90
 
 func usage() string {
 	return fmt.Sprintf("Usage: %s <filename>", os.Args[0])
@@ -31,7 +32,7 @@ func main() {
 
 	buf, err := process(filename, file)
 	if err != nil {
-		log.Fatalf(err)
+		log.Fatal(err)
 	}
 
 	io.Copy(os.Stdout, buf)
@@ -82,7 +83,12 @@ func transformAST(ctx *sourceContext) (ast.Node, error) {
 		return nil, err
 	}
 
-	root, err := parser.ParseExpr(ioutil.ReadAll(tmpl))
+	tmpBytes, err := ioutil.ReadAll(tmpl)
+	if err != nil {
+		return nil, err
+	}
+
+	root, err := parser.ParseExpr(string(tmpBytes))
 	if err != nil {
 		return nil, err
 	}
