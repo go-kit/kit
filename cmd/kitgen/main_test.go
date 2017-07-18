@@ -30,14 +30,22 @@ func TestProcess(t *testing.T) {
 				t.Fatal(outpath, err)
 			}
 
-			actual, err := process(inpath, in)
+			actualR, err := process(inpath, bytes.NewBuffer(in))
+			if err != nil {
+				t.Fatal(outpath, err)
+			}
+
+			actual, err := ioutil.ReadAll(actualR)
+			if err != nil {
+				t.Fatal(outpath, err)
+			}
 
 			if !bytes.Equal(expected, actual) {
 				errfile, err := ioutil.TempFile("", name)
 				if err != nil {
 					t.Fatal("opening tempfile for output", err)
 				}
-				io.Copy(errfile, actual)
+				io.WriteString(errfile, string(actual))
 
 				t.Error("Processing output didn't match %q. Results recorded in %q.", outpath, errfile.Name())
 			}
@@ -45,6 +53,6 @@ func TestProcess(t *testing.T) {
 	}
 
 	for _, dir := range cases {
-		testcase(inpath, outpath)
+		testcase(dir)
 	}
 }
