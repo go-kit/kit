@@ -1,4 +1,4 @@
-package endpoint
+package addendpoint
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
 
-	"github.com/go-kit/kit/examples/addsvc2/pkg/service"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addservice"
 )
 
 // Set collects all of the endpoints that compose an add service. It's meant to
@@ -27,7 +27,7 @@ type Set struct {
 
 // New returns a Set that wraps the provided server, and wires in all of the
 // expected endpoint middlewares via the various parameters.
-func New(svc service.Service, logger log.Logger, duration metrics.Histogram, trace stdopentracing.Tracer) Set {
+func New(svc addservice.Service, logger log.Logger, duration metrics.Histogram, trace stdopentracing.Tracer) Set {
 	var sumEndpoint endpoint.Endpoint
 	{
 		sumEndpoint = MakeSumEndpoint(svc)
@@ -75,7 +75,7 @@ func (s Set) Concat(ctx context.Context, a, b string) (string, error) {
 }
 
 // MakeSumEndpoint constructs a Sum endpoint wrapping the service.
-func MakeSumEndpoint(s service.Service) endpoint.Endpoint {
+func MakeSumEndpoint(s addservice.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(SumRequest)
 		v, err := s.Sum(ctx, req.A, req.B)
@@ -84,7 +84,7 @@ func MakeSumEndpoint(s service.Service) endpoint.Endpoint {
 }
 
 // MakeConcatEndpoint constructs a Concat endpoint wrapping the service.
-func MakeConcatEndpoint(s service.Service) endpoint.Endpoint {
+func MakeConcatEndpoint(s addservice.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(ConcatRequest)
 		v, err := s.Concat(ctx, req.A, req.B)

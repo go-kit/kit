@@ -27,9 +27,9 @@ import (
 	"github.com/go-kit/kit/metrics/prometheus"
 
 	addpb "github.com/go-kit/kit/examples/addsvc2/pb"
-	addendpoint "github.com/go-kit/kit/examples/addsvc2/pkg/endpoint"
-	addservice "github.com/go-kit/kit/examples/addsvc2/pkg/service"
-	addtransport "github.com/go-kit/kit/examples/addsvc2/pkg/transport"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addendpoint"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addservice"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addtransport"
 	addthrift "github.com/go-kit/kit/examples/addsvc2/thrift/gen-go/addsvc"
 )
 

@@ -1,4 +1,4 @@
-package transport
+package addtransport
 
 import (
 	"bytes"
@@ -22,8 +22,8 @@ import (
 	"github.com/go-kit/kit/tracing/opentracing"
 	httptransport "github.com/go-kit/kit/transport/http"
 
-	addendpoint "github.com/go-kit/kit/examples/addsvc2/pkg/endpoint"
-	addservice "github.com/go-kit/kit/examples/addsvc2/pkg/service"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addendpoint"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addservice"
 )
 
 // NewHTTPHandler returns an HTTP handler that makes a set of endpoints

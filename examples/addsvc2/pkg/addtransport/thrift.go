@@ -1,4 +1,4 @@
-package transport
+package addtransport
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/ratelimit"
 
-	addendpoint "github.com/go-kit/kit/examples/addsvc2/pkg/endpoint"
-	addservice "github.com/go-kit/kit/examples/addsvc2/pkg/service"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addendpoint"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addservice"
 	thriftadd "github.com/go-kit/kit/examples/addsvc2/thrift/gen-go/addsvc"
 )
 

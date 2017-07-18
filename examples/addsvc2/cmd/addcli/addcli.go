@@ -20,8 +20,8 @@ import (
 
 	"github.com/go-kit/kit/log"
 
-	addservice "github.com/go-kit/kit/examples/addsvc2/pkg/service"
-	addtransport "github.com/go-kit/kit/examples/addsvc2/pkg/transport"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addservice"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addtransport"
 	addthrift "github.com/go-kit/kit/examples/addsvc2/thrift/gen-go/addsvc"
 )
 

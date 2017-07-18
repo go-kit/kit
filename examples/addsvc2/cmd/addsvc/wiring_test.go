@@ -1,26 +1,26 @@
 package main
 
 import (
-	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics/discard"
 	"github.com/opentracing/opentracing-go"
 
-	addendpoint "github.com/go-kit/kit/examples/addsvc2/pkg/endpoint"
-	addservice "github.com/go-kit/kit/examples/addsvc2/pkg/service"
-	addtransport "github.com/go-kit/kit/examples/addsvc2/pkg/transport"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/discard"
+
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addendpoint"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addservice"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addtransport"
 )
 
 func TestHTTP(t *testing.T) {
 	svc := addservice.New(log.NewNopLogger(), discard.NewCounter(), discard.NewCounter())
 	eps := addendpoint.New(svc, log.NewNopLogger(), discard.NewHistogram(), opentracing.GlobalTracer())
-	mux := addtransport.NewHTTPHandler(context.Background(), eps, log.NewNopLogger(), opentracing.GlobalTracer())
+	mux := addtransport.NewHTTPHandler(eps, opentracing.GlobalTracer(), log.NewNopLogger())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 

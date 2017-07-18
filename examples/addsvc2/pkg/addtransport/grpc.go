@@ -1,4 +1,4 @@
-package transport
+package addtransport
 
 import (
 	"context"
@@ -20,8 +20,8 @@ import (
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 
 	"github.com/go-kit/kit/examples/addsvc2/pb"
-	addendpoint "github.com/go-kit/kit/examples/addsvc2/pkg/endpoint"
-	addservice "github.com/go-kit/kit/examples/addsvc2/pkg/service"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addendpoint"
+	"github.com/go-kit/kit/examples/addsvc2/pkg/addservice"
 )
 
 type grpcServer struct {
