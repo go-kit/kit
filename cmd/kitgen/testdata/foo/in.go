@@ -1,9 +1,5 @@
 package foo
 
-import "golang.org/x/net/context"
-
-type Service interface {
-	Concat(ctx context.Context, a, b string) (string, error)
-	Count(ctx context.Context, s string) (count int)
+type FooService interface {
+	Bar(ctx context.Context, i int, s string) (string, error)
 }
-

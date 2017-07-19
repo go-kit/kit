@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
 
 func TestProcess(t *testing.T) {
-	cases, err := filepath.Glob("testdata/*/")
+	cases, err := filepath.Glob("testdata/*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,6 +48,9 @@ func TestProcess(t *testing.T) {
 				}
 				io.WriteString(errfile, string(actual))
 
+				diffCmd := exec.Command("diff", outpath, errfile.Name())
+				diffOut, _ := diffCmd.Output()
+				t.Log(string(diffOut))
 				t.Error("Processing output didn't match %q. Results recorded in %q.", outpath, errfile.Name())
 			}
 		})

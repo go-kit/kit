@@ -7,91 +7,69 @@ import (
 
 type (
 	sourceContext struct {
-		imports    []importPair
+		imports    []*ast.ImportSpec
 		interfaces []iface
 	}
 
-	importPair struct {
-		alias *string
-		path  string
-	}
-
 	iface struct {
-		name    string
+		name    *ast.Ident
 		methods []method
 	}
 
 	method struct {
-		name    string
+		name    *ast.Ident
 		params  []arg
 		results []arg
 	}
 
 	arg struct {
-		typ, name string
-	}
-
-	importSpecVisitor struct {
-		src  *sourceContext
-		node *ast.TypeSpec
+		name *ast.Ident
+		typ  ast.Expr
 	}
 
 	typeSpecVisitor struct {
 		src   *sourceContext
 		node  *ast.TypeSpec
 		iface *iface
-		name  string
+		name  *ast.Ident
 	}
 
 	interfaceTypeVisitor struct {
-		src     *sourceContext
 		node    *ast.TypeSpec
 		ts      *typeSpecVisitor
 		methods []method
 	}
 
 	methodVisitor struct {
-		src             *sourceContext
 		node            *ast.TypeSpec
 		list            *[]method
+		name            *ast.Ident
 		params, results *[]arg
 		isMethod        bool
-		name            string
+	}
+
+	argListVisitor struct {
+		list *[]arg
 	}
 
 	argVisitor struct {
-		src   *sourceContext
 		node  *ast.TypeSpec
-		names []string
-		typ   string
+		parts []ast.Expr
 		list  *[]arg
 	}
 )
-
-func (ip importPair) String() string {
-	if ip.alias == nil {
-		return ip.path
-	}
-	return fmt.Sprintf("%s %s", *ip.alias, ip.path)
-}
 
 func (sc *sourceContext) Visit(n ast.Node) ast.Visitor {
 	switch rn := n.(type) {
 	default:
 		return sc
 	case *ast.ImportSpec:
-		ip := importPair{path: rn.Path.Value}
-		if rn.Name != nil {
-			nm := rn.Name.String()
-			ip.alias = &nm
-		}
-		sc.imports = append(sc.imports, ip)
+		sc.imports = append(sc.imports, rn)
 		return nil
 
 	case *ast.TypeSpec:
 		return &typeSpecVisitor{src: sc, node: rn}
 	}
-
 }
 
 func (sc *sourceContext) validate() error {
@@ -106,12 +84,12 @@ func (v *typeSpecVisitor) Visit(n ast.Node) ast.Visitor {
 	default:
 		return v
 	case *ast.Ident:
-		if v.name == "" {
-			v.name = rn.String()
+		if v.name == nil {
+			v.name = rn
 		}
 		return v
 	case *ast.InterfaceType:
-		return &interfaceTypeVisitor{src: v.src, ts: v, methods: []method{}}
+		return &interfaceTypeVisitor{ts: v, methods: []method{}}
 	case nil:
 		if v.iface != nil {
 			v.iface.name = v.name
@@ -122,11 +100,11 @@ func (v *typeSpecVisitor) Visit(n ast.Node) ast.Visitor {
 }
 
 func (v *interfaceTypeVisitor) Visit(n ast.Node) ast.Visitor {
-	switch rn := n.(type) {
+	switch n.(type) {
 	default:
 		return v
 	case *ast.Field:
-		return &methodVisitor{src: v.src, list: &v.methods}
+		return &methodVisitor{list: &v.methods}
 	case nil:
 		v.ts.iface = &iface{methods: v.methods}
 		return nil
@@ -139,7 +117,7 @@ func (v *methodVisitor) Visit(n ast.Node) ast.Visitor {
 		return v
 	case *ast.Ident:
 		if rn.IsExported() {
-			v.name = rn.String()
+			v.name = rn
 		}
 		return v
 	case *ast.FuncType:
@@ -149,32 +127,45 @@ func (v *methodVisitor) Visit(n ast.Node) ast.Visitor {
 	case *ast.FieldList:
 		if v.params == nil {
 			v.params = &[]arg{}
-			return &argVisitor{src: v.src, list: v.params}
+			return &argListVisitor{list: v.params}
 		}
 		if v.results == nil {
 			v.results = &[]arg{}
 		}
-		return &argVisitor{src: v.src, list: v.results}
+		return &argListVisitor{list: v.results}
 	case nil:
-		if v.isMethod && v.name != "" {
+		if v.isMethod && v.name != nil {
 			*v.list = append(*v.list, method{name: v.name, params: *v.params, results: *v.results})
 		}
 		return nil
 	}
 }
 
+func (v *argListVisitor) Visit(n ast.Node) ast.Visitor {
+	switch n.(type) {
+	default:
+		return nil
+	case *ast.Field:
+		return &argVisitor{list: v.list}
+	}
+}
+
 func (v *argVisitor) Visit(n ast.Node) ast.Visitor {
 	switch t := n.(type) {
-	case *ast.Ident:
-		v.names = append(v.names, t.String())
-	case *ast.SelectorExpr:
-		v.typ = t.String()
+	case *ast.CommentGroup, *ast.BasicLit:
+		return nil
+	case *ast.Ident: //Expr -> everything, but clarity
+		v.parts = append(v.parts, t)
+	case ast.Expr:
+		v.parts = append(v.parts, t)
 	case nil:
-		if v.typ == "" {
-			v.typ, v.names = v.names[len(v.names)-1], v.names[:len(v.names)]
-		}
-		for _, n := range v.names {
-			*v.list = append(*v.list, arg{typ: v.typ, name: n})
+		names := v.parts[:len(v.parts)-1]
+		tp := v.parts[len(v.parts)-1]
+		for _, n := range names {
+			*v.list = append(*v.list, arg{
+				name: n.(*ast.Ident),
+				typ:  tp,
+			})
 		}
 	}
 	return nil

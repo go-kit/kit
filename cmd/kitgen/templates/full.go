@@ -1,8 +1,8 @@
 package foo
 
-type stubFooService struct{}
+type STUBSTRUCT struct{}
 
-func (s stubFooService) Bar(ctx context.Context, i int, s string) (string, error) {
+func (f stubFooService) Bar(ctx context.Context, i int, s string) (string, error) {
 	return "", errors.New("not implemented")
 }
 
