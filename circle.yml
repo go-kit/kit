@@ -17,7 +17,7 @@ test:
     - mkdir -p /home/ubuntu/.go_workspace/src/github.com/go-kit
     - mv /home/ubuntu/kit /home/ubuntu/.go_workspace/src/github.com/go-kit
     - ln -s /home/ubuntu/.go_workspace/src/github.com/go-kit/kit /home/ubuntu/kit
-    - go get github.com/go-kit/kit/...
+    - go get -t github.com/go-kit/kit/...
   override:
     - go test -v -race -tags integration github.com/go-kit/kit/...:
         environment:

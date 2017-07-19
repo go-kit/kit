@@ -6,23 +6,23 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
+	"text/tabwriter"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/lightstep/lightstep-tracer-go"
+	lightstep "github.com/lightstep/lightstep-tracer-go"
 	stdopentracing "github.com/opentracing/opentracing-go"
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
-	"google.golang.org/grpc"
 	"sourcegraph.com/sourcegraph/appdash"
 	appdashot "sourcegraph.com/sourcegraph/appdash/opentracing"
 
-	"github.com/go-kit/kit/examples/addsvc"
-	grpcclient "github.com/go-kit/kit/examples/addsvc/client/grpc"
-	httpclient "github.com/go-kit/kit/examples/addsvc/client/http"
-	thriftclient "github.com/go-kit/kit/examples/addsvc/client/thrift"
-	thriftadd "github.com/go-kit/kit/examples/addsvc/thrift/gen-go/addsvc"
 	"github.com/go-kit/kit/log"
+
+	"github.com/go-kit/kit/examples/addsvc/pkg/addservice"
+	"github.com/go-kit/kit/examples/addsvc/pkg/addtransport"
+	addthrift "github.com/go-kit/kit/examples/addsvc/thrift/gen-go/addsvc"
 )
 
 func main() {
@@ -32,24 +32,23 @@ func main() {
 	// and various client constructors both expect host:port strings. For an
 	// example service with a client built on top of a service discovery system,
 	// see profilesvc.
-
+	fs := flag.NewFlagSet("addcli", flag.ExitOnError)
 	var (
-		httpAddr         = flag.String("http.addr", "", "HTTP address of addsvc")
-		grpcAddr         = flag.String("grpc.addr", "", "gRPC (HTTP) address of addsvc")
-		thriftAddr       = flag.String("thrift.addr", "", "Thrift address of addsvc")
-		thriftProtocol   = flag.String("thrift.protocol", "binary", "binary, compact, json, simplejson")
-		thriftBufferSize = flag.Int("thrift.buffer.size", 0, "0 for unbuffered")
-		thriftFramed     = flag.Bool("thrift.framed", false, "true to enable framing")
-		zipkinAddr       = flag.String("zipkin.addr", "", "Enable Zipkin tracing via a Zipkin HTTP Collector endpoint")
-		zipkinKafkaAddr  = flag.String("zipkin.kafka.addr", "", "Enable Zipkin tracing via a Kafka server host:port")
-		appdashAddr      = flag.String("appdash.addr", "", "Enable Appdash tracing via an Appdash server host:port")
-		lightstepToken   = flag.String("lightstep.token", "", "Enable LightStep tracing via a LightStep access token")
-		method           = flag.String("method", "sum", "sum, concat")
+		httpAddr       = fs.String("http-addr", "", "HTTP address of addsvc")
+		grpcAddr       = fs.String("grpc-addr", "", "gRPC address of addsvc")
+		thriftAddr     = fs.String("thrift-addr", "", "Thrift address of addsvc")
+		thriftProtocol = fs.String("thrift-protocol", "binary", "binary, compact, json, simplejson")
+		thriftBuffer   = fs.Int("thrift-buffer", 0, "0 for unbuffered")
+		thriftFramed   = fs.Bool("thrift-framed", false, "true to enable framing")
+		zipkinURL      = fs.String("zipkin-url", "", "Enable Zipkin tracing via a collector URL e.g. http://localhost:9411/api/v1/spans")
+		lightstepToken = flag.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
+		appdashAddr    = flag.String("appdash-addr", "", "Enable Appdash tracing via an Appdash server host:port")
+		method         = fs.String("method", "sum", "sum, concat")
 	)
-	flag.Parse()
-
-	if len(flag.Args()) != 2 {
-		fmt.Fprintf(os.Stderr, "usage: addcli [flags] <a> <b>\n")
+	fs.Usage = usageFor(fs, os.Args[0]+" [flags] <a> <b>")
+	fs.Parse(os.Args[1:])
+	if len(fs.Args()) != 2 {
+		fs.Usage()
 		os.Exit(1)
 	}
 
@@ -57,47 +56,31 @@ func main() {
 	// Your clients will probably just use one tracer.
 	var tracer stdopentracing.Tracer
 	{
-		if *zipkinAddr != "" {
-			// endpoint typically looks like: http://zipkinhost:9411/api/v1/spans
-			collector, err := zipkin.NewHTTPCollector(*zipkinAddr)
+		if *zipkinURL != "" {
+			collector, err := zipkin.NewHTTPCollector(*zipkinURL)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v\n", err)
+				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(1)
 			}
 			defer collector.Close()
-
-			tracer, err = zipkin.NewTracer(
-				zipkin.NewRecorder(collector, false, "0.0.0.0:0", "addcli"),
+			var (
+				debug       = false
+				hostPort    = "localhost:80"
+				serviceName = "addsvc"
 			)
+			recorder := zipkin.NewRecorder(collector, debug, hostPort, serviceName)
+			tracer, err = zipkin.NewTracer(recorder)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v\n", err)
+				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(1)
 			}
-		} else if *zipkinKafkaAddr != "" {
-			collector, err := zipkin.NewKafkaCollector(
-				strings.Split(*zipkinKafkaAddr, ","),
-				zipkin.KafkaLogger(log.NewNopLogger()),
-			)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v\n", err)
-				os.Exit(1)
-			}
-			defer collector.Close()
-
-			tracer, err = zipkin.NewTracer(
-				zipkin.NewRecorder(collector, false, "0.0.0.0:0", "addcli"),
-			)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v\n", err)
-				os.Exit(1)
-			}
-		} else if *appdashAddr != "" {
-			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
 		} else if *lightstepToken != "" {
 			tracer = lightstep.NewTracer(lightstep.Options{
 				AccessToken: *lightstepToken,
 			})
 			defer lightstep.FlushLightStepTracer(tracer)
+		} else if *appdashAddr != "" {
+			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
 		} else {
 			tracer = stdopentracing.GlobalTracer() // no-op
 		}
@@ -105,13 +88,12 @@ func main() {
 
 	// This is a demonstration client, which supports multiple transports.
 	// Your clients will probably just define and stick with 1 transport.
-
 	var (
-		service addsvc.Service
-		err     error
+		svc addservice.Service
+		err error
 	)
 	if *httpAddr != "" {
-		service, err = httpclient.New(*httpAddr, tracer, log.NewNopLogger())
+		svc, err = addtransport.NewHTTPClient(*httpAddr, tracer, log.NewNopLogger())
 	} else if *grpcAddr != "" {
 		conn, err := grpc.Dial(*grpcAddr, grpc.WithInsecure(), grpc.WithTimeout(time.Second))
 		if err != nil {
@@ -119,7 +101,7 @@ func main() {
 			os.Exit(1)
 		}
 		defer conn.Close()
-		service = grpcclient.New(conn, tracer, log.NewNopLogger())
+		svc = addtransport.NewGRPCClient(conn, tracer, log.NewNopLogger())
 	} else if *thriftAddr != "" {
 		// It's necessary to do all of this construction in the func main,
 		// because (among other reasons) we need to control the lifecycle of the
@@ -139,8 +121,8 @@ func main() {
 			os.Exit(1)
 		}
 		var transportFactory thrift.TTransportFactory
-		if *thriftBufferSize > 0 {
-			transportFactory = thrift.NewTBufferedTransportFactory(*thriftBufferSize)
+		if *thriftBuffer > 0 {
+			transportFactory = thrift.NewTBufferedTransportFactory(*thriftBuffer)
 		} else {
 			transportFactory = thrift.NewTTransportFactory()
 		}
@@ -162,8 +144,8 @@ func main() {
 			os.Exit(1)
 		}
 		defer transport.Close()
-		client := thriftadd.NewAddServiceClientFactory(transport, protocolFactory)
-		service = thriftclient.New(client)
+		client := addthrift.NewAddServiceClientFactory(transport, protocolFactory)
+		svc = addtransport.NewThriftClient(client)
 	} else {
 		fmt.Fprintf(os.Stderr, "error: no remote address specified\n")
 		os.Exit(1)
@@ -175,9 +157,9 @@ func main() {
 
 	switch *method {
 	case "sum":
-		a, _ := strconv.ParseInt(flag.Args()[0], 10, 64)
-		b, _ := strconv.ParseInt(flag.Args()[1], 10, 64)
-		v, err := service.Sum(context.Background(), int(a), int(b))
+		a, _ := strconv.ParseInt(fs.Args()[0], 10, 64)
+		b, _ := strconv.ParseInt(fs.Args()[1], 10, 64)
+		v, err := svc.Sum(context.Background(), int(a), int(b))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -185,9 +167,9 @@ func main() {
 		fmt.Fprintf(os.Stdout, "%d + %d = %d\n", a, b, v)
 
 	case "concat":
-		a := flag.Args()[0]
-		b := flag.Args()[1]
-		v, err := service.Concat(context.Background(), a, b)
+		a := fs.Args()[0]
+		b := fs.Args()[1]
+		v, err := svc.Concat(context.Background(), a, b)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -197,5 +179,20 @@ func main() {
 	default:
 		fmt.Fprintf(os.Stderr, "error: invalid method %q\n", method)
 		os.Exit(1)
+	}
+}
+
+func usageFor(fs *flag.FlagSet, short string) func() {
+	return func() {
+		fmt.Fprintf(os.Stderr, "USAGE\n")
+		fmt.Fprintf(os.Stderr, "  %s\n", short)
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "FLAGS\n")
+		w := tabwriter.NewWriter(os.Stderr, 0, 2, 2, ' ', 0)
+		fs.VisitAll(func(f *flag.Flag) {
+			fmt.Fprintf(w, "\t-%s %s\t%s\n", f.Name, f.DefValue, f.Usage)
+		})
+		w.Flush()
+		fmt.Fprintf(os.Stderr, "\n")
 	}
 }
