@@ -347,3 +347,49 @@ func testServer(t *testing.T) (step func(), resp <-chan *http.Response) {
 	}()
 	return func() { stepch <- true }, response
 }
+
+func TestServerRecoverPanic(t *testing.T) {
+	for _, testCase := range []struct {
+		name               string
+		catchPanic         bool
+		expectedPanicValue interface{}
+	}{
+		{"Catch panic option enabled", true, "generic panic"},
+		{"Catch panic option disabled", false, nil},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			handler := httptransport.NewServer(
+				func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
+				func(context.Context, *http.Request) (interface{}, error) {
+					panic("generic panic")
+				},
+				func(context.Context, http.ResponseWriter, interface{}) error { return nil },
+				httptransport.ServerFinalizer(func(ctx context.Context, code int, r *http.Request) {
+					if ctx.Value(httptransport.ContextKeyPanicValue) != testCase.expectedPanicValue {
+						t.Error("Panic was not recovered and set properly in context")
+					}
+				}),
+				httptransport.ServerCatchPanic(testCase.catchPanic),
+			)
+			server := httptest.NewServer(func(http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					defer func() {
+						if !testCase.catchPanic {
+							// Check that panic hasn't been handled by kit/transport/http.Server
+							if r := recover(); r != nil {
+								if r != "generic panic" {
+									t.Error("Unexpected panic value")
+								}
+							} else {
+								t.Error("Expected panic value")
+							}
+						}
+					}()
+					handler.ServeHTTP(w, r)
+				})
+			}(handler))
+			defer server.Close()
+			_, _ = http.Get(server.URL)
+		})
+	}
+}
