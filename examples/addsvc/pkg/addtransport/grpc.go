@@ -39,13 +39,13 @@ func NewGRPCServer(endpoints addendpoint.Set, tracer stdopentracing.Tracer, logg
 			endpoints.SumEndpoint,
 			decodeGRPCSumRequest,
 			encodeGRPCSumResponse,
-			append(options, grpctransport.ServerBefore(opentracing.FromGRPCRequest(tracer, "Sum", logger)))...,
+			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "Sum", logger)))...,
 		),
 		concat: grpctransport.NewServer(
 			endpoints.ConcatEndpoint,
 			decodeGRPCConcatRequest,
 			encodeGRPCConcatResponse,
-			append(options, grpctransport.ServerBefore(opentracing.FromGRPCRequest(tracer, "Concat", logger)))...,
+			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "Concat", logger)))...,
 		),
 	}
 }
@@ -91,7 +91,7 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 			encodeGRPCSumRequest,
 			decodeGRPCSumResponse,
 			pb.SumReply{},
-			grpctransport.ClientBefore(opentracing.ToGRPCRequest(tracer, logger)),
+			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
 		).Endpoint()
 		sumEndpoint = opentracing.TraceClient(tracer, "Sum")(sumEndpoint)
 		sumEndpoint = limiter(sumEndpoint)
@@ -112,7 +112,7 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 			encodeGRPCConcatRequest,
 			decodeGRPCConcatResponse,
 			pb.ConcatReply{},
-			grpctransport.ClientBefore(opentracing.ToGRPCRequest(tracer, logger)),
+			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
 		).Endpoint()
 		concatEndpoint = opentracing.TraceClient(tracer, "Concat")(concatEndpoint)
 		concatEndpoint = limiter(concatEndpoint)

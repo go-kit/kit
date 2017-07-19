@@ -38,13 +38,13 @@ func NewHTTPHandler(endpoints addendpoint.Set, tracer stdopentracing.Tracer, log
 		endpoints.SumEndpoint,
 		decodeHTTPSumRequest,
 		encodeHTTPGenericResponse,
-		append(options, httptransport.ServerBefore(opentracing.FromHTTPRequest(tracer, "Sum", logger)))...,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "Sum", logger)))...,
 	))
 	m.Handle("/concat", httptransport.NewServer(
 		endpoints.ConcatEndpoint,
 		decodeHTTPConcatRequest,
 		encodeHTTPGenericResponse,
-		append(options, httptransport.ServerBefore(opentracing.FromHTTPRequest(tracer, "Concat", logger)))...,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "Concat", logger)))...,
 	))
 	return m
 }
@@ -81,7 +81,7 @@ func NewHTTPClient(instance string, tracer stdopentracing.Tracer, logger log.Log
 			copyURL(u, "/sum"),
 			encodeHTTPGenericRequest,
 			decodeHTTPSumResponse,
-			httptransport.ClientBefore(opentracing.ToHTTPRequest(tracer, logger)),
+			httptransport.ClientBefore(opentracing.ContextToHTTP(tracer, logger)),
 		).Endpoint()
 		sumEndpoint = opentracing.TraceClient(tracer, "Sum")(sumEndpoint)
 		sumEndpoint = limiter(sumEndpoint)
@@ -100,7 +100,7 @@ func NewHTTPClient(instance string, tracer stdopentracing.Tracer, logger log.Log
 			copyURL(u, "/concat"),
 			encodeHTTPGenericRequest,
 			decodeHTTPConcatResponse,
-			httptransport.ClientBefore(opentracing.ToHTTPRequest(tracer, logger)),
+			httptransport.ClientBefore(opentracing.ContextToHTTP(tracer, logger)),
 		).Endpoint()
 		concatEndpoint = opentracing.TraceClient(tracer, "Concat")(concatEndpoint)
 		concatEndpoint = limiter(concatEndpoint)
