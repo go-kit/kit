@@ -17,9 +17,9 @@ const (
 	bearerFormat string = "Bearer %s"
 )
 
-// ToHTTPContext moves JWT token from request header to context. Particularly
+// HTTPToContext moves a JWT from request header to context. Particularly
 // useful for servers.
-func ToHTTPContext() http.RequestFunc {
+func HTTPToContext() http.RequestFunc {
 	return func(ctx context.Context, r *stdhttp.Request) context.Context {
 		token, ok := extractTokenFromAuthHeader(r.Header.Get("Authorization"))
 		if !ok {
@@ -30,9 +30,9 @@ func ToHTTPContext() http.RequestFunc {
 	}
 }
 
-// FromHTTPContext moves JWT token from context to request header. Particularly
+// ContextToHTTP moves a JWT from context to request header. Particularly
 // useful for clients.
-func FromHTTPContext() http.RequestFunc {
+func ContextToHTTP() http.RequestFunc {
 	return func(ctx context.Context, r *stdhttp.Request) context.Context {
 		token, ok := ctx.Value(JWTTokenContextKey).(string)
 		if ok {
@@ -42,9 +42,9 @@ func FromHTTPContext() http.RequestFunc {
 	}
 }
 
-// ToGRPCContext moves JWT token from grpc metadata to context. Particularly
+// GRPCToContext moves a JWT from grpc metadata to context. Particularly
 // userful for servers.
-func ToGRPCContext() grpc.ServerRequestFunc {
+func GRPCToContext() grpc.ServerRequestFunc {
 	return func(ctx context.Context, md metadata.MD) context.Context {
 		// capital "Key" is illegal in HTTP/2.
 		authHeader, ok := md["authorization"]
@@ -61,9 +61,9 @@ func ToGRPCContext() grpc.ServerRequestFunc {
 	}
 }
 
-// FromGRPCContext moves JWT token from context to grpc metadata. Particularly
+// ContextToGRPC moves a JWT from context to grpc metadata. Particularly
 // useful for clients.
-func FromGRPCContext() grpc.ClientRequestFunc {
+func ContextToGRPC() grpc.ClientRequestFunc {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
 		token, ok := ctx.Value(JWTTokenContextKey).(string)
 		if ok {
