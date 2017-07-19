@@ -24,7 +24,7 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	beforeSpan.SetBaggageItem("baggage", "check")
 	beforeCtx := opentracing.ContextWithSpan(context.Background(), beforeSpan)
 
-	toHTTPFunc := kitot.ToHTTPRequest(tracer, logger)
+	toHTTPFunc := kitot.ContextToHTTP(tracer, logger)
 	req, _ := http.NewRequest("GET", "http://test.biz/path", nil)
 	// Call the RequestFunc.
 	afterCtx := toHTTPFunc(beforeCtx, req)
@@ -41,8 +41,8 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 		t.Errorf("Want %v span(s), found %v", want, have)
 	}
 
-	// Use FromHTTPRequest to verify that we can join with the trace given a req.
-	fromHTTPFunc := kitot.FromHTTPRequest(tracer, "joined", logger)
+	// Use HTTPToContext to verify that we can join with the trace given a req.
+	fromHTTPFunc := kitot.HTTPToContext(tracer, "joined", logger)
 	joinCtx := fromHTTPFunc(afterCtx, req)
 	joinedSpan := opentracing.SpanFromContext(joinCtx).(*mocktracer.MockSpan)
 
@@ -65,14 +65,14 @@ func TestTraceHTTPRequestRoundtrip(t *testing.T) {
 	}
 }
 
-func TestToHTTPRequestTags(t *testing.T) {
+func TestContextToHTTPTags(t *testing.T) {
 	tracer := mocktracer.New()
 	span := tracer.StartSpan("to_inject").(*mocktracer.MockSpan)
 	defer span.Finish()
 	ctx := opentracing.ContextWithSpan(context.Background(), span)
 	req, _ := http.NewRequest("GET", "http://test.biz/path", nil)
 
-	kitot.ToHTTPRequest(tracer, log.NewNopLogger())(ctx, req)
+	kitot.ContextToHTTP(tracer, log.NewNopLogger())(ctx, req)
 
 	expectedTags := map[string]interface{}{
 		string(ext.HTTPMethod):   "GET",
@@ -84,14 +84,14 @@ func TestToHTTPRequestTags(t *testing.T) {
 	}
 }
 
-func TestFromHTTPRequestTags(t *testing.T) {
+func TestHTTPToContextTags(t *testing.T) {
 	tracer := mocktracer.New()
 	parentSpan := tracer.StartSpan("to_extract").(*mocktracer.MockSpan)
 	defer parentSpan.Finish()
 	req, _ := http.NewRequest("GET", "http://test.biz/path", nil)
 	tracer.Inject(parentSpan.Context(), opentracing.TextMap, opentracing.HTTPHeadersCarrier(req.Header))
 
-	ctx := kitot.FromHTTPRequest(tracer, "op", log.NewNopLogger())(context.Background(), req)
+	ctx := kitot.HTTPToContext(tracer, "op", log.NewNopLogger())(context.Background(), req)
 	opentracing.SpanFromContext(ctx).Finish()
 
 	childSpan := tracer.FinishedSpans()[0]
