@@ -51,7 +51,8 @@ func (s *thriftServer) Concat(a string, b string) (*addthrift.ConcatReply, error
 
 // NewThriftClient returns an AddService backed by a Thrift server described by
 // the provided client. The caller is responsible for constructing the client,
-// and eventually closing the underlying transport.
+// and eventually closing the underlying transport. We bake-in certain middlewares,
+// implementing the client library pattern.
 func NewThriftClient(client *addthrift.AddServiceClient) addservice.Service {
 	// We construct a single ratelimiter middleware, to limit the total outgoing
 	// QPS from this client to all methods on the remote instance. We also

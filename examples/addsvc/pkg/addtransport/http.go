@@ -51,7 +51,8 @@ func NewHTTPHandler(endpoints addendpoint.Set, tracer stdopentracing.Tracer, log
 
 // NewHTTPClient returns an AddService backed by an HTTP server living at the
 // remote instance. We expect instance to come from a service discovery system,
-// so likely of the form "host:port".
+// so likely of the form "host:port". We bake-in certain middlewares,
+// implementing the client library pattern.
 func NewHTTPClient(instance string, tracer stdopentracing.Tracer, logger log.Logger) (addservice.Service, error) {
 	// Quickly sanitize the instance string.
 	if !strings.HasPrefix(instance, "http") {

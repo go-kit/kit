@@ -68,7 +68,8 @@ func (s *grpcServer) Concat(ctx oldcontext.Context, req *pb.ConcatRequest) (*pb.
 
 // NewGRPCClient returns an AddService backed by a gRPC server at the other end
 // of the conn. The caller is responsible for constructing the conn, and
-// eventually closing the underlying transport.
+// eventually closing the underlying transport. We bake-in certain middlewares,
+// implementing the client library pattern.
 func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger log.Logger) addservice.Service {
 	// We construct a single ratelimiter middleware, to limit the total outgoing
 	// QPS from this client to all methods on the remote instance. We also
