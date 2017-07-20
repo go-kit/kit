@@ -1,3 +1,16 @@
+// Package expvar provides an expvar backend for metrics.
+//
+// All metric names support a primitive form of templates, to support Go kit's
+// With/keyvals mechanism of establishing dimensionality. The behavior is best
+// illustrated with an example.
+//
+//    p := NewProvider(...)
+//    c := p.NewIntCounter("foo_{x}_{y}_bar")
+//    c.Add(1)                          // foo_unknown_unknown_bar += 1
+//    c.With("x", "hello").Add(2)       // foo_hello_unknown_bar += 2
+//    c.With("x", "1", "y", "2").Add(4) // foo_1_2_bar += 4
+//    c.With("quux", "bing").Add(8)     // foo_unknown_unknown_bar += 8
+//
 package expvar
 
 import (
@@ -34,7 +47,7 @@ func (p *Provider) NewIntCounter(name string) *IntCounter {
 	return &IntCounter{
 		parent:  p,
 		name:    name,
-		keyvals: map[string]string{},
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
 	}
 }
 
@@ -45,7 +58,7 @@ func (p *Provider) NewFloatCounter(name string) *FloatCounter {
 	return &FloatCounter{
 		parent:  p,
 		name:    name,
-		keyvals: map[string]string{},
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
 	}
 }
 
@@ -56,7 +69,7 @@ func (p *Provider) NewIntGauge(name string) *IntGauge {
 	return &IntGauge{
 		parent:  p,
 		name:    name,
-		keyvals: map[string]string{},
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
 	}
 }
 
@@ -67,7 +80,7 @@ func (p *Provider) NewFloatGauge(name string) *FloatGauge {
 	return &FloatGauge{
 		parent:  p,
 		name:    name,
-		keyvals: map[string]string{},
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
 	}
 }
 
@@ -80,7 +93,7 @@ func (p *Provider) NewHistogram(name string) *Histogram {
 	return &Histogram{
 		parent:  p,
 		name:    name,
-		keyvals: map[string]string{},
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
 	}
 }
 
@@ -135,8 +148,8 @@ func (p *Provider) observe(name string, value float64) {
 }
 
 // IntCounter is a Counter whose values are truncated to integers and exposed as
-// expvar.Int. The zero value of an IntCounter is not useful; you must construct
-// it via the Provider.
+// expvar.Int. IntCounters must be constructed via the Provider; the zero value
+// of an IntCounter is not useful.
 type IntCounter struct {
 	parent  *Provider
 	name    string
@@ -148,7 +161,7 @@ func (c *IntCounter) With(keyvals ...string) metrics.Counter {
 	return &IntCounter{
 		parent:  c.parent,
 		name:    c.name,
-		keyvals: keyval.Append(c.keyvals, keyvals...),
+		keyvals: keyval.Merge(c.keyvals, keyvals...),
 	}
 }
 
@@ -158,9 +171,9 @@ func (c *IntCounter) Add(delta float64) {
 	c.parent.int(name).Add(int64(delta))
 }
 
-// FloatCounter is a Counter whose values are exposed as expvar.Float. The zero
-// value of an FloatCounter is not useful; you must construct it via the
-// Provider.
+// FloatCounter is a Counter whose values are exposed as expvar.Float.
+// FloatCounters must be constructed via the Provider; the zero value of a
+// FloatCounter is not useful.
 type FloatCounter struct {
 	parent  *Provider
 	name    string
@@ -172,7 +185,7 @@ func (c *FloatCounter) With(keyvals ...string) metrics.Counter {
 	return &FloatCounter{
 		parent:  c.parent,
 		name:    c.name,
-		keyvals: keyval.Append(c.keyvals, keyvals...),
+		keyvals: keyval.Merge(c.keyvals, keyvals...),
 	}
 }
 
@@ -182,9 +195,9 @@ func (c *FloatCounter) Add(delta float64) {
 	c.parent.float(name).Add(delta)
 }
 
-// IntGauge is a Gauge whose values are truncated and exposed as expvar.Int. The
-// zero value of an IntGauge is not useful; you must construct it via the
-// Provider.
+// IntGauge is a Gauge whose values are truncated and exposed as expvar.Int.
+// IntGauges must be constructed via the Provider; the zero value of an IntGauge
+// is not useful.
 type IntGauge struct {
 	parent  *Provider
 	name    string
@@ -196,7 +209,7 @@ func (g *IntGauge) With(keyvals ...string) metrics.Gauge {
 	return &IntGauge{
 		parent:  g.parent,
 		name:    g.name,
-		keyvals: keyval.Append(g.keyvals, keyvals...),
+		keyvals: keyval.Merge(g.keyvals, keyvals...),
 	}
 }
 
@@ -212,8 +225,9 @@ func (g *IntGauge) Add(delta float64) {
 	g.parent.int(name).Add(int64(delta))
 }
 
-// FloatGauge is a Gauge whose values are exposed as expvar.Float. The zero
-// value of a FloatGauge is not useful; you must construct it via the Provider.
+// FloatGauge is a Gauge whose values are exposed as expvar.Float. FloatGauges
+// must be constructed via the Provider; the zero value of a FloatGauge is not
+// useful.
 type FloatGauge struct {
 	parent  *Provider
 	name    string
@@ -225,7 +239,7 @@ func (g *FloatGauge) With(keyvals ...string) metrics.Gauge {
 	return &FloatGauge{
 		parent:  g.parent,
 		name:    g.name,
-		keyvals: keyval.Append(g.keyvals, keyvals...),
+		keyvals: keyval.Merge(g.keyvals, keyvals...),
 	}
 }
 
@@ -241,9 +255,9 @@ func (g *FloatGauge) Add(delta float64) {
 	g.parent.float(name).Add(delta)
 }
 
-// Histogram collects observations and exposes them as per-quantile Gauges. The
-// zero value of a Histogram is not useful; you must construct it via the
-// Provider.
+// Histogram collects observations and exposes them as per-quantile Gauges.
+// Histograms must be constructed via the Provider; the zero value of a
+// Histogram is not useful.
 type Histogram struct {
 	parent  *Provider
 	name    string
@@ -255,7 +269,7 @@ func (h *Histogram) With(keyvals ...string) metrics.Histogram {
 	return &Histogram{
 		parent:  h.parent,
 		name:    h.name,
-		keyvals: keyval.Append(h.keyvals, keyvals...),
+		keyvals: keyval.Merge(h.keyvals, keyvals...),
 	}
 }
 

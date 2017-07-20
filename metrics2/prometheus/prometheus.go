@@ -1,3 +1,9 @@
+// Package prometheus provides a Prometheus backend for metrics.
+//
+// Go kit's With/keyvals mechanism of establishing dimensionality maps directly
+// to Prometheus' concept of labels. Prometheus labels must be predeclared when
+// constructing a metric, so extra Go kit keyvals will be silently dropped, and
+// unspecified Prometheus label keys will get a value of metrics.UnknownValue.
 package prometheus
 
 import (
@@ -81,6 +87,8 @@ func (p *Provider) NewHistogram(namespace, subsystem, name, help string, labels 
 }
 
 // Counter wraps a prometheus.CounterVec and implements metrics.Counter.
+// Counters must be constructed via the Provider; the zero value of a Counter is
+// not useful.
 type Counter struct {
 	counter *prometheus.CounterVec
 	keyvals map[string]string
@@ -100,7 +108,8 @@ func (c *Counter) Add(value float64) {
 	c.counter.With(prometheus.Labels(c.keyvals)).Add(value)
 }
 
-// Gauge wraps a prometheus.GaugeVec and implements metrics.Gauge.
+// Gauge wraps a prometheus.GaugeVec and implements metrics.Gauge. Gauges must
+// be constructed via the Provider; the zero value of a Gauge is not useful.
 type Gauge struct {
 	gauge   *prometheus.GaugeVec
 	keyvals map[string]string
@@ -126,6 +135,8 @@ func (g *Gauge) Set(value float64) {
 }
 
 // Histogram wraps a prometheus.HistogramVec and implements metrics.Histogram.
+// Histograms must be constructed via the Provider; the zero value of a
+// Histogram is not useful.
 type Histogram struct {
 	histogram *prometheus.HistogramVec
 	keyvals   map[string]string

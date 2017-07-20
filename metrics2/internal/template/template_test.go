@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestExtract(t *testing.T) {
+func TestExtractKeysFrom(t *testing.T) {
 	for input, want := range map[string][]string{
 		"":                []string{},
 		"foo_bar":         []string{},
@@ -13,7 +13,7 @@ func TestExtract(t *testing.T) {
 		"foo_{x}_bar_{y}": []string{"x", "y"},
 	} {
 		t.Run(input, func(t *testing.T) {
-			if have := Extract(input); !reflect.DeepEqual(want, have) {
+			if have := ExtractKeysFrom(input); !reflect.DeepEqual(want, have) {
 				t.Errorf("want %v, have %v", want, have)
 			}
 		})

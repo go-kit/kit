@@ -23,3 +23,7 @@ type Histogram interface {
 	With(keyvals ...string) Histogram
 	Observe(value float64)
 }
+
+// UnknownValue is used as the value of any predeclared label
+// key that hasn't received a value at the time of an observation.
+var UnknownValue = "unknown"

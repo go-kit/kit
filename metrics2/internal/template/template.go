@@ -9,9 +9,9 @@ import (
 
 var templateRegexp = regexp.MustCompile(`{([^{}]+)}`)
 
-// Extract the keys from a templated name.
+// ExtractKeysFrom a templated name.
 // For example, "foo_{x}_{y}_bar" will yield {"x", "y"}.
-func Extract(tmpl string) []string {
+func ExtractKeysFrom(tmpl string) []string {
 	keys := []string{}
 	for _, match := range templateRegexp.FindAllStringSubmatch(tmpl, -1) {
 		keys = append(keys, strings.Trim(match[0], "{}"))

@@ -2,19 +2,12 @@ package keyval
 
 import metrics "github.com/go-kit/kit/metrics2"
 
-// Append the keyvals to the original map, and return a new map.
-func Append(original map[string]string, keyvals ...string) map[string]string {
-	if len(keyvals)%2 != 0 {
-		keyvals = append(keyvals, metrics.UnknownValue)
+func MakeWith(keys []string) map[string]string {
+	m := make(map[string]string, len(keys))
+	for _, key := range keys {
+		m[key] = metrics.UnknownValue
 	}
-	result := map[string]string{}
-	for k, v := range original {
-		result[k] = v
-	}
-	for i := 0; i < len(keyvals); i += 2 {
-		result[keyvals[i]] = keyvals[i+1]
-	}
-	return result
+	return m
 }
 
 // Merge the keyvals into the original map, and return a new map. Keyvals that
