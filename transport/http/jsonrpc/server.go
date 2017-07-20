@@ -89,8 +89,8 @@ func ServerFinalizer(f httptransport.ServerFinalizerFunc) ServerOption {
 
 // ServeHTTP implements http.Handler.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if r.Method != http.MethodPost {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		io.WriteString(w, "405 must POST\n")
 		return
