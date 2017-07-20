@@ -9,6 +9,17 @@ import (
 
 var templateRegexp = regexp.MustCompile(`{([^{}]+)}`)
 
+// Extract the keys from a templated name.
+// For example, "foo_{x}_{y}_bar" will yield {"x", "y"}.
+func Extract(tmpl string) []string {
+	keys := []string{}
+	for _, match := range templateRegexp.FindAllStringSubmatch(tmpl, -1) {
+		keys = append(keys, strings.Trim(match[0], "{}"))
+
+	}
+	return keys
+}
+
 // Render a templated name like "foo_{x}_{y}_bar" to "foo_abc_unknown_bar".
 func Render(tmpl string, fields map[string]string) string {
 	for _, match := range templateRegexp.FindAllStringSubmatch(tmpl, -1) {
