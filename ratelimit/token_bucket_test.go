@@ -3,6 +3,7 @@ package ratelimit_test
 import (
 	"context"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/ratelimit"
+	"golang.org/x/time/rate"
 )
 
 func TestTokenBucketLimiter(t *testing.T) {
@@ -51,5 +53,31 @@ func testLimiter(t *testing.T, e endpoint.Endpoint, rate int) {
 	// Next request should fail.
 	if _, err := e(context.Background(), struct{}{}); err != ratelimit.ErrLimited {
 		t.Errorf("rate=%d: want %v, have %v", rate, ratelimit.ErrLimited, err)
+	}
+}
+
+func TestXRateErroring(t *testing.T) {
+	limit := rate.NewLimiter(rate.Every(time.Minute), 1)
+	e := func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
+	testLimiter(t, ratelimit.NewErroringLimiter(limit)(e), 1)
+}
+
+func TestXRateDelaying(t *testing.T) {
+	limit := rate.NewLimiter(rate.Every(time.Minute), 1)
+	e := func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
+	e = ratelimit.NewDelayingLimiter(limit)(e)
+
+	_, err := e(context.Background(), struct{}{})
+	if err != nil {
+		t.Errorf("unexpected: %v\n", err)
+	}
+
+	dur := 500 * time.Millisecond
+	ctx, cxl := context.WithTimeout(context.Background(), dur)
+	defer cxl()
+
+	_, err = e(ctx, struct{}{})
+	if !strings.Contains(err.Error(), "exceed context deadline") {
+		t.Errorf("expected timeout: %v\n", err)
 	}
 }
