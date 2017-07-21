@@ -23,16 +23,11 @@ func NewTokenBucketLimiter(tb *ratelimit.Bucket) endpoint.Middleware {
 
 // NewTokenBucketThrottler returns an endpoint.Middleware that acts as a
 // request throttler based on a token-bucket algorithm. Requests that would
-// exceed the maximum request rate are delayed via the parameterized sleep
-// function. By default you may pass time.Sleep.
-func NewTokenBucketThrottler(tb *ratelimit.Bucket, sleep func(time.Duration)) endpoint.Middleware {
-	// return NewDelayingLimiter(NewWaiter(tb))
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (interface{}, error) {
-			sleep(tb.Take(1))
-			return next(ctx, request)
-		}
-	}
+// exceed the maximum request rate are delayed.
+// The parameterized function "_" is kept for backwards-compatiblity of
+// the API, but it is no longer used for anything. You may pass it nil.
+func NewTokenBucketThrottler(tb *ratelimit.Bucket, _ func(time.Duration)) endpoint.Middleware {
+	return NewDelayingLimiter(NewWaiter(tb))
 }
 
 // Allower dictates whether or not a request is acceptable to run.
