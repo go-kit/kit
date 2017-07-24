@@ -51,7 +51,7 @@ func TestProcess(t *testing.T) {
 				diffCmd := exec.Command("diff", outpath, errfile.Name())
 				diffOut, _ := diffCmd.Output()
 				t.Log(string(diffOut))
-				t.Error("Processing output didn't match %q. Results recorded in %q.", outpath, errfile.Name())
+				t.Errorf("Processing output didn't match %q. Results recorded in %q.", outpath, errfile.Name())
 			}
 		})
 	}

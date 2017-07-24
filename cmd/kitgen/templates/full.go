@@ -2,7 +2,7 @@ package foo
 
 type STUBSTRUCT struct{}
 
-func (f stubFooService) Bar(ctx context.Context, i int, s string) (string, error) {
+func (f STUBSTRUCT) METHOD(PARAM aType) (string, error) {
 	return "", errors.New("not implemented")
 }
 
@@ -16,11 +16,11 @@ type BarResponse struct {
 	Err error
 }
 
-func makeBarEndpoint(s stubFooService) endpoint.Endpoint {
+func MAKEENDPOINT(s STUBSTRUCT) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(barrequest)
+		req := request.(REQUESTSTRUCT)
 		s, err := s.bar(ctx, req.i, req.s)
-		return barresponse{s: s, err: err}, nil
+		return RESPONSESTRUCT{s: s, err: err}, nil
 	}
 }
 

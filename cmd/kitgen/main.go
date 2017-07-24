@@ -8,7 +8,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -73,31 +72,11 @@ func parseFile(fname string, source io.Reader) (ast.Node, error) {
 
 func extractContext(f ast.Node) (*sourceContext, error) {
 	context := &sourceContext{}
+	visitor := &parseVisitor{src: context}
 
-	ast.Walk(context, f)
+	ast.Walk(visitor, f)
 
 	return context, context.validate()
-}
-
-func transformAST(ctx *sourceContext) (ast.Node, error) {
-	tmpl, err := ASTTemplates.Open("full.go")
-	if err != nil {
-		return nil, errors.Wrapf(err, "opening tempate %q", "full.go")
-	}
-
-	tmpBytes, err := ioutil.ReadAll(tmpl)
-	if err != nil {
-		return nil, errors.Wrapf(err, "reading %q", "full.go")
-	}
-
-	root, err := parser.ParseFile(token.NewFileSet(), "full.go", tmpBytes, parser.DeclarationErrors)
-	if err != nil {
-		return nil, errors.Wrapf(err, "parsing %q", "full.go")
-	}
-
-	v := &transformer{src: ctx}
-	ast.Walk(v, root)
-	return root, v.err()
 }
 
 func formatNode(node ast.Node) (*bytes.Buffer, error) {
