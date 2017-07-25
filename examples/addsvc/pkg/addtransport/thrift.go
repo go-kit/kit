@@ -22,16 +22,15 @@ type thriftServer struct {
 }
 
 // NewThriftServer makes a set of endpoints available as a Thrift service.
-func NewThriftServer(ctx context.Context, endpoints addendpoint.Set) addthrift.AddService {
+func NewThriftServer(endpoints addendpoint.Set) addthrift.AddService {
 	return &thriftServer{
-		ctx:       ctx,
 		endpoints: endpoints,
 	}
 }
 
-func (s *thriftServer) Sum(a int64, b int64) (*addthrift.SumReply, error) {
+func (s *thriftServer) Sum(ctx context.Context, a int64, b int64) (*addthrift.SumReply, error) {
 	request := addendpoint.SumRequest{A: int(a), B: int(b)}
-	response, err := s.endpoints.SumEndpoint(s.ctx, request)
+	response, err := s.endpoints.SumEndpoint(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -39,9 +38,9 @@ func (s *thriftServer) Sum(a int64, b int64) (*addthrift.SumReply, error) {
 	return &addthrift.SumReply{Value: int64(resp.V), Err: err2str(resp.Err)}, nil
 }
 
-func (s *thriftServer) Concat(a string, b string) (*addthrift.ConcatReply, error) {
+func (s *thriftServer) Concat(ctx context.Context, a string, b string) (*addthrift.ConcatReply, error) {
 	request := addendpoint.ConcatRequest{A: a, B: b}
-	response, err := s.endpoints.ConcatEndpoint(s.ctx, request)
+	response, err := s.endpoints.ConcatEndpoint(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +99,7 @@ func NewThriftClient(client *addthrift.AddServiceClient) addservice.Service {
 func MakeThriftSumEndpoint(client *addthrift.AddServiceClient) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(addendpoint.SumRequest)
-		reply, err := client.Sum(int64(req.A), int64(req.B))
+		reply, err := client.Sum(ctx, int64(req.A), int64(req.B))
 		if err == addservice.ErrIntOverflow {
 			return nil, err // special case; see comment on ErrIntOverflow
 		}
@@ -114,7 +113,7 @@ func MakeThriftSumEndpoint(client *addthrift.AddServiceClient) endpoint.Endpoint
 func MakeThriftConcatEndpoint(client *addthrift.AddServiceClient) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(addendpoint.ConcatRequest)
-		reply, err := client.Concat(req.A, req.B)
+		reply, err := client.Concat(ctx, req.A, req.B)
 		return addendpoint.ConcatResponse{V: reply.Value, Err: err}, nil
 	}
 }
