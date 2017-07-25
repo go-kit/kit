@@ -12,6 +12,7 @@ then
 	exit 1
 fi
 
+echo "Coveralls token is: $COVERALLS_TOKEN"
 if [[ "$COVERALLS_TOKEN" == "" ]]
 then
 	echo COVERALLS_TOKEN not set

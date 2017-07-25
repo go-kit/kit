@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"net"
@@ -140,7 +139,7 @@ func main() {
 		endpoints    = addendpoint.New(service, logger, duration, tracer)
 		httpHandler  = addtransport.NewHTTPHandler(endpoints, tracer, logger)
 		grpcServer   = addtransport.NewGRPCServer(endpoints, tracer, logger)
-		thriftServer = addtransport.NewThriftServer(context.Background(), endpoints)
+		thriftServer = addtransport.NewThriftServer(endpoints)
 	)
 
 	// Now we're to the part of the func main where we want to start actually
