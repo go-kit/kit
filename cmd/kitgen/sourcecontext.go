@@ -7,6 +7,8 @@ import (
 	"go/token"
 	"strings"
 	"unicode"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 type (
@@ -97,6 +99,13 @@ func pasteStmts(body *ast.BlockStmt, idx int, stmts []ast.Stmt) {
 func (sc *sourceContext) validate() error {
 	if len(sc.interfaces) != 1 {
 		return fmt.Errorf("found %d interfaces, expecting exactly 1", len(sc.interfaces))
+	}
+	for _, i := range sc.interfaces {
+		for _, m := range i.methods {
+			if len(m.results) < 1 {
+				return fmt.Errorf("method %q of interface %q has no result types!", m.name, i.name)
+			}
+		}
 	}
 	return nil
 }
@@ -223,7 +232,7 @@ func (m method) endpointMaker(ifc iface) ast.Decl {
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{List: []*ast.Field{ifc.reciever()}},
 			Results: &ast.FieldList{List: []*ast.Field{
-				&ast.Field{Type: &ast.InterfaceType{}},
+				&ast.Field{Type: &ast.InterfaceType{Methods: &ast.FieldList{}}},
 				&ast.Field{Type: id("error")},
 			}},
 		},
@@ -266,6 +275,7 @@ func (m method) called(ifc iface, ctxName, spreadStruct string) ast.Stmt {
 		arglist = append(arglist, sel(ssid, f.Names[0]))
 	}
 
+	spew.Dump(resNamesExpr)
 	return &ast.AssignStmt{
 		Lhs: resNamesExpr,
 		Tok: token.DEFINE,

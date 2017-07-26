@@ -1,6 +1,10 @@
 package main
 
-import "go/ast"
+import (
+	"go/ast"
+
+	"github.com/davecgh/go-spew/spew"
+)
 
 type (
 	parseVisitor struct {
@@ -116,10 +120,12 @@ func (v *methodVisitor) Visit(n ast.Node) ast.Visitor {
 			return &argListVisitor{list: v.params}
 		}
 		if v.results == nil {
+			spew.Dump("results")
 			v.results = &[]arg{}
 		}
 		return &argListVisitor{list: v.results}
 	case nil:
+		spew.Dump("done", v)
 		if v.isMethod && v.name != nil {
 			*v.list = append(*v.list, method{name: v.name, params: *v.params, results: *v.results})
 		}
@@ -147,12 +153,15 @@ func (v *argVisitor) Visit(n ast.Node) ast.Visitor {
 	case nil:
 		names := v.parts[:len(v.parts)-1]
 		tp := v.parts[len(v.parts)-1]
+		spew.Dump(v.list)
 		for _, n := range names {
+			spew.Dump(n)
 			*v.list = append(*v.list, arg{
 				name: n.(*ast.Ident),
 				typ:  tp,
 			})
 		}
+		spew.Dump(v.list)
 	}
 	return nil
 }
