@@ -29,8 +29,8 @@ func TestCounterSampled(t *testing.T) {
 func TestGauge(t *testing.T) {
 	prefix, name := "ghi.", "jkl"
 	label, value := "xyz", "abc"
-	regex := `^` + prefix + name + `:([0-9\.]+)\|g\|#` + label + `:` + value + `$`
-	d := New(prefix, log.NewNopLogger())
+	regex := `^` + prefix + name + `:([0-9\.]+)\|g\|#hostname:foohost,` + label + `:` + value + `$`
+	d := New(prefix, log.NewNopLogger(), "hostname", "foohost")
 	gauge := d.NewGauge(name).With(label, value)
 	valuef := teststat.LastLine(d, regex)
 	if err := teststat.TestGauge(gauge, valuef); err != nil {
