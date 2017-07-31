@@ -2,8 +2,6 @@ package main
 
 import (
 	"go/ast"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 type (
@@ -25,6 +23,7 @@ type (
 	}
 
 	methodVisitor struct {
+		depth           int
 		node            *ast.TypeSpec
 		list            *[]method
 		name            *ast.Ident
@@ -81,7 +80,8 @@ func (v *typeSpecVisitor) Visit(n ast.Node) ast.Visitor {
 	case nil:
 		if v.iface != nil {
 			v.iface.name = v.name
-			v.iface.stubname = &(*v.name)
+			sn := *v.name
+			v.iface.stubname = &sn
 			v.iface.stubname.Name = "stub" + v.name.String()
 			v.src.interfaces = append(v.src.interfaces, *v.iface)
 		}
@@ -104,14 +104,16 @@ func (v *interfaceTypeVisitor) Visit(n ast.Node) ast.Visitor {
 func (v *methodVisitor) Visit(n ast.Node) ast.Visitor {
 	switch rn := n.(type) {
 	default:
+		v.depth++
 		return v
 	case *ast.Ident:
 		if rn.IsExported() {
 			v.name = rn
 		}
+		v.depth++
 		return v
 	case *ast.FuncType:
-
+		v.depth++
 		v.isMethod = true
 		return v
 	case *ast.FieldList:
@@ -120,13 +122,12 @@ func (v *methodVisitor) Visit(n ast.Node) ast.Visitor {
 			return &argListVisitor{list: v.params}
 		}
 		if v.results == nil {
-			spew.Dump("results")
 			v.results = &[]arg{}
 		}
 		return &argListVisitor{list: v.results}
 	case nil:
-		spew.Dump("done", v)
-		if v.isMethod && v.name != nil {
+		v.depth--
+		if v.depth == 0 && v.isMethod && v.name != nil {
 			*v.list = append(*v.list, method{name: v.name, params: *v.params, results: *v.results})
 		}
 		return nil
@@ -153,15 +154,16 @@ func (v *argVisitor) Visit(n ast.Node) ast.Visitor {
 	case nil:
 		names := v.parts[:len(v.parts)-1]
 		tp := v.parts[len(v.parts)-1]
-		spew.Dump(v.list)
+		if len(names) == 0 {
+			*v.list = append(*v.list, arg{typ: tp})
+			return nil
+		}
 		for _, n := range names {
-			spew.Dump(n)
 			*v.list = append(*v.list, arg{
 				name: n.(*ast.Ident),
 				typ:  tp,
 			})
 		}
-		spew.Dump(v.list)
 	}
 	return nil
 }

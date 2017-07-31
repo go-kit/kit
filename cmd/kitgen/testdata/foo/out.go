@@ -1,6 +1,7 @@
 package foo
 
-type stubFooService struct{}
+type stubFooService struct {
+}
 
 func (f stubFooService) Bar(ctx context.Context, i int, s string) (string, error) {
 	return "", errors.New("not implemented")
@@ -15,15 +16,17 @@ type BarResponse struct {
 	Err error
 }
 
-func makeBarEndpoint(s stubFooService) endpoint.Endpoint {
+func makeBarEndpoint(f stubFooService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(barrequest)
-		s, err := s.bar(ctx, req.i, req.s)
-		return barresponse{s: s, err: err}, nil
+		req := request.(BarRequest)
+		s, err := f.Bar(ctx, req.I, req.S)
+		return BarResponse{S: s, Err: err}, nil
 	}
 }
 
-type Endpoints struct{ Bar endpoint.Endpoint }
+type Endpoints struct {
+	Bar endpoint.Endpoint
+}
 
 func NewHTTPHandler(endpoints Endpoints) http.Handler {
 	m := http.NewServeMux()
