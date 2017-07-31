@@ -41,6 +41,10 @@ func (mcw *mockCloudWatch) PutMetricData(input *cloudwatch.PutMetricDataInput) (
 
 func (mcw *mockCloudWatch) testDimensions(name string, labelValues ...string) error {
 	mcw.mtx.RLock()
+	_, hasValue := mcw.valuesReceived[name]
+	if !hasValue {
+		return nil // nothing to check; 0 samples were received
+	}
 	dimensions, ok := mcw.dimensionsReceived[name]
 	mcw.mtx.RUnlock()
 
