@@ -233,3 +233,26 @@ func TestInjector(t *testing.T) {
 		t.Errorf("wrong level value: got %#v, want %#v", got, want)
 	}
 }
+
+func TestSetKey(t *testing.T) {
+	var buf bytes.Buffer
+	logger := log.NewJSONLogger(&buf)
+
+	level.Error(logger).Log("foo", "bar")
+	if want, have := `{"foo":"bar","level":"error"}`, strings.TrimSpace(buf.String()); want != have {
+		t.Errorf("want %v, have %v", want, have)
+	}
+	buf.Reset()
+
+	// Set the key to severity overwriting the default: level
+	level.SetKey("severity")
+
+	level.Error(logger).Log("foo", "bar")
+	if want, have := `{"foo":"bar","severity":"error"}`, strings.TrimSpace(buf.String()); want != have {
+		t.Errorf("want %v, have %v", want, have)
+	}
+	buf.Reset()
+
+	// Reset the key to level for other tests running next.
+	level.SetKey("level")
+}
