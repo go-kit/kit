@@ -7,8 +7,6 @@ import (
 	"go/token"
 	"strings"
 	"unicode"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 type (
@@ -19,19 +17,20 @@ type (
 	}
 
 	iface struct {
-		name, stubname *ast.Ident
-		methods        []method
+		name, stubname, rcvrName *ast.Ident
+		methods                  []method
 	}
 
 	method struct {
-		name    *ast.Ident
-		params  []arg
-		results []arg
+		name            *ast.Ident
+		params          []arg
+		results         []arg
+		structsResolved bool
 	}
 
 	arg struct {
-		name *ast.Ident
-		typ  ast.Expr
+		name, asField *ast.Ident
+		typ           ast.Expr
 	}
 )
 
@@ -92,7 +91,9 @@ func mustParseExpr(s string) ast.Node {
 func pasteStmts(body *ast.BlockStmt, idx int, stmts []ast.Stmt) {
 	list := body.List
 	prefix := list[:idx]
-	suffix := list[idx+1:]
+	suffix := make([]ast.Stmt, len(list)-idx-1)
+	copy(suffix, list[idx+1:])
+
 	body.List = append(append(prefix, stmts...), suffix...)
 }
 
@@ -151,7 +152,7 @@ func (i iface) httpHandler() ast.Decl {
 		handleCall.Args[0].(*ast.BasicLit).Value = `"` + m.pathName() + `"`
 
 		handleCall.Args[1].(*ast.CallExpr).Args =
-			[]ast.Expr{sel(id("endpoints"), m.name), m.encodeFuncName(), m.decodeFuncName()}
+			[]ast.Expr{sel(id("endpoints"), m.name), m.decodeFuncName(), m.encodeFuncName()}
 
 		handleCalls = append(handleCalls, &ast.ExprStmt{X: handleCall})
 	}
@@ -173,22 +174,44 @@ func (i iface) reciever() *ast.Field {
 }
 
 func (i iface) receiverName() *ast.Ident {
-	r := strings.NewReader(i.name.Name)
-	ch, _, err := r.ReadRune()
-	if err != nil {
-		panic(err)
+	if i.rcvrName != nil {
+		return i.rcvrName
 	}
-	return id(string(unicode.ToLower(ch)))
+	scope := ast.NewScope(nil)
+	for _, meth := range i.methods {
+		for _, arg := range meth.params {
+			if arg.name != nil {
+				scope.Insert(ast.NewObj(ast.Var, arg.name.Name))
+			}
+		}
+		for _, arg := range meth.results {
+			if arg.name != nil {
+				scope.Insert(ast.NewObj(ast.Var, arg.name.Name))
+			}
+		}
+	}
+	i.rcvrName = id(unexport(inventName(i.name, scope).Name))
+	return i.rcvrName
 }
 
 func (m method) definition(ifc iface) ast.Decl {
 	notImpl := mustParseExpr(`func() {return "", errors.New("not implemented")}`).(*ast.FuncLit)
 
+	parms := m.funcParams()
+	if m.hasContext() {
+		parms = &ast.FieldList{
+			List: append([]*ast.Field{{
+				Names: []*ast.Ident{ast.NewIdent("ctx")},
+				Type:  sel(id("context"), id("Context")),
+			}}, parms.List...),
+		}
+	}
+
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{List: []*ast.Field{ifc.reciever()}},
 		Name: m.name,
 		Type: &ast.FuncType{
-			Params:  m.funcParams(),
+			Params:  parms,
 			Results: m.funcResults(),
 		},
 		Body: notImpl.Body,
@@ -206,6 +229,10 @@ func (m method) definition(ifc iface) ast.Decl {
 */
 func (m method) endpointMaker(ifc iface) ast.Decl {
 	endpointFn := mustParseExpr(`func() {return func(ctx context.Context, request interface{}) (interface{}, error) { }}`).(*ast.FuncLit)
+	scope := ast.NewScope(nil)
+	scope.Insert(ast.NewObj(ast.Var, ifc.receiverName().Name))
+	scope.Insert(ast.NewObj(ast.Var, "ctx"))
+	scope.Insert(ast.NewObj(ast.Var, "req"))
 
 	anonFunc := endpointFn.Body.List[0].(*ast.ReturnStmt).Results[0].(*ast.FuncLit)
 	if !m.hasContext() { // is this the right thing?
@@ -213,12 +240,12 @@ func (m method) endpointMaker(ifc iface) ast.Decl {
 	}
 
 	castReq := mustParseExpr(`func() {req := request.(NOTTHIS)}`).(*ast.FuncLit).Body.List[0].(*ast.AssignStmt)
-	castReq.Rhs[0].(*ast.TypeAssertExpr).Type = m.responseStructName()
+	castReq.Rhs[0].(*ast.TypeAssertExpr).Type = m.requestStructName()
 
-	callMethod := m.called(ifc, "ctx", "req")
+	callMethod := m.called(ifc, scope, "ctx", "req")
 
 	returnResponse := &ast.ReturnStmt{
-		Results: []ast.Expr{m.wrapResult(), id("nil")},
+		Results: []ast.Expr{m.wrapResult(callMethod.Lhs), id("nil")},
 	}
 
 	anonFunc.Body = blockStmt(
@@ -232,8 +259,7 @@ func (m method) endpointMaker(ifc iface) ast.Decl {
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{List: []*ast.Field{ifc.reciever()}},
 			Results: &ast.FieldList{List: []*ast.Field{
-				&ast.Field{Type: &ast.InterfaceType{Methods: &ast.FieldList{}}},
-				&ast.Field{Type: id("error")},
+				&ast.Field{Type: sel(id("endpoint"), id("Endpoint"))},
 			}},
 		},
 		Body: endpointFn.Body,
@@ -245,24 +271,67 @@ func (m method) pathName() string {
 }
 
 func (m method) encodeFuncName() *ast.Ident {
-	return id("Decode" + m.name.Name + "Request")
-}
-
-func (m method) decodeFuncName() *ast.Ident {
 	return id("Encode" + m.name.Name + "Response")
 }
 
-func (m method) resultNames() []*ast.Ident {
+func (m method) decodeFuncName() *ast.Ident {
+	return id("Decode" + m.name.Name + "Request")
+}
+
+func (m method) resultNames(scope *ast.Scope) []*ast.Ident {
 	ids := []*ast.Ident{}
 	for _, rz := range m.results {
-		ids = append(ids, rz.name)
+		ids = append(ids, rz.chooseName(scope))
 	}
 	return ids
 }
 
-func (m method) called(ifc iface, ctxName, spreadStruct string) ast.Stmt {
+func (a arg) chooseName(scope *ast.Scope) *ast.Ident {
+	if a.name == nil {
+		return inventName(a.typ, scope)
+	}
+	return a.name
+}
+
+func inventName(t ast.Expr, scope *ast.Scope) *ast.Ident {
+	n := baseName(t)
+	for try := 0; ; try++ {
+		nstr := pickName(n, try)
+		obj := ast.NewObj(ast.Var, nstr)
+		if alt := scope.Insert(obj); alt == nil {
+			return ast.NewIdent(nstr)
+		}
+	}
+}
+
+func baseName(t ast.Expr) string {
+	switch tt := t.(type) {
+	default:
+		panic(fmt.Sprintf("don't know how to choose a base name for #t (#v[0])", tt))
+	case *ast.Ident:
+		return tt.Name
+	case *ast.SelectorExpr:
+		return tt.Sel.Name
+	}
+}
+
+func pickName(base string, idx int) string {
+	if idx == 0 {
+		switch base {
+		default:
+			return strings.Split(base, "")[0]
+		case "error":
+			return "err"
+		}
+	}
+	return fmt.Sprintf("%s%d", base, idx)
+}
+
+func (m method) called(ifc iface, scope *ast.Scope, ctxName, spreadStruct string) *ast.AssignStmt {
+	m.resolveStructNames()
+
 	resNamesExpr := []ast.Expr{}
-	for _, r := range m.resultNames() {
+	for _, r := range m.resultNames(scope) {
 		resNamesExpr = append(resNamesExpr, ast.Expr(r))
 	}
 
@@ -275,7 +344,6 @@ func (m method) called(ifc iface, ctxName, spreadStruct string) ast.Stmt {
 		arglist = append(arglist, sel(ssid, f.Names[0]))
 	}
 
-	spew.Dump(resNamesExpr)
 	return &ast.AssignStmt{
 		Lhs: resNamesExpr,
 		Tok: token.DEFINE,
@@ -288,18 +356,36 @@ func (m method) called(ifc iface, ctxName, spreadStruct string) ast.Stmt {
 	}
 }
 
-func (m method) wrapResult() ast.Expr {
+func (m method) wrapResult(results []ast.Expr) ast.Expr {
 	kvs := []ast.Expr{}
+	m.resolveStructNames()
 
-	for _, a := range m.results {
+	for i, a := range m.results {
 		kvs = append(kvs, &ast.KeyValueExpr{
-			Key:   a.exported().Names[0],
-			Value: a.name,
+			Key:   ast.NewIdent(export(a.asField.Name)),
+			Value: results[i],
 		})
 	}
 	return &ast.CompositeLit{
 		Type: m.responseStructName(),
 		Elts: kvs,
+	}
+}
+
+func (m method) resolveStructNames() {
+	if m.structsResolved {
+		return
+	}
+	m.structsResolved = true
+	scope := ast.NewScope(nil)
+	for i, p := range m.params {
+		p.asField = p.chooseName(scope)
+		m.params[i] = p
+	}
+	scope = ast.NewScope(nil)
+	for i, r := range m.results {
+		r.asField = r.chooseName(scope)
+		m.results[i] = r
 	}
 }
 
@@ -341,10 +427,12 @@ func (m method) endpointMakerName() *ast.Ident {
 }
 
 func (m method) requestStruct() ast.Decl {
+	m.resolveStructNames()
 	return structDecl(m.requestStructName(), m.requestStructFields())
 }
 
 func (m method) responseStruct() ast.Decl {
+	m.resolveStructNames()
 	return structDecl(m.responseStructName(), m.responseStructFields())
 }
 
@@ -411,7 +499,7 @@ func (a arg) field() *ast.Field {
 
 func (a arg) result() *ast.Field {
 	return &ast.Field{
-		Names: []*ast.Ident{},
+		Names: nil,
 		Type:  a.typ,
 	}
 }
@@ -433,7 +521,7 @@ func unexport(s string) string {
 
 func (a arg) exported() *ast.Field {
 	return &ast.Field{
-		Names: []*ast.Ident{id(export(a.name.Name))},
+		Names: []*ast.Ident{id(export(a.asField.Name))},
 		Type:  a.typ,
 	}
 }

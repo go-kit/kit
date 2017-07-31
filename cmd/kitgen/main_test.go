@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"io"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 	"testing"
 )
+
+var update = flag.Bool("update", false, "update golden files")
 
 func TestProcess(t *testing.T) {
 	cases, err := filepath.Glob("testdata/*")
@@ -26,17 +29,24 @@ func TestProcess(t *testing.T) {
 				t.Fatal(inpath, err)
 			}
 
-			expected, err := ioutil.ReadFile(outpath)
-			if err != nil {
-				t.Fatal(outpath, err)
-			}
-
 			actualR, err := process(inpath, bytes.NewBuffer(in))
 			if err != nil {
-				t.Fatal(outpath, err)
+				t.Fatal(inpath, err)
 			}
 
 			actual, err := ioutil.ReadAll(actualR)
+			if err != nil {
+				t.Fatal(dir, err)
+			}
+
+			if *update {
+				err := ioutil.WriteFile(outpath, actual, 0644)
+				if err != nil {
+					t.Fatal(outpath, err)
+				}
+			}
+
+			expected, err := ioutil.ReadFile(outpath)
 			if err != nil {
 				t.Fatal(outpath, err)
 			}
