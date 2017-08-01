@@ -31,38 +31,34 @@ type Percentiles []struct {
 //
 // To regularly report metrics to CloudWatch, use the WriteLoop helper method.
 type CloudWatch struct {
-	mtx        sync.RWMutex
-	sem        chan struct{}
-	namespace  string
-	svc        cloudwatchiface.CloudWatchAPI
-	counters   *lv.Space
-	gauges     *lv.Space
-	histograms *lv.Space
-	*cwoptions
-}
-
-type cwoptions struct {
+	mtx                   sync.RWMutex
+	sem                   chan struct{}
+	namespace             string
+	svc                   cloudwatchiface.CloudWatchAPI
+	counters              *lv.Space
+	gauges                *lv.Space
+	histograms            *lv.Space
 	percentiles           Percentiles
 	logger                log.Logger
 	numConcurrentRequests int
 }
 
-type option func(*cwoptions)
+type option func(*CloudWatch)
 
-func (s *cwoptions) apply(opt option) {
+func (s *CloudWatch) apply(opt option) {
 	if opt != nil {
 		opt(s)
 	}
 }
 
 func WithLogger(logger log.Logger) option {
-	return func(o *cwoptions) {
-		o.logger = logger
+	return func(c *CloudWatch) {
+		c.logger = logger
 	}
 }
 
 func WithPercentiles(p Percentiles) option {
-	return func(o *cwoptions) {
+	return func(c *CloudWatch) {
 		validated := Percentiles{}
 		for _, entry := range p {
 			if entry.f < 0 || entry.f > 1 {
@@ -70,16 +66,16 @@ func WithPercentiles(p Percentiles) option {
 			}
 			validated = append(validated, entry)
 		}
-		o.percentiles = validated
+		c.percentiles = validated
 	}
 }
 
 func WithConcurrentRequests(n int) option {
-	return func(o *cwoptions) {
+	return func(c *CloudWatch) {
 		if n > maxConcurrentRequests {
 			n = maxConcurrentRequests
 		}
-		o.numConcurrentRequests = n
+		c.numConcurrentRequests = n
 	}
 }
 
@@ -88,7 +84,13 @@ func WithConcurrentRequests(n int) option {
 // Callers must ensure that regular calls to Send are performed, either
 // manually or with one of the helper methods.
 func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...option) *CloudWatch {
-	useOptions := &cwoptions{
+	cw := &CloudWatch{
+		sem:                   nil, // set below
+		namespace:             namespace,
+		svc:                   svc,
+		counters:              lv.NewSpace(),
+		gauges:                lv.NewSpace(),
+		histograms:            lv.NewSpace(),
 		numConcurrentRequests: 10,
 		logger:                log.NewLogfmtLogger(os.Stderr),
 		percentiles: Percentiles{
@@ -99,19 +101,13 @@ func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...option)
 		},
 	}
 
-	for _, opt := range options {
-		useOptions.apply(opt)
+	for _, optFunc := range options {
+		optFunc(cw)
 	}
 
-	return &CloudWatch{
-		sem:        make(chan struct{}, useOptions.numConcurrentRequests),
-		namespace:  namespace,
-		svc:        svc,
-		counters:   lv.NewSpace(),
-		gauges:     lv.NewSpace(),
-		histograms: lv.NewSpace(),
-		cwoptions:  useOptions,
-	}
+	cw.sem = make(chan struct{}, cw.numConcurrentRequests)
+
+	return cw
 }
 
 // NewCounter returns a counter. Observations are aggregated and emitted once
