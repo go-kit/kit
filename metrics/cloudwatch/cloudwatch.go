@@ -138,9 +138,15 @@ func (cw *CloudWatch) Send() error {
 			{"95", 0.95},
 			{"99", 0.99},
 		} {
+			dims := makeDimensions(h.h.LabelValues()...)
+			dims = append(dims, &cloudwatch.Dimension{
+				Name:  aws.String("percentile"),
+				Value: aws.String(p.s),
+			})
+
 			datums = append(datums, &cloudwatch.MetricDatum{
-				MetricName: aws.String(fmt.Sprintf("%s_%s", name, p.s)),
-				Dimensions: makeDimensions(h.h.LabelValues()...),
+				MetricName: aws.String(name),
+				Dimensions: dims,
 				Value:      aws.Float64(h.h.Quantile(p.f)),
 				Timestamp:  aws.Time(now),
 			})

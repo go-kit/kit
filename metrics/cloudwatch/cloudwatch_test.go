@@ -80,6 +80,9 @@ func TestCounter(t *testing.T) {
 	if err := teststat.TestCounter(counter, valuef); err != nil {
 		t.Fatal(err)
 	}
+	if err := teststat.TestCounter(counter, valuef); err != nil {
+		t.Fatal("Fill and flush counter 2nd time: ", err)
+	}
 	if err := testDimensions(svc, name, label, value); err != nil {
 		t.Fatal(err)
 	}
