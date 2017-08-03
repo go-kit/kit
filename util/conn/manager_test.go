@@ -40,7 +40,7 @@ func TestManager(t *testing.T) {
 	// First takes should fail.
 	for i := 0; i < 10; i++ {
 		if conn = mgr.Take(); conn != nil {
-			t.Fatalf("want nil conn, got real conn")
+			t.Fatalf("iteration %d: want nil conn, got real conn", i)
 		}
 	}
 
