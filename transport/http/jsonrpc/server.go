@@ -198,6 +198,8 @@ type ErrorCoder interface {
 	ErrorCode() int
 }
 
+// interceptingWriter intercepts calls to WriteHeader, so that a finalizer
+// can be given the correct status code.
 type interceptingWriter struct {
 	http.ResponseWriter
 	code int
