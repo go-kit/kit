@@ -55,7 +55,7 @@ func (l logfmtLogger) Log(keyvals ...interface{}) error {
 	// The Logger interface requires implementations to be safe for concurrent
 	// use by multiple goroutines. For this implementation that means making
 	// only one call to l.w.Write() for each call to Log.
-	if _, err := l.w.Write(enc.buf.Bytes()); err != nil {
+	if _, err := specializedWriter(l.w, keyvals...).Write(enc.buf.Bytes()); err != nil {
 		return err
 	}
 	return nil
