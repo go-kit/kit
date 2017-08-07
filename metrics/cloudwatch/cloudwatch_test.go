@@ -39,8 +39,15 @@ func (mcw *mockCloudWatch) PutMetricData(input *cloudwatch.PutMetricDataInput) (
 	return nil, nil
 }
 
-func testDimensions(svc *mockCloudWatch, name string, labelValues ...string) error {
-	dimensions, ok := svc.dimensionsReceived[name]
+func (mcw *mockCloudWatch) testDimensions(name string, labelValues ...string) error {
+	mcw.mtx.RLock()
+	_, hasValue := mcw.valuesReceived[name]
+	if !hasValue {
+		return nil // nothing to check; 0 samples were received
+	}
+	dimensions, ok := mcw.dimensionsReceived[name]
+	mcw.mtx.RUnlock()
+
 	if !ok {
 		if len(labelValues) > 0 {
 			return errors.New("Expected dimensions to be available, but none were")
@@ -66,7 +73,7 @@ func TestCounter(t *testing.T) {
 	namespace, name := "abc", "def"
 	label, value := "label", "value"
 	svc := newMockCloudWatch()
-	cw := New(namespace, svc, 10, log.NewNopLogger())
+	cw := New(namespace, svc, WithLogger(log.NewNopLogger()))
 	counter := cw.NewCounter(name).With(label, value)
 	valuef := func() float64 {
 		err := cw.Send()
@@ -80,7 +87,10 @@ func TestCounter(t *testing.T) {
 	if err := teststat.TestCounter(counter, valuef); err != nil {
 		t.Fatal(err)
 	}
-	if err := testDimensions(svc, name, label, value); err != nil {
+	if err := teststat.TestCounter(counter, valuef); err != nil {
+		t.Fatal("Fill and flush counter 2nd time: ", err)
+	}
+	if err := svc.testDimensions(name, label, value); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -95,7 +105,10 @@ func TestCounterLowSendConcurrency(t *testing.T) {
 		values = append(values, "value"+num)
 	}
 	svc := newMockCloudWatch()
-	cw := New(namespace, svc, 2, log.NewNopLogger())
+	cw := New(namespace, svc,
+		WithLogger(log.NewNopLogger()),
+		WithConcurrentRequests(2),
+	)
 
 	counters := make(map[string]metrics.Counter)
 	var wants []float64
@@ -113,7 +126,7 @@ func TestCounterLowSendConcurrency(t *testing.T) {
 		if svc.valuesReceived[name] != wants[i] {
 			t.Fatalf("want %f, have %f", wants[i], svc.valuesReceived[name])
 		}
-		if err := testDimensions(svc, name, labels[i], values[i]); err != nil {
+		if err := svc.testDimensions(name, labels[i], values[i]); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -123,7 +136,7 @@ func TestGauge(t *testing.T) {
 	namespace, name := "abc", "def"
 	label, value := "label", "value"
 	svc := newMockCloudWatch()
-	cw := New(namespace, svc, 10, log.NewNopLogger())
+	cw := New(namespace, svc, WithLogger(log.NewNopLogger()))
 	gauge := cw.NewGauge(name).With(label, value)
 	valuef := func() float64 {
 		err := cw.Send()
@@ -137,7 +150,7 @@ func TestGauge(t *testing.T) {
 	if err := teststat.TestGauge(gauge, valuef); err != nil {
 		t.Fatal(err)
 	}
-	if err := testDimensions(svc, name, label, value); err != nil {
+	if err := svc.testDimensions(name, label, value); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -146,8 +159,8 @@ func TestHistogram(t *testing.T) {
 	namespace, name := "abc", "def"
 	label, value := "label", "value"
 	svc := newMockCloudWatch()
-	cw := New(namespace, svc, 10, log.NewNopLogger())
-	histogram := cw.NewHistogram(name, 50).With(label, value)
+	cw := New(namespace, svc, WithLogger(log.NewNopLogger()))
+	histogram := cw.NewHistogram(name).With(label, value)
 	n50 := fmt.Sprintf("%s_50", name)
 	n90 := fmt.Sprintf("%s_90", name)
 	n95 := fmt.Sprintf("%s_95", name)
@@ -168,16 +181,16 @@ func TestHistogram(t *testing.T) {
 	if err := teststat.TestHistogram(histogram, quantiles, 0.01); err != nil {
 		t.Fatal(err)
 	}
-	if err := testDimensions(svc, n50, label, value); err != nil {
+	if err := svc.testDimensions(n50, label, value); err != nil {
 		t.Fatal(err)
 	}
-	if err := testDimensions(svc, n90, label, value); err != nil {
+	if err := svc.testDimensions(n90, label, value); err != nil {
 		t.Fatal(err)
 	}
-	if err := testDimensions(svc, n95, label, value); err != nil {
+	if err := svc.testDimensions(n95, label, value); err != nil {
 		t.Fatal(err)
 	}
-	if err := testDimensions(svc, n99, label, value); err != nil {
+	if err := svc.testDimensions(n99, label, value); err != nil {
 		t.Fatal(err)
 	}
 }
