@@ -2,8 +2,6 @@ package main
 
 import (
 	"go/ast"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func transformAST(ctx *sourceContext) (ast.Node, error) {
@@ -40,7 +38,6 @@ func addStubStruct(root *ast.File, iface iface) {
 
 func addMethod(root *ast.File, iface iface, meth method) {
 	def := meth.definition(iface)
-	spew.Dump(def)
 	root.Decls = append(root.Decls, def)
 }
 
