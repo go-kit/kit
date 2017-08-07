@@ -1,54 +1,50 @@
 package foo
 
-type STUBSTRUCT struct{}
-
-func (f STUBSTRUCT) METHOD(PARAM aType) (string, error) {
-	return "", errors.New("not implemented")
+type stubFooService struct {
 }
 
-type BarRequest struct {
+type ExampleRequest struct {
 	I int
 	S string
 }
-
-type BarResponse struct {
+type ExampleResponse struct {
 	S   string
 	Err error
 }
 
-func MAKEENDPOINT(s STUBSTRUCT) endpoint.Endpoint {
+type Endpoints struct {
+	ExampleEndpoint endpoint.Endpoint
+}
+
+func (f stubFooService) ExampleEndpoint(ctx context.Context, i int, s string) (string, error) {
+	return "", errors.New("not implemented")
+}
+
+func makeExampleEndpoint(f stubFooService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(REQUESTSTRUCT)
-		s, err := s.bar(ctx, req.i, req.s)
-		return RESPONSESTRUCT{s: s, err: err}, nil
+		req := request.(ExampleRequest)
+		s, err := f.ExampleEndpoint(ctx, req.I, req.S)
+		return ExampleResponse{S: s, Err: err}, nil
 	}
 }
 
-type Endpoints struct {
-	Bar endpoint.Endpoint
+func inlineHandlerBuilder() {
+	m.Handle("/bar", httptransport.NewServer(endpoints.ExampleEndpoint, DecodeExampleRequest, EncodeExampleResponse))
 }
-
-// Each transport binding should be opt-in with a flag to kitgen.
-// Here's a basic sketch of what HTTP may look like.
-// n.b. comments should encourage users to edit the generated code.
 
 func NewHTTPHandler(endpoints Endpoints) http.Handler {
 	m := http.NewServeMux()
-	m.Handle("/bar", httptransport.NewServer(
-		endpoints.Bar,
-		DecodeBarRequest,
-		EncodeBarResponse,
-	))
+	inlineHandlerBuilder()
 	return m
 }
 
-func DecodeBarRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req BarRequest
+func DecodeExampleRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req ExampleRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	return req, err
 }
 
-func EncodeBarResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+func EncodeExampleResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	return json.NewEncoder(w).Encode(response)
 }

@@ -34,6 +34,23 @@ type (
 	}
 )
 
+func fetchFuncDecl(name string) *ast.FuncDecl {
+	full, err := ASTTemplates.Open("full.go")
+	if err != nil {
+		panic(err)
+	}
+	f, err := parser.ParseFile(token.NewFileSet(), "templates/full.go", full, parser.DeclarationErrors)
+	if err != nil {
+		panic(err)
+	}
+	for _, decl := range f.Decls {
+		if f, ok := decl.(*ast.FuncDecl); ok && f.Name.Name == name {
+			return f
+		}
+	}
+	panic(fmt.Errorf("No function called %q in 'templates/full.go'", name))
+}
+
 func id(name string) *ast.Ident {
 	return ast.NewIdent(name)
 }
@@ -78,14 +95,6 @@ func structDecl(name *ast.Ident, fields *ast.FieldList) ast.Decl {
 			},
 		},
 	}
-}
-
-func mustParseExpr(s string) ast.Node {
-	n, err := parser.ParseExpr(s)
-	if err != nil {
-		panic(err)
-	}
-	return n
 }
 
 func pasteStmts(body *ast.BlockStmt, idx int, stmts []ast.Stmt) {
@@ -138,16 +147,13 @@ func NewHTTPHandler(endpoints Endpoints) http.Handler {
 	return m
 }
 */
+
 func (i iface) httpHandler() ast.Decl {
-	handlerFn := mustParseExpr(`func (endpoints Endpoints) http.Handler {
-		m := http.NewServeMux()
-		replaceWithHandleCalls()
-		return m
-	}`).(*ast.FuncLit)
+	handlerFn := fetchFuncDecl("NewHTTPHandler")
 
 	handleCalls := []ast.Stmt{}
 	for _, m := range i.methods {
-		handleCall := mustParseExpr(`m.Handle("", httptransport.NewServer())`).(*ast.CallExpr)
+		handleCall := fetchFuncDecl("inlineHandlerBuilder").Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr)
 
 		handleCall.Args[0].(*ast.BasicLit).Value = `"` + m.pathName() + `"`
 
@@ -159,11 +165,7 @@ func (i iface) httpHandler() ast.Decl {
 
 	pasteStmts(handlerFn.Body, 1, handleCalls)
 
-	return &ast.FuncDecl{
-		Name: id("NewHTTPHandler"),
-		Type: handlerFn.Type,
-		Body: handlerFn.Body,
-	}
+	return handlerFn
 }
 
 func (i iface) reciever() *ast.Field {
@@ -195,27 +197,22 @@ func (i iface) receiverName() *ast.Ident {
 }
 
 func (m method) definition(ifc iface) ast.Decl {
-	notImpl := mustParseExpr(`func() {return "", errors.New("not implemented")}`).(*ast.FuncLit)
+	notImpl := fetchFuncDecl("ExampleEndpoint")
 
-	parms := m.funcParams()
-	if m.hasContext() {
-		parms = &ast.FieldList{
-			List: append([]*ast.Field{{
-				Names: []*ast.Ident{ast.NewIdent("ctx")},
-				Type:  sel(id("context"), id("Context")),
-			}}, parms.List...),
-		}
-	}
+	notImpl.Name = m.name
+	notImpl.Recv = &ast.FieldList{List: []*ast.Field{ifc.reciever()}}
+	notImpl.Type.Params = m.funcParams()
+	notImpl.Type.Results = m.funcResults()
 
-	return &ast.FuncDecl{
-		Recv: &ast.FieldList{List: []*ast.Field{ifc.reciever()}},
-		Name: m.name,
-		Type: &ast.FuncType{
-			Params:  parms,
-			Results: m.funcResults(),
-		},
-		Body: notImpl.Body,
+	return notImpl
+}
+
+func scopeWith(names ...string) *ast.Scope {
+	scope := ast.NewScope(nil)
+	for _, name := range names {
+		scope.Insert(ast.NewObj(ast.Var, name))
 	}
+	return scope
 }
 
 /*
@@ -228,42 +225,23 @@ func (m method) definition(ifc iface) ast.Decl {
 	}
 */
 func (m method) endpointMaker(ifc iface) ast.Decl {
-	endpointFn := mustParseExpr(`func() {return func(ctx context.Context, request interface{}) (interface{}, error) { }}`).(*ast.FuncLit)
-	scope := ast.NewScope(nil)
-	scope.Insert(ast.NewObj(ast.Var, ifc.receiverName().Name))
-	scope.Insert(ast.NewObj(ast.Var, "ctx"))
-	scope.Insert(ast.NewObj(ast.Var, "req"))
+	endpointFn := fetchFuncDecl("makeExampleEndpoint")
+	scope := scopeWith("ctx", "req", ifc.receiverName().Name)
 
 	anonFunc := endpointFn.Body.List[0].(*ast.ReturnStmt).Results[0].(*ast.FuncLit)
 	if !m.hasContext() { // is this the right thing?
 		anonFunc.Type.Params.List = anonFunc.Type.Params.List[1:]
 	}
 
-	castReq := mustParseExpr(`func() {req := request.(NOTTHIS)}`).(*ast.FuncLit).Body.List[0].(*ast.AssignStmt)
-	castReq.Rhs[0].(*ast.TypeAssertExpr).Type = m.requestStructName()
-
+	anonFunc.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.TypeAssertExpr).Type = m.requestStructName()
 	callMethod := m.called(ifc, scope, "ctx", "req")
+	anonFunc.Body.List[1] = callMethod
+	anonFunc.Body.List[2].(*ast.ReturnStmt).Results[0] = m.wrapResult(callMethod.Lhs)
 
-	returnResponse := &ast.ReturnStmt{
-		Results: []ast.Expr{m.wrapResult(callMethod.Lhs), id("nil")},
-	}
-
-	anonFunc.Body = blockStmt(
-		castReq,
-		callMethod,
-		returnResponse,
-	)
-
-	return &ast.FuncDecl{
-		Name: m.endpointMakerName(),
-		Type: &ast.FuncType{
-			Params: &ast.FieldList{List: []*ast.Field{ifc.reciever()}},
-			Results: &ast.FieldList{List: []*ast.Field{
-				&ast.Field{Type: sel(id("endpoint"), id("Endpoint"))},
-			}},
-		},
-		Body: endpointFn.Body,
-	}
+	endpointFn.Name = m.endpointMakerName()
+	endpointFn.Type.Params = &ast.FieldList{List: []*ast.Field{ifc.reciever()}}
+	endpointFn.Type.Results = &ast.FieldList{List: []*ast.Field{&ast.Field{Type: sel(id("endpoint"), id("Endpoint"))}}}
+	return endpointFn
 }
 
 func (m method) pathName() string {
@@ -390,36 +368,16 @@ func (m method) resolveStructNames() {
 }
 
 func (m method) decoderFunc() ast.Decl {
-	fn := mustParseExpr(`
-		func (_ context.Context, r *http.Request) (interface{}, error) {
-			var req ReqStructName
-			err := json.NewDecoder(r.Body).Decode(&req)
-			return req, err
-		}
-	`).(*ast.FuncLit)
-
+	fn := fetchFuncDecl("DecodeExampleRequest")
+	fn.Name = m.decodeFuncName()
 	fn.Body.List[0].(*ast.DeclStmt).Decl.(*ast.GenDecl).Specs[0].(*ast.ValueSpec).Type = m.requestStructName()
-
-	return &ast.FuncDecl{
-		Name: m.decodeFuncName(),
-		Type: fn.Type,
-		Body: fn.Body,
-	}
+	return fn
 }
 
 func (m method) encoderFunc() ast.Decl {
-	fn := mustParseExpr(`
-		func (_ context.Context, w http.ResponseWriter, response interface{}) error {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			return json.NewEncoder(w).Encode(response)
-		}
-	`).(*ast.FuncLit)
-
-	return &ast.FuncDecl{
-		Name: m.encodeFuncName(),
-		Type: fn.Type,
-		Body: fn.Body,
-	}
+	fn := fetchFuncDecl("EncodeExampleResponse")
+	fn.Name = m.encodeFuncName()
+	return fn
 }
 
 func (m method) endpointMakerName() *ast.Ident {
@@ -459,9 +417,17 @@ func (m method) nonContextParams() []arg {
 }
 
 func (m method) funcParams() *ast.FieldList {
-	return fieldList(func(a arg) *ast.Field {
+	parms := &ast.FieldList{}
+	if m.hasContext() {
+		parms.List = []*ast.Field{{
+			Names: []*ast.Ident{ast.NewIdent("ctx")},
+			Type:  sel(id("context"), id("Context")),
+		}}
+	}
+	parms.List = append(parms.List, fieldList(func(a arg) *ast.Field {
 		return a.field()
-	}, m.nonContextParams()...)
+	}, m.nonContextParams()...).List...)
+	return parms
 }
 
 func (m method) funcResults() *ast.FieldList {
