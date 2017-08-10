@@ -60,9 +60,11 @@ func WithLogger(logger log.Logger) option {
 
 // WithPercentiles registers the percentiles to track, overriding the
 // existing/default values.
+// Reason is that Cloudwatch makes you pay per metric, so you can save half the money
+// by only using 2 metrics instead of the default 4.
 func WithPercentiles(percentiles ...float64) option {
 	return func(c *CloudWatch) {
-		c.percentiles = make([]float64, 0)
+		c.percentiles = make([]float64, 0, len(percentiles))
 		for _, p := range percentiles {
 			if p < 0 || p > 1 {
 				continue // illegal entry; ignore
