@@ -32,7 +32,11 @@ func ExampleNewLogger_levelColors() {
 			if keyvals[i] != "level" {
 				continue
 			}
-			switch keyvals[i+1] {
+			s, ok := keyvals[i+1].(fmt.Stringer)
+			if !ok {
+				return term.FgBgColor{}
+			}
+			switch s.String() {
 			case "debug":
 				return term.FgBgColor{Fg: term.DarkGray}
 			case "info":
