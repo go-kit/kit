@@ -2,6 +2,7 @@ package term_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/go-kit/kit/log"
