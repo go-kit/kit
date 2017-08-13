@@ -298,6 +298,8 @@ func pickName(base string, idx int) string {
 		switch base {
 		default:
 			return strings.Split(base, "")[0]
+		case "Context":
+			return "ctx"
 		case "error":
 			return "err"
 		}
@@ -424,8 +426,9 @@ func (m method) funcParams() *ast.FieldList {
 			Type:  sel(id("context"), id("Context")),
 		}}
 	}
+	scope := scopeWith("ctx")
 	parms.List = append(parms.List, fieldList(func(a arg) *ast.Field {
-		return a.field()
+		return a.field(scope)
 	}, m.nonContextParams()...).List...)
 	return parms
 }
@@ -456,9 +459,9 @@ func (m method) responseStructFields() *ast.FieldList {
 	}, m.results...)
 }
 
-func (a arg) field() *ast.Field {
+func (a arg) field(scope *ast.Scope) *ast.Field {
 	return &ast.Field{
-		Names: []*ast.Ident{a.name},
+		Names: []*ast.Ident{a.chooseName(scope)},
 		Type:  a.typ,
 	}
 }
