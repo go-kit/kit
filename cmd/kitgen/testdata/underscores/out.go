@@ -1,4 +1,4 @@
-package foo
+package underscores
 
 import "context"
 import "encoding/json"
@@ -10,13 +10,12 @@ import httptransport "github.com/go-kit/kit/transport/http"
 type stubService struct {
 }
 
-func (s stubService) Foo(ctx context.Context, i int, string1 string) (int, error) {
+func (s stubService) Foo(ctx context.Context, i int) (int, error) {
 	panic(errors.New("not implemented"))
 }
 
 type FooRequest struct {
 	I int
-	S string
 }
 type FooResponse struct {
 	I   int
@@ -26,7 +25,7 @@ type FooResponse struct {
 func makeFooEndpoint(s stubService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(FooRequest)
-		i, err := s.Foo(ctx, req.I, req.S)
+		i, err := s.Foo(ctx, req.I)
 		return FooResponse{I: i, Err: err}, nil
 	}
 }

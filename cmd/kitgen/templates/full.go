@@ -1,5 +1,15 @@
 package foo
 
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+
+	"github.com/go-kit/kit/endpoint"
+	httptransport "github.com/go-kit/kit/transport/http"
+)
+
 type stubFooService struct {
 }
 
@@ -17,7 +27,7 @@ type Endpoints struct {
 }
 
 func (f stubFooService) ExampleEndpoint(ctx context.Context, i int, s string) (string, error) {
-	return "", errors.New("not implemented")
+	panic(errors.New("not implemented"))
 }
 
 func makeExampleEndpoint(f stubFooService) endpoint.Endpoint {
@@ -28,13 +38,13 @@ func makeExampleEndpoint(f stubFooService) endpoint.Endpoint {
 	}
 }
 
-func inlineHandlerBuilder() {
+func inlineHandlerBuilder(m *http.ServeMux, endpoints Endpoints) {
 	m.Handle("/bar", httptransport.NewServer(endpoints.ExampleEndpoint, DecodeExampleRequest, EncodeExampleResponse))
 }
 
 func NewHTTPHandler(endpoints Endpoints) http.Handler {
 	m := http.NewServeMux()
-	inlineHandlerBuilder()
+	inlineHandlerBuilder(m, endpoints)
 	return m
 }
 

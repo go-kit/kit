@@ -1,15 +1,14 @@
 package main
 
-import (
-	"go/ast"
-)
+import "go/ast"
 
 func transformAST(ctx *sourceContext) (ast.Node, error) {
 	root := &ast.File{
-		Name:    ctx.pkg,
-		Imports: ctx.imports,
-		Decls:   []ast.Decl{},
+		Name:  ctx.pkg,
+		Decls: []ast.Decl{},
 	}
+
+	addImports(root, ctx)
 
 	for _, iface := range ctx.interfaces { //only one...
 		addStubStruct(root, iface)
@@ -30,6 +29,10 @@ func transformAST(ctx *sourceContext) (ast.Node, error) {
 		}
 	}
 	return root, nil
+}
+
+func addImports(root *ast.File, ctx *sourceContext) {
+	root.Decls = append(root.Decls, ctx.importDecls()...)
 }
 
 func addStubStruct(root *ast.File, iface iface) {

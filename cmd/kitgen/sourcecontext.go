@@ -34,7 +34,7 @@ type (
 	}
 )
 
-func fetchFuncDecl(name string) *ast.FuncDecl {
+func fullAST() *ast.File {
 	full, err := ASTTemplates.Open("full.go")
 	if err != nil {
 		panic(err)
@@ -43,6 +43,15 @@ func fetchFuncDecl(name string) *ast.FuncDecl {
 	if err != nil {
 		panic(err)
 	}
+	return f
+}
+
+func fetchImports() []*ast.ImportSpec {
+	return fullAST().Imports
+}
+
+func fetchFuncDecl(name string) *ast.FuncDecl {
+	f := fullAST()
 	for _, decl := range f.Decls {
 		if f, ok := decl.(*ast.FuncDecl); ok && f.Name.Name == name {
 			return f
@@ -118,6 +127,31 @@ func (sc *sourceContext) validate() error {
 		}
 	}
 	return nil
+}
+
+func (sc *sourceContext) importDecls() (decls []ast.Decl) {
+	have := map[string]struct{}{}
+	notHave := func(is *ast.ImportSpec) bool {
+		if _, has := have[is.Path.Value]; has {
+			return false
+		}
+		have[is.Path.Value] = struct{}{}
+		return true
+	}
+
+	for _, is := range sc.imports {
+		if notHave(is) {
+			decls = append(decls, &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{is}})
+		}
+	}
+
+	for _, is := range fetchImports() {
+		if notHave(is) {
+			decls = append(decls, &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{is}})
+		}
+	}
+
+	return
 }
 
 func (i iface) stubName() *ast.Ident {
@@ -201,7 +235,8 @@ func (m method) definition(ifc iface) ast.Decl {
 
 	notImpl.Name = m.name
 	notImpl.Recv = &ast.FieldList{List: []*ast.Field{ifc.reciever()}}
-	notImpl.Type.Params = m.funcParams()
+	scope := scopeWith(notImpl.Recv.List[0].Names[0].Name)
+	notImpl.Type.Params = m.funcParams(scope)
 	notImpl.Type.Results = m.funcResults()
 
 	return notImpl
@@ -265,7 +300,7 @@ func (m method) resultNames(scope *ast.Scope) []*ast.Ident {
 }
 
 func (a arg) chooseName(scope *ast.Scope) *ast.Ident {
-	if a.name == nil {
+	if a.name == nil || scope.Lookup(a.name.Name) != nil {
 		return inventName(a.typ, scope)
 	}
 	return a.name
@@ -418,15 +453,15 @@ func (m method) nonContextParams() []arg {
 	return m.params
 }
 
-func (m method) funcParams() *ast.FieldList {
+func (m method) funcParams(scope *ast.Scope) *ast.FieldList {
 	parms := &ast.FieldList{}
 	if m.hasContext() {
 		parms.List = []*ast.Field{{
 			Names: []*ast.Ident{ast.NewIdent("ctx")},
 			Type:  sel(id("context"), id("Context")),
 		}}
+		scope.Insert(ast.NewObj(ast.Var, "ctx"))
 	}
-	scope := scopeWith("ctx")
 	parms.List = append(parms.List, fieldList(func(a arg) *ast.Field {
 		return a.field(scope)
 	}, m.nonContextParams()...).List...)
