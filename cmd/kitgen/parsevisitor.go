@@ -148,7 +148,9 @@ func (v *argVisitor) Visit(n ast.Node) ast.Visitor {
 	case *ast.CommentGroup, *ast.BasicLit:
 		return nil
 	case *ast.Ident: //Expr -> everything, but clarity
-		v.parts = append(v.parts, t)
+		if t.Name != "_" {
+			v.parts = append(v.parts, t)
+		}
 	case ast.Expr:
 		v.parts = append(v.parts, t)
 	case nil:

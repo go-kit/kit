@@ -1,10 +1,18 @@
 package foo
 
+import "golang.org/x/net/context"
+import "context"
+import "encoding/json"
+import "errors"
+import "net/http"
+import "github.com/go-kit/kit/endpoint"
+import httptransport "github.com/go-kit/kit/transport/http"
+
 type stubService struct {
 }
 
 func (s stubService) Concat(ctx context.Context, a string, b string) (string, error) {
-	return "", errors.New("not implemented")
+	panic(errors.New("not implemented"))
 }
 
 type ConcatRequest struct {
@@ -23,8 +31,8 @@ func makeConcatEndpoint(s stubService) endpoint.Endpoint {
 		return ConcatResponse{S: string1, Err: err}, nil
 	}
 }
-func (s stubService) Count(ctx context.Context, s string) int {
-	return "", errors.New("not implemented")
+func (s stubService) Count(ctx context.Context, string1 string) int {
+	panic(errors.New("not implemented"))
 }
 
 type CountRequest struct {
