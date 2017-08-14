@@ -196,7 +196,7 @@ func (cw *CloudWatch) Send() error {
 		for _, perc := range cw.percentiles {
 			value := histogram.Quantile(perc)
 			datums = append(datums, &cloudwatch.MetricDatum{
-				MetricName: aws.String(fmt.Sprintf("%s_p%s", name, formatPerc(perc))),
+				MetricName: aws.String(fmt.Sprintf("%s_%s", name, formatPerc(perc))),
 				Dimensions: makeDimensions(lvs...),
 				Value:      aws.Float64(value),
 				Timestamp:  aws.Time(now),

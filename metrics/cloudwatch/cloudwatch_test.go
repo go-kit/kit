@@ -161,10 +161,10 @@ func TestHistogram(t *testing.T) {
 	svc := newMockCloudWatch()
 	cw := New(namespace, svc, WithLogger(log.NewNopLogger()))
 	histogram := cw.NewHistogram(name).With(label, value)
-	n50 := fmt.Sprintf("%s_p50", name)
-	n90 := fmt.Sprintf("%s_p90", name)
-	n95 := fmt.Sprintf("%s_p95", name)
-	n99 := fmt.Sprintf("%s_p99", name)
+	n50 := fmt.Sprintf("%s_50", name)
+	n90 := fmt.Sprintf("%s_90", name)
+	n95 := fmt.Sprintf("%s_95", name)
+	n99 := fmt.Sprintf("%s_99", name)
 	quantiles := func() (p50, p90, p95, p99 float64) {
 		err := cw.Send()
 		if err != nil {
