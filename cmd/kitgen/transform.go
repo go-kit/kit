@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"go/ast"
+	"go/format"
+	"go/token"
 	"io"
 )
 
@@ -47,9 +50,29 @@ func (f flat) transformAST(ctx *sourceContext) (files, error) {
 		}
 	}
 
-	buf, err := formatNode(root)
-	fs := files(map[string]io.Reader{"gokit.go": buf})
-	return fs, err
+	return formatNodes(map[string]ast.Node{"gokit.go": root})
+}
+
+func formatNode(node ast.Node) (*bytes.Buffer, error) {
+	outfset := token.NewFileSet()
+	buf := &bytes.Buffer{}
+	err := format.Node(buf, outfset, node)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
+func formatNodes(nodes map[string]ast.Node) (files, error) {
+	res := files{}
+	var err error
+	for fn, node := range nodes {
+		res[fn], err = formatNode(node)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
 }
 
 func addImports(root *ast.File, ctx *sourceContext) {
