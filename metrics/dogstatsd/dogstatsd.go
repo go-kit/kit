@@ -215,7 +215,7 @@ func sampling(r float64) string {
 }
 
 func (d *Dogstatsd) tagValues(labelValues []string) string {
-	if len(labelValues) == 0 {
+	if len(labelValues) == 0 && len(d.lvs) == 0 {
 		return ""
 	}
 	if len(labelValues)%2 != 0 {
