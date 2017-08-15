@@ -1,8 +1,26 @@
 package main
 
-import "go/ast"
+import (
+	"errors"
+	"go/ast"
+	"io"
+)
 
-func transformAST(ctx *sourceContext) (ast.Node, error) {
+type (
+	files  map[string]io.Reader
+	layout interface {
+		transformAST(ctx *sourceContext) (files, error)
+	}
+
+	flat      struct{}
+	deflayout struct{}
+)
+
+func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
+	return nil, errors.New("Not implemented")
+}
+
+func (f flat) transformAST(ctx *sourceContext) (files, error) {
 	root := &ast.File{
 		Name:  ctx.pkg,
 		Decls: []ast.Decl{},
@@ -28,7 +46,10 @@ func transformAST(ctx *sourceContext) (ast.Node, error) {
 			addEncoder(root, meth)
 		}
 	}
-	return root, nil
+
+	buf, err := formatNode(root)
+	fs := files(map[string]io.Reader{"gokit.go": buf})
+	return fs, err
 }
 
 func addImports(root *ast.File, ctx *sourceContext) {
