@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"go/ast"
-	"go/format"
 	"go/parser"
 	"go/token"
 	"io"
@@ -150,14 +148,4 @@ func splatFile(target string, buf io.Reader) error {
 	defer f.Close()
 	_, err = io.Copy(f, buf)
 	return errors.Wrapf(err, "Error writing data to file %q", target)
-}
-
-func formatNode(node ast.Node) (*bytes.Buffer, error) {
-	outfset := token.NewFileSet()
-	buf := &bytes.Buffer{}
-	err := format.Node(buf, outfset, node)
-	if err != nil {
-		return nil, err
-	}
-	return buf, nil
 }
