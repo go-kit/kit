@@ -193,4 +193,52 @@ func TestHistogram(t *testing.T) {
 	if err := svc.testDimensions(n99, label, value); err != nil {
 		t.Fatal(err)
 	}
+
+	// now test with only 2 custom percentiles
+	//
+	svc = newMockCloudWatch()
+	cw = New(namespace, svc, WithLogger(log.NewNopLogger()), WithPercentiles(0.50, 0.90))
+	histogram = cw.NewHistogram(name).With(label, value)
+
+	customQuantiles := func() (p50, p90, p95, p99 float64) {
+		err := cw.Send()
+		if err != nil {
+			t.Fatal(err)
+		}
+		svc.mtx.RLock()
+		defer svc.mtx.RUnlock()
+		p50 = svc.valuesReceived[n50]
+		p90 = svc.valuesReceived[n90]
+
+		// our teststat.TestHistogram wants us to give p95 and p99,
+		// but with custom percentiles we don't have those.
+		// So fake them. Maybe we should make teststat.nvq() public and use that?
+		p95 = 541.121341
+		p99 = 558.158697
+
+		// but fail if they are actually set (because that would mean the
+		// WithPercentiles() is not respected)
+		if _, isSet := svc.valuesReceived[n95]; isSet {
+			t.Fatal("p95 should not be set")
+		}
+		if _, isSet := svc.valuesReceived[n99]; isSet {
+			t.Fatal("p99 should not be set")
+		}
+		return
+	}
+	if err := teststat.TestHistogram(histogram, customQuantiles, 0.01); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.testDimensions(n50, label, value); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.testDimensions(n90, label, value); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.testDimensions(n95, label, value); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.testDimensions(n99, label, value); err != nil {
+		t.Fatal(err)
+	}
 }

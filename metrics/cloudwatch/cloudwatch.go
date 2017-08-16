@@ -14,6 +14,7 @@ import (
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/generic"
 	"github.com/go-kit/kit/metrics/internal/lv"
+	"strconv"
 )
 
 const (
@@ -38,7 +39,7 @@ type CloudWatch struct {
 	counters              *lv.Space
 	gauges                *lv.Space
 	histograms            *lv.Space
-	percentiles           Percentiles
+	percentiles           []float64 // percentiles to track
 	logger                log.Logger
 	numConcurrentRequests int
 }
@@ -57,16 +58,19 @@ func WithLogger(logger log.Logger) option {
 	}
 }
 
-func WithPercentiles(p Percentiles) option {
+// WithPercentiles registers the percentiles to track, overriding the
+// existing/default values.
+// Reason is that Cloudwatch makes you pay per metric, so you can save half the money
+// by only using 2 metrics instead of the default 4.
+func WithPercentiles(percentiles ...float64) option {
 	return func(c *CloudWatch) {
-		validated := Percentiles{}
-		for _, entry := range p {
-			if entry.f < 0 || entry.f > 1 {
-				continue // illegal entry
+		c.percentiles = make([]float64, 0, len(percentiles))
+		for _, p := range percentiles {
+			if p < 0 || p > 1 {
+				continue // illegal entry; ignore
 			}
-			validated = append(validated, entry)
+			c.percentiles = append(c.percentiles, p)
 		}
-		c.percentiles = validated
 	}
 }
 
@@ -93,12 +97,7 @@ func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...option)
 		histograms:            lv.NewSpace(),
 		numConcurrentRequests: 10,
 		logger:                log.NewLogfmtLogger(os.Stderr),
-		percentiles: Percentiles{
-			{"50", 0.50},
-			{"90", 0.90},
-			{"95", 0.95},
-			{"99", 0.99},
-		},
+		percentiles:           []float64{0.50, 0.90, 0.95, 0.99},
 	}
 
 	for _, optFunc := range options {
@@ -179,6 +178,14 @@ func (cw *CloudWatch) Send() error {
 		return true
 	})
 
+	// format a [0,1]-float value to a percentile value, with minimum nr of decimals
+	// 0.90 -> "90"
+	// 0.95 -> "95"
+	// 0.999 -> "99.9"
+	formatPerc := func(p float64) string {
+		return strconv.FormatFloat(p*100, 'f', -1, 64)
+	}
+
 	cw.histograms.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
 		histogram := generic.NewHistogram(name, 50)
 
@@ -186,10 +193,10 @@ func (cw *CloudWatch) Send() error {
 			histogram.Observe(v)
 		}
 
-		for _, p := range cw.percentiles {
-			value := histogram.Quantile(p.f)
+		for _, perc := range cw.percentiles {
+			value := histogram.Quantile(perc)
 			datums = append(datums, &cloudwatch.MetricDatum{
-				MetricName: aws.String(fmt.Sprintf("%s_%s", name, p.s)),
+				MetricName: aws.String(fmt.Sprintf("%s_%s", name, formatPerc(perc))),
 				Dimensions: makeDimensions(lvs...),
 				Value:      aws.Float64(value),
 				Timestamp:  aws.Time(now),
