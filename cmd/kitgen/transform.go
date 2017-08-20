@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"go/ast"
 	"go/format"
 	"go/token"
@@ -17,10 +16,50 @@ type (
 
 	flat      struct{}
 	deflayout struct{}
+
+	outputTree map[string]ast.Node
 )
 
+func (ot outputTree) addFile(path, pkgname string) *ast.File {
+	file := &ast.File{
+		Name:  id(pkgname),
+		Decls: []ast.Decl{},
+	}
+	ot[path] = file
+	return file
+}
+
 func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
-	return nil, errors.New("Not implemented")
+	out := make(outputTree)
+
+	endpoints := out.addFile("endpoints/endpoints.go", "endpoints")
+	http := out.addFile("http/http.go", "http")
+	service := out.addFile("service/service.go", "service")
+
+	addImports(endpoints, ctx)
+	addImports(http, ctx)
+	addImports(service, ctx)
+
+	for _, iface := range ctx.interfaces { //only one...
+		addStubStruct(service, iface)
+
+		for _, meth := range iface.methods {
+			addMethod(service, iface, meth)
+			addRequestStruct(endpoints, meth)
+			addResponseStruct(endpoints, meth)
+			addEndpointMaker(endpoints, iface, meth)
+		}
+
+		addEndpointsStruct(endpoints, iface)
+		addHTTPHandler(http, iface)
+
+		for _, meth := range iface.methods {
+			addDecoder(http, meth)
+			addEncoder(http, meth)
+		}
+	}
+
+	return formatNodes(out)
 }
 
 func (f flat) transformAST(ctx *sourceContext) (files, error) {
@@ -50,7 +89,7 @@ func (f flat) transformAST(ctx *sourceContext) (files, error) {
 		}
 	}
 
-	return formatNodes(map[string]ast.Node{"gokit.go": root})
+	return formatNodes(outputTree{"gokit.go": root})
 }
 
 func formatNode(node ast.Node) (*bytes.Buffer, error) {
@@ -63,7 +102,7 @@ func formatNode(node ast.Node) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func formatNodes(nodes map[string]ast.Node) (files, error) {
+func formatNodes(nodes outputTree) (files, error) {
 	res := files{}
 	var err error
 	for fn, node := range nodes {
