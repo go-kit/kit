@@ -72,6 +72,7 @@ func TestProcess(t *testing.T) {
 				t.Fatal(inpath, err)
 			}
 			laidout(t, inpath, dir, "flat", flat{}, in)
+			laidout(t, inpath, dir, "default", deflayout{}, in)
 		})
 	}
 
