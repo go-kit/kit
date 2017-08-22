@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -47,6 +48,8 @@ func TestProcess(t *testing.T) {
 
 				if !bytes.Equal(expected, actual) {
 					name := kind + fn
+					name = strings.Replace(name, "/", "-", -1)
+
 					errfile, err := ioutil.TempFile("", name)
 					if err != nil {
 						t.Fatal("opening tempfile for output", err)

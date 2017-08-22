@@ -182,6 +182,25 @@ func NewHTTPHandler(endpoints Endpoints) http.Handler {
 }
 */
 
+type visitFn func(ast.Node, func(ast.Node))
+
+func (fn visitFn) Visit(node ast.Node, r func(ast.Node)) Visitor {
+	fn(node, r)
+	return fn
+}
+
+func replaceIdent(named string, src, with ast.Node) {
+	r := visitFn(func(node ast.Node, replaceWith func(ast.Node)) {
+		switch id := node.(type) {
+		case *ast.Ident:
+			if id.Name == named {
+				replaceWith(with)
+			}
+		}
+	})
+	WalkReplace(r, src)
+}
+
 func (i iface) httpHandler() ast.Decl {
 	handlerFn := fetchFuncDecl("NewHTTPHandler")
 
