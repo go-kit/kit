@@ -6,6 +6,8 @@ import (
 	"go/format"
 	"go/token"
 	"io"
+
+	"golang.org/x/tools/imports"
 )
 
 type (
@@ -92,21 +94,25 @@ func (f flat) transformAST(ctx *sourceContext) (files, error) {
 	return formatNodes(outputTree{"gokit.go": root})
 }
 
-func formatNode(node ast.Node) (*bytes.Buffer, error) {
+func formatNode(fname string, node ast.Node) (*bytes.Buffer, error) {
 	outfset := token.NewFileSet()
 	buf := &bytes.Buffer{}
 	err := format.Node(buf, outfset, node)
 	if err != nil {
 		return nil, err
 	}
-	return buf, nil
+	imps, err := imports.Process(fname, buf.Bytes(), nil)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewBuffer(imps), nil
 }
 
 func formatNodes(nodes outputTree) (files, error) {
 	res := files{}
 	var err error
 	for fn, node := range nodes {
-		res[fn], err = formatNode(node)
+		res[fn], err = formatNode(fn, node)
 		if err != nil {
 			return nil, err
 		}
