@@ -14,12 +14,12 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
-// AuthError represents an authoriation error.
+// AuthError represents an authorization error.
 type AuthError struct {
 	Realm string
 }
 
-// StatusCode is an iimplementation of the StatusCoder interface in go-kit/http.
+// StatusCode is an implementation of the StatusCoder interface in go-kit/http.
 func (AuthError) StatusCode() int {
 	return http.StatusUnauthorized
 }
@@ -29,7 +29,7 @@ func (AuthError) Error() string {
 	return http.StatusText(http.StatusUnauthorized)
 }
 
-// Headers is an implemntation of the Headerer interface in go-kit/http.
+// Headers is an implementation of the Headerer interface in go-kit/http.
 func (e AuthError) Headers() http.Header {
 	return http.Header{
 		"Content-Type":           []string{"text/plain; charset=utf-8"},
@@ -56,26 +56,31 @@ func parseBasicAuth(auth string) (username, password []byte, ok bool) {
 	return c[:s], c[s+1:], true
 }
 
+// Returns a hash of a given slice.
+func toHashSlice(s []byte) []byte {
+	hash := sha256.Sum256(s)
+	return hash[:]
+}
+
 // AuthMiddleware returns a Basic Authentication middleware for a particular user and password.
 func AuthMiddleware(requiredUser, requiredPassword, realm string) endpoint.Middleware {
-	requiredUserBytes := sha256.Sum256([]byte(requiredUser))
-	requiredPassBytes := sha256.Sum256([]byte(requiredPassword))
+	requiredUserBytes := toHashSlice([]byte(requiredUser))
+	requiredPasswordBytes := toHashSlice([]byte(requiredPassword))
 
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			auth := ctx.Value(httptransport.ContextKeyRequestAuthorization).(string)
-			givenUser, givenPass, ok := parseBasicAuth(auth)
+			givenUser, givenPassword, ok := parseBasicAuth(auth)
 			if !ok {
 				return nil, AuthError{realm}
 			}
 
 			// Equalize lengths of supplied and required credentials by hashing them.
-			givenUserBytes := sha256.Sum256(givenUser)
-			givenPassBytes := sha256.Sum256(givenPass)
+			givenUserBytes := toHashSlice(givenUser)
+			givenPasswordBytes := toHashSlice(givenPassword)
 
-			// Compare the supplied credentials to those set in our options.
-			if subtle.ConstantTimeCompare(givenUserBytes[:], requiredUserBytes[:]) == 0 ||
-				subtle.ConstantTimeCompare(givenPassBytes[:], requiredPassBytes[:]) == 0 {
+			if subtle.ConstantTimeCompare(givenUserBytes, requiredUserBytes) == 0 ||
+				subtle.ConstantTimeCompare(givenPasswordBytes, requiredPasswordBytes) == 0 {
 				return nil, AuthError{realm}
 			}
 
