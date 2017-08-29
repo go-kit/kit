@@ -75,7 +75,6 @@ func AuthMiddleware(requiredUser, requiredPassword, realm string) endpoint.Middl
 				return nil, AuthError{realm}
 			}
 
-			// Equalize lengths of supplied and required credentials by hashing them.
 			givenUserBytes := toHashSlice(givenUser)
 			givenPasswordBytes := toHashSlice(givenPassword)
 
