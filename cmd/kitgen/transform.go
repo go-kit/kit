@@ -6,6 +6,7 @@ import (
 	"go/format"
 	"go/token"
 	"io"
+	"os"
 
 	"golang.org/x/tools/imports"
 )
@@ -17,7 +18,9 @@ type (
 	}
 
 	flat      struct{}
-	deflayout struct{}
+	deflayout struct {
+		targetDir string
+	}
 
 	outputTree map[string]ast.Node
 )
@@ -31,6 +34,21 @@ func (ot outputTree) addFile(path, pkgname string) *ast.File {
 	return file
 }
 
+func (l deflayout) packagePath(base string) string {
+	gopath, set := os.LookupEnv("GOPATH")
+	if !set {
+		gopath := filepath.Join(os.Getenv("HOME"), "go")
+	}
+
+	for _, dir := range filepath.SplitList(path) {
+		path := filepath.Join(dir, "src", l.targetDir)
+		if err := findExecutable(path); err == nil {
+			return path, nil
+		}
+	}
+
+}
+
 func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
 	out := make(outputTree)
 
@@ -40,6 +58,7 @@ func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
 
 	addImports(endpoints, ctx)
 	addImports(http, ctx)
+	addImport(http, l.packagePath("endpoints"))
 	addImports(service, ctx)
 
 	for _, iface := range ctx.interfaces { //only one...
@@ -124,6 +143,10 @@ func addImports(root *ast.File, ctx *sourceContext) {
 	root.Decls = append(root.Decls, ctx.importDecls()...)
 }
 
+func addImport(root *ast.File, path string) {
+	root.Decls = append(root.Decls, importFor(importSpec(path)))
+}
+
 func addStubStruct(root *ast.File, iface iface) {
 	root.Decls = append(root.Decls, iface.stubStructDecl())
 }
@@ -150,7 +173,7 @@ func addEndpointsStruct(root *ast.File, ifc iface) {
 }
 
 func addHTTPHandler(root *ast.File, ifc iface) {
-	root.Decls = append(root.Decls, ifc.httpHandler())
+	root.Decls = append(root.Decls, ifc.httpHandler(sel(id("endpoints"), id("Endpoints"))))
 }
 
 func addDecoder(root *ast.File, meth method) {

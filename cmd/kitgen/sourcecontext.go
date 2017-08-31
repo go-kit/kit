@@ -7,6 +7,8 @@ import (
 	"go/token"
 	"strings"
 	"unicode"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 type (
@@ -129,6 +131,14 @@ func (sc *sourceContext) validate() error {
 	return nil
 }
 
+func importFor(*ast.ImportSpec) *ast.GenDecl {
+	return &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{is}}
+}
+
+func importSpec(path string) *ast.ImportSpec {
+	return &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: `"` + path + `"`}}
+}
+
 func (sc *sourceContext) importDecls() (decls []ast.Decl) {
 	have := map[string]struct{}{}
 	notHave := func(is *ast.ImportSpec) bool {
@@ -141,7 +151,7 @@ func (sc *sourceContext) importDecls() (decls []ast.Decl) {
 
 	for _, is := range sc.imports {
 		if notHave(is) {
-			decls = append(decls, &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{is}})
+			decls = append(decls, importFor(is))
 		}
 	}
 
@@ -193,6 +203,7 @@ func replaceIdent(named string, src, with ast.Node) {
 	r := visitFn(func(node ast.Node, replaceWith func(ast.Node)) {
 		switch id := node.(type) {
 		case *ast.Ident:
+			spew.Dump(id.Name, named, id.Name == named)
 			if id.Name == named {
 				replaceWith(with)
 			}
@@ -201,7 +212,7 @@ func replaceIdent(named string, src, with ast.Node) {
 	WalkReplace(r, src)
 }
 
-func (i iface) httpHandler() ast.Decl {
+func (i iface) httpHandler(endpointType ast.Expr) ast.Decl {
 	handlerFn := fetchFuncDecl("NewHTTPHandler")
 
 	handleCalls := []ast.Stmt{}
@@ -217,6 +228,8 @@ func (i iface) httpHandler() ast.Decl {
 	}
 
 	pasteStmts(handlerFn.Body, 1, handleCalls)
+
+	replaceIdent("Endpoints", handlerFn, endpointType)
 
 	return handlerFn
 }

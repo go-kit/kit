@@ -5,9 +5,10 @@ import "encoding/json"
 
 import "net/http"
 
+import "github.com/go-kit/kit/cmd/kitgen/testdata/foo/default/endpoints"
 import httptransport "github.com/go-kit/kit/transport/http"
 
-func NewHTTPHandler(endpoints Endpoints) http.Handler {
+func NewHTTPHandler(endpoints endpoints.Endpoints) http.Handler {
 	m := http.NewServeMux()
 	m.Handle("/bar", httptransport.NewServer(endpoints.Bar, DecodeBarRequest, EncodeBarResponse))
 	return m
