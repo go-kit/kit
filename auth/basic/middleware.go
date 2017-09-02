@@ -34,7 +34,8 @@ func (e AuthError) Headers() http.Header {
 	return http.Header{
 		"Content-Type":           []string{"text/plain; charset=utf-8"},
 		"X-Content-Type-Options": []string{"nosniff"},
-		"WWW-Authenticate":       []string{fmt.Sprintf(`Basic realm=%q`, e.Realm)}}
+		"WWW-Authenticate":       []string{fmt.Sprintf(`Basic realm=%q`, e.Realm)},
+	}
 }
 
 // parseBasicAuth parses an HTTP Basic Authentication string.
@@ -69,7 +70,11 @@ func AuthMiddleware(requiredUser, requiredPassword, realm string) endpoint.Middl
 
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
-			auth := ctx.Value(httptransport.ContextKeyRequestAuthorization).(string)
+			auth, ok := ctx.Value(httptransport.ContextKeyRequestAuthorization).(string)
+			if !ok {
+				return nil, AuthError{realm}
+			}
+
 			givenUser, givenPassword, ok := parseBasicAuth(auth)
 			if !ok {
 				return nil, AuthError{realm}

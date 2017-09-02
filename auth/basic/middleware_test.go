@@ -20,9 +20,11 @@ func TestWithBasicAuth(t *testing.T) {
 	}
 	tests := []struct {
 		name       string
-		authHeader string
+		authHeader interface{}
 		want       want
 	}{
+		{"Isn't valid with nil header", nil, want{nil, AuthError{realm}}},
+		{"Isn't valid with non-string header", 42, want{nil, AuthError{realm}}},
 		{"Isn't valid without authHeader", "", want{nil, AuthError{realm}}},
 		{"Isn't valid for wrong user", makeAuthString("wrong-user", requiredPassword), want{nil, AuthError{realm}}},
 		{"Isn't valid for wrong password", makeAuthString(requiredUser, "wrong-password"), want{nil, AuthError{realm}}},
