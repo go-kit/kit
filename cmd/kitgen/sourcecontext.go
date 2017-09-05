@@ -7,8 +7,6 @@ import (
 	"go/token"
 	"strings"
 	"unicode"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 type (
@@ -124,14 +122,14 @@ func (sc *sourceContext) validate() error {
 	for _, i := range sc.interfaces {
 		for _, m := range i.methods {
 			if len(m.results) < 1 {
-				return fmt.Errorf("method %q of interface %q has no result types!", m.name, i.name)
+				return fmt.Errorf("method %q of interface %q has no result types", m.name, i.name)
 			}
 		}
 	}
 	return nil
 }
 
-func importFor(*ast.ImportSpec) *ast.GenDecl {
+func importFor(is *ast.ImportSpec) *ast.GenDecl {
 	return &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{is}}
 }
 
@@ -199,17 +197,19 @@ func (fn visitFn) Visit(node ast.Node, r func(ast.Node)) Visitor {
 	return fn
 }
 
-func replaceIdent(named string, src, with ast.Node) {
+func replaceIdent(named string, src, with ast.Node) bool {
+	replaced := false
 	r := visitFn(func(node ast.Node, replaceWith func(ast.Node)) {
 		switch id := node.(type) {
 		case *ast.Ident:
-			spew.Dump(id.Name, named, id.Name == named)
 			if id.Name == named {
+				replaced = true
 				replaceWith(with)
 			}
 		}
 	})
 	WalkReplace(r, src)
+	return replaced
 }
 
 func (i iface) httpHandler(endpointType ast.Expr) ast.Decl {
@@ -352,7 +352,7 @@ func inventName(t ast.Expr, scope *ast.Scope) *ast.Ident {
 func baseName(t ast.Expr) string {
 	switch tt := t.(type) {
 	default:
-		panic(fmt.Sprintf("don't know how to choose a base name for #t (#v[0])", tt))
+		panic(fmt.Sprintf("don't know how to choose a base name for %T (%[1]v)", tt))
 	case *ast.Ident:
 		return tt.Name
 	case *ast.SelectorExpr:

@@ -2,11 +2,14 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"go/ast"
 	"go/format"
 	"go/token"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"golang.org/x/tools/imports"
 )
@@ -34,19 +37,40 @@ func (ot outputTree) addFile(path, pkgname string) *ast.File {
 	return file
 }
 
-func (l deflayout) packagePath(base string) string {
+func getGopath() string {
 	gopath, set := os.LookupEnv("GOPATH")
 	if !set {
-		gopath := filepath.Join(os.Getenv("HOME"), "go")
+		return filepath.Join(os.Getenv("HOME"), "go")
+	}
+	return gopath
+}
+
+func importPath(targetDir, gopath string) (string, error) {
+	if !filepath.IsAbs(targetDir) {
+		return "", fmt.Errorf("%q is not an absolute path", targetDir)
 	}
 
-	for _, dir := range filepath.SplitList(path) {
-		path := filepath.Join(dir, "src", l.targetDir)
-		if err := findExecutable(path); err == nil {
-			return path, nil
+	for _, dir := range filepath.SplitList(gopath) {
+		abspath, err := filepath.Abs(dir)
+		if err != nil {
+			continue
+		}
+		srcPath := filepath.Join(abspath, "src")
+
+		res, err := filepath.Rel(srcPath, targetDir)
+		if err != nil {
+			continue
+		}
+		if strings.Index(res, "..") == -1 {
+			return res, nil
 		}
 	}
+	return "", fmt.Errorf("%q is not in GOPATH (%s)", targetDir, gopath)
 
+}
+
+func (l deflayout) packagePath(sub string) string {
+	return filepath.Join(l.targetDir, sub)
 }
 
 func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
@@ -58,7 +82,6 @@ func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
 
 	addImports(endpoints, ctx)
 	addImports(http, ctx)
-	addImport(http, l.packagePath("endpoints"))
 	addImports(service, ctx)
 
 	for _, iface := range ctx.interfaces { //only one...
@@ -80,7 +103,22 @@ func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
 		}
 	}
 
+	for _, file := range out {
+		selectify(file, "Endpoints", "endpoints", l.packagePath("endpoints"))
+	}
+
 	return formatNodes(out)
+}
+
+func selectify(file *ast.File, identName, pkgName, importPath string) {
+	if file.Name.Name == pkgName {
+		return
+	}
+
+	selector := sel(id(pkgName), id(identName))
+	if replaceIdent(identName, file, selector) {
+		addImport(file, importPath)
+	}
 }
 
 func (f flat) transformAST(ctx *sourceContext) (files, error) {

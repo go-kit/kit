@@ -75,7 +75,9 @@ func TestProcess(t *testing.T) {
 				t.Fatal(inpath, err)
 			}
 			laidout(t, inpath, dir, "flat", flat{}, in)
-			laidout(t, inpath, dir, "default", deflayout{}, in)
+			laidout(t, inpath, dir, "default", deflayout{
+				targetDir: "github.com/go-kit/kit/cmd/kitgen/testdata/foo/default",
+			}, in)
 		})
 	}
 
