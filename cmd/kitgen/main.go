@@ -56,9 +56,14 @@ func main() {
 	var layout layout
 	switch *layoutkind {
 	default:
-		log.Fatalf("Unrecognized layout kind: %q - try 'default' or 'flat'")
+		log.Fatalf("Unrecognized layout kind: %q - try 'default' or 'flat'", *layoutkind)
 	case "default":
-		layout = deflayout{}
+		gopath := getGopath()
+		importBase, err := importPath(outdir, gopath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		layout = deflayout{targetDir: importBase}
 	case "flat":
 		layout = flat{}
 	}
