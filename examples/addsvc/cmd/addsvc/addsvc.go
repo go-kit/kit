@@ -149,8 +149,8 @@ func main() {
 	// struct, which is a combination of 2 anonymous functions: the first
 	// function actually runs the component, and the second function should
 	// interrupt the first function and cause it to return. It's in these
-	// functions that we actually bin the Go kit server/handler structs to the
-	// concrete transports and start them running.
+	// functions that we actually bind the Go kit server/handler structs to the
+	// concrete transports and run them.
 	//
 	// Putting each component into its own block is mostly for aesthetics: it
 	// clearly demarcates the scope in which each listener/socket may be used.

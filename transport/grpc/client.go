@@ -91,7 +91,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		for _, f := range c.before {
 			ctx = f(ctx, md)
 		}
-		ctx = metadata.NewContext(ctx, *md)
+		ctx = metadata.NewOutgoingContext(ctx, *md)
 
 		var header, trailer metadata.MD
 		grpcReply := reflect.New(c.grpcReply).Interface()
