@@ -25,7 +25,7 @@ type (
 		targetDir string
 	}
 
-	outputTree map[string]ast.Node
+	outputTree map[string]*ast.File
 )
 
 func (ot outputTree) addFile(path, pkgname string) *ast.File {
