@@ -29,7 +29,8 @@ func (t *Timer) ObserveDuration() {
 	t.h.Observe(d)
 }
 
-// Unit sets the timer time unit
+// Unit sets the unit of the float64 emitted by the timer.
+// By default, the timer emits seconds.
 func (t *Timer) Unit(u time.Duration) {
 	t.u = u
 }

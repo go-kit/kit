@@ -33,7 +33,6 @@ func TestTimerSlow(t *testing.T) {
 }
 
 func TestTimerUnit(t *testing.T) {
-
 	for _, tc := range []struct {
 		name      string
 		unit      time.Duration
