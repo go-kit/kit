@@ -48,7 +48,7 @@
 //        Namespace: "myteam",
 //        Subsystem: "foosvc",
 //        Name:      "request_latency_seconds",
-//        Help:      "Incoming request latency in seconds."
+//        Help:      "Incoming request latency in seconds.",
 //    }, []string{"method", "status_code"})
 //
 // Write your components to take the metrics they will use as parameters to
