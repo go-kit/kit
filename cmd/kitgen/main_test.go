@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -23,7 +24,7 @@ func TestProcess(t *testing.T) {
 		t.Run(kind, func(t *testing.T) {
 			tree, err := process(inpath, bytes.NewBuffer(in), layout)
 			if err != nil {
-				t.Fatal(inpath, err)
+				t.Fatal(inpath, fmt.Sprintf("%+#v", err))
 			}
 
 			if *update {
