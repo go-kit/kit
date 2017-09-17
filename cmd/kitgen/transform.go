@@ -9,7 +9,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"golang.org/x/tools/imports"
 )
@@ -116,9 +119,33 @@ func selectify(file *ast.File, identName, pkgName, importPath string) {
 	}
 
 	selector := sel(id(pkgName), id(identName))
-	if replaceIdent(identName, file, selector) {
+	if selectifyIdent(identName, file, selector) {
 		addImport(file, importPath)
 	}
+}
+
+type selIdentFn func(ast.Node, func(ast.Node)) Visitor
+
+func (f selIdentFn) Visit(node ast.Node, r func(ast.Node)) Visitor {
+	return f(node, r)
+}
+
+func selectifyIdent(identName string, file *ast.File, selector ast.Expr) (replaced bool) {
+	var r selIdentFn
+	r = selIdentFn(func(node ast.Node, replaceWith func(ast.Node)) Visitor {
+		switch id := node.(type) {
+		case *ast.SelectorExpr:
+			return nil
+		case *ast.Ident:
+			if id.Name == identName {
+				replaced = true
+				replaceWith(selector)
+			}
+		}
+		return r
+	})
+	WalkReplace(r, file)
+	return
 }
 
 func (f flat) transformAST(ctx *sourceContext) (files, error) {
@@ -165,13 +192,35 @@ func formatNode(fname string, node ast.Node) (*bytes.Buffer, error) {
 	return bytes.NewBuffer(imps), nil
 }
 
+type sortableDecls []ast.Decl
+
+func (sd sortableDecls) Len() int {
+	return len(sd)
+}
+
+func (sd sortableDecls) Less(i int, j int) bool {
+	switch left := sd[i].(type) {
+	case *ast.GenDecl:
+		switch sd[j].(type) {
+		case *ast.FuncDecl:
+			return left.Tok == token.IMPORT
+		}
+	}
+	return false
+}
+
+func (sd sortableDecls) Swap(i int, j int) {
+	sd[i], sd[j] = sd[j], sd[i]
+}
+
 func formatNodes(nodes outputTree) (files, error) {
 	res := files{}
 	var err error
 	for fn, node := range nodes {
+		sort.Stable(sortableDecls(node.Decls))
 		res[fn], err = formatNode(fn, node)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "formatNodes")
 		}
 	}
 	return res, nil
@@ -211,7 +260,7 @@ func addEndpointsStruct(root *ast.File, ifc iface) {
 }
 
 func addHTTPHandler(root *ast.File, ifc iface) {
-	root.Decls = append(root.Decls, ifc.httpHandler(sel(id("endpoints"), id("Endpoints"))))
+	root.Decls = append(root.Decls, ifc.httpHandler())
 }
 
 func addDecoder(root *ast.File, meth method) {

@@ -212,7 +212,7 @@ func replaceIdent(named string, src, with ast.Node) bool {
 	return replaced
 }
 
-func (i iface) httpHandler(endpointType ast.Expr) ast.Decl {
+func (i iface) httpHandler() ast.Decl {
 	handlerFn := fetchFuncDecl("NewHTTPHandler")
 
 	handleCalls := []ast.Stmt{}
@@ -228,8 +228,6 @@ func (i iface) httpHandler(endpointType ast.Expr) ast.Decl {
 	}
 
 	pasteStmts(handlerFn.Body, 1, handleCalls)
-
-	replaceIdent("Endpoints", handlerFn, endpointType)
 
 	return handlerFn
 }

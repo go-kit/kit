@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"go/ast"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 // A Visitor's Visit method is invoked for each node encountered by walkToReplace.
@@ -153,9 +151,7 @@ func walkToReplace(v Visitor, node ast.Node, replace func(ast.Node)) {
 		walkToReplace(v, n.X, func(r ast.Node) {
 			n.X = r.(ast.Expr)
 		})
-		spew.Dump(v, n.X, n.Sel)
 		walkToReplace(v, n.Sel, func(r ast.Node) {
-			spew.Dump(r)
 			n.Sel = r.(*ast.Ident)
 		})
 

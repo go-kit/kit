@@ -18,7 +18,6 @@ func main() {
 		if n == nil {
 			return true
 		}
-		spew.Dump(n)
 		return true
 	})
 }
