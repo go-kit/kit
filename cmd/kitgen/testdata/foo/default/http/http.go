@@ -14,7 +14,7 @@ func NewHTTPHandler(endpoints endpoints.Endpoints) http.Handler {
 	return m
 }
 func DecodeBarRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req BarRequest
+	var req endpoints.BarRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	return req, err
 }
