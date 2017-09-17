@@ -7,7 +7,7 @@ import (
 	"github.com/go-kit/kit/sd"
 )
 
-var _ sd.Instancer = &Instancer{}
+var _ sd.Instancer = (*Instancer)(nil) // API check
 
 func TestInstancer(t *testing.T) {
 	client := newFakeClient()

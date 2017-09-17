@@ -8,7 +8,7 @@ import (
 	"github.com/go-kit/kit/sd"
 )
 
-var _ sd.Instancer = &Cache{} // API check
+var _ sd.Instancer = (*Cache)(nil) // API check
 
 // The test verifies the following:
 //   registering causes initial notification of the current state

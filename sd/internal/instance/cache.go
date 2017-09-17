@@ -45,6 +45,10 @@ func (c *Cache) State() sd.Event {
 	return c.state
 }
 
+// Stop implements Instancer. Since the cache is just a plain-old store of data,
+// Stop is a no-op.
+func (c *Cache) Stop() {}
+
 // Register implements Instancer.
 func (c *Cache) Register(ch chan<- sd.Event) {
 	c.mtx.Lock()
