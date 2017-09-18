@@ -10,7 +10,7 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
-type stubFooService struct {
+type ExampleService struct {
 }
 
 type ExampleRequest struct {
@@ -26,11 +26,11 @@ type Endpoints struct {
 	ExampleEndpoint endpoint.Endpoint
 }
 
-func (f stubFooService) ExampleEndpoint(ctx context.Context, i int, s string) (string, error) {
+func (f ExampleService) ExampleEndpoint(ctx context.Context, i int, s string) (string, error) {
 	panic(errors.New("not implemented"))
 }
 
-func makeExampleEndpoint(f stubFooService) endpoint.Endpoint {
+func makeExampleEndpoint(f ExampleService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(ExampleRequest)
 		s, err := f.ExampleEndpoint(ctx, req.I, req.S)

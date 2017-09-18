@@ -82,7 +82,7 @@ func (v *typeSpecVisitor) Visit(n ast.Node) ast.Visitor {
 			v.iface.name = v.name
 			sn := *v.name
 			v.iface.stubname = &sn
-			v.iface.stubname.Name = "stub" + v.name.String()
+			v.iface.stubname.Name = v.name.String()
 			v.src.interfaces = append(v.src.interfaces, *v.iface)
 		}
 		return nil
