@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 
 	"golang.org/x/tools/imports"
@@ -104,16 +105,20 @@ func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
 			addDecoder(http, meth)
 			addEncoder(http, meth)
 		}
-	}
 
-	for _, file := range out {
-		selectify(file, "Endpoints", "endpoints", l.packagePath("endpoints"))
+		for _, file := range out {
+			selectify(file, "service", iface.stubName().Name, l.packagePath("service"))
+			selectify(file, "endpoints", "Endpoints", l.packagePath("endpoints"))
+			for _, meth := range iface.methods {
+				selectify(file, "endpoints", meth.requestStructName().Name, l.packagePath("endpoints"))
+			}
+		}
 	}
 
 	return formatNodes(out)
 }
 
-func selectify(file *ast.File, identName, pkgName, importPath string) {
+func selectify(file *ast.File, pkgName, identName, importPath string) {
 	if file.Name.Name == pkgName {
 		return
 	}
@@ -201,9 +206,11 @@ func (sd sortableDecls) Len() int {
 func (sd sortableDecls) Less(i int, j int) bool {
 	switch left := sd[i].(type) {
 	case *ast.GenDecl:
-		switch sd[j].(type) {
-		case *ast.FuncDecl:
+		switch right := sd[j].(type) {
+		default:
 			return left.Tok == token.IMPORT
+		case *ast.GenDecl:
+			return left.Tok == token.IMPORT && right.Tok != token.IMPORT
 		}
 	}
 	return false
@@ -224,6 +231,20 @@ func formatNodes(nodes outputTree) (files, error) {
 		}
 	}
 	return res, nil
+}
+
+// XXX debug
+func spewDecls(f *ast.File) {
+	for _, d := range f.Decls {
+		switch dcl := d.(type) {
+		default:
+			spew.Dump(dcl)
+		case *ast.GenDecl:
+			spew.Dump(dcl.Tok)
+		case *ast.FuncDecl:
+			spew.Dump(dcl.Name.Name)
+		}
+	}
 }
 
 func addImports(root *ast.File, ctx *sourceContext) {
