@@ -1,13 +1,12 @@
 package http
 
-import "golang.org/x/net/context"
 import "context"
 import "encoding/json"
 
 import "net/http"
 
 import httptransport "github.com/go-kit/kit/transport/http"
-import "github.com/go-kit/kit/cmd/kitgen/testdata/foo/default/endpoints"
+import "github.com/go-kit/kit/cmd/kitgen/testdata/stringservice/default/endpoints"
 
 func NewHTTPHandler(endpoints endpoints.Endpoints) http.Handler {
 	m := http.NewServeMux()

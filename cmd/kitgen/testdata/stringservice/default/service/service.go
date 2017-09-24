@@ -1,6 +1,5 @@
 package service
 
-import "golang.org/x/net/context"
 import "context"
 
 import "errors"
