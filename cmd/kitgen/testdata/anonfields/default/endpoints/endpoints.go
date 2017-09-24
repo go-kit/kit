@@ -4,6 +4,8 @@ import "context"
 
 import "github.com/go-kit/kit/endpoint"
 
+import "github.com/go-kit/kit/cmd/kitgen/testdata/foo/default/service"
+
 type FooRequest struct {
 	I int
 	S string
@@ -13,7 +15,7 @@ type FooResponse struct {
 	Err error
 }
 
-func makeFooEndpoint(s stubService) endpoint.Endpoint {
+func makeFooEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(FooRequest)
 		i, err := s.Foo(ctx, req.I, req.S)
