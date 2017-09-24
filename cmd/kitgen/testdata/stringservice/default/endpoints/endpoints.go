@@ -5,6 +5,8 @@ import "context"
 
 import "github.com/go-kit/kit/endpoint"
 
+import "github.com/go-kit/kit/cmd/kitgen/testdata/foo/default/service"
+
 type ConcatRequest struct {
 	A string
 	B string
@@ -14,7 +16,7 @@ type ConcatResponse struct {
 	Err error
 }
 
-func makeConcatEndpoint(s stubService) endpoint.Endpoint {
+func makeConcatEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(ConcatRequest)
 		string1, err := s.Concat(ctx, req.A, req.B)
@@ -29,7 +31,7 @@ type CountResponse struct {
 	Count int
 }
 
-func makeCountEndpoint(s stubService) endpoint.Endpoint {
+func makeCountEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(CountRequest)
 		count := s.Count(ctx, req.S)

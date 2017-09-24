@@ -7,15 +7,16 @@ import "encoding/json"
 import "net/http"
 
 import httptransport "github.com/go-kit/kit/transport/http"
+import "github.com/go-kit/kit/cmd/kitgen/testdata/foo/default/endpoints"
 
-func NewHTTPHandler(endpoints Endpoints) http.Handler {
+func NewHTTPHandler(endpoints endpoints.Endpoints) http.Handler {
 	m := http.NewServeMux()
 	m.Handle("/concat", httptransport.NewServer(endpoints.Concat, DecodeConcatRequest, EncodeConcatResponse))
 	m.Handle("/count", httptransport.NewServer(endpoints.Count, DecodeCountRequest, EncodeCountResponse))
 	return m
 }
 func DecodeConcatRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req ConcatRequest
+	var req endpoints.ConcatRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	return req, err
 }
@@ -24,7 +25,7 @@ func EncodeConcatResponse(_ context.Context, w http.ResponseWriter, response int
 	return json.NewEncoder(w).Encode(response)
 }
 func DecodeCountRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req CountRequest
+	var req endpoints.CountRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	return req, err
 }

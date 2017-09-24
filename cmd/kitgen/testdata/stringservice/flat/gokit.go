@@ -8,10 +8,10 @@ import "net/http"
 import "github.com/go-kit/kit/endpoint"
 import httptransport "github.com/go-kit/kit/transport/http"
 
-type stubService struct {
+type Service struct {
 }
 
-func (s stubService) Concat(ctx context.Context, a string, b string) (string, error) {
+func (s Service) Concat(ctx context.Context, a string, b string) (string, error) {
 	panic(errors.New("not implemented"))
 }
 
@@ -24,14 +24,14 @@ type ConcatResponse struct {
 	Err error
 }
 
-func makeConcatEndpoint(s stubService) endpoint.Endpoint {
+func makeConcatEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(ConcatRequest)
 		string1, err := s.Concat(ctx, req.A, req.B)
 		return ConcatResponse{S: string1, Err: err}, nil
 	}
 }
-func (s stubService) Count(ctx context.Context, string1 string) int {
+func (s Service) Count(ctx context.Context, string1 string) int {
 	panic(errors.New("not implemented"))
 }
 
@@ -42,7 +42,7 @@ type CountResponse struct {
 	Count int
 }
 
-func makeCountEndpoint(s stubService) endpoint.Endpoint {
+func makeCountEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(CountRequest)
 		count := s.Count(ctx, req.S)
