@@ -4,7 +4,7 @@ import "context"
 
 import "github.com/go-kit/kit/endpoint"
 
-import "github.com/go-kit/kit/cmd/kitgen/testdata/foo/default/service"
+import "github.com/go-kit/kit/cmd/kitgen/testdata/anonfields/default/service"
 
 type FooRequest struct {
 	I int

@@ -1,6 +1,5 @@
 package foo
 
-import "golang.org/x/net/context"
 import "context"
 import "encoding/json"
 import "errors"

@@ -22,25 +22,31 @@ func TestProcess(t *testing.T) {
 
 	laidout := func(t *testing.T, inpath, dir, kind string, layout layout, in []byte) {
 		t.Run(kind, func(t *testing.T) {
+			targetDir := filepath.Join(dir, kind)
 			tree, err := process(inpath, bytes.NewBuffer(in), layout)
 			if err != nil {
 				t.Fatal(inpath, fmt.Sprintf("%+#v", err))
 			}
 
 			if *update {
-				err := splat(filepath.Join(dir, kind), tree)
+				err := splat(targetDir, tree)
 				if err != nil {
 					t.Fatal(kind, err)
 				}
+				// otherwise we need to do some tomfoolery with resetting buffers
+				// I'm willing to just run the tests again - besides, we shouldn't be
+				// regerating the golden files that often
+				t.Log("Updated outputs - DID NOT COMPARE! (run tests again without -update)")
+				return
 			}
 
-			for fn, buf := range tree {
+			for filename, buf := range tree {
 				actual, err := ioutil.ReadAll(buf)
 				if err != nil {
-					t.Fatal(kind, fn, err)
+					t.Fatal(kind, filename, err)
 				}
 
-				outpath := filepath.Join(dir, kind, fn)
+				outpath := filepath.Join(targetDir, filename)
 
 				expected, err := ioutil.ReadFile(outpath)
 				if err != nil {
@@ -48,7 +54,7 @@ func TestProcess(t *testing.T) {
 				}
 
 				if !bytes.Equal(expected, actual) {
-					name := kind + fn
+					name := kind + filename
 					name = strings.Replace(name, "/", "-", -1)
 
 					errfile, err := ioutil.TempFile("", name)
@@ -63,7 +69,17 @@ func TestProcess(t *testing.T) {
 					t.Errorf("Processing output didn't match %q. Results recorded in %q.", outpath, errfile.Name())
 				}
 			}
+
+			if !t.Failed() {
+				build := exec.Command("go", "build", "./...")
+				build.Dir = targetDir
+				out, err := build.CombinedOutput()
+				if err != nil {
+					t.Fatal(err, "\n", string(out))
+				}
+			}
 		})
+
 	}
 
 	testcase := func(dir string) {
@@ -77,12 +93,21 @@ func TestProcess(t *testing.T) {
 			}
 			laidout(t, inpath, dir, "flat", flat{}, in)
 			laidout(t, inpath, dir, "default", deflayout{
-				targetDir: "github.com/go-kit/kit/cmd/kitgen/testdata/foo/default",
+				targetDir: filepath.Join("github.com/go-kit/kit/cmd/kitgen", dir, "default"),
 			}, in)
 		})
 	}
 
 	for _, dir := range cases {
 		testcase(dir)
+	}
+}
+
+func TestTemplatesBuild(t *testing.T) {
+	build := exec.Command("go", "build", "./...")
+	build.Dir = "templates"
+	out, err := build.CombinedOutput()
+	if err != nil {
+		t.Fatal(err, "\n", string(out))
 	}
 }
