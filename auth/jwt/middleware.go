@@ -70,21 +70,21 @@ func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims jwt.Clai
 // Useful in NewParser middleware.
 type ClaimsFactory func() jwt.Claims
 
-// MapClaimsFactory is a ClaimsFactory that returns 
+// MapClaimsFactory is a ClaimsFactory that returns
 // an empty jwt.MapClaims.
 func MapClaimsFactory() jwt.Claims {
-    return jwt.MapClaims{}
+	return jwt.MapClaims{}
 }
 
-// StandardClaimsFactory is a ClaimsFactory that returns 
+// StandardClaimsFactory is a ClaimsFactory that returns
 // an empty jwt.StandardClaims.
 func StandardClaimsFactory() jwt.Claims {
-    return &jwt.StandardClaims{}
+	return &jwt.StandardClaims{}
 }
 
 // NewParser creates a new JWT token parsing middleware, specifying a
 // jwt.Keyfunc interface, the signing method and the claims type to be used. NewParser
-// adds the resulting  claims to endpoint context or returns error on invalid token.
+// adds the resulting claims to endpoint context or returns error on invalid token.
 // Particularly useful for servers.
 func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims ClaimsFactory) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
