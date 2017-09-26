@@ -27,6 +27,7 @@ func (i iface) endpointsStruct() ast.Decl {
 func (i iface) httpHandler() ast.Decl {
 	handlerFn := fetchFuncDecl("NewHTTPHandler")
 
+	// xxx does this "inlining" process merit a helper akin to replaceIdent?
 	handleCalls := []ast.Stmt{}
 	for _, m := range i.methods {
 		handleCall := fetchFuncDecl("inlineHandlerBuilder").Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr)
@@ -68,6 +69,5 @@ func (i iface) receiverName() *ast.Ident {
 			}
 		}
 	}
-	i.rcvrName = id(unexport(inventName(i.name, scope).Name))
-	return i.rcvrName
+	return id(unexport(inventName(i.name, scope).Name))
 }
