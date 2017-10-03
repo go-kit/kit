@@ -28,7 +28,7 @@ import (
 func main() {
 	// The addcli presumes no service discovery system, and expects users to
 	// provide the direct address of an addsvc. This presumption is reflected in
-	// the addcli binary and the the client packages: the -transport.addr flags
+	// the addcli binary and the client packages: the -transport.addr flags
 	// and various client constructors both expect host:port strings. For an
 	// example service with a client built on top of a service discovery system,
 	// see profilesvc.
