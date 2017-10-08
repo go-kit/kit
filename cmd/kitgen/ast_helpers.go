@@ -75,7 +75,7 @@ func (fn visitFn) Visit(node ast.Node, r func(ast.Node)) Visitor {
 	return fn
 }
 
-func replaceIdent(named string, src, with ast.Node) bool {
+func replaceIdent(src ast.Node, named string, with ast.Node) bool {
 	replaced := false
 	r := visitFn(func(node ast.Node, replaceWith func(ast.Node)) {
 		switch id := node.(type) {
@@ -83,6 +83,21 @@ func replaceIdent(named string, src, with ast.Node) bool {
 			if id.Name == named {
 				replaced = true
 				replaceWith(with)
+			}
+		}
+	})
+	WalkReplace(r, src)
+	return replaced
+}
+
+func replaceLit(src ast.Node, from, to string) bool {
+	replaced := false
+	r := visitFn(func(node ast.Node, replaceWith func(ast.Node)) {
+		switch lit := node.(type) {
+		case *ast.BasicLit:
+			if lit.Value == from {
+				replaced = true
+				replaceWith(&ast.BasicLit{Value: to})
 			}
 		}
 	})
@@ -134,7 +149,22 @@ func sel(ids ...*ast.Ident) ast.Expr {
 	}
 }
 
-func fieldList(fn func(arg) *ast.Field, args ...arg) *ast.FieldList {
+func typeField(t ast.Expr) *ast.Field {
+	return &ast.Field{Type: t}
+}
+
+func field(n *ast.Ident, t ast.Expr) *ast.Field {
+	return &ast.Field{
+		Names: []*ast.Ident{n},
+		Type:  t,
+	}
+}
+
+func fieldList(list ...*ast.Field) *ast.FieldList {
+	return &ast.FieldList{List: list}
+}
+
+func mappedFieldList(fn func(arg) *ast.Field, args ...arg) *ast.FieldList {
 	fl := &ast.FieldList{List: []*ast.Field{}}
 	for _, a := range args {
 		fl.List = append(fl.List, fn(a))
