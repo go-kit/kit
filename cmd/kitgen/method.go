@@ -17,7 +17,7 @@ func (m method) definition(ifc iface) ast.Decl {
 	notImpl := fetchFuncDecl("ExampleEndpoint")
 
 	notImpl.Name = m.name
-	notImpl.Recv = &ast.FieldList{List: []*ast.Field{ifc.reciever()}}
+	notImpl.Recv = fieldList(ifc.reciever())
 	scope := scopeWith(notImpl.Recv.List[0].Names[0].Name)
 	notImpl.Type.Params = m.funcParams(scope)
 	notImpl.Type.Results = m.funcResults()
@@ -30,18 +30,19 @@ func (m method) endpointMaker(ifc iface) ast.Decl {
 	scope := scopeWith("ctx", "req", ifc.receiverName().Name)
 
 	anonFunc := endpointFn.Body.List[0].(*ast.ReturnStmt).Results[0].(*ast.FuncLit)
-	if !m.hasContext() { // is this the right thing?
+	if !m.hasContext() {
+		// strip context param from endpoint function
 		anonFunc.Type.Params.List = anonFunc.Type.Params.List[1:]
 	}
 
-	anonFunc.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.TypeAssertExpr).Type = m.requestStructName()
+	replaceIdent(anonFunc, "ExampleRequest", m.requestStructName())
 	callMethod := m.called(ifc, scope, "ctx", "req")
 	anonFunc.Body.List[1] = callMethod
 	anonFunc.Body.List[2].(*ast.ReturnStmt).Results[0] = m.wrapResult(callMethod.Lhs)
 
 	endpointFn.Name = m.endpointMakerName()
-	endpointFn.Type.Params = &ast.FieldList{List: []*ast.Field{ifc.reciever()}}
-	endpointFn.Type.Results = &ast.FieldList{List: []*ast.Field{&ast.Field{Type: sel(id("endpoint"), id("Endpoint"))}}}
+	endpointFn.Type.Params = fieldList(ifc.reciever())
+	endpointFn.Type.Results = fieldList(typeField(sel(id("endpoint"), id("Endpoint"))))
 	return endpointFn
 }
 
@@ -130,7 +131,7 @@ func (m method) resolveStructNames() {
 func (m method) decoderFunc() ast.Decl {
 	fn := fetchFuncDecl("DecodeExampleRequest")
 	fn.Name = m.decodeFuncName()
-	fn.Body.List[0].(*ast.DeclStmt).Decl.(*ast.GenDecl).Specs[0].(*ast.ValueSpec).Type = m.requestStructName()
+	replaceIdent(fn, "ExampleRequest", m.requestStructName())
 	return fn
 }
 
@@ -185,14 +186,14 @@ func (m method) funcParams(scope *ast.Scope) *ast.FieldList {
 		}}
 		scope.Insert(ast.NewObj(ast.Var, "ctx"))
 	}
-	parms.List = append(parms.List, fieldList(func(a arg) *ast.Field {
+	parms.List = append(parms.List, mappedFieldList(func(a arg) *ast.Field {
 		return a.field(scope)
 	}, m.nonContextParams()...).List...)
 	return parms
 }
 
 func (m method) funcResults() *ast.FieldList {
-	return fieldList(func(a arg) *ast.Field {
+	return mappedFieldList(func(a arg) *ast.Field {
 		return a.result()
 	}, m.results...)
 }
@@ -202,7 +203,7 @@ func (m method) requestStructName() *ast.Ident {
 }
 
 func (m method) requestStructFields() *ast.FieldList {
-	return fieldList(func(a arg) *ast.Field {
+	return mappedFieldList(func(a arg) *ast.Field {
 		return a.exported()
 	}, m.nonContextParams()...)
 }
@@ -212,7 +213,7 @@ func (m method) responseStructName() *ast.Ident {
 }
 
 func (m method) responseStructFields() *ast.FieldList {
-	return fieldList(func(a arg) *ast.Field {
+	return mappedFieldList(func(a arg) *ast.Field {
 		return a.exported()
 	}, m.results...)
 }

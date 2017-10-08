@@ -23,12 +23,6 @@ type (
 	layout interface {
 		transformAST(ctx *sourceContext) (files, error)
 	}
-
-	flat      struct{}
-	deflayout struct {
-		targetDir string
-	}
-
 	outputTree map[string]*ast.File
 )
 
@@ -73,51 +67,6 @@ func importPath(targetDir, gopath string) (string, error) {
 
 }
 
-func (l deflayout) packagePath(sub string) string {
-	return filepath.Join(l.targetDir, sub)
-}
-
-func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
-	out := make(outputTree)
-
-	endpoints := out.addFile("endpoints/endpoints.go", "endpoints")
-	http := out.addFile("http/http.go", "http")
-	service := out.addFile("service/service.go", "service")
-
-	addImports(endpoints, ctx)
-	addImports(http, ctx)
-	addImports(service, ctx)
-
-	for _, iface := range ctx.interfaces { //only one...
-		addStubStruct(service, iface)
-
-		for _, meth := range iface.methods {
-			addMethod(service, iface, meth)
-			addRequestStruct(endpoints, meth)
-			addResponseStruct(endpoints, meth)
-			addEndpointMaker(endpoints, iface, meth)
-		}
-
-		addEndpointsStruct(endpoints, iface)
-		addHTTPHandler(http, iface)
-
-		for _, meth := range iface.methods {
-			addDecoder(http, meth)
-			addEncoder(http, meth)
-		}
-
-		for _, file := range out {
-			selectify(file, "service", iface.stubName().Name, l.packagePath("service"))
-			selectify(file, "endpoints", "Endpoints", l.packagePath("endpoints"))
-			for _, meth := range iface.methods {
-				selectify(file, "endpoints", meth.requestStructName().Name, l.packagePath("endpoints"))
-			}
-		}
-	}
-
-	return formatNodes(out)
-}
-
 func selectify(file *ast.File, pkgName, identName, importPath string) {
 	if file.Name.Name == pkgName {
 		return
@@ -151,36 +100,6 @@ func selectifyIdent(identName string, file *ast.File, selector ast.Expr) (replac
 	})
 	WalkReplace(r, file)
 	return
-}
-
-func (f flat) transformAST(ctx *sourceContext) (files, error) {
-	root := &ast.File{
-		Name:  ctx.pkg,
-		Decls: []ast.Decl{},
-	}
-
-	addImports(root, ctx)
-
-	for _, iface := range ctx.interfaces { //only one...
-		addStubStruct(root, iface)
-
-		for _, meth := range iface.methods {
-			addMethod(root, iface, meth)
-			addRequestStruct(root, meth)
-			addResponseStruct(root, meth)
-			addEndpointMaker(root, iface, meth)
-		}
-
-		addEndpointsStruct(root, iface)
-		addHTTPHandler(root, iface)
-
-		for _, meth := range iface.methods {
-			addDecoder(root, meth)
-			addEncoder(root, meth)
-		}
-	}
-
-	return formatNodes(outputTree{"gokit.go": root})
 }
 
 func formatNode(fname string, node ast.Node) (*bytes.Buffer, error) {

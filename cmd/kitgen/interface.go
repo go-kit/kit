@@ -27,15 +27,16 @@ func (i iface) endpointsStruct() ast.Decl {
 func (i iface) httpHandler() ast.Decl {
 	handlerFn := fetchFuncDecl("NewHTTPHandler")
 
-	// xxx does this "inlining" process merit a helper akin to replaceIdent?
+	// does this "inlining" process merit a helper akin to replaceIdent?
 	handleCalls := []ast.Stmt{}
 	for _, m := range i.methods {
 		handleCall := fetchFuncDecl("inlineHandlerBuilder").Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr)
 
-		handleCall.Args[0].(*ast.BasicLit).Value = `"` + m.pathName() + `"`
+		replaceLit(handleCall, `"/bar"`, `"`+m.pathName()+`"`)
 
-		handleCall.Args[1].(*ast.CallExpr).Args =
-			[]ast.Expr{sel(id("endpoints"), m.name), m.decodeFuncName(), m.encodeFuncName()}
+		replaceIdent(handleCall, "ExampleEndpoint", m.name)
+		replaceIdent(handleCall, "DecodeExampleRequest", m.decodeFuncName())
+		replaceIdent(handleCall, "EncodeExampleResponse", m.encodeFuncName())
 
 		handleCalls = append(handleCalls, &ast.ExprStmt{X: handleCall})
 	}
@@ -46,10 +47,7 @@ func (i iface) httpHandler() ast.Decl {
 }
 
 func (i iface) reciever() *ast.Field {
-	return &ast.Field{
-		Names: []*ast.Ident{i.receiverName()},
-		Type:  i.stubName(),
-	}
+	return field(i.receiverName(), i.stubName())
 }
 
 func (i iface) receiverName() *ast.Ident {
