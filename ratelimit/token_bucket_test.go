@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	jujuratelimit "github.com/juju/ratelimit"
 	"golang.org/x/time/rate"
 
 	"github.com/go-kit/kit/endpoint"
@@ -14,22 +13,6 @@ import (
 )
 
 var nopEndpoint = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
-
-func TestTokenBucketLimiter(t *testing.T) {
-	tb := jujuratelimit.NewBucket(time.Minute, 1)
-	testSuccessThenFailure(
-		t,
-		ratelimit.NewTokenBucketLimiter(tb)(nopEndpoint),
-		ratelimit.ErrLimited.Error())
-}
-
-func TestTokenBucketThrottler(t *testing.T) {
-	tb := jujuratelimit.NewBucket(time.Minute, 1)
-	testSuccessThenFailure(
-		t,
-		ratelimit.NewTokenBucketThrottler(tb, nil)(nopEndpoint),
-		"context deadline exceeded")
-}
 
 func TestXRateErroring(t *testing.T) {
 	limit := rate.NewLimiter(rate.Every(time.Minute), 1)
