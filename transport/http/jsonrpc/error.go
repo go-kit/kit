@@ -9,6 +9,19 @@ type Error struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
+// Error implements error.
+func (e Error) Error() string {
+	if e.Message != "" {
+		return e.Message
+	}
+	return errorMessage[e.Code]
+}
+
+// ErrorCode returns the JSON RPC error code associated with the error.
+func (e Error) ErrorCode() int {
+	return e.Code
+}
+
 const (
 	// ParseError defines invalid JSON was received by the server.
 	// An error occurred on the server while parsing the JSON text.
