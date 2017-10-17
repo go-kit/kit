@@ -163,6 +163,9 @@ func TestServerHappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cant' decode response. err=%s, body=%s", err, buf)
 	}
+	if r.JSONRPC != jsonrpc.Version {
+		t.Fatalf("JSONRPC Version: want=%s, got=%s", jsonrpc.Version, r.JSONRPC)
+	}
 	if r.Error != nil {
 		t.Fatalf("Unxpected error on response: %s", buf)
 	}

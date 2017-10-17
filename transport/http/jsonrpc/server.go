@@ -146,7 +146,9 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx = f(ctx, w)
 	}
 
-	res := Response{}
+	res := Response{
+		JSONRPC: Version,
+	}
 
 	// Encode the response from the Endpoint
 	resParams, err := ecm.Encode(ctx, response)
