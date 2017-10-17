@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 
 	"github.com/go-kit/kit/endpoint"
 )
@@ -43,7 +42,7 @@ func decodeCountRequest(_ context.Context, msg *nats.Msg) (interface{}, error) {
 	return request, nil
 }
 
-func encodeResponse(_ context.Context, response interface{}) (r interface, err error) {
+func encodeResponse(_ context.Context, response interface{}) (r interface{}, err error) {
 	return r, err
 }
 
