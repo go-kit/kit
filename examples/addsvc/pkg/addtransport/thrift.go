@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	jujuratelimit "github.com/juju/ratelimit"
+	"golang.org/x/time/rate"
+
 	"github.com/sony/gobreaker"
 
 	"github.com/go-kit/kit/circuitbreaker"
@@ -58,7 +59,7 @@ func NewThriftClient(client *addthrift.AddServiceClient) addservice.Service {
 	// construct per-endpoint circuitbreaker middlewares to demonstrate how
 	// that's done, although they could easily be combined into a single breaker
 	// for the entire remote instance, too.
-	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
+	limiter := ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 100))
 
 	// Each individual endpoint is an http/transport.Client (which implements
 	// endpoint.Endpoint) that gets wrapped with various middlewares. If you
