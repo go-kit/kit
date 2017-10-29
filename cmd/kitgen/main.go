@@ -71,7 +71,7 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal(usage())
 	}
-	filename := os.Args[1]
+	filename := flag.Arg(0)
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatalf("error while opening %q: %v", filename, err)

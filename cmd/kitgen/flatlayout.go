@@ -1,5 +1,7 @@
 package main
 
+import "go/ast"
+
 type flat struct{}
 
 func (f flat) transformAST(ctx *sourceContext) (files, error) {

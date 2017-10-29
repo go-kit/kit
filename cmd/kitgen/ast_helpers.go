@@ -39,6 +39,8 @@ func baseName(t ast.Expr) string {
 	switch tt := t.(type) {
 	default:
 		panic(fmt.Sprintf("don't know how to choose a base name for %T (%[1]v)", tt))
+	case *ast.ArrayType:
+		return "slice"
 	case *ast.Ident:
 		return tt.Name
 	case *ast.SelectorExpr:
