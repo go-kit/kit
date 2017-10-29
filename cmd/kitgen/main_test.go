@@ -75,7 +75,7 @@ func TestProcess(t *testing.T) {
 				build.Dir = targetDir
 				out, err := build.CombinedOutput()
 				if err != nil {
-					t.Fatal(err, "\n", string(out))
+					t.Fatalf("Cannot build output: %v\n%s", err, string(out))
 				}
 			}
 		})
