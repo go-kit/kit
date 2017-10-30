@@ -1,4 +1,4 @@
-package main
+package profilesvc
 
 type Service interface {
 	PostProfile(ctx context.Context, p Profile) error
