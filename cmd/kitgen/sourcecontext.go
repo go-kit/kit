@@ -10,6 +10,7 @@ type sourceContext struct {
 	pkg        *ast.Ident
 	imports    []*ast.ImportSpec
 	interfaces []iface
+	types      []*ast.TypeSpec
 }
 
 func (sc *sourceContext) validate() error {

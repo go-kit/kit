@@ -54,6 +54,7 @@ func (v *parseVisitor) Visit(n ast.Node) ast.Visitor {
 		return nil
 
 	case *ast.TypeSpec:
+		v.src.types = append(v.src.types, rn)
 		return &typeSpecVisitor{src: v.src, node: rn}
 	}
 }

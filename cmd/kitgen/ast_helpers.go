@@ -181,16 +181,18 @@ func blockStmt(stmts ...ast.Stmt) *ast.BlockStmt {
 }
 
 func structDecl(name *ast.Ident, fields *ast.FieldList) ast.Decl {
-	return &ast.GenDecl{
-		Tok: token.TYPE,
-		Specs: []ast.Spec{
-			&ast.TypeSpec{
-				Name: name,
-				Type: &ast.StructType{
-					Fields: fields,
-				},
-			},
+	return typeDecl(&ast.TypeSpec{
+		Name: name,
+		Type: &ast.StructType{
+			Fields: fields,
 		},
+	})
+}
+
+func typeDecl(ts *ast.TypeSpec) ast.Decl {
+	return &ast.GenDecl{
+		Tok:   token.TYPE,
+		Specs: []ast.Spec{ts},
 	}
 }
 

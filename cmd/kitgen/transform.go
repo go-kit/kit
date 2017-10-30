@@ -188,6 +188,10 @@ func addStubStruct(root *ast.File, iface iface) {
 	root.Decls = append(root.Decls, iface.stubStructDecl())
 }
 
+func addType(root *ast.File, typ *ast.TypeSpec) {
+	root.Decls = append(root.Decls, typeDecl(typ))
+}
+
 func addMethod(root *ast.File, iface iface, meth method) {
 	def := meth.definition(iface)
 	root.Decls = append(root.Decls, def)

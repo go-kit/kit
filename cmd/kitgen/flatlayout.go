@@ -12,6 +12,14 @@ func (f flat) transformAST(ctx *sourceContext) (files, error) {
 
 	addImports(root, ctx)
 
+	for _, typ := range ctx.types {
+		switch typ.Type.(type) {
+		default:
+			addType(root, typ)
+		case *ast.InterfaceType:
+		}
+	}
+
 	for _, iface := range ctx.interfaces { //only one...
 		addStubStruct(root, iface)
 
