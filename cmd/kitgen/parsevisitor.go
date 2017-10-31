@@ -54,7 +54,13 @@ func (v *parseVisitor) Visit(n ast.Node) ast.Visitor {
 		return nil
 
 	case *ast.TypeSpec:
-		v.src.types = append(v.src.types, rn)
+		switch rn.Type.(type) {
+		default:
+			v.src.types = append(v.src.types, rn)
+		case *ast.InterfaceType:
+			// can't output interfaces
+			// because they'd conflict with our implementations
+		}
 		return &typeSpecVisitor{src: v.src, node: rn}
 	}
 }
