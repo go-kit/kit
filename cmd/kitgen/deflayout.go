@@ -21,6 +21,10 @@ func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
 	addImports(http, ctx)
 	addImports(service, ctx)
 
+	for _, typ := range ctx.types {
+		addType(service, typ)
+	}
+
 	for _, iface := range ctx.interfaces { //only one...
 		addStubStruct(service, iface)
 
@@ -41,10 +45,16 @@ func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
 
 		for _, file := range out {
 			selectify(file, "service", iface.stubName().Name, l.packagePath("service"))
-			selectify(file, "endpoints", "Endpoints", l.packagePath("endpoints"))
 			for _, meth := range iface.methods {
 				selectify(file, "endpoints", meth.requestStructName().Name, l.packagePath("endpoints"))
 			}
+		}
+	}
+
+	for _, file := range out {
+		selectify(file, "endpoints", "Endpoints", l.packagePath("endpoints"))
+		for _, typ := range ctx.types {
+			selectify(file, "service", typ.Name.Name, l.packagePath("service"))
 		}
 	}
 

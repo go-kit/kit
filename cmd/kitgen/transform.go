@@ -72,6 +72,8 @@ func selectify(file *ast.File, pkgName, identName, importPath string) {
 		return
 	}
 
+	spew.Printf("File: %q %q %s.%s\n", file.Name.Name, importPath, pkgName, identName)
+
 	selector := sel(id(pkgName), id(identName))
 	if selectifyIdent(identName, file, selector) {
 		addImport(file, importPath)

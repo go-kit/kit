@@ -7,7 +7,7 @@ import "github.com/go-kit/kit/endpoint"
 import "github.com/go-kit/kit/cmd/kitgen/testdata/profilesvc/default/service"
 
 type PostProfileRequest struct {
-	P Profile
+	P service.Profile
 }
 type PostProfileResponse struct {
 	Err error
@@ -25,7 +25,7 @@ type GetProfileRequest struct {
 	Id string
 }
 type GetProfileResponse struct {
-	P   Profile
+	P   service.Profile
 	Err error
 }
 
@@ -39,7 +39,7 @@ func makeGetProfileEndpoint(s service.Service) endpoint.Endpoint {
 
 type PutProfileRequest struct {
 	Id string
-	P  Profile
+	P  service.Profile
 }
 type PutProfileResponse struct {
 	Err error
@@ -55,7 +55,7 @@ func makePutProfileEndpoint(s service.Service) endpoint.Endpoint {
 
 type PatchProfileRequest struct {
 	Id string
-	P  Profile
+	P  service.Profile
 }
 type PatchProfileResponse struct {
 	Err error
@@ -88,7 +88,7 @@ type GetAddressesRequest struct {
 	ProfileID string
 }
 type GetAddressesResponse struct {
-	S   []Address
+	S   []service.Address
 	Err error
 }
 
@@ -105,7 +105,7 @@ type GetAddressRequest struct {
 	AddressID string
 }
 type GetAddressResponse struct {
-	A   Address
+	A   service.Address
 	Err error
 }
 
@@ -119,7 +119,7 @@ func makeGetAddressEndpoint(s service.Service) endpoint.Endpoint {
 
 type PostAddressRequest struct {
 	ProfileID string
-	A         Address
+	A         service.Address
 }
 type PostAddressResponse struct {
 	Err error
