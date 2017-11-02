@@ -36,7 +36,7 @@ func TestProcess(t *testing.T) {
 				// otherwise we need to do some tomfoolery with resetting buffers
 				// I'm willing to just run the tests again - besides, we shouldn't be
 				// regerating the golden files that often
-				t.Log("Updated outputs - DID NOT COMPARE! (run tests again without -update)")
+				t.Error("Updated outputs - DID NOT COMPARE! (run tests again without -update)")
 				return
 			}
 

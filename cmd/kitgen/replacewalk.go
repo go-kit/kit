@@ -56,13 +56,13 @@ func walkDeclList(v Visitor, list []ast.Decl) {
 // w.Visit(nil).
 //
 
-func WalkReplace(v Visitor, node ast.Node) {
-	walkToReplace(v, node, func(r ast.Node) {
+func WalkReplace(v Visitor, node ast.Node) ast.Node {
+	return walkToReplace(v, node, func(r ast.Node) {
 		panic("tried to replace root node")
 	})
 }
 
-func walkToReplace(v Visitor, node ast.Node, replace func(ast.Node)) {
+func walkToReplace(v Visitor, node ast.Node, replace func(ast.Node)) ast.Node {
 	replaced := false
 	repl := func(r ast.Node) {
 		replaced = true

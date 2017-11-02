@@ -88,12 +88,14 @@ func (f selIdentFn) Visit(node ast.Node, r func(ast.Node)) Visitor {
 
 func selectifyIdent(identName string, file *ast.File, selector ast.Expr) (replaced bool) {
 	var r selIdentFn
+	spew.Dump(selector)
 	r = selIdentFn(func(node ast.Node, replaceWith func(ast.Node)) Visitor {
 		switch id := node.(type) {
 		case *ast.SelectorExpr:
 			return nil
 		case *ast.Ident:
 			if id.Name == identName {
+				spew.Dump("replace", node, selector, "endreplace")
 				replaced = true
 				replaceWith(selector)
 			}
@@ -105,6 +107,9 @@ func selectifyIdent(identName string, file *ast.File, selector ast.Expr) (replac
 }
 
 func formatNode(fname string, node ast.Node) (*bytes.Buffer, error) {
+	if file, is := node.(*ast.File); is {
+		sort.Stable(sortableDecls(file.Decls))
+	}
 	outfset := token.NewFileSet()
 	buf := &bytes.Buffer{}
 	err := format.Node(buf, outfset, node)
@@ -145,7 +150,6 @@ func formatNodes(nodes outputTree) (files, error) {
 	res := files{}
 	var err error
 	for fn, node := range nodes {
-		sort.Stable(sortableDecls(node.Decls))
 		res[fn], err = formatNode(fn, node)
 		if err != nil {
 			return nil, errors.Wrapf(err, "formatNodes")

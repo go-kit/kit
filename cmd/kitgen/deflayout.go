@@ -1,6 +1,11 @@
 package main
 
-import "path/filepath"
+import (
+	"path/filepath"
+	"regexp"
+
+	"github.com/davecgh/go-spew/spew"
+)
 
 type deflayout struct {
 	targetDir string
@@ -51,12 +56,29 @@ func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
 		}
 	}
 
-	for _, file := range out {
+	for name, file := range out {
+		spew.Dump(name, file)
+	}
+	problem := regexp.MustCompile(`(?m)^.*GetAddresses.*$`)
+
+	buf, _ := formatNode("service", out["service/service.go"])
+	spew.Println("REGEXP", problem.Match(buf.Bytes()), string(problem.Find(buf.Bytes())))
+
+	for name, file := range out {
+		spew.Printf("Path: %q", name)
 		selectify(file, "endpoints", "Endpoints", l.packagePath("endpoints"))
+		buf, _ = formatNode("service", out["service/service.go"])
+		spew.Println("REGEXP", problem.Match(buf.Bytes()), string(problem.Find(buf.Bytes())))
+
 		for _, typ := range ctx.types {
 			selectify(file, "service", typ.Name.Name, l.packagePath("service"))
+			buf, _ = formatNode("service", out["service/service.go"])
+			spew.Println("REGEXP", problem.Match(buf.Bytes()), string(problem.Find(buf.Bytes())))
 		}
 	}
+	buf, _ = formatNode("service", out["service/service.go"])
+	spew.Println("REGEXP", problem.Match(buf.Bytes()), string(problem.Find(buf.Bytes())))
+	spew.Dump(out["service/service.go"])
 
 	return formatNodes(out)
 }
