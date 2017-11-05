@@ -1,11 +1,6 @@
 package main
 
-import (
-	"path/filepath"
-	"regexp"
-
-	"github.com/davecgh/go-spew/spew"
-)
+import "path/filepath"
 
 type deflayout struct {
 	targetDir string
@@ -48,37 +43,21 @@ func (l deflayout) transformAST(ctx *sourceContext) (files, error) {
 			addEncoder(http, meth)
 		}
 
-		for _, file := range out {
-			selectify(file, "service", iface.stubName().Name, l.packagePath("service"))
+		for name := range out {
+			out[name] = selectify(out[name], "service", iface.stubName().Name, l.packagePath("service"))
 			for _, meth := range iface.methods {
-				selectify(file, "endpoints", meth.requestStructName().Name, l.packagePath("endpoints"))
+				out[name] = selectify(out[name], "endpoints", meth.requestStructName().Name, l.packagePath("endpoints"))
 			}
 		}
 	}
 
-	for name, file := range out {
-		spew.Dump(name, file)
-	}
-	problem := regexp.MustCompile(`(?m)^.*GetAddresses.*$`)
-
-	buf, _ := formatNode("service", out["service/service.go"])
-	spew.Println("REGEXP", problem.Match(buf.Bytes()), string(problem.Find(buf.Bytes())))
-
-	for name, file := range out {
-		spew.Printf("Path: %q", name)
-		selectify(file, "endpoints", "Endpoints", l.packagePath("endpoints"))
-		buf, _ = formatNode("service", out["service/service.go"])
-		spew.Println("REGEXP", problem.Match(buf.Bytes()), string(problem.Find(buf.Bytes())))
+	for name := range out {
+		out[name] = selectify(out[name], "endpoints", "Endpoints", l.packagePath("endpoints"))
 
 		for _, typ := range ctx.types {
-			selectify(file, "service", typ.Name.Name, l.packagePath("service"))
-			buf, _ = formatNode("service", out["service/service.go"])
-			spew.Println("REGEXP", problem.Match(buf.Bytes()), string(problem.Find(buf.Bytes())))
+			out[name] = selectify(out[name], "service", typ.Name.Name, l.packagePath("service"))
 		}
 	}
-	buf, _ = formatNode("service", out["service/service.go"])
-	spew.Println("REGEXP", problem.Match(buf.Bytes()), string(problem.Find(buf.Bytes())))
-	spew.Dump(out["service/service.go"])
 
 	return formatNodes(out)
 }

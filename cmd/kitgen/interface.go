@@ -32,11 +32,10 @@ func (i iface) httpHandler() ast.Decl {
 	for _, m := range i.methods {
 		handleCall := fetchFuncDecl("inlineHandlerBuilder").Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr)
 
-		replaceLit(handleCall, `"/bar"`, `"`+m.pathName()+`"`)
-
-		replaceIdent(handleCall, "ExampleEndpoint", m.name)
-		replaceIdent(handleCall, "DecodeExampleRequest", m.decodeFuncName())
-		replaceIdent(handleCall, "EncodeExampleResponse", m.encodeFuncName())
+		handleCall = replaceLit(handleCall, `"/bar"`, `"`+m.pathName()+`"`).(*ast.CallExpr)
+		handleCall = replaceIdent(handleCall, "ExampleEndpoint", m.name).(*ast.CallExpr)
+		handleCall = replaceIdent(handleCall, "DecodeExampleRequest", m.decodeFuncName()).(*ast.CallExpr)
+		handleCall = replaceIdent(handleCall, "EncodeExampleResponse", m.encodeFuncName()).(*ast.CallExpr)
 
 		handleCalls = append(handleCalls, &ast.ExprStmt{X: handleCall})
 	}

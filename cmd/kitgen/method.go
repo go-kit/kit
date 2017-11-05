@@ -35,11 +35,12 @@ func (m method) endpointMaker(ifc iface) ast.Decl {
 		anonFunc.Type.Params.List = anonFunc.Type.Params.List[1:]
 	}
 
-	replaceIdent(anonFunc, "ExampleRequest", m.requestStructName())
+	anonFunc = replaceIdent(anonFunc, "ExampleRequest", m.requestStructName()).(*ast.FuncLit)
 	callMethod := m.called(ifc, scope, "ctx", "req")
 	anonFunc.Body.List[1] = callMethod
 	anonFunc.Body.List[2].(*ast.ReturnStmt).Results[0] = m.wrapResult(callMethod.Lhs)
 
+	endpointFn.Body.List[0].(*ast.ReturnStmt).Results[0] = anonFunc
 	endpointFn.Name = m.endpointMakerName()
 	endpointFn.Type.Params = fieldList(ifc.reciever())
 	endpointFn.Type.Results = fieldList(typeField(sel(id("endpoint"), id("Endpoint"))))
@@ -131,7 +132,7 @@ func (m method) resolveStructNames() {
 func (m method) decoderFunc() ast.Decl {
 	fn := fetchFuncDecl("DecodeExampleRequest")
 	fn.Name = m.decodeFuncName()
-	replaceIdent(fn, "ExampleRequest", m.requestStructName())
+	fn = replaceIdent(fn, "ExampleRequest", m.requestStructName()).(*ast.FuncDecl)
 	return fn
 }
 

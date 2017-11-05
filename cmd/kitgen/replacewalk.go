@@ -46,49 +46,69 @@ func walkDeclList(v Visitor, list []ast.Decl) {
 	}
 }
 
-// TODO(gri): Investigate if providing a closure to walkToReplace leads to
-//            simpler use (and may help eliminate Inspect in turn).
-
-// walkToReplace traverses an AST in depth-first order: It starts by calling
+// WalkToReplace traverses an AST in depth-first order: It starts by calling
 // v.Visit(node); node must not be nil. If the visitor w returned by
 // v.Visit(node) is not nil, walkToReplace is invoked recursively with visitor
 // w for each of the non-nil children of node, followed by a call of
 // w.Visit(nil).
-//
-
-func WalkReplace(v Visitor, node ast.Node) ast.Node {
-	return walkToReplace(v, node, func(r ast.Node) {
-		panic("tried to replace root node")
+func WalkReplace(v Visitor, node ast.Node) (replacement ast.Node) {
+	walkToReplace(v, node, func(r ast.Node) {
+		replacement = r
 	})
+	return
 }
 
-func walkToReplace(v Visitor, node ast.Node, replace func(ast.Node)) (replacement ast.Node) {
+func walkToReplace(v Visitor, node ast.Node, replace func(ast.Node)) {
+	if v == nil {
+		return
+	}
+	var replacement ast.Node
 	repl := func(r ast.Node) {
 		replacement = r
 		replace(r)
 	}
 
-	if replacement != nil {
-		return replacement
-	}
-
 	v = v.Visit(node, repl)
+
+	if replacement != nil {
+		return
+	}
 
 	// walk children
 	// (the order of the cases matches the order
 	// of the corresponding node types in ast.go)
 	switch n := node.(type) {
-	// Comments and fields
-	case *ast.Comment, *ast.BadExpr, *ast.Ident, *ast.BasicLit:
+
+	// These are all leaves, so there's no sub-walk to do.
+	// We just need to replace them on their parent with a copy.
+	case *ast.Comment:
 		cpy := *n
-		return &cpy
+		replace(&cpy)
+	case *ast.BadExpr:
+		cpy := *n
+		replace(&cpy)
+	case *ast.Ident:
+		cpy := *n
+		replace(&cpy)
+	case *ast.BasicLit:
+		cpy := *n
+		replace(&cpy)
+	case *ast.BadDecl:
+		cpy := *n
+		replace(&cpy)
+	case *ast.EmptyStmt:
+		cpy := *n
+		replace(&cpy)
+	case *ast.BadStmt:
+		cpy := *n
+		replace(&cpy)
 
 	case *ast.CommentGroup:
 		cpy := *n
-		cpy.List = make([]*ast.Comment, len(n.List))
-		copy(cpy.List, n.List)
-		if v == nil {
-			return &cpy
+
+		if n.List != nil {
+			cpy.List = make([]*ast.Comment, len(n.List))
+			copy(cpy.List, n.List)
 		}
 
 		for i, c := range cpy.List {
@@ -96,10 +116,14 @@ func walkToReplace(v Visitor, node ast.Node, replace func(ast.Node)) (replacemen
 				cpy.List[i] = r.(*ast.Comment)
 			})
 		}
-		return &cpy
+		replace(&cpy)
 
 	case *ast.Field:
 		cpy := *n
+		if n.Names != nil {
+			cpy.Names = make([]*ast.Ident, len(n.Names))
+			copy(cpy.Names, n.Names)
+		}
 
 		if cpy.Doc != nil {
 			walkToReplace(v, cpy.Doc, func(r ast.Node) {
@@ -107,6 +131,7 @@ func walkToReplace(v Visitor, node ast.Node, replace func(ast.Node)) (replacemen
 			})
 		}
 		walkIdentList(v, cpy.Names)
+
 		walkToReplace(v, cpy.Type, func(r ast.Node) {
 			cpy.Type = r.(ast.Expr)
 		})
@@ -120,12 +145,14 @@ func walkToReplace(v Visitor, node ast.Node, replace func(ast.Node)) (replacemen
 				cpy.Comment = r.(*ast.CommentGroup)
 			})
 		}
-		return &cpy
+		replace(&cpy)
 
 	case *ast.FieldList:
 		cpy := *n
-		cpy.List = make([]*ast.Field, len(n.List))
-		copy(cpy.List, n.List)
+		if n.List != nil {
+			cpy.List = make([]*ast.Field, len(n.List))
+			copy(cpy.List, n.List)
+		}
 
 		for i, f := range cpy.List {
 			walkToReplace(v, f, func(r ast.Node) {
@@ -133,9 +160,7 @@ func walkToReplace(v Visitor, node ast.Node, replace func(ast.Node)) (replacemen
 			})
 		}
 
-		// Expressions
-		cpy := *n
-		return &cpy
+		replace(&cpy)
 
 	case *ast.Ellipsis:
 		cpy := *n
@@ -146,470 +171,589 @@ func walkToReplace(v Visitor, node ast.Node, replace func(ast.Node)) (replacemen
 			})
 		}
 
-		return &cpy
+		replace(&cpy)
 
 	case *ast.FuncLit:
 		cpy := *n
-		walkToReplace(v, n.Type, func(r ast.Node) {
-			n.Type = r.(*ast.FuncType)
+		walkToReplace(v, cpy.Type, func(r ast.Node) {
+			cpy.Type = r.(*ast.FuncType)
 		})
-		walkToReplace(v, n.Body, func(r ast.Node) {
-			n.Body = r.(*ast.BlockStmt)
+		walkToReplace(v, cpy.Body, func(r ast.Node) {
+			cpy.Body = r.(*ast.BlockStmt)
 		})
 
+		replace(&cpy)
 	case *ast.CompositeLit:
 		cpy := *n
-		if n.Type != nil {
-			walkToReplace(v, n.Type, func(r ast.Node) {
-				n.Type = r.(ast.Expr)
+		if n.Elts != nil {
+			cpy.Elts = make([]ast.Expr, len(n.Elts))
+			copy(cpy.Elts, n.Elts)
+		}
+
+		if cpy.Type != nil {
+			walkToReplace(v, cpy.Type, func(r ast.Node) {
+				cpy.Type = r.(ast.Expr)
 			})
 		}
-		walkExprList(v, n.Elts)
+		walkExprList(v, cpy.Elts)
 
+		replace(&cpy)
 	case *ast.ParenExpr:
 		cpy := *n
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
 
+		replace(&cpy)
 	case *ast.SelectorExpr:
 		cpy := *n
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
-		walkToReplace(v, n.Sel, func(r ast.Node) {
-			n.Sel = r.(*ast.Ident)
+		walkToReplace(v, cpy.Sel, func(r ast.Node) {
+			cpy.Sel = r.(*ast.Ident)
 		})
 
+		replace(&cpy)
 	case *ast.IndexExpr:
 		cpy := *n
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
-		walkToReplace(v, n.Index, func(r ast.Node) {
-			n.Index = r.(ast.Expr)
+		walkToReplace(v, cpy.Index, func(r ast.Node) {
+			cpy.Index = r.(ast.Expr)
 		})
 
+		replace(&cpy)
 	case *ast.SliceExpr:
 		cpy := *n
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
-		if n.Low != nil {
-			walkToReplace(v, n.Low, func(r ast.Node) {
-				n.Low = r.(ast.Expr)
+		if cpy.Low != nil {
+			walkToReplace(v, cpy.Low, func(r ast.Node) {
+				cpy.Low = r.(ast.Expr)
 			})
 		}
-		if n.High != nil {
-			walkToReplace(v, n.High, func(r ast.Node) {
-				n.High = r.(ast.Expr)
+		if cpy.High != nil {
+			walkToReplace(v, cpy.High, func(r ast.Node) {
+				cpy.High = r.(ast.Expr)
 			})
 		}
-		if n.Max != nil {
-			walkToReplace(v, n.Max, func(r ast.Node) {
-				n.Max = r.(ast.Expr)
+		if cpy.Max != nil {
+			walkToReplace(v, cpy.Max, func(r ast.Node) {
+				cpy.Max = r.(ast.Expr)
 			})
 		}
 
+		replace(&cpy)
 	case *ast.TypeAssertExpr:
 		cpy := *n
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
-		if n.Type != nil {
-			walkToReplace(v, n.Type, func(r ast.Node) {
-				n.Type = r.(ast.Expr)
+		if cpy.Type != nil {
+			walkToReplace(v, cpy.Type, func(r ast.Node) {
+				cpy.Type = r.(ast.Expr)
 			})
 		}
-
+		replace(&cpy)
 	case *ast.CallExpr:
 		cpy := *n
-		walkToReplace(v, n.Fun, func(r ast.Node) {
-			n.Fun = r.(ast.Expr)
-		})
-		walkExprList(v, n.Args)
+		if n.Args != nil {
+			cpy.Args = make([]ast.Expr, len(n.Args))
+			copy(cpy.Args, n.Args)
+		}
 
+		walkToReplace(v, cpy.Fun, func(r ast.Node) {
+			cpy.Fun = r.(ast.Expr)
+		})
+		walkExprList(v, cpy.Args)
+
+		replace(&cpy)
 	case *ast.StarExpr:
 		cpy := *n
-		walkToReplace(v, n.Fun, func(r ast.Node) {
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
 
+		replace(&cpy)
 	case *ast.UnaryExpr:
 		cpy := *n
-		walkToReplace(v, n.Fun, func(r ast.Node) {
-		walkToReplace(v, n.Fun, func(r ast.Node) {
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
 
+		replace(&cpy)
 	case *ast.BinaryExpr:
 		cpy := *n
-		walkToReplace(v, n.Fun, func(r ast.Node) {
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
-		walkToReplace(v, n.Y, func(r ast.Node) {
-			n.Y = r.(ast.Expr)
+		walkToReplace(v, cpy.Y, func(r ast.Node) {
+			cpy.Y = r.(ast.Expr)
 		})
 
+		replace(&cpy)
 	case *ast.KeyValueExpr:
 		cpy := *n
-		walkToReplace(v, n.Key, func(r ast.Node) {
-			n.Key = r.(ast.Expr)
+		walkToReplace(v, cpy.Key, func(r ast.Node) {
+			cpy.Key = r.(ast.Expr)
 		})
-		walkToReplace(v, n.Value, func(r ast.Node) {
-			n.Value = r.(ast.Expr)
+		walkToReplace(v, cpy.Value, func(r ast.Node) {
+			cpy.Value = r.(ast.Expr)
 		})
 
-	// Types
+		replace(&cpy)
+
+		// Types
 	case *ast.ArrayType:
 		cpy := *n
-		if n.Len != nil {
-			walkToReplace(v, n.Len, func(r ast.Node) {
-				n.Len = r.(ast.Expr)
+		if cpy.Len != nil {
+			walkToReplace(v, cpy.Len, func(r ast.Node) {
+				cpy.Len = r.(ast.Expr)
 			})
 		}
-		walkToReplace(v, n.Elt, func(r ast.Node) {
-			n.Elt = r.(ast.Expr)
+		walkToReplace(v, cpy.Elt, func(r ast.Node) {
+			cpy.Elt = r.(ast.Expr)
 		})
 
+		replace(&cpy)
 	case *ast.StructType:
 		cpy := *n
-		walkToReplace(v, n.Fields, func(r ast.Node) {
-			n.Fields = r.(*ast.FieldList)
+		walkToReplace(v, cpy.Fields, func(r ast.Node) {
+			cpy.Fields = r.(*ast.FieldList)
 		})
 
+		replace(&cpy)
 	case *ast.FuncType:
 		cpy := *n
-		if n.Params != nil {
-			walkToReplace(v, n.Params, func(r ast.Node) {
-				n.Params = r.(*ast.FieldList)
+		if cpy.Params != nil {
+			walkToReplace(v, cpy.Params, func(r ast.Node) {
+				cpy.Params = r.(*ast.FieldList)
 			})
 		}
-		if n.Results != nil {
-			walkToReplace(v, n.Results, func(r ast.Node) {
-				n.Results = r.(*ast.FieldList)
+		if cpy.Results != nil {
+			walkToReplace(v, cpy.Results, func(r ast.Node) {
+				cpy.Results = r.(*ast.FieldList)
 			})
 		}
 
+		replace(&cpy)
 	case *ast.InterfaceType:
 		cpy := *n
-		walkToReplace(v, n.Methods, func(r ast.Node) {
-			n.Methods = r.(*ast.FieldList)
+		walkToReplace(v, cpy.Methods, func(r ast.Node) {
+			cpy.Methods = r.(*ast.FieldList)
 		})
 
+		replace(&cpy)
 	case *ast.MapType:
 		cpy := *n
-		walkToReplace(v, n.Key, func(r ast.Node) {
-			n.Key = r.(ast.Expr)
+		walkToReplace(v, cpy.Key, func(r ast.Node) {
+			cpy.Key = r.(ast.Expr)
 		})
-		walkToReplace(v, n.Value, func(r ast.Node) {
-			n.Value = r.(ast.Expr)
+		walkToReplace(v, cpy.Value, func(r ast.Node) {
+			cpy.Value = r.(ast.Expr)
 		})
 
+		replace(&cpy)
 	case *ast.ChanType:
 		cpy := *n
-		walkToReplace(v, n.Value, func(r ast.Node) {
-			n.Value = r.(ast.Expr)
+		walkToReplace(v, cpy.Value, func(r ast.Node) {
+			cpy.Value = r.(ast.Expr)
 		})
 
-	// Statements
-	case *ast.BadStmt:
-		// nothing to do
-
+		replace(&cpy)
 	case *ast.DeclStmt:
 		cpy := *n
-		walkToReplace(v, n.Decl, func(r ast.Node) {
-			n.Decl = r.(ast.Decl)
+		walkToReplace(v, cpy.Decl, func(r ast.Node) {
+			cpy.Decl = r.(ast.Decl)
 		})
 
-	case *ast.EmptyStmt:
-		// nothing to do
-
+		replace(&cpy)
 	case *ast.LabeledStmt:
 		cpy := *n
-		walkToReplace(v, n.Label, func(r ast.Node) {
-			n.Label = r.(*ast.Ident)
+		walkToReplace(v, cpy.Label, func(r ast.Node) {
+			cpy.Label = r.(*ast.Ident)
 		})
-		walkToReplace(v, n.Stmt, func(r ast.Node) {
-			n.Stmt = r.(ast.Stmt)
+		walkToReplace(v, cpy.Stmt, func(r ast.Node) {
+			cpy.Stmt = r.(ast.Stmt)
 		})
 
+		replace(&cpy)
 	case *ast.ExprStmt:
 		cpy := *n
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
 
+		replace(&cpy)
 	case *ast.SendStmt:
 		cpy := *n
-		walkToReplace(v, n.Chan, func(r ast.Node) {
-			n.Chan = r.(ast.Expr)
+		walkToReplace(v, cpy.Chan, func(r ast.Node) {
+			cpy.Chan = r.(ast.Expr)
 		})
-		walkToReplace(v, n.Value, func(r ast.Node) {
-			n.Value = r.(ast.Expr)
+		walkToReplace(v, cpy.Value, func(r ast.Node) {
+			cpy.Value = r.(ast.Expr)
 		})
 
+		replace(&cpy)
 	case *ast.IncDecStmt:
 		cpy := *n
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
 
+		replace(&cpy)
 	case *ast.AssignStmt:
 		cpy := *n
-		walkExprList(v, n.Lhs)
-		walkExprList(v, n.Rhs)
+		if n.Lhs != nil {
+			cpy.Lhs = make([]ast.Expr, len(n.Lhs))
+			copy(cpy.Lhs, n.Lhs)
+		}
+		if n.Rhs != nil {
+			cpy.Rhs = make([]ast.Expr, len(n.Rhs))
+			copy(cpy.Rhs, n.Rhs)
+		}
 
+		walkExprList(v, cpy.Lhs)
+		walkExprList(v, cpy.Rhs)
+
+		replace(&cpy)
 	case *ast.GoStmt:
 		cpy := *n
-		walkToReplace(v, n.Call, func(r ast.Node) {
-			n.Call = r.(*ast.CallExpr)
+		walkToReplace(v, cpy.Call, func(r ast.Node) {
+			cpy.Call = r.(*ast.CallExpr)
 		})
 
+		replace(&cpy)
 	case *ast.DeferStmt:
 		cpy := *n
-		walkToReplace(v, n.Call, func(r ast.Node) {
-			n.Call = r.(*ast.CallExpr)
+		walkToReplace(v, cpy.Call, func(r ast.Node) {
+			cpy.Call = r.(*ast.CallExpr)
 		})
 
+		replace(&cpy)
 	case *ast.ReturnStmt:
-		walkExprList(v, n.Results)
+		cpy := *n
+		if n.Results != nil {
+			cpy.Results = make([]ast.Expr, len(n.Results))
+			copy(cpy.Results, n.Results)
+		}
 
+		walkExprList(v, cpy.Results)
+
+		replace(&cpy)
 	case *ast.BranchStmt:
-		if n.Label != nil {
-			walkToReplace(v, n.Label, func(r ast.Node) {
-				n.Label = r.(*ast.Ident)
+		cpy := *n
+		if cpy.Label != nil {
+			walkToReplace(v, cpy.Label, func(r ast.Node) {
+				cpy.Label = r.(*ast.Ident)
 			})
 		}
 
+		replace(&cpy)
 	case *ast.BlockStmt:
-		walkStmtList(v, n.List)
+		cpy := *n
+		if n.List != nil {
+			cpy.List = make([]ast.Stmt, len(n.List))
+			copy(cpy.List, n.List)
+		}
 
+		walkStmtList(v, cpy.List)
+
+		replace(&cpy)
 	case *ast.IfStmt:
-		if n.Init != nil {
-			walkToReplace(v, n.Init, func(r ast.Node) {
-				n.Init = r.(ast.Stmt)
+		cpy := *n
+
+		if cpy.Init != nil {
+			walkToReplace(v, cpy.Init, func(r ast.Node) {
+				cpy.Init = r.(ast.Stmt)
 			})
 		}
-		walkToReplace(v, n.Cond, func(r ast.Node) {
-			n.Cond = r.(ast.Expr)
+		walkToReplace(v, cpy.Cond, func(r ast.Node) {
+			cpy.Cond = r.(ast.Expr)
 		})
-		walkToReplace(v, n.Body, func(r ast.Node) {
-			n.Body = r.(*ast.BlockStmt)
+		walkToReplace(v, cpy.Body, func(r ast.Node) {
+			cpy.Body = r.(*ast.BlockStmt)
 		})
-		if n.Else != nil {
-			walkToReplace(v, n.Else, func(r ast.Node) {
-				n.Else = r.(ast.Stmt)
+		if cpy.Else != nil {
+			walkToReplace(v, cpy.Else, func(r ast.Node) {
+				cpy.Else = r.(ast.Stmt)
 			})
 		}
 
+		replace(&cpy)
 	case *ast.CaseClause:
-		walkExprList(v, n.List)
-		walkStmtList(v, n.Body)
+		cpy := *n
+		if n.List != nil {
+			cpy.List = make([]ast.Expr, len(n.List))
+			copy(cpy.List, n.List)
+		}
+		if n.Body != nil {
+			cpy.Body = make([]ast.Stmt, len(n.Body))
+			copy(cpy.Body, n.Body)
+		}
 
+		walkExprList(v, cpy.List)
+		walkStmtList(v, cpy.Body)
+
+		replace(&cpy)
 	case *ast.SwitchStmt:
-		if n.Init != nil {
-			walkToReplace(v, n.Init, func(r ast.Node) {
-				n.Init = r.(ast.Stmt)
+		cpy := *n
+		if cpy.Init != nil {
+			walkToReplace(v, cpy.Init, func(r ast.Node) {
+				cpy.Init = r.(ast.Stmt)
 			})
 		}
-		if n.Tag != nil {
-			walkToReplace(v, n.Tag, func(r ast.Node) {
-				n.Tag = r.(ast.Expr)
+		if cpy.Tag != nil {
+			walkToReplace(v, cpy.Tag, func(r ast.Node) {
+				cpy.Tag = r.(ast.Expr)
 			})
 		}
-		walkToReplace(v, n.Body, func(r ast.Node) {
-			n.Body = r.(*ast.BlockStmt)
+		walkToReplace(v, cpy.Body, func(r ast.Node) {
+			cpy.Body = r.(*ast.BlockStmt)
 		})
 
+		replace(&cpy)
 	case *ast.TypeSwitchStmt:
-		if n.Init != nil {
-			walkToReplace(v, n.Init, func(r ast.Node) {
-				n.Init = r.(ast.Stmt)
+		cpy := *n
+		if cpy.Init != nil {
+			walkToReplace(v, cpy.Init, func(r ast.Node) {
+				cpy.Init = r.(ast.Stmt)
 			})
 		}
-		walkToReplace(v, n.Assign, func(r ast.Node) {
-			n.Assign = r.(ast.Stmt)
+		walkToReplace(v, cpy.Assign, func(r ast.Node) {
+			cpy.Assign = r.(ast.Stmt)
 		})
-		walkToReplace(v, n.Body, func(r ast.Node) {
-			n.Body = r.(*ast.BlockStmt)
+		walkToReplace(v, cpy.Body, func(r ast.Node) {
+			cpy.Body = r.(*ast.BlockStmt)
 		})
 
+		replace(&cpy)
 	case *ast.CommClause:
-		if n.Comm != nil {
-			walkToReplace(v, n.Comm, func(r ast.Node) {
-				n.Comm = r.(ast.Stmt)
+		cpy := *n
+		if n.Body != nil {
+			cpy.Body = make([]ast.Stmt, len(n.Body))
+			copy(cpy.Body, n.Body)
+		}
+
+		if cpy.Comm != nil {
+			walkToReplace(v, cpy.Comm, func(r ast.Node) {
+				cpy.Comm = r.(ast.Stmt)
 			})
 		}
-		walkStmtList(v, n.Body)
+		walkStmtList(v, cpy.Body)
 
+		replace(&cpy)
 	case *ast.SelectStmt:
-		walkToReplace(v, n.Body, func(r ast.Node) {
-			n.Body = r.(*ast.BlockStmt)
+		cpy := *n
+		walkToReplace(v, cpy.Body, func(r ast.Node) {
+			cpy.Body = r.(*ast.BlockStmt)
 		})
 
+		replace(&cpy)
 	case *ast.ForStmt:
-		if n.Init != nil {
-			walkToReplace(v, n.Init, func(r ast.Node) {
-				n.Init = r.(ast.Stmt)
+		cpy := *n
+		if cpy.Init != nil {
+			walkToReplace(v, cpy.Init, func(r ast.Node) {
+				cpy.Init = r.(ast.Stmt)
 			})
 		}
-		if n.Cond != nil {
-			walkToReplace(v, n.Cond, func(r ast.Node) {
-				n.Cond = r.(ast.Expr)
+		if cpy.Cond != nil {
+			walkToReplace(v, cpy.Cond, func(r ast.Node) {
+				cpy.Cond = r.(ast.Expr)
 			})
 		}
-		if n.Post != nil {
-			walkToReplace(v, n.Post, func(r ast.Node) {
-				n.Post = r.(ast.Stmt)
+		if cpy.Post != nil {
+			walkToReplace(v, cpy.Post, func(r ast.Node) {
+				cpy.Post = r.(ast.Stmt)
 			})
 		}
-		walkToReplace(v, n.Body, func(r ast.Node) {
-			n.Body = r.(*ast.BlockStmt)
+		walkToReplace(v, cpy.Body, func(r ast.Node) {
+			cpy.Body = r.(*ast.BlockStmt)
 		})
 
+		replace(&cpy)
 	case *ast.RangeStmt:
-		if n.Key != nil {
-			walkToReplace(v, n.Key, func(r ast.Node) {
-				n.Key = r.(ast.Expr)
+		cpy := *n
+		if cpy.Key != nil {
+			walkToReplace(v, cpy.Key, func(r ast.Node) {
+				cpy.Key = r.(ast.Expr)
 			})
 		}
-		if n.Value != nil {
-			walkToReplace(v, n.Value, func(r ast.Node) {
-				n.Value = r.(ast.Expr)
+		if cpy.Value != nil {
+			walkToReplace(v, cpy.Value, func(r ast.Node) {
+				cpy.Value = r.(ast.Expr)
 			})
 		}
-		walkToReplace(v, n.X, func(r ast.Node) {
-			n.X = r.(ast.Expr)
+		walkToReplace(v, cpy.X, func(r ast.Node) {
+			cpy.X = r.(ast.Expr)
 		})
-		walkToReplace(v, n.Body, func(r ast.Node) {
-			n.Body = r.(*ast.BlockStmt)
+		walkToReplace(v, cpy.Body, func(r ast.Node) {
+			cpy.Body = r.(*ast.BlockStmt)
 		})
 
-	// Declarations
+		// Declarations
+		replace(&cpy)
 	case *ast.ImportSpec:
-		if n.Doc != nil {
-			walkToReplace(v, n.Doc, func(r ast.Node) {
-				n.Doc = r.(*ast.CommentGroup)
+		cpy := *n
+		if cpy.Doc != nil {
+			walkToReplace(v, cpy.Doc, func(r ast.Node) {
+				cpy.Doc = r.(*ast.CommentGroup)
 			})
 		}
-		if n.Name != nil {
-			walkToReplace(v, n.Name, func(r ast.Node) {
-				n.Name = r.(*ast.Ident)
+		if cpy.Name != nil {
+			walkToReplace(v, cpy.Name, func(r ast.Node) {
+				cpy.Name = r.(*ast.Ident)
 			})
 		}
-		walkToReplace(v, n.Path, func(r ast.Node) {
-			n.Path = r.(*ast.BasicLit)
+		walkToReplace(v, cpy.Path, func(r ast.Node) {
+			cpy.Path = r.(*ast.BasicLit)
 		})
-		if n.Comment != nil {
-			walkToReplace(v, n.Comment, func(r ast.Node) {
-				n.Comment = r.(*ast.CommentGroup)
+		if cpy.Comment != nil {
+			walkToReplace(v, cpy.Comment, func(r ast.Node) {
+				cpy.Comment = r.(*ast.CommentGroup)
 			})
 		}
 
+		replace(&cpy)
 	case *ast.ValueSpec:
-		if n.Doc != nil {
-			walkToReplace(v, n.Doc, func(r ast.Node) {
-				n.Doc = r.(*ast.CommentGroup)
+		cpy := *n
+		if n.Names != nil {
+			cpy.Names = make([]*ast.Ident, len(n.Names))
+			copy(cpy.Names, n.Names)
+		}
+		if n.Values != nil {
+			cpy.Values = make([]ast.Expr, len(n.Values))
+			copy(cpy.Values, n.Values)
+		}
+
+		if cpy.Doc != nil {
+			walkToReplace(v, cpy.Doc, func(r ast.Node) {
+				cpy.Doc = r.(*ast.CommentGroup)
 			})
 		}
-		walkIdentList(v, n.Names)
-		if n.Type != nil {
-			walkToReplace(v, n.Type, func(r ast.Node) {
-				n.Type = r.(ast.Expr)
+
+		walkIdentList(v, cpy.Names)
+
+		if cpy.Type != nil {
+			walkToReplace(v, cpy.Type, func(r ast.Node) {
+				cpy.Type = r.(ast.Expr)
 			})
 		}
-		walkExprList(v, n.Values)
-		if n.Comment != nil {
-			walkToReplace(v, n.Comment, func(r ast.Node) {
-				n.Comment = r.(*ast.CommentGroup)
+
+		walkExprList(v, cpy.Values)
+
+		if cpy.Comment != nil {
+			walkToReplace(v, cpy.Comment, func(r ast.Node) {
+				cpy.Comment = r.(*ast.CommentGroup)
 			})
 		}
+
+		replace(&cpy)
 
 	case *ast.TypeSpec:
-		if n.Doc != nil {
-			walkToReplace(v, n.Doc, func(r ast.Node) {
-				n.Doc = r.(*ast.CommentGroup)
+		cpy := *n
+
+		if cpy.Doc != nil {
+			walkToReplace(v, cpy.Doc, func(r ast.Node) {
+				cpy.Doc = r.(*ast.CommentGroup)
 			})
 		}
-		walkToReplace(v, n.Name, func(r ast.Node) {
-			n.Name = r.(*ast.Ident)
+		walkToReplace(v, cpy.Name, func(r ast.Node) {
+			cpy.Name = r.(*ast.Ident)
 		})
-		walkToReplace(v, n.Type, func(r ast.Node) {
-			n.Type = r.(ast.Expr)
+		walkToReplace(v, cpy.Type, func(r ast.Node) {
+			cpy.Type = r.(ast.Expr)
 		})
-		if n.Comment != nil {
-			walkToReplace(v, n.Comment, func(r ast.Node) {
-				n.Comment = r.(*ast.CommentGroup)
+		if cpy.Comment != nil {
+			walkToReplace(v, cpy.Comment, func(r ast.Node) {
+				cpy.Comment = r.(*ast.CommentGroup)
 			})
 		}
 
-	case *ast.BadDecl:
-		// nothing to do
-
+		replace(&cpy)
 	case *ast.GenDecl:
-		if n.Doc != nil {
-			walkToReplace(v, n.Doc, func(r ast.Node) {
-				n.Doc = r.(*ast.CommentGroup)
+		cpy := *n
+		if n.Specs != nil {
+			cpy.Specs = make([]ast.Spec, len(n.Specs))
+			copy(cpy.Specs, n.Specs)
+		}
+
+		if cpy.Doc != nil {
+			walkToReplace(v, cpy.Doc, func(r ast.Node) {
+				cpy.Doc = r.(*ast.CommentGroup)
 			})
 		}
-		for i, s := range n.Specs {
+		for i, s := range cpy.Specs {
 			walkToReplace(v, s, func(r ast.Node) {
-				n.Specs[i] = r.(ast.Spec)
+				cpy.Specs[i] = r.(ast.Spec)
 			})
 		}
 
+		replace(&cpy)
 	case *ast.FuncDecl:
-		if n.Doc != nil {
-			walkToReplace(v, n.Doc, func(r ast.Node) {
-				n.Doc = r.(*ast.CommentGroup)
+		cpy := *n
+
+		if cpy.Doc != nil {
+			walkToReplace(v, cpy.Doc, func(r ast.Node) {
+				cpy.Doc = r.(*ast.CommentGroup)
 			})
 		}
-		if n.Recv != nil {
-			walkToReplace(v, n.Recv, func(r ast.Node) {
-				n.Recv = r.(*ast.FieldList)
+		if cpy.Recv != nil {
+			walkToReplace(v, cpy.Recv, func(r ast.Node) {
+				cpy.Recv = r.(*ast.FieldList)
 			})
 		}
-		walkToReplace(v, n.Name, func(r ast.Node) {
-			n.Name = r.(*ast.Ident)
+		walkToReplace(v, cpy.Name, func(r ast.Node) {
+			cpy.Name = r.(*ast.Ident)
 		})
-		walkToReplace(v, n.Type, func(r ast.Node) {
-			n.Type = r.(*ast.FuncType)
+		walkToReplace(v, cpy.Type, func(r ast.Node) {
+			cpy.Type = r.(*ast.FuncType)
 		})
-		if n.Body != nil {
-			walkToReplace(v, n.Body, func(r ast.Node) {
-				n.Body = r.(*ast.BlockStmt)
+		if cpy.Body != nil {
+			walkToReplace(v, cpy.Body, func(r ast.Node) {
+				cpy.Body = r.(*ast.BlockStmt)
 			})
 		}
 
-	// Files and packages
+		// Files and packages
+		replace(&cpy)
 	case *ast.File:
-		if n.Doc != nil {
-			walkToReplace(v, n.Doc, func(r ast.Node) {
-				n.Doc = r.(*ast.CommentGroup)
+		cpy := *n
+
+		if cpy.Doc != nil {
+			walkToReplace(v, cpy.Doc, func(r ast.Node) {
+				cpy.Doc = r.(*ast.CommentGroup)
 			})
 		}
-		walkToReplace(v, n.Name, func(r ast.Node) {
-			n.Name = r.(*ast.Ident)
+		walkToReplace(v, cpy.Name, func(r ast.Node) {
+			cpy.Name = r.(*ast.Ident)
 		})
-		walkDeclList(v, n.Decls)
-		// don't walk n.Comments - they have been
+		walkDeclList(v, cpy.Decls)
+		// don't walk cpy.Comments - they have been
 		// visited already through the individual
 		// nodes
 
+		replace(&cpy)
 	case *ast.Package:
+		cpy := *n
+		cpy.Files = map[string]*ast.File{}
+
 		for i, f := range n.Files {
+			cpy.Files[i] = f
 			walkToReplace(v, f, func(r ast.Node) {
-				n.Files[i] = r.(*ast.File)
+				cpy.Files[i] = r.(*ast.File)
 			})
 		}
+		replace(&cpy)
 
 	default:
 		panic(fmt.Sprintf("walkToReplace: unexpected node type %T", n))
 	}
 
-	v.Visit(nil, func(ast.Node) { panic("can't replace the go-up nil") })
+	if v != nil {
+		v.Visit(nil, func(ast.Node) { panic("can't replace the go-up nil") })
+	}
 }

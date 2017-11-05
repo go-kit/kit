@@ -67,17 +67,17 @@ func importPath(targetDir, gopath string) (string, error) {
 
 }
 
-func selectify(file *ast.File, pkgName, identName, importPath string) {
+func selectify(file *ast.File, pkgName, identName, importPath string) *ast.File {
 	if file.Name.Name == pkgName {
-		return
+		return file
 	}
-
-	spew.Printf("File: %q %q %s.%s\n", file.Name.Name, importPath, pkgName, identName)
 
 	selector := sel(id(pkgName), id(identName))
-	if selectifyIdent(identName, file, selector) {
+	var did bool
+	if file, did = selectifyIdent(identName, file, selector); did {
 		addImport(file, importPath)
 	}
+	return file
 }
 
 type selIdentFn func(ast.Node, func(ast.Node)) Visitor
@@ -86,24 +86,22 @@ func (f selIdentFn) Visit(node ast.Node, r func(ast.Node)) Visitor {
 	return f(node, r)
 }
 
-func selectifyIdent(identName string, file *ast.File, selector ast.Expr) (replaced bool) {
+func selectifyIdent(identName string, file *ast.File, selector ast.Expr) (*ast.File, bool) {
+	var replaced bool
 	var r selIdentFn
-	spew.Dump(selector)
 	r = selIdentFn(func(node ast.Node, replaceWith func(ast.Node)) Visitor {
 		switch id := node.(type) {
 		case *ast.SelectorExpr:
 			return nil
 		case *ast.Ident:
 			if id.Name == identName {
-				spew.Dump("replace", node, selector, "endreplace")
 				replaced = true
 				replaceWith(selector)
 			}
 		}
 		return r
 	})
-	WalkReplace(r, file)
-	return
+	return WalkReplace(r, file).(*ast.File), replaced
 }
 
 func formatNode(fname string, node ast.Node) (*bytes.Buffer, error) {
