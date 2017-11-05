@@ -77,34 +77,28 @@ func (fn visitFn) Visit(node ast.Node, r func(ast.Node)) Visitor {
 	return fn
 }
 
-func replaceIdent(src ast.Node, named string, with ast.Node) bool {
-	replaced := false
+func replaceIdent(src ast.Node, named string, with ast.Node) ast.Node {
 	r := visitFn(func(node ast.Node, replaceWith func(ast.Node)) {
 		switch id := node.(type) {
 		case *ast.Ident:
 			if id.Name == named {
-				replaced = true
 				replaceWith(with)
 			}
 		}
 	})
-	WalkReplace(r, src)
-	return replaced
+	return WalkReplace(r, src)
 }
 
-func replaceLit(src ast.Node, from, to string) bool {
-	replaced := false
+func replaceLit(src ast.Node, from, to string) ast.Node {
 	r := visitFn(func(node ast.Node, replaceWith func(ast.Node)) {
 		switch lit := node.(type) {
 		case *ast.BasicLit:
 			if lit.Value == from {
-				replaced = true
 				replaceWith(&ast.BasicLit{Value: to})
 			}
 		}
 	})
-	WalkReplace(r, src)
-	return replaced
+	return WalkReplace(r, src)
 }
 
 func fullAST() *ast.File {
