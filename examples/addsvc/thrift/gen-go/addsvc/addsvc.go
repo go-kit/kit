@@ -284,28 +284,26 @@ type AddService interface {
 }
 
 type AddServiceClient struct {
-  Transport thrift.TTransport
-  ProtocolFactory thrift.TProtocolFactory
-  InputProtocol thrift.TProtocol
-  OutputProtocol thrift.TProtocol
-  SeqId int32
+  c thrift.TClient
 }
 
+// Deprecated: Use NewAddService instead
 func NewAddServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *AddServiceClient {
-  return &AddServiceClient{Transport: t,
-    ProtocolFactory: f,
-    InputProtocol: f.GetProtocol(t),
-    OutputProtocol: f.GetProtocol(t),
-    SeqId: 0,
+  return &AddServiceClient{
+    c: thrift.NewTStandardClient(f.GetProtocol(t), f.GetProtocol(t)),
   }
 }
 
+// Deprecated: Use NewAddService instead
 func NewAddServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *AddServiceClient {
-  return &AddServiceClient{Transport: t,
-    ProtocolFactory: nil,
-    InputProtocol: iprot,
-    OutputProtocol: oprot,
-    SeqId: 0,
+  return &AddServiceClient{
+    c: thrift.NewTStandardClient(iprot, oprot),
+  }
+}
+
+func NewAddServiceClient(c thrift.TClient) *AddServiceClient {
+  return &AddServiceClient{
+    c: c,
   }
 }
 
@@ -313,158 +311,29 @@ func NewAddServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, op
 //  - A
 //  - B
 func (p *AddServiceClient) Sum(ctx context.Context, a int64, b int64) (r *SumReply, err error) {
-  if err = p.sendSum(a, b); err != nil { return }
-  return p.recvSum()
-}
-
-func (p *AddServiceClient) sendSum(a int64, b int64)(err error) {
-  oprot := p.OutputProtocol
-  if oprot == nil {
-    oprot = p.ProtocolFactory.GetProtocol(p.Transport)
-    p.OutputProtocol = oprot
-  }
-  p.SeqId++
-  if err = oprot.WriteMessageBegin("Sum", thrift.CALL, p.SeqId); err != nil {
-      return
-  }
-  args := AddServiceSumArgs{
-  A : a,
-  B : b,
-  }
-  if err = args.Write(oprot); err != nil {
-      return
-  }
-  if err = oprot.WriteMessageEnd(); err != nil {
-      return
-  }
-  return oprot.Flush()
-}
-
-
-func (p *AddServiceClient) recvSum() (value *SumReply, err error) {
-  iprot := p.InputProtocol
-  if iprot == nil {
-    iprot = p.ProtocolFactory.GetProtocol(p.Transport)
-    p.InputProtocol = iprot
-  }
-  method, mTypeId, seqId, err := iprot.ReadMessageBegin()
-  if err != nil {
+  var _args0 AddServiceSumArgs
+  _args0.A = a
+  _args0.B = b
+  var _result1 AddServiceSumResult
+  if err = p.c.Call(ctx, "Sum", &_args0, &_result1); err != nil {
     return
   }
-  if method != "Sum" {
-    err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "Sum failed: wrong method name")
-    return
-  }
-  if p.SeqId != seqId {
-    err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "Sum failed: out of sequence response")
-    return
-  }
-  if mTypeId == thrift.EXCEPTION {
-    error0 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-    var error1 error
-    error1, err = error0.Read(iprot)
-    if err != nil {
-      return
-    }
-    if err = iprot.ReadMessageEnd(); err != nil {
-      return
-    }
-    err = error1
-    return
-  }
-  if mTypeId != thrift.REPLY {
-    err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "Sum failed: invalid message type")
-    return
-  }
-  result := AddServiceSumResult{}
-  if err = result.Read(iprot); err != nil {
-    return
-  }
-  if err = iprot.ReadMessageEnd(); err != nil {
-    return
-  }
-  value = result.GetSuccess()
-  return
+  return _result1.GetSuccess(), nil
 }
 
 // Parameters:
 //  - A
 //  - B
 func (p *AddServiceClient) Concat(ctx context.Context, a string, b string) (r *ConcatReply, err error) {
-  if err = p.sendConcat(a, b); err != nil { return }
-  return p.recvConcat()
+  var _args2 AddServiceConcatArgs
+  _args2.A = a
+  _args2.B = b
+  var _result3 AddServiceConcatResult
+  if err = p.c.Call(ctx, "Concat", &_args2, &_result3); err != nil {
+    return
+  }
+  return _result3.GetSuccess(), nil
 }
-
-func (p *AddServiceClient) sendConcat(a string, b string)(err error) {
-  oprot := p.OutputProtocol
-  if oprot == nil {
-    oprot = p.ProtocolFactory.GetProtocol(p.Transport)
-    p.OutputProtocol = oprot
-  }
-  p.SeqId++
-  if err = oprot.WriteMessageBegin("Concat", thrift.CALL, p.SeqId); err != nil {
-      return
-  }
-  args := AddServiceConcatArgs{
-  A : a,
-  B : b,
-  }
-  if err = args.Write(oprot); err != nil {
-      return
-  }
-  if err = oprot.WriteMessageEnd(); err != nil {
-      return
-  }
-  return oprot.Flush()
-}
-
-
-func (p *AddServiceClient) recvConcat() (value *ConcatReply, err error) {
-  iprot := p.InputProtocol
-  if iprot == nil {
-    iprot = p.ProtocolFactory.GetProtocol(p.Transport)
-    p.InputProtocol = iprot
-  }
-  method, mTypeId, seqId, err := iprot.ReadMessageBegin()
-  if err != nil {
-    return
-  }
-  if method != "Concat" {
-    err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "Concat failed: wrong method name")
-    return
-  }
-  if p.SeqId != seqId {
-    err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "Concat failed: out of sequence response")
-    return
-  }
-  if mTypeId == thrift.EXCEPTION {
-    error2 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-    var error3 error
-    error3, err = error2.Read(iprot)
-    if err != nil {
-      return
-    }
-    if err = iprot.ReadMessageEnd(); err != nil {
-      return
-    }
-    err = error3
-    return
-  }
-  if mTypeId != thrift.REPLY {
-    err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "Concat failed: invalid message type")
-    return
-  }
-  result := AddServiceConcatResult{}
-  if err = result.Read(iprot); err != nil {
-    return
-  }
-  if err = iprot.ReadMessageEnd(); err != nil {
-    return
-  }
-  value = result.GetSuccess()
-  return
-}
-
 
 type AddServiceProcessor struct {
   processorMap map[string]thrift.TProcessorFunction
