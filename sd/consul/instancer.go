@@ -6,6 +6,7 @@ import (
 
 	consul "github.com/hashicorp/consul/api"
 
+	"github.com/go-kit/kit/backoff"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/kit/sd/internal/instance"
@@ -59,6 +60,7 @@ func (s *Instancer) loop(lastIndex uint64) {
 	var (
 		instances []string
 		err       error
+		backoff   = backoff.New(s.quitc)
 	)
 	for {
 		instances, lastIndex, err = s.getInstances(lastIndex, s.quitc)
@@ -68,8 +70,10 @@ func (s *Instancer) loop(lastIndex uint64) {
 		case err != nil:
 			s.logger.Log("err", err)
 			s.cache.Update(sd.Event{Err: err})
+			backoff.Wait()
 		default:
 			s.cache.Update(sd.Event{Instances: instances})
+			backoff.Reset()
 		}
 	}
 }
