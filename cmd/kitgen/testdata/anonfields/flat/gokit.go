@@ -23,7 +23,7 @@ type FooResponse struct {
 	Err error
 }
 
-func makeFooEndpoint(s Service) endpoint.Endpoint {
+func MakeFooEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(FooRequest)
 		i, err := s.Foo(ctx, req.I, req.S)

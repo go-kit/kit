@@ -143,7 +143,7 @@ func (m method) encoderFunc() ast.Decl {
 }
 
 func (m method) endpointMakerName() *ast.Ident {
-	return id("make" + m.name.Name + "Endpoint")
+	return id("Make" + m.name.Name + "Endpoint")
 }
 
 func (m method) requestStruct() ast.Decl {
