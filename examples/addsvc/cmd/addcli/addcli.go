@@ -34,10 +34,10 @@ func main() {
 	// see profilesvc.
 	fs := flag.NewFlagSet("addcli", flag.ExitOnError)
 	var (
-		httpAddr   = fs.String("http-addr", "", "HTTP address of addsvc")
-		grpcAddr   = fs.String("grpc-addr", "", "gRPC address of addsvc")
-		thriftAddr = fs.String("thrift-addr", "", "Thrift address of addsvc")
-		//jsonRPCAddr    = fs.String("jsonrpc-addr", "", "JSON RPC address of addsvc")
+		httpAddr       = fs.String("http-addr", "", "HTTP address of addsvc")
+		grpcAddr       = fs.String("grpc-addr", "", "gRPC address of addsvc")
+		thriftAddr     = fs.String("thrift-addr", "", "Thrift address of addsvc")
+		jsonRPCAddr    = fs.String("jsonrpc-addr", "", "JSON RPC address of addsvc")
 		thriftProtocol = fs.String("thrift-protocol", "binary", "binary, compact, json, simplejson")
 		thriftBuffer   = fs.Int("thrift-buffer", 0, "0 for unbuffered")
 		thriftFramed   = fs.Bool("thrift-framed", false, "true to enable framing")
@@ -103,6 +103,9 @@ func main() {
 		}
 		defer conn.Close()
 		svc = addtransport.NewGRPCClient(conn, tracer, log.NewNopLogger())
+	} else if *jsonRPCAddr != "" {
+		// TODO: Add tracer
+		svc, err = addtransport.NewJSONRPCClient(*jsonRPCAddr, log.NewNopLogger())
 	} else if *thriftAddr != "" {
 		// It's necessary to do all of this construction in the func main,
 		// because (among other reasons) we need to control the lifecycle of the

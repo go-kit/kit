@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
@@ -39,22 +38,12 @@ func NewServer(
 	return s
 }
 
-// EndpointCodec defines and Endpoint and its associated codecs
-type EndpointCodec struct {
-	Endpoint endpoint.Endpoint
-	Decode   DecodeRequestFunc
-	Encode   EncodeResponseFunc
-}
-
-// EndpointCodecMap maps the Request.Method to the proper EndpointCodec
-type EndpointCodecMap map[string]EndpointCodec
-
 // ServerOption sets an optional parameter for servers.
 type ServerOption func(*Server)
 
 // ServerBefore functions are executed on the HTTP request object before the
-// request is decoded.
 func ServerBefore(before ...httptransport.RequestFunc) ServerOption {
+	// request is decoded.
 	return func(s *Server) { s.before = append(s.before, before...) }
 }
 
@@ -89,6 +78,7 @@ func ServerFinalizer(f httptransport.ServerFinalizerFunc) ServerOption {
 
 // ServeHTTP implements http.Handler.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("HERE!")
 	if r.Method != http.MethodPost {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)

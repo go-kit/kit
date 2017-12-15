@@ -56,9 +56,9 @@ func (id *RequestID) String() (string, error) {
 // Response defines a JSON RPC response from the spec
 // http://www.jsonrpc.org/specification#response_object
 type Response struct {
-	JSONRPC string      `json:"jsonrpc"`
-	Result  interface{} `json:"result,omitempty"`
-	Error   *Error      `json:"error,omitemty"`
+	JSONRPC string          `json:"jsonrpc"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   *Error          `json:"error,omitemty"`
 }
 
 const (
