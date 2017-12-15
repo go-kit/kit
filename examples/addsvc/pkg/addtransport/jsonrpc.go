@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/time/rate"
+
 	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/examples/addsvc/pkg/addendpoint"
@@ -16,7 +18,6 @@ import (
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/kit/transport/http/jsonrpc"
-	jujuratelimit "github.com/juju/ratelimit"
 	stdopentracing "github.com/opentracing/opentracing-go"
 	"github.com/sony/gobreaker"
 )
@@ -49,7 +50,7 @@ func NewJSONRPCClient(instance string, tracer stdopentracing.Tracer, logger log.
 	// construct per-endpoint circuitbreaker middlewares to demonstrate how
 	// that's done, although they could easily be combined into a single breaker
 	// for the entire remote instance, too.
-	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
+	limiter := ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 100))
 
 	var sumEndpoint endpoint.Endpoint
 	{
