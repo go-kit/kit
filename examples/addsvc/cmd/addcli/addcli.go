@@ -104,8 +104,7 @@ func main() {
 		defer conn.Close()
 		svc = addtransport.NewGRPCClient(conn, tracer, log.NewNopLogger())
 	} else if *jsonRPCAddr != "" {
-		// TODO: Add tracer
-		svc, err = addtransport.NewJSONRPCClient(*jsonRPCAddr, log.NewNopLogger())
+		svc, err = addtransport.NewJSONRPCClient(*jsonRPCAddr, tracer, log.NewNopLogger())
 	} else if *thriftAddr != "" {
 		// It's necessary to do all of this construction in the func main,
 		// because (among other reasons) we need to control the lifecycle of the

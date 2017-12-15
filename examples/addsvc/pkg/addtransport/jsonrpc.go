@@ -5,12 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
+	"time"
 
+	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/examples/addsvc/pkg/addendpoint"
 	"github.com/go-kit/kit/examples/addsvc/pkg/addservice"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/ratelimit"
+	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/kit/transport/http/jsonrpc"
+	jujuratelimit "github.com/juju/ratelimit"
+	stdopentracing "github.com/opentracing/opentracing-go"
+	"github.com/sony/gobreaker"
 )
 
 // NewJSONRPCHandler returns a JSON RPC Server/Handler that can be passed to http.Handle()
@@ -26,17 +34,37 @@ func NewJSONRPCHandler(endpoints addendpoint.Set, logger log.Logger) *jsonrpc.Se
 // living at the remote instance. We expect instance to come from a service
 // discovery system, so likely of the form "host:port". We bake-in certain
 // middlewares, implementing the client library pattern.
-func NewJSONRPCClient(instance string, logger log.Logger) (addservice.Service, error) {
-	tgt, err := url.Parse(instance)
+func NewJSONRPCClient(instance string, tracer stdopentracing.Tracer, logger log.Logger) (addservice.Service, error) {
+	// Quickly sanitize the instance string.
+	if !strings.HasPrefix(instance, "http") {
+		instance = "http://" + instance
+	}
+	u, err := url.Parse(instance)
 	if err != nil {
 		return nil, err
 	}
 
+	// We construct a single ratelimiter middleware, to limit the total outgoing
+	// QPS from this client to all methods on the remote instance. We also
+	// construct per-endpoint circuitbreaker middlewares to demonstrate how
+	// that's done, although they could easily be combined into a single breaker
+	// for the entire remote instance, too.
+	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
+
 	var sumEndpoint endpoint.Endpoint
 	{
-		c := jsonrpc.NewClient(tgt, "sum", encodeSumRequest, decodeSumResponse)
-		sumEndpoint = c.Endpoint()
-		// TODO: Add middlewares.
+		sumEndpoint = jsonrpc.NewClient(
+			u,
+			"sum",
+			encodeSumRequest,
+			decodeSumResponse,
+		).Endpoint()
+		sumEndpoint = opentracing.TraceClient(tracer, "Sum")(sumEndpoint)
+		sumEndpoint = limiter(sumEndpoint)
+		sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "Sum",
+			Timeout: 30 * time.Second,
+		}))(sumEndpoint)
 	}
 
 	var concatEndpoint endpoint.Endpoint
