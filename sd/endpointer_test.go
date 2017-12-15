@@ -19,9 +19,7 @@ func TestDefaultEndpointer(t *testing.T) {
 		f  = func(instance string) (endpoint.Endpoint, io.Closer, error) {
 			return endpoint.Nop, c[instance], nil
 		}
-		instancer = &mockInstancer{
-			cache: instance.NewCache(),
-		}
+		instancer = &mockInstancer{instance.NewCache()}
 	)
 	// set initial state
 	instancer.Update(sd.Event{Instances: []string{"a", "b"}})
@@ -69,21 +67,7 @@ func TestDefaultEndpointer(t *testing.T) {
 	// and therefore does not have access to the endpointer's private members.
 }
 
-type mockInstancer struct {
-	cache *instance.Cache
-}
-
-func (m *mockInstancer) Update(event sd.Event) {
-	m.cache.Update(event)
-}
-
-func (m *mockInstancer) Register(ch chan<- sd.Event) {
-	m.cache.Register(ch)
-}
-
-func (m *mockInstancer) Deregister(ch chan<- sd.Event) {
-	m.cache.Deregister(ch)
-}
+type mockInstancer struct{ *instance.Cache }
 
 type closer chan struct{}
 

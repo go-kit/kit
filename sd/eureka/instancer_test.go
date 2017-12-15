@@ -9,7 +9,7 @@ import (
 	"github.com/go-kit/kit/sd"
 )
 
-var _ sd.Instancer = &Instancer{} // API check
+var _ sd.Instancer = (*Instancer)(nil) // API check
 
 func TestInstancer(t *testing.T) {
 	connection := &testConnection{

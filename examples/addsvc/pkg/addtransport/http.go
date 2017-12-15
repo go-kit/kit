@@ -11,7 +11,8 @@ import (
 	"strings"
 	"time"
 
-	jujuratelimit "github.com/juju/ratelimit"
+	"golang.org/x/time/rate"
+
 	stdopentracing "github.com/opentracing/opentracing-go"
 	"github.com/sony/gobreaker"
 
@@ -68,7 +69,7 @@ func NewHTTPClient(instance string, tracer stdopentracing.Tracer, logger log.Log
 	// construct per-endpoint circuitbreaker middlewares to demonstrate how
 	// that's done, although they could easily be combined into a single breaker
 	// for the entire remote instance, too.
-	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
+	limiter := ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 100))
 
 	// Each individual endpoint is an http/transport.Client (which implements
 	// endpoint.Endpoint) that gets wrapped with various middlewares. If you
