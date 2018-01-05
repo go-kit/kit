@@ -17,7 +17,11 @@ import (
 )
 
 func addBody() io.Reader {
-	return strings.NewReader(`{"jsonrpc": "2.0", "method": "add", "params": [3, 2], "id": 1}`)
+	return body(`{"jsonrpc": "2.0", "method": "add", "params": [3, 2], "id": 1}`)
+}
+
+func body(in string) io.Reader {
+	return strings.NewReader(in)
 }
 
 func expectErrorCode(t *testing.T, want int, body []byte) {
@@ -136,6 +140,30 @@ func TestServerErrorEncoder(t *testing.T) {
 	}
 }
 
+func TestCanRejectNonPostRequest(t *testing.T) {
+	ecm := jsonrpc.EndpointCodecMap{}
+	handler := jsonrpc.NewServer(ecm)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	resp, _ := http.Get(server.URL)
+	if want, have := http.StatusMethodNotAllowed, resp.StatusCode; want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+}
+
+func TestCanRejectInvalidJSON(t *testing.T) {
+	ecm := jsonrpc.EndpointCodecMap{}
+	handler := jsonrpc.NewServer(ecm)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	resp, _ := http.Post(server.URL, "application/json", body("clearlynotjson"))
+	if want, have := http.StatusOK, resp.StatusCode; want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+	buf, _ := ioutil.ReadAll(resp.Body)
+	expectErrorCode(t, jsonrpc.ParseError, buf)
+}
+
 func TestServerUnregisteredMethod(t *testing.T) {
 	ecm := jsonrpc.EndpointCodecMap{}
 	handler := jsonrpc.NewServer(ecm)
@@ -240,6 +268,38 @@ func TestMultipleServerAfter(t *testing.T) {
 	case <-done:
 	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for finalizer")
+	}
+}
+
+func TestCanFinalize(t *testing.T) {
+	var done = make(chan struct{})
+	var finalizerCalled bool
+	ecm := jsonrpc.EndpointCodecMap{
+		"add": jsonrpc.EndpointCodec{
+			Endpoint: endpoint.Nop,
+			Decode:   nopDecoder,
+			Encode:   nopEncoder,
+		},
+	}
+	handler := jsonrpc.NewServer(
+		ecm,
+		jsonrpc.ServerFinalizer(func(ctx context.Context, code int, req *http.Request) {
+			finalizerCalled = true
+			close(done)
+		}),
+	)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	http.Post(server.URL, "application/json", addBody()) // nolint
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for finalizer")
+	}
+
+	if !finalizerCalled {
+		t.Fatal("Finalizer was not called.")
 	}
 }
 

@@ -100,8 +100,9 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var req Request
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		s.logger.Log("err", err)
-		s.errorEncoder(ctx, err, w)
+		rpcerr := parseError("JSON could not be decoded: " + err.Error())
+		s.logger.Log("err", rpcerr)
+		s.errorEncoder(ctx, rpcerr, w)
 		return
 	}
 

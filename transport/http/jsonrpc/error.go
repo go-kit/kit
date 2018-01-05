@@ -54,15 +54,21 @@ func ErrorMessage(code int) string {
 	return errorMessage[code]
 }
 
-type parseError struct{}
+type parseError string
 
-func (e *parseError) ErrorCode() int {
+func (e parseError) Error() string {
+	return string(e)
+}
+func (e parseError) ErrorCode() int {
 	return ParseError
 }
 
-type invalidRequestError struct{}
+type invalidRequestError string
 
-func (e *invalidRequestError) ErrorCode() int {
+func (e invalidRequestError) Error() string {
+	return string(e)
+}
+func (e invalidRequestError) ErrorCode() int {
 	return InvalidRequestError
 }
 
@@ -71,19 +77,24 @@ type methodNotFoundError string
 func (e methodNotFoundError) Error() string {
 	return string(e)
 }
-
 func (e methodNotFoundError) ErrorCode() int {
 	return MethodNotFoundError
 }
 
-type invalidParamsError struct{}
+type invalidParamsError string
 
+func (e invalidParamsError) Error() string {
+	return string(e)
+}
 func (e invalidParamsError) ErrorCode() int {
 	return InvalidParamsError
 }
 
-type internalError struct{}
+type internalError string
 
-func (e *internalError) ErrorCode() int {
+func (e internalError) Error() string {
+	return string(e)
+}
+func (e internalError) ErrorCode() int {
 	return InternalError
 }
