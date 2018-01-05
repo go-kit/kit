@@ -70,6 +70,18 @@ func NewJSONRPCClient(instance string, tracer stdopentracing.Tracer, logger log.
 
 	var concatEndpoint endpoint.Endpoint
 	{
+		concatEndpoint = jsonrpc.NewClient(
+			u,
+			"concat",
+			encodeConcatRequest,
+			decodeConcatResponse,
+		).Endpoint()
+		concatEndpoint = opentracing.TraceClient(tracer, "Concat")(concatEndpoint)
+		concatEndpoint = limiter(concatEndpoint)
+		concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "Concat",
+			Timeout: 30 * time.Second,
+		}))(concatEndpoint)
 	}
 
 	// Returning the endpoint.Set as a service.Service relies on the
@@ -89,6 +101,11 @@ func makeEndpointCodecMap(endpoints addendpoint.Set) jsonrpc.EndpointCodecMap {
 			Endpoint: endpoints.SumEndpoint,
 			Decode:   decodeSumRequest,
 			Encode:   encodeSumResponse,
+		},
+		"concat": jsonrpc.EndpointCodec{
+			Endpoint: endpoints.ConcatEndpoint,
+			Decode:   decodeConcatRequest,
+			Encode:   encodeConcatResponse,
 		},
 	}
 }
@@ -133,6 +150,54 @@ func encodeSumRequest(_ context.Context, obj interface{}) (json.RawMessage, erro
 	req, ok := obj.(addendpoint.SumRequest)
 	if !ok {
 		return nil, fmt.Errorf("couldn't assert request as SumRequest, got %T", obj)
+	}
+	b, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't marshal request: %s", err)
+	}
+	return b, nil
+}
+
+func decodeConcatRequest(_ context.Context, msg json.RawMessage) (interface{}, error) {
+	var req addendpoint.ConcatRequest
+	err := json.Unmarshal(msg, &req)
+	if err != nil {
+		return nil, &jsonrpc.Error{
+			Code:    -32000,
+			Message: fmt.Sprintf("couldn't unmarshal body to concat request: %s", err),
+		}
+	}
+	return req, nil
+}
+
+func encodeConcatResponse(_ context.Context, obj interface{}) (json.RawMessage, error) {
+	res, ok := obj.(addendpoint.ConcatResponse)
+	if !ok {
+		return nil, &jsonrpc.Error{
+			Code:    -32000,
+			Message: fmt.Sprintf("Asserting result to *ConcatResponse failed. Got %T, %+v", obj, obj),
+		}
+	}
+	b, err := json.Marshal(res)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't marshal response: %s", err)
+	}
+	return b, nil
+}
+
+func decodeConcatResponse(_ context.Context, msg json.RawMessage) (interface{}, error) {
+	var res addendpoint.ConcatResponse
+	err := json.Unmarshal(msg, &res)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't unmarshal body to ConcatResponse: %s", err)
+	}
+	return res, nil
+}
+
+func encodeConcatRequest(_ context.Context, obj interface{}) (json.RawMessage, error) {
+	req, ok := obj.(addendpoint.ConcatRequest)
+	if !ok {
+		return nil, fmt.Errorf("couldn't assert request as ConcatRequest, got %T", obj)
 	}
 	b, err := json.Marshal(req)
 	if err != nil {
