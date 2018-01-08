@@ -74,11 +74,11 @@ The encoder takes the output of the endpoint, and builds the raw JSON message th
 Now that we have an EndpointCodec with decoder, endpoint, and encoder, we can wire up the server:
 
 	handler := jsonrpc.NewServer(jsonrpc.EndpointCodecMap{
-		"sum":	 jsonrpc.EndpointCodec{
-					Endpoint: sumEndpoint,
-					Decode:   decodeSumRequest,
-					Encode:   encodeSumResponse,
-				},
+		"sum": jsonrpc.EndpointCodec{
+			Endpoint: sumEndpoint,
+			Decode:   decodeSumRequest,
+			Encode:   encodeSumResponse,
+		},
 	})
 	http.Handle("/rpc", handler)
 	http.ListenAndServe(":80", nil)
