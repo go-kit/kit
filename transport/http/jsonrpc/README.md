@@ -80,7 +80,7 @@ Now that we have an EndpointCodec with decoder, endpoint, and encoder, we can wi
 					Encode:   encodeSumResponse,
 				},
 	})
-	http.Handle("/v1/rpc", handler)
+	http.Handle("/rpc", handler)
 	http.ListenAndServe(":80", nil)
 
 With all of this done, our example request above should result in a response like this:
