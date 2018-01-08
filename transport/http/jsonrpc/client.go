@@ -27,6 +27,7 @@ type Client struct {
 	before         []httptransport.RequestFunc
 	after          []httptransport.ClientResponseFunc
 	finalizer      httptransport.ClientFinalizerFunc
+	requestID      requestIDGenerator
 	bufferedStream bool
 }
 
@@ -46,6 +47,7 @@ func NewClient(
 		dec:            dec,
 		before:         []httptransport.RequestFunc{},
 		after:          []httptransport.ClientResponseFunc{},
+		requestID:      new(AutoIncrementRequestID),
 		bufferedStream: false,
 	}
 	for _, option := range options {
@@ -79,20 +81,25 @@ func ClientAfter(after ...httptransport.ClientResponseFunc) ClientOption {
 // ClientFinalizer is executed at the end of every HTTP request.
 // By default, no finalizer is registered.
 func ClientFinalizer(f httptransport.ClientFinalizerFunc) ClientOption {
-	return func(s *Client) { s.finalizer = f }
+	return func(c *Client) { c.finalizer = f }
+}
+
+// requestIDGenerator returns an ID for the request.
+type requestIDGenerator interface {
+	Generate() *RequestID
+}
+
+// ClientRequestIDGenerator is executed before each request to generate an ID
+// for the request.
+// By default, AutoIncrementRequestID is used.
+func ClientRequestIDGenerator(g requestIDGenerator) ClientOption {
+	return func(c *Client) { c.requestID = g }
 }
 
 // BufferedStream sets whether the Response.Body is left open, allowing it
 // to be read from later. Useful for transporting a file as a buffered stream.
 func BufferedStream(buffered bool) ClientOption {
 	return func(c *Client) { c.bufferedStream = buffered }
-}
-
-func (c Client) requestID() *RequestID {
-	return &RequestID{
-		// TODO: Auto-increment.
-		intValue: 1,
-	}
 }
 
 // Endpoint returns a usable endpoint that invokes the remote endpoint.
@@ -123,7 +130,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			JSONRPC: "",
 			Method:  c.method,
 			Params:  params,
-			ID:      c.requestID(),
+			ID:      c.requestID.Generate(),
 		}
 
 		req, err := http.NewRequest("POST", c.tgt.String(), nil)
@@ -171,6 +178,19 @@ func (c Client) Endpoint() endpoint.Endpoint {
 // request, after the response is returned. The principal
 // intended use is for error logging. Additional response parameters are
 // provided in the context under keys with the ContextKeyResponse prefix.
-// Note: err may be nil. There maybe also no additional response parameters depending on
-// when an error occurs.
+// Note: err may be nil. There maybe also no additional response parameters
+// depending on when an error occurs.
 type ClientFinalizerFunc func(ctx context.Context, err error)
+
+// AutoIncrementRequestID is a RequestIDGenerator that generates
+// auto-incrementing integer IDs.
+type AutoIncrementRequestID int
+
+// Generate satisfies RequestIDGenerator
+func (i *AutoIncrementRequestID) Generate() *RequestID {
+	id := *i
+	*i++
+	return &RequestID{
+		intValue: int(id),
+	}
+}
