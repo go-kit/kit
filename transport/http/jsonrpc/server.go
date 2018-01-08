@@ -184,8 +184,10 @@ func DefaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 }
 
 // ErrorCoder is checked by DefaultErrorEncoder. If an error value implements
-// ErrorCoder, the Error will be used when encoding the error. By default,
-// InternalError (-32603) is used.
+// ErrorCoder, the integer result of ErrorCode() will be used as the JSONRPC
+// error code when encoding the error.
+//
+// By default, InternalError (-32603) is used.
 type ErrorCoder interface {
 	ErrorCode() int
 }
