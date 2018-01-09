@@ -17,7 +17,7 @@ type Server struct {
 	before       []RequestFunc
 	after        []ServerResponseFunc
 	errorEncoder ErrorEncoder
-	finalizer    ServerFinalizerFunc
+	finalizer    []ServerFinalizerFunc
 	logger       log.Logger
 }
 
@@ -76,8 +76,8 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 
 // ServerFinalizer is executed at the end of every HTTP request.
 // By default, no finalizer is registered.
-func ServerFinalizer(f ServerFinalizerFunc) ServerOption {
-	return func(s *Server) { s.finalizer = f }
+func ServerFinalizer(f ...ServerFinalizerFunc) ServerOption {
+	return func(s *Server) { s.finalizer = append(s.finalizer, f...) }
 }
 
 // ServeHTTP implements http.Handler.
@@ -89,7 +89,9 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			ctx = context.WithValue(ctx, ContextKeyResponseHeaders, iw.Header())
 			ctx = context.WithValue(ctx, ContextKeyResponseSize, iw.written)
-			s.finalizer(ctx, iw.code, r)
+			for _, f := range s.finalizer {
+				f(ctx, iw.code, r)
+			}
 		}()
 		w = iw
 	}

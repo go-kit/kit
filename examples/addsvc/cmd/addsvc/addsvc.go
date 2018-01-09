@@ -26,6 +26,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/prometheus"
+	kitgrpc "github.com/go-kit/kit/transport/grpc"
 
 	addpb "github.com/go-kit/kit/examples/addsvc/pb"
 	"github.com/go-kit/kit/examples/addsvc/pkg/addendpoint"
@@ -218,7 +219,9 @@ func main() {
 		}
 		g.Add(func() error {
 			logger.Log("transport", "gRPC", "addr", *grpcAddr)
-			baseServer := grpc.NewServer()
+			// we add the Go Kit gRPC Interceptor to our gRPC service as it is used by
+			// the here demonstrated zipkin tracing middleware.
+			baseServer := grpc.NewServer(grpc.UnaryInterceptor(kitgrpc.Interceptor))
 			addpb.RegisterAddServer(baseServer, grpcServer)
 			return baseServer.Serve(grpcListener)
 		}, func(error) {

@@ -3,6 +3,7 @@ package zipkin
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	zipkin "github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
@@ -12,41 +13,180 @@ import (
 	kithttp "github.com/go-kit/kit/transport/http"
 )
 
-// ContextToHTTP returns an http RequestFunc that injects a Zipkin Span found
-// in `ctx` into the http headers. If no such Span can be found, the RequestFunc
-// is a noop.
-func ContextToHTTP(tracer *zipkin.Tracer, logger log.Logger) kithttp.RequestFunc {
-	return func(ctx context.Context, req *http.Request) context.Context {
-		if span := zipkin.SpanFromContext(ctx); span != nil {
-			// add some common Zipkin Tags
-			zipkin.TagHTTPMethod.Set(span, req.Method)
-			zipkin.TagHTTPUrl.Set(span, req.URL.String())
-			if endpoint, err := zipkin.NewEndpoint("", req.URL.Host); err == nil {
-				span.SetRemoteEndpoint(endpoint)
+// HTTPClientTrace enables Zipkin tracing of a Go kit HTTP Client Transport.
+func HTTPClientTrace(tracer *zipkin.Tracer, options ...Option) kithttp.ClientOption {
+	config := tracerOptions{
+		tags:      make(map[string]string),
+		name:      "",
+		logger:    log.NewNopLogger(),
+		propagate: true,
+	}
+
+	for _, option := range options {
+		option(&config)
+	}
+
+	clientBefore := kithttp.ClientBefore(
+		func(ctx context.Context, req *http.Request) context.Context {
+			var (
+				spanContext model.SpanContext
+				name        string
+			)
+
+			if config.name != "" {
+				name = config.name
+			} else {
+				name = req.Method
 			}
-			// There's nothing we can do with any errors here.
-			if err := b3.InjectHTTP(req)(span.Context()); err != nil {
-				logger.Log("err", err)
+
+			if parent := zipkin.SpanFromContext(ctx); parent != nil {
+				spanContext = parent.Context()
 			}
-		}
-		return ctx
+
+			tags := map[string]string{
+				string(zipkin.TagHTTPMethod): req.Method,
+				string(zipkin.TagHTTPUrl):    req.URL.String(),
+			}
+
+			span := tracer.StartSpan(
+				name,
+				zipkin.Kind(model.Client),
+				zipkin.Tags(config.tags),
+				zipkin.Tags(tags),
+				zipkin.Parent(spanContext),
+				zipkin.FlushOnFinish(false),
+			)
+
+			if config.propagate {
+				if err := b3.InjectHTTP(req)(span.Context()); err != nil {
+					config.logger.Log("err", err)
+				}
+			}
+
+			return zipkin.NewContext(ctx, span)
+		},
+	)
+
+	clientAfter := kithttp.ClientAfter(
+		func(ctx context.Context, res *http.Response) context.Context {
+			if span := zipkin.SpanFromContext(ctx); span != nil {
+				zipkin.TagHTTPResponseSize.Set(span, strconv.FormatInt(res.ContentLength, 10))
+				zipkin.TagHTTPStatusCode.Set(span, strconv.Itoa(res.StatusCode))
+				if res.StatusCode > 399 {
+					zipkin.TagError.Set(span, strconv.Itoa(res.StatusCode))
+				}
+				span.Finish()
+			}
+
+			return ctx
+		},
+	)
+
+	clientFinalizer := kithttp.ClientFinalizer(
+		func(ctx context.Context, err error) {
+			if span := zipkin.SpanFromContext(ctx); span != nil {
+				if err != nil {
+					zipkin.TagError.Set(span, err.Error())
+				}
+				// calling span.Finish() a second time is a noop, if we didn't get to
+				// ClientAfter we can at least time the early bail out by calling it
+				// here.
+				span.Finish()
+				// send span to the Reporter
+				span.Flush()
+			}
+		},
+	)
+
+	return func(c *kithttp.Client) {
+		clientBefore(c)
+		clientAfter(c)
+		clientFinalizer(c)
 	}
 }
 
-// HTTPToContext returns an http RequestFunc that tries to join with a Zipkin
-// trace found in `req` and starts a new Span called  `operationName`
-// accordingly. If no trace could be found in `req`, the Span will be a trace
-// root. The Span is incorporated in the returned Context and can be retrieved
-// with zipkin.SpanFromContext(ctx).
-func HTTPToContext(tracer *zipkin.Tracer, operationName string, logger log.Logger) kithttp.RequestFunc {
-	return func(ctx context.Context, req *http.Request) context.Context {
-		spanContext := tracer.Extract(b3.ExtractHTTP(req))
-		span := tracer.StartSpan(
-			operationName, zipkin.Kind(model.Server), zipkin.Parent(spanContext),
-		)
-		// add some common Zipkin Tags
-		zipkin.TagHTTPMethod.Set(span, req.Method)
-		zipkin.TagHTTPUrl.Set(span, req.URL.String())
-		return zipkin.NewContext(ctx, span)
+// HTTPServerTrace enables Zipkin tracing of a Go kit HTTP Server Transport.
+func HTTPServerTrace(tracer *zipkin.Tracer, options ...Option) kithttp.ServerOption {
+	config := tracerOptions{
+		tags:      make(map[string]string),
+		name:      "",
+		logger:    log.NewNopLogger(),
+		propagate: true,
+	}
+
+	for _, option := range options {
+		option(&config)
+	}
+
+	serverBefore := kithttp.ServerBefore(
+		func(ctx context.Context, req *http.Request) context.Context {
+			var (
+				spanContext model.SpanContext
+				name        string
+			)
+
+			if config.name != "" {
+				name = config.name
+			} else {
+				name = req.Method
+			}
+
+			if config.propagate {
+				spanContext = tracer.Extract(b3.ExtractHTTP(req))
+				if spanContext.Err != nil {
+					config.logger.Log("err", spanContext.Err)
+				}
+			}
+
+			tags := map[string]string{
+				string(zipkin.TagHTTPMethod): req.Method,
+				string(zipkin.TagHTTPPath):   req.URL.Path,
+			}
+
+			span := tracer.StartSpan(
+				name,
+				zipkin.Kind(model.Server),
+				zipkin.Tags(config.tags),
+				zipkin.Tags(tags),
+				zipkin.Parent(spanContext),
+				zipkin.FlushOnFinish(false),
+			)
+
+			return zipkin.NewContext(ctx, span)
+		},
+	)
+
+	serverAfter := kithttp.ServerAfter(
+		func(ctx context.Context, _ http.ResponseWriter) context.Context {
+			if span := zipkin.SpanFromContext(ctx); span != nil {
+				span.Finish()
+			}
+
+			return ctx
+		},
+	)
+
+	serverFinalizer := kithttp.ServerFinalizer(
+		func(ctx context.Context, code int, r *http.Request) {
+			if span := zipkin.SpanFromContext(ctx); span != nil {
+				zipkin.TagHTTPStatusCode.Set(span, strconv.Itoa(code))
+				if rs, ok := ctx.Value(kithttp.ContextKeyResponseSize).(int64); ok {
+					zipkin.TagHTTPResponseSize.Set(span, strconv.FormatInt(rs, 10))
+				}
+
+				// calling span.Finish() a second time is a noop, if we didn't get to
+				// ServerAfter we can at least time the early bail out by calling it
+				// here.
+				span.Finish()
+				// send span to the Reporter
+				span.Flush()
+			}
+		},
+	)
+
+	return func(s *kithttp.Server) {
+		serverBefore(s)
+		serverAfter(s)
+		serverFinalizer(s)
 	}
 }

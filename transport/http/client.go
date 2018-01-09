@@ -21,7 +21,7 @@ type Client struct {
 	dec            DecodeResponseFunc
 	before         []RequestFunc
 	after          []ClientResponseFunc
-	finalizer      ClientFinalizerFunc
+	finalizer      []ClientFinalizerFunc
 	bufferedStream bool
 }
 
@@ -73,8 +73,8 @@ func ClientAfter(after ...ClientResponseFunc) ClientOption {
 
 // ClientFinalizer is executed at the end of every HTTP request.
 // By default, no finalizer is registered.
-func ClientFinalizer(f ClientFinalizerFunc) ClientOption {
-	return func(s *Client) { s.finalizer = f }
+func ClientFinalizer(f ...ClientFinalizerFunc) ClientOption {
+	return func(s *Client) { s.finalizer = append(s.finalizer, f...) }
 }
 
 // BufferedStream sets whether the Response.Body is left open, allowing it
@@ -99,7 +99,9 @@ func (c Client) Endpoint() endpoint.Endpoint {
 					ctx = context.WithValue(ctx, ContextKeyResponseHeaders, resp.Header)
 					ctx = context.WithValue(ctx, ContextKeyResponseSize, resp.ContentLength)
 				}
-				c.finalizer(ctx, err)
+				for _, f := range c.finalizer {
+					f(ctx, err)
+				}
 			}()
 		}
 

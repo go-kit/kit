@@ -32,28 +32,31 @@ import (
 // NewHTTPHandler returns an HTTP handler that makes a set of endpoints
 // available on predefined paths.
 func NewHTTPHandler(endpoints addendpoint.Set, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) http.Handler {
+	// Zipkin HTTP Server Trace can either be instantiated per endpoint with a
+	// provided operation name or a global tracing service can be instantiated
+	// without an operation name and fed to each Go kit endpoint as ServerOption.
+	// In the latter case, the operation name will be the endpoint's http method.
+	// We demonstrate a global tracing service here.
+	zipkinServer := zipkin.HTTPServerTrace(zipkinTracer)
+
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorEncoder(errorEncoder),
 		httptransport.ServerErrorLogger(logger),
+		zipkinServer,
 	}
+
 	m := http.NewServeMux()
 	m.Handle("/sum", httptransport.NewServer(
 		endpoints.SumEndpoint,
 		decodeHTTPSumRequest,
 		encodeHTTPGenericResponse,
-		append(options, httptransport.ServerBefore(
-			opentracing.HTTPToContext(otTracer, "Sum", logger),
-			zipkin.HTTPToContext(zipkinTracer, "Sum", logger),
-		))...,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(otTracer, "Sum", logger)))...,
 	))
 	m.Handle("/concat", httptransport.NewServer(
 		endpoints.ConcatEndpoint,
 		decodeHTTPConcatRequest,
 		encodeHTTPGenericResponse,
-		append(options, httptransport.ServerBefore(
-			opentracing.HTTPToContext(otTracer, "Concat", logger),
-			zipkin.HTTPToContext(zipkinTracer, "Concat", logger),
-		))...,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(otTracer, "Concat", logger)))...,
 	))
 	return m
 }
@@ -79,6 +82,17 @@ func NewHTTPClient(instance string, otTracer stdopentracing.Tracer, zipkinTracer
 	// for the entire remote instance, too.
 	limiter := ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 100))
 
+	// Zipkin HTTP Client Trace can either be instantiated per endpoint with a
+	// provided operation name or a global tracing client can be instantiated
+	// without an operation name and fed to each Go kit endpoint as ClientOption.
+	// In the latter case, the operation name will be the endpoint's http method.
+	zipkinClient := zipkin.HTTPClientTrace(zipkinTracer)
+
+	// global client middlewares
+	options := []httptransport.ClientOption{
+		zipkinClient,
+	}
+
 	// Each individual endpoint is an http/transport.Client (which implements
 	// endpoint.Endpoint) that gets wrapped with various middlewares. If you
 	// made your own client library, you'd do this work there, so your server
@@ -90,13 +104,10 @@ func NewHTTPClient(instance string, otTracer stdopentracing.Tracer, zipkinTracer
 			copyURL(u, "/sum"),
 			encodeHTTPGenericRequest,
 			decodeHTTPSumResponse,
-			httptransport.ClientBefore(
-				opentracing.ContextToHTTP(otTracer, logger),
-				zipkin.ContextToHTTP(zipkinTracer, logger),
-			),
+			append(options, httptransport.ClientBefore(opentracing.ContextToHTTP(otTracer, logger)))...,
 		).Endpoint()
 		sumEndpoint = opentracing.TraceClient(otTracer, "Sum")(sumEndpoint)
-		sumEndpoint = zipkin.TraceClient(zipkinTracer, "Sum")(sumEndpoint)
+		sumEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Sum")(sumEndpoint)
 		sumEndpoint = limiter(sumEndpoint)
 		sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
 			Name:    "Sum",
@@ -113,13 +124,10 @@ func NewHTTPClient(instance string, otTracer stdopentracing.Tracer, zipkinTracer
 			copyURL(u, "/concat"),
 			encodeHTTPGenericRequest,
 			decodeHTTPConcatResponse,
-			httptransport.ClientBefore(
-				opentracing.ContextToHTTP(otTracer, logger),
-				zipkin.ContextToHTTP(zipkinTracer, logger),
-			),
+			append(options, httptransport.ClientBefore(opentracing.ContextToHTTP(otTracer, logger)))...,
 		).Endpoint()
 		concatEndpoint = opentracing.TraceClient(otTracer, "Concat")(concatEndpoint)
-		concatEndpoint = zipkin.TraceClient(zipkinTracer, "Concat")(concatEndpoint)
+		concatEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Concat")(concatEndpoint)
 		concatEndpoint = limiter(concatEndpoint)
 		concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
 			Name:    "Concat",
