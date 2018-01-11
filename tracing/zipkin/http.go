@@ -14,7 +14,7 @@ import (
 )
 
 // HTTPClientTrace enables Zipkin tracing of a Go kit HTTP Client Transport.
-func HTTPClientTrace(tracer *zipkin.Tracer, options ...Option) kithttp.ClientOption {
+func HTTPClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.ClientOption {
 	config := tracerOptions{
 		tags:      make(map[string]string),
 		name:      "",
@@ -106,7 +106,7 @@ func HTTPClientTrace(tracer *zipkin.Tracer, options ...Option) kithttp.ClientOpt
 }
 
 // HTTPServerTrace enables Zipkin tracing of a Go kit HTTP Server Transport.
-func HTTPServerTrace(tracer *zipkin.Tracer, options ...Option) kithttp.ServerOption {
+func HTTPServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.ServerOption {
 	config := tracerOptions{
 		tags:      make(map[string]string),
 		name:      "",

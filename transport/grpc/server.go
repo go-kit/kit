@@ -87,7 +87,7 @@ func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (retctx oldco
 		md = metadata.MD{}
 	}
 
-	if s.finalizer != nil {
+	if len(s.finalizer) > 0 {
 		defer func() {
 			for _, f := range s.finalizer {
 				f(ctx, err)

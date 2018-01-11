@@ -84,7 +84,7 @@ func ServerFinalizer(f ...ServerFinalizerFunc) ServerOption {
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	if s.finalizer != nil {
+	if len(s.finalizer) > 0 {
 		iw := &interceptingWriter{w, http.StatusOK, 0}
 		defer func() {
 			ctx = context.WithValue(ctx, ContextKeyResponseHeaders, iw.Header())
