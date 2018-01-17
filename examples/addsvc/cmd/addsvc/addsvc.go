@@ -106,15 +106,16 @@ func main() {
 	var zipkinTracer *zipkin.Tracer
 	{
 		var (
-			err         error
-			hostPort    = "localhost:80"
-			serviceName = "addsvc"
+			err           error
+			hostPort      = "localhost:80"
+			serviceName   = "addsvc"
+			useNoopTracer = (*zipkinV2URL == "")
+			reporter      = zipkinhttp.NewReporter(*zipkinV2URL)
 		)
-		noopTracer := (*zipkinV2URL == "")
+		defer reporter.Close()
 		zEP, _ := zipkin.NewEndpoint(serviceName, hostPort)
-		reporter := zipkinhttp.NewReporter(*zipkinV2URL)
 		zipkinTracer, err = zipkin.NewTracer(
-			reporter, zipkin.WithLocalEndpoint(zEP), zipkin.WithNoopTracer(noopTracer),
+			reporter, zipkin.WithLocalEndpoint(zEP), zipkin.WithNoopTracer(useNoopTracer),
 		)
 		if err != nil {
 			logger.Log("err", err)

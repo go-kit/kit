@@ -90,22 +90,24 @@ func main() {
 		}
 	}
 
+	// This is a demonstration of the native Zipkin tracing client. If using
+	// Zipkin this is the more idiomatic client over OpenTracing.
 	var zipkinTracer *zipkin.Tracer
 	{
 		var (
-			err         error
-			hostPort    = "" // if host:port is unknown we can keep this empty
-			serviceName = "addsvc-cli"
+			err           error
+			hostPort      = "" // if host:port is unknown we can keep this empty
+			serviceName   = "addsvc-cli"
+			useNoopTracer = (*zipkinV2URL == "")
+			reporter      = zipkinhttp.NewReporter(*zipkinV2URL)
 		)
-		noopTracer := (*zipkinV2URL == "")
-		reporter := zipkinhttp.NewReporter(*zipkinV2URL)
 		defer reporter.Close()
 		zEP, _ := zipkin.NewEndpoint(serviceName, hostPort)
 		zipkinTracer, err = zipkin.NewTracer(
-			reporter, zipkin.WithLocalEndpoint(zEP), zipkin.WithNoopTracer(noopTracer),
+			reporter, zipkin.WithLocalEndpoint(zEP), zipkin.WithNoopTracer(useNoopTracer),
 		)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+			fmt.Fprintf(os.Stderr, "unable to create zipkin tracer: %s\n", err.Error())
 			os.Exit(1)
 		}
 	}

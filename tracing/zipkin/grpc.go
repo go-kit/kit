@@ -14,18 +14,18 @@ import (
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 )
 
-// GRPCClientTrace enables native Zipkin tracing of a Go kit gRPC Client
-// Transport invocation.
+// GRPCClientTrace enables native Zipkin tracing of a Go kit gRPC transport
+// Client.
 //
-// Go kit creates client transports per gRPC method. This middleware can be
-// set-up individually per service method by adding the method name for each of
-// the Go kit method clients using the Name() TracerOption.
+// Go kit creates gRPC transport clients per remote endpoint. This middleware
+// can be set-up individually by adding the endpoint name for each of the Go kit
+// transport clients using the Name() TracerOption.
 // If wanting to use the gRPC FullMethod (/service/method) as Span name you can
 // create a global client tracer omitting the Name() TracerOption, which you can
-// then feed to each Go kit method client.
+// then feed to each Go kit gRPC transport client.
 // If instrumenting a client to an external (not on your platform) service, you
-// might want to disallow propagation of SpanContext using the AllowPropagation
-// TracerOption and setting it to false.
+// will probably want to disallow propagation of SpanContext using the
+// AllowPropagation TracerOption and setting it to false.
 func GRPCClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.ClientOption {
 	config := tracerOptions{
 		tags:      make(map[string]string),
@@ -107,7 +107,19 @@ func GRPCClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Cli
 
 }
 
-// GRPCServerTrace enables Zipkin tracing of a Go kit gRPC Server Transport.
+// GRPCServerTrace enables native Zipkin tracing of a Go kit gRPC transport
+// Server.
+//
+// Go kit creates gRPC transport servers per gRPC method. This middleware can be
+// set-up individually by adding the method name for each of the Go kit method
+// servers using the Name() TracerOption.
+// If wanting to use the gRPC FullMethod (/service/method) as Span name you can
+// create a global server tracer omitting the Name() TracerOption, which you can
+// then feed to each Go kit method server. For this to work you will need to
+// wire the Go kit gRPC Interceptor too.
+// If instrumenting a service to external (not on your platform) clients, you
+// will probably want to disallow propagation of a client SpanContext using
+// the AllowPropagation TracerOption and setting it to false.
 func GRPCServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.ServerOption {
 	config := tracerOptions{
 		tags:      make(map[string]string),

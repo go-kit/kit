@@ -13,7 +13,18 @@ import (
 	kithttp "github.com/go-kit/kit/transport/http"
 )
 
-// HTTPClientTrace enables Zipkin tracing of a Go kit HTTP Client Transport.
+// HTTPClientTrace enables native Zipkin tracing of a Go kit HTTP transport
+// Client.
+//
+// Go kit creates HTTP transport clients per remote endpoint. This middleware
+// can be set-up individually by adding the endpoint name for each of the Go kit
+// transport clients using the Name() TracerOption.
+// If wanting to use the HTTP Method (Get, Post, Put, etc.) as Span name you can
+// create a global client tracer omitting the Name() TracerOption, which you can
+// then feed to each Go kit transport client.
+// If instrumenting a client to an external (not on your platform) service, you
+// will probably want to disallow propagation of SpanContext using the
+// AllowPropagation TracerOption and setting it to false.
 func HTTPClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.ClientOption {
 	config := tracerOptions{
 		tags:      make(map[string]string),
@@ -105,7 +116,19 @@ func HTTPClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Cli
 	}
 }
 
-// HTTPServerTrace enables Zipkin tracing of a Go kit HTTP Server Transport.
+// HTTPServerTrace enables native Zipkin tracing of a Go kit HTTP transport
+// Server.
+//
+// Go kit creates HTTP transport servers per HTTP endpoint. This middleware can
+// be set-up individually by adding the method name for each of the Go kit
+// method servers using the Name() TracerOption.
+// If wanting to use the HTTP method (Get, Post, Put, etc.) as Span name you can
+// create a global server tracer omitting the Name() TracerOption, which you can
+// then feed to each Go kit method server.
+//
+// If instrumenting a service to external (not on your platform) clients, you
+// will probably want to disallow propagation of a client SpanContext using
+// the AllowPropagation TracerOption and setting it to false.
 func HTTPServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.ServerOption {
 	config := tracerOptions{
 		tags:      make(map[string]string),
