@@ -144,8 +144,10 @@ type ServerFinalizerFunc func(ctx context.Context, code int, r *http.Request)
 func EncodeJSONResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if headerer, ok := response.(Headerer); ok {
-		for k := range headerer.Headers() {
-			w.Header().Set(k, headerer.Headers().Get(k))
+		for k, values := range headerer.Headers() {
+			for _, v := range values {
+				w.Header().Add(k, v)
+			}
 		}
 	}
 	code := http.StatusOK
@@ -175,8 +177,10 @@ func DefaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	}
 	w.Header().Set("Content-Type", contentType)
 	if headerer, ok := err.(Headerer); ok {
-		for k := range headerer.Headers() {
-			w.Header().Set(k, headerer.Headers().Get(k))
+		for k, values := range headerer.Headers() {
+			for _, v := range values {
+				w.Header().Add(k, v)
+			}
 		}
 	}
 	code := http.StatusInternalServerError
