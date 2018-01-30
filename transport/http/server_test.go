@@ -261,6 +261,77 @@ func TestEncodeJSONResponse(t *testing.T) {
 	}
 }
 
+type multiHeaderResponse struct{}
+
+func (_ multiHeaderResponse) Headers() http.Header {
+	return http.Header{"Vary": []string{"Origin", "User-Agent"}}
+}
+
+func TestAddMultipleHeaders(t *testing.T) {
+	handler := httptransport.NewServer(
+		func(context.Context, interface{}) (interface{}, error) { return multiHeaderResponse{}, nil },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		httptransport.EncodeJSONResponse,
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect := map[string]map[string]struct{}{"Vary": map[string]struct{}{"Origin": struct{}{}, "User-Agent": struct{}{}}}
+	for k, vls := range resp.Header {
+		for _, v := range vls {
+			delete((expect[k]), v)
+		}
+		if len(expect[k]) != 0 {
+			t.Errorf("Header: unexpected header %s: %v", k, expect[k])
+		}
+	}
+}
+
+type multiHeaderResponseError struct {
+	multiHeaderResponse
+	msg string
+}
+
+func (m multiHeaderResponseError) Error() string {
+	return m.msg
+}
+
+func TestAddMultipleHeadersErrorEncoder(t *testing.T) {
+	errStr := "oh no"
+	handler := httptransport.NewServer(
+		func(context.Context, interface{}) (interface{}, error) {
+			return nil, multiHeaderResponseError{msg: errStr}
+		},
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		httptransport.EncodeJSONResponse,
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect := map[string]map[string]struct{}{"Vary": map[string]struct{}{"Origin": struct{}{}, "User-Agent": struct{}{}}}
+	for k, vls := range resp.Header {
+		for _, v := range vls {
+			delete((expect[k]), v)
+		}
+		if len(expect[k]) != 0 {
+			t.Errorf("Header: unexpected header %s: %v", k, expect[k])
+		}
+	}
+	if b, _ := ioutil.ReadAll(resp.Body); errStr != string(b) {
+		t.Errorf("ErrorEncoder: got: %q, expected: %q", b, errStr)
+	}
+}
+
 type noContentResponse struct{}
 
 func (e noContentResponse) StatusCode() int { return http.StatusNoContent }
