@@ -6,21 +6,18 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// rpcFn is a simple type to represent an RPC method on the Twirp client.
-type rpcFn func(context.Context, interface{}) (interface{}, error)
-
 // Client wraps a Twirp client and provides a method that implements endpoint.Endpoint.
 type Client struct {
-	rpcFn  rpcFn
-	enc    EncodeRequestFunc
-	dec    DecodeResponseFunc
-	before []ClientRequestFunc
-	after  []ClientResponseFunc
+	rpcFn     endpoint.Endpoint
+	enc       EncodeRequestFunc
+	dec       DecodeResponseFunc
+	before    []ClientRequestFunc
+	after     []ClientResponseFunc
 }
 
 // NewClient constructs a usable Client for a single remote method.
 func NewClient(
-	rpcFn rpcFn,
+	rpcFn endpoint.Endpoint,
 	enc EncodeRequestFunc,
 	dec DecodeResponseFunc,
 	options ...ClientOption,
