@@ -16,12 +16,13 @@ type Handler interface {
 
 // Server wraps an endpoint and implements Twirp Handler.
 type Server struct {
-	e      endpoint.Endpoint
-	dec    DecodeRequestFunc
-	enc    EncodeResponseFunc
-	before []ServerRequestFunc
-	after  []ServerResponseFunc
-	logger log.Logger
+	e         endpoint.Endpoint
+	dec       DecodeRequestFunc
+	enc       EncodeResponseFunc
+	before    []ServerRequestFunc
+	after     []ServerResponseFunc
+	finalizer ServerFinalizerFunc
+	logger    log.Logger
 }
 
 // NewServer constructs a new server, which implements wraps the provided
@@ -71,6 +72,13 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 // ServeTwirp implements the Handler interface.
 func (s Server) ServeTwirp(ctx context.Context, req interface{}) (context.Context, interface{}, error) {
 
+	// Process ServerFinalizerFunctions
+	if s.finalizer != nil {
+		defer func() {
+			s.finalizer(ctx, req)
+		}()
+	}
+
 	// Process ServerRequestFunctions
 	for _, f := range s.before {
 		ctx = f(ctx)
@@ -103,3 +111,8 @@ func (s Server) ServeTwirp(ctx context.Context, req interface{}) (context.Contex
 
 	return ctx, twirpResp, nil
 }
+
+// ServerFinalizerFunc can be used to perform work at the end of a
+// request, after the response has been written to the client. The principal
+// intended use is for request logging.
+type ServerFinalizerFunc func(ctx context.Context, req interface{})

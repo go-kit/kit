@@ -13,6 +13,7 @@ type Client struct {
 	dec       DecodeResponseFunc
 	before    []ClientRequestFunc
 	after     []ClientResponseFunc
+	finalizer ClientFinalizerFunc
 }
 
 // NewClient constructs a usable Client for a single remote method.
@@ -38,17 +39,23 @@ func NewClient(
 // ClientOption sets an optional parameter for clients.
 type ClientOption func(*Client)
 
-// ClientBefore sets the ClientRequestFunc that are applied to the outgoing HTTP
+// ClientBefore sets the ClientRequestFunc that are applied to the outgoing
 // request before it's invoked.
 func ClientBefore(before ...ClientRequestFunc) ClientOption {
 	return func(c *Client) { c.before = append(c.before, before...) }
 }
 
-// ClientAfter sets the ClientResponseFuncs applied to the incoming HTTP
+// ClientAfter sets the ClientResponseFuncs applied to the incoming
 // request prior to it being decoded. This is useful for obtaining anything off
 // of the response and adding onto the context prior to decoding.
 func ClientAfter(after ...ClientResponseFunc) ClientOption {
 	return func(c *Client) { c.after = append(c.after, after...) }
+}
+
+// ClientFinalizer is executed at the end of every request.
+// By default, no finalizer is registered.
+func ClientFinalizer(f ClientFinalizerFunc) ClientOption {
+	return func(s *Client) { s.finalizer = f }
 }
 
 // Endpoint returns a usable endpoint that invokes the remote endpoint.
@@ -57,11 +64,19 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		// Encode
 		var (
 			req interface{}
 			err error
 		)
+
+		// Process ClientFinalizers
+		if c.finalizer != nil {
+			defer func() {
+				c.finalizer(ctx, err)
+			}()
+		}
+
+		// Encode
 		req, err = c.enc(ctx, request)
 		if err != nil {
 			return nil, err
@@ -98,3 +113,10 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		return response, nil
 	}
 }
+
+// ClientFinalizerFunc can be used to perform work at the end of a client
+// request, after the response is returned. The principal
+// intended use is for error logging. Note: err may be nil.
+// There maybe also no additional response parameters depending on when
+// an error occurs.
+type ClientFinalizerFunc func(ctx context.Context, err error)
