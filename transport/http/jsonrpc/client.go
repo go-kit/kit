@@ -35,16 +35,14 @@ type Client struct {
 func NewClient(
 	tgt *url.URL,
 	method string,
-	enc EncodeRequestFunc,
-	dec DecodeResponseFunc,
 	options ...ClientOption,
 ) *Client {
 	c := &Client{
 		client:         http.DefaultClient,
 		method:         method,
 		tgt:            tgt,
-		enc:            enc,
-		dec:            dec,
+		enc:            DefaultRequestEncoder,
+		dec:            DefaultResponseDecoder,
 		before:         []httptransport.RequestFunc{},
 		after:          []httptransport.ClientResponseFunc{},
 		requestID:      new(AutoIncrementRequestID),
@@ -97,6 +95,18 @@ func ClientAfter(after ...httptransport.ClientResponseFunc) ClientOption {
 // By default, no finalizer is registered.
 func ClientFinalizer(f httptransport.ClientFinalizerFunc) ClientOption {
 	return func(c *Client) { c.finalizer = f }
+}
+
+// ClientRequestEncoder sets the func used to encode the request params to JSON.
+// If not set, DefaultRequestEncoder is used.
+func ClientRequestEncoder(enc EncodeRequestFunc) ClientOption {
+	return func(c *Client) { c.enc = enc }
+}
+
+// ClientResponseEncoder sets the func used to decode the response params to JSON.
+// If not set, DefaultResponseDecoder is used.
+func ClientResponseDecoder(dec DecodeResponseFunc) ClientOption {
+	return func(c *Client) { c.dec = dec }
 }
 
 // requestIDGenerator returns an ID for the request.

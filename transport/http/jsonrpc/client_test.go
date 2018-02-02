@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -23,8 +24,6 @@ func TestCanCallBeforeFunc(t *testing.T) {
 	sut := jsonrpc.NewClient(
 		u,
 		"add",
-		nopEncoder,
-		nopDecoder,
 		jsonrpc.ClientBefore(func(ctx context.Context, req *http.Request) context.Context {
 			called = true
 			return ctx
@@ -38,38 +37,25 @@ func TestCanCallBeforeFunc(t *testing.T) {
 	}
 }
 
-//func TestCanCallAfterFunc(t *testing.T) {
-//called := false
-//u, _ := url.Parse("http://senseye.io/jsonrpc")
-//sut := jsonrpc.NewClient(
-//u,
-//"add",
-//nopEncoder,
-//nopDecoder,
-//jsonrpc.ClientAfter(func(ctx context.Context, req *http.Response) context.Context {
-//called = true
-//return ctx
-//}),
-//)
-
-//_, err := sut.Endpoint()(context.TODO(), "foo")
-//if err != nil {
-//t.Fatal(err)
-//}
-
-//if !called {
-//t.Fatal("Expected client after func to be called. Wasn't.")
-//}
-//}
-
 func TestClientHappyPath(t *testing.T) {
 	var (
-		testbody = `{"jsonrpc":"2.0", "result":5}`
-		encode   = func(_ context.Context, req interface{}) (json.RawMessage, error) {
+		afterCalledKey    = "AC"
+		beforeHeaderKey   = "BF"
+		beforeHeaderValue = "beforeFuncWozEre"
+		testbody          = `{"jsonrpc":"2.0", "result":5}`
+		requestBody       []byte
+		beforeFunc        = func(ctx context.Context, r *http.Request) context.Context {
+			r.Header.Add(beforeHeaderKey, beforeHeaderValue)
+			return ctx
+		}
+		encode = func(ctx context.Context, req interface{}) (json.RawMessage, error) {
 			return json.Marshal(req)
 		}
+		afterFunc = func(ctx context.Context, r *http.Response) context.Context {
+			return context.WithValue(ctx, afterCalledKey, true)
+		}
 		decode = func(ctx context.Context, res json.RawMessage) (interface{}, error) {
-			if ac := ctx.Value("afterCalled"); ac == nil {
+			if ac := ctx.Value(afterCalledKey); ac == nil {
 				t.Fatal("after not called")
 			}
 			var result int
@@ -79,12 +65,19 @@ func TestClientHappyPath(t *testing.T) {
 			}
 			return result, nil
 		}
-		afterFunc = func(ctx context.Context, r *http.Response) context.Context {
-			return context.WithValue(ctx, "afterCalled", true)
-		}
 	)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get(beforeHeaderKey) != beforeHeaderValue {
+			t.Fatal("Header not set by before func.")
+		}
+
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil && err != io.EOF {
+			t.Fatal(err)
+		}
+		requestBody = b
+
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(testbody))
 	}))
@@ -92,12 +85,20 @@ func TestClientHappyPath(t *testing.T) {
 	sut := jsonrpc.NewClient(
 		mustParse(server.URL),
 		"add",
-		encode,
-		decode,
+		jsonrpc.ClientRequestEncoder(encode),
+		jsonrpc.ClientResponseDecoder(decode),
+		jsonrpc.ClientBefore(beforeFunc),
 		jsonrpc.ClientAfter(afterFunc),
 	)
 
-	result, err := sut.Endpoint()(context.Background(), struct{}{})
+	type addRequest struct {
+		A int
+		B int
+	}
+
+	in := addRequest{2, 2}
+
+	result, err := sut.Endpoint()(context.Background(), in)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,119 +109,98 @@ func TestClientHappyPath(t *testing.T) {
 	if ri != 5 {
 		t.Fatalf("want=5, got=%d", ri)
 	}
+
+	var requestAtServer jsonrpc.Request
+	err = json.Unmarshal(requestBody, &requestAtServer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id, _ := requestAtServer.ID.Int(); id != 0 {
+		t.Fatalf("Request ID at server: want=0, got=%d", requestAtServer.ID)
+	}
+
+	var paramsAtServer addRequest
+	err = json.Unmarshal(requestAtServer.Params, &paramsAtServer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if paramsAtServer != in {
+		t.Fatalf("want=%+v, got=%+v", in, paramsAtServer)
+	}
 }
 
-//func TestClientFinalizer(t *testing.T) {
-//var (
-//headerKey    = "X-Henlo-Lizer"
-//headerVal    = "Helllo you stinky lizard"
-//responseBody = "go eat a fly ugly\n"
-//done         = make(chan struct{})
-//encode       = func(context.Context, *http.Request, interface{}) error { return nil }
-//decode       = func(_ context.Context, r *http.Response) (interface{}, error) {
-//return TestResponse{r.Body, ""}, nil
-//}
-//)
+func TestCanUseDefaults(t *testing.T) {
+	var (
+		testbody    = `{"jsonrpc":"2.0", "result":"boogaloo"}`
+		requestBody []byte
+	)
 
-//server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//w.Header().Set(headerKey, headerVal)
-//w.Write([]byte(responseBody))
-//}))
-//defer server.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil && err != io.EOF {
+			t.Fatal(err)
+		}
+		requestBody = b
 
-//client := httptransport.NewClient(
-//"GET",
-//mustParse(server.URL),
-//encode,
-//decode,
-//httptransport.ClientFinalizer(func(ctx context.Context, err error) {
-//responseHeader := ctx.Value(httptransport.ContextKeyResponseHeaders).(http.Header)
-//if want, have := headerVal, responseHeader.Get(headerKey); want != have {
-//t.Errorf("%s: want %q, have %q", headerKey, want, have)
-//}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(testbody))
+	}))
 
-//responseSize := ctx.Value(httptransport.ContextKeyResponseSize).(int64)
-//if want, have := int64(len(responseBody)), responseSize; want != have {
-//t.Errorf("response size: want %d, have %d", want, have)
-//}
+	sut := jsonrpc.NewClient(
+		mustParse(server.URL),
+		"add",
+	)
 
-//close(done)
-//}),
-//)
+	type addRequest struct {
+		A int
+		B int
+	}
 
-//_, err := client.Endpoint()(context.Background(), struct{}{})
-//if err != nil {
-//t.Fatal(err)
-//}
+	in := addRequest{2, 2}
 
-//select {
-//case <-done:
-//case <-time.After(time.Second):
-//t.Fatal("timeout waiting for finalizer")
-//}
-//}
+	result, err := sut.Endpoint()(context.Background(), in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rs, ok := result.(string)
+	if !ok {
+		t.Fatalf("result is not string: (%T)%+v", result, result)
+	}
+	if rs != "boogaloo" {
+		t.Fatalf("want=boogaloo, got=%d", rs)
+	}
 
-//func TestEncodeJSONRequest(t *testing.T) {
-//var header http.Header
-//var body string
+	var requestAtServer jsonrpc.Request
+	err = json.Unmarshal(requestBody, &requestAtServer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var paramsAtServer addRequest
+	err = json.Unmarshal(requestAtServer.Params, &paramsAtServer)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-//server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//b, err := ioutil.ReadAll(r.Body)
-//if err != nil && err != io.EOF {
-//t.Fatal(err)
-//}
-//header = r.Header
-//body = string(b)
-//}))
+	if paramsAtServer != in {
+		t.Fatalf("want=%+v, got=%+v", in, paramsAtServer)
+	}
+}
 
-//defer server.Close()
+func TestDefaultAutoIncrementer(t *testing.T) {
+	sut := new(jsonrpc.AutoIncrementRequestID)
+	for want := 0; want < 100; want++ {
+		id := sut.Generate()
 
-//serverURL, err := url.Parse(server.URL)
-
-//if err != nil {
-//t.Fatal(err)
-//}
-
-//client := httptransport.NewClient(
-//"POST",
-//serverURL,
-//httptransport.EncodeJSONRequest,
-//func(context.Context, *http.Response) (interface{}, error) { return nil, nil },
-//).Endpoint()
-
-//for _, test := range []struct {
-//value interface{}
-//body  string
-//}{
-//{nil, "null\n"},
-//{12, "12\n"},
-//{1.2, "1.2\n"},
-//{true, "true\n"},
-//{"test", "\"test\"\n"},
-//{enhancedRequest{Foo: "foo"}, "{\"foo\":\"foo\"}\n"},
-//} {
-//if _, err := client(context.Background(), test.value); err != nil {
-//t.Error(err)
-//continue
-//}
-
-//if body != test.body {
-//t.Errorf("%v: actual %#v, expected %#v", test.value, body, test.body)
-//}
-//}
-
-//if _, err := client(context.Background(), enhancedRequest{Foo: "foo"}); err != nil {
-//t.Fatal(err)
-//}
-
-//if _, ok := header["X-Edward"]; !ok {
-//t.Fatalf("X-Edward value: actual %v, expected %v", nil, []string{"Snowden"})
-//}
-
-//if v := header.Get("X-Edward"); v != "Snowden" {
-//t.Errorf("X-Edward string: actual %v, expected %v", v, "Snowden")
-//}
-//}
+		got, err := id.Int()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Fatalf("want=%d, got=%d", want, got)
+		}
+	}
+}
 
 func mustParse(s string) *url.URL {
 	u, err := url.Parse(s)

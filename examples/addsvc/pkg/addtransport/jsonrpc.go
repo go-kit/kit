@@ -57,8 +57,8 @@ func NewJSONRPCClient(instance string, tracer stdopentracing.Tracer, logger log.
 		sumEndpoint = jsonrpc.NewClient(
 			u,
 			"sum",
-			encodeSumRequest,
-			decodeSumResponse,
+			jsonrpc.ClientRequestEncoder(encodeSumRequest),
+			jsonrpc.ClientResponseDecoder(decodeSumResponse),
 		).Endpoint()
 		sumEndpoint = opentracing.TraceClient(tracer, "Sum")(sumEndpoint)
 		sumEndpoint = limiter(sumEndpoint)
@@ -73,8 +73,8 @@ func NewJSONRPCClient(instance string, tracer stdopentracing.Tracer, logger log.
 		concatEndpoint = jsonrpc.NewClient(
 			u,
 			"concat",
-			encodeConcatRequest,
-			decodeConcatResponse,
+			jsonrpc.ClientRequestEncoder(encodeConcatRequest),
+			jsonrpc.ClientResponseDecoder(decodeConcatResponse),
 		).Endpoint()
 		concatEndpoint = opentracing.TraceClient(tracer, "Concat")(concatEndpoint)
 		concatEndpoint = limiter(concatEndpoint)
