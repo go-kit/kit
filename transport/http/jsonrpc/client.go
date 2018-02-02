@@ -56,6 +56,21 @@ func NewClient(
 	return c
 }
 
+// DefaultRequestEncoder marshals the given request to JSON.
+func DefaultRequestEncoder(_ context.Context, req interface{}) (json.RawMessage, error) {
+	return json.Marshal(req)
+}
+
+// DefaultResponseDecoder unmarshals the given JSON to interface{}.
+func DefaultResponseDecoder(_ context.Context, res json.RawMessage) (interface{}, error) {
+	var result interface{}
+	err := json.Unmarshal(res, &result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 // ClientOption sets an optional parameter for clients.
 type ClientOption func(*Client)
 
@@ -71,9 +86,9 @@ func ClientBefore(before ...httptransport.RequestFunc) ClientOption {
 	return func(c *Client) { c.before = append(c.before, before...) }
 }
 
-// ClientAfter sets the ClientResponseFuncs applied to the incoming HTTP
-// request prior to it being decoded. This is useful for obtaining anything off
-// of the response and adding onto the context prior to decoding.
+// ClientAfter sets the ClientResponseFuncs applied to the server's HTTP
+// response prior to it being decoded. This is useful for obtaining anything
+// from the response and adding onto the context prior to decoding.
 func ClientAfter(after ...httptransport.ClientResponseFunc) ClientOption {
 	return func(c *Client) { c.after = append(c.after, after...) }
 }

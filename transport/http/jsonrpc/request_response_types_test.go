@@ -25,7 +25,6 @@ func TestCanUnMarshalID(t *testing.T) {
 
 		var foo interface{}
 		_ = json.Unmarshal([]byte(JSON), &foo)
-		fmt.Printf("foo = %t %+v\n", foo, foo)
 
 		err := json.Unmarshal([]byte(JSON), &r)
 		if err != nil {
