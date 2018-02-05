@@ -393,6 +393,28 @@ func TestEnhancedError(t *testing.T) {
 	}
 }
 
+func TestNoOpRequestDecoder(t *testing.T) {
+	resw := httptest.NewRecorder()
+	req, err := http.NewRequest(http.MethodGet, "/", nil)
+	if err != nil {
+		t.Error("Failed to create request")
+	}
+	handler := httptransport.NewServer(
+		func(ctx context.Context, request interface{}) (interface{}, error) {
+			if request != nil {
+				t.Error("Expected nil request in endpoint when using NopRequestDecoder")
+			}
+			return nil, nil
+		},
+		httptransport.NopRequestDecoder,
+		httptransport.EncodeJSONResponse,
+	)
+	handler.ServeHTTP(resw, req)
+	if resw.Code != http.StatusOK {
+		t.Errorf("Expected status code %d but got %d", http.StatusOK, resw.Code)
+	}
+}
+
 func testServer(t *testing.T) (step func(), resp <-chan *http.Response) {
 	var (
 		stepch   = make(chan bool)
