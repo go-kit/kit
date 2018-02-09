@@ -9,6 +9,9 @@ import (
 	"github.com/samuel/go-zookeeper/zk"
 
 	"github.com/go-kit/kit/log"
+	"io"
+	"crypto/rand"
+	"fmt"
 )
 
 // DefaultACL is the default ACL to use for creating znodes.
@@ -234,15 +237,33 @@ func (c *client) Register(s *Service) error {
 	if s.Path[len(s.Path)-1] != '/' {
 		s.Path += "/"
 	}
-	path := s.Path + s.Name
-	if err := c.CreateParentNodes(path); err != nil {
-		return err
-	}
-	node, err := c.CreateProtectedEphemeralSequential(path, s.Data, c.acl)
+
+	var guid [16]byte
+	_, err := io.ReadFull(rand.Reader, guid[:16])
 	if err != nil {
 		return err
 	}
-	s.node = node
+	guidStr := fmt.Sprintf("%x", guid)
+	node := s.Name + "-" + guidStr
+
+	path := s.Path + s.Name + "/"
+	path = path + node
+
+	if err := c.CreateParentNodes(path); err != nil {
+		return err
+	}
+	found, stat, err := c.Exists(path)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrNodeNotFound
+	}
+	if _, err := c.Set(path, s.Data, stat.Version); err != nil {
+		return err
+	}
+
+	s.node = path
 	return nil
 }
 
@@ -251,15 +272,15 @@ func (c *client) Deregister(s *Service) error {
 	if s.node == "" {
 		return ErrNotRegistered
 	}
-	path := s.Path + s.Name
-	found, stat, err := c.Exists(path)
+
+	found, stat, err := c.Exists(s.node)
 	if err != nil {
 		return err
 	}
 	if !found {
 		return ErrNodeNotFound
 	}
-	if err := c.Delete(path, stat.Version); err != nil {
+	if err := c.Delete(s.node, stat.Version); err != nil {
 		return err
 	}
 	return nil
