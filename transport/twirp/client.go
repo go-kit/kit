@@ -2,8 +2,9 @@ package twirp
 
 import (
 	"context"
-
 	"github.com/go-kit/kit/endpoint"
+	"github.com/twitchtv/twirp"
+	"net/http"
 )
 
 // Client wraps a Twirp client and provides a method that implements endpoint.Endpoint.
@@ -82,12 +83,17 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			return nil, err
 		}
 
+		// Create an empty http.Header to hold the headers that we will accumulate in before functions.
+		var reqHeader http.Header
 		// Process ClientRequestFunctions
 		for _, f := range c.before {
-			ctx, err = f(ctx)
-			if err != nil {
-				return nil, err
-			}
+			ctx = f(ctx, &reqHeader)
+		}
+
+		// Tell twirp to use these headers in the request.
+		ctx, err = twirp.WithHTTPRequestHeaders(ctx, reqHeader)
+		if err != nil {
+			return nil, err
 		}
 
 		// Call the actual RPC method
@@ -98,10 +104,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		// Process ClientResponseFunctions
 		for _, f := range c.after {
-			ctx, err = f(ctx)
-			if err != nil {
-				return nil, err
-			}
+			ctx = f(ctx)
 		}
 
 		// Decode

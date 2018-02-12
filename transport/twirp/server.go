@@ -3,8 +3,11 @@ package twirp
 import (
 	"context"
 
+	"errors"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/twitchtv/twirp"
+	"net/http"
 )
 
 // Handler which should be called from the Twirp binding of the service
@@ -78,10 +81,20 @@ func (s Server) ServeTwirp(ctx context.Context, req interface{}) (context.Contex
 			s.finalizer(ctx, req)
 		}()
 	}
-
+	// Extract the headers from the ctx
+	var (
+		reqHeader http.Header
+		ok        bool
+	)
+	reqHeader, ok = twirp.HTTPRequestHeaders(ctx)
+	if !ok {
+		err := errors.New("error extracting http headers from Twirp Context (twirptransport.HTTPRequestHeaders)")
+		s.logger.Log("err", err)
+		return ctx, nil, err
+	}
 	// Process ServerRequestFunctions
 	for _, f := range s.before {
-		ctx = f(ctx)
+		ctx = f(ctx, reqHeader)
 	}
 	request, err := s.dec(ctx, req)
 	if err != nil {
@@ -97,12 +110,8 @@ func (s Server) ServeTwirp(ctx context.Context, req interface{}) (context.Contex
 
 	// Process ServerResponseFunctions
 	for _, f := range s.after {
-		ctx, err = f(ctx)
-		if err != nil {
-			return ctx, nil, err
-		}
+		ctx = f(ctx)
 	}
-
 	twirpResp, err := s.enc(ctx, response)
 	if err != nil {
 		s.logger.Log("err", err)
