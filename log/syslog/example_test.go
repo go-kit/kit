@@ -1,13 +1,14 @@
 package syslog_test
 
 import (
-	gosyslog "log/syslog"
-	"github.com/go-kit/kit/log/syslog"
-	"github.com/go-kit/kit/log"
 	"fmt"
-	"github.com/go-kit/kit/log/level"
-)
 
+	gosyslog "log/syslog"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
+	"github.com/go-kit/kit/log/syslog"
+)
 
 func ExampleNewLogger_defaultPrioritySelector() {
 	// Normal syslog writer

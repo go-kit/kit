@@ -2,11 +2,13 @@ package syslog
 
 import (
 	"fmt"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
-	gosyslog "log/syslog"
 	"reflect"
 	"testing"
+
+	gosyslog "log/syslog"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 )
 
 func TestSyslogLoggerDefaultPrioritySelector(t *testing.T) {
@@ -106,7 +108,6 @@ func TestSyslogLoggerExhaustivePrioritySelector(t *testing.T) {
 		t.Errorf("wrong writes: want %s, have %s", want, have)
 	}
 }
-
 
 type testSyslogWriter struct {
 	writes []string

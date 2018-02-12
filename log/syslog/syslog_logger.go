@@ -1,15 +1,17 @@
 package syslog
 
 import (
-	gosyslog "log/syslog"
-	"io"
-	"github.com/go-kit/kit/log/level"
-	"github.com/go-kit/kit/log"
 	"bytes"
+	"io"
 	"sync"
+
+	gosyslog "log/syslog"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 )
 
-// PrioritySelector inspects list of keyvals and select a syslog priority
+// PrioritySelector inspects the list of keyvals and selects a syslog priority
 type PrioritySelector func(keyvals ...interface{}) gosyslog.Priority
 
 // NewSyslogLogger returns a new Logger which writes to syslog in syslog format.
@@ -17,8 +19,8 @@ type PrioritySelector func(keyvals ...interface{}) gosyslog.Priority
 // by newLogger.
 func NewSyslogLogger(w SyslogWriter, newLogger func(io.Writer) log.Logger, options ...Option) log.Logger {
 	l := &syslogLogger{
-		w: w,
-		newLogger: newLogger,
+		w:                w,
+		newLogger:        newLogger,
 		prioritySelector: defaultPrioritySelector,
 		bufPool: sync.Pool{New: func() interface{} {
 			return &loggerBuf{}
@@ -77,7 +79,7 @@ type Option func(*syslogLogger)
 // PrioritySelectorOption sets priority selector function to choose syslog
 // priority.
 func PrioritySelectorOption(selector PrioritySelector) Option {
-	return func (l *syslogLogger) { l.prioritySelector = selector }
+	return func(l *syslogLogger) { l.prioritySelector = selector }
 }
 
 func defaultPrioritySelector(keyvals ...interface{}) gosyslog.Priority {
