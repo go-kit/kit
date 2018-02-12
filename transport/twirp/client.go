@@ -2,14 +2,17 @@ package twirp
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/twitchtv/twirp"
 	"net/http"
+	"reflect"
 )
 
 // Client wraps a Twirp client and provides a method that implements endpoint.Endpoint.
 type Client struct {
-	rpcFn     endpoint.Endpoint
+	client    interface{}
+	method    string
 	enc       EncodeRequestFunc
 	dec       DecodeResponseFunc
 	before    []ClientRequestFunc
@@ -19,13 +22,15 @@ type Client struct {
 
 // NewClient constructs a usable Client for a single remote method.
 func NewClient(
-	rpcFn endpoint.Endpoint,
+	client interface{},
+	method string,
 	enc EncodeRequestFunc,
 	dec DecodeResponseFunc,
 	options ...ClientOption,
 ) *Client {
 	c := &Client{
-		rpcFn:  rpcFn,
+		client: client,
+		method: method,
 		enc:    enc,
 		dec:    dec,
 		before: []ClientRequestFunc{},
@@ -96,8 +101,21 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			return nil, err
 		}
 
-		// Call the actual RPC method
-		resp, err := c.rpcFn(ctx, req)
+		client := reflect.ValueOf(&c.client)
+		method := client.MethodByName(c.method)
+		if !method.IsValid() {
+			interfaceName := reflect.TypeOf(&c.client).Elem().Name()
+			return nil, fmt.Errorf("Invalid method specified: %s does not have method %s", interfaceName, c.method)
+		}
+
+		args := make([]reflect.Value, 2)
+		args[0] = reflect.ValueOf(ctx)
+		args[1] = reflect.ValueOf(req)
+
+		retVals := make([]reflect.Value, 2)
+		retVals = method.Call(args)
+		resp := retVals[0].Interface()
+		err = retVals[1].Interface().(error)
 		if err != nil {
 			return nil, err
 		}
