@@ -11,8 +11,19 @@ import (
 	"github.com/go-kit/kit/log/level"
 )
 
-// PrioritySelector inspects the list of keyvals and selects a syslog priority
-type PrioritySelector func(keyvals ...interface{}) gosyslog.Priority
+// SyslogWriter is an interface wrapping stdlib syslog Writer.
+type SyslogWriter interface {
+	Write([]byte) (int, error)
+	Close() error
+	Emerg(string) error
+	Alert(string) error
+	Crit(string) error
+	Err(string) error
+	Warning(string) error
+	Notice(string) error
+	Info(string) error
+	Debug(string) error
+}
 
 // NewSyslogLogger returns a new Logger which writes to syslog in syslog format.
 // The body of the log message is the formatted output from the Logger returned
@@ -73,8 +84,31 @@ func (l *syslogLogger) Log(keyvals ...interface{}) error {
 	}
 }
 
+type loggerBuf struct {
+	buf    *bytes.Buffer
+	logger log.Logger
+}
+
+func (l *syslogLogger) getLoggerBuf() *loggerBuf {
+	lb := l.bufPool.Get().(*loggerBuf)
+	if lb.buf == nil {
+		lb.buf = &bytes.Buffer{}
+		lb.logger = l.newLogger(lb.buf)
+	} else {
+		lb.buf.Reset()
+	}
+	return lb
+}
+
+func (l *syslogLogger) putLoggerBuf(lb *loggerBuf) {
+	l.bufPool.Put(lb)
+}
+
 // Option sets a parameter for syslog loggers.
 type Option func(*syslogLogger)
+
+// PrioritySelector inspects the list of keyvals and selects a syslog priority.
+type PrioritySelector func(keyvals ...interface{}) gosyslog.Priority
 
 // PrioritySelectorOption sets priority selector function to choose syslog
 // priority.
@@ -106,24 +140,4 @@ func defaultPrioritySelector(keyvals ...interface{}) gosyslog.Priority {
 	}
 
 	return gosyslog.LOG_INFO
-}
-
-type loggerBuf struct {
-	buf    *bytes.Buffer
-	logger log.Logger
-}
-
-func (l *syslogLogger) getLoggerBuf() *loggerBuf {
-	lb := l.bufPool.Get().(*loggerBuf)
-	if lb.buf == nil {
-		lb.buf = &bytes.Buffer{}
-		lb.logger = l.newLogger(lb.buf)
-	} else {
-		lb.buf.Reset()
-	}
-	return lb
-}
-
-func (l *syslogLogger) putLoggerBuf(cb *loggerBuf) {
-	l.bufPool.Put(cb)
 }
