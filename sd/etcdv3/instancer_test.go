@@ -69,8 +69,6 @@ func (c *fakeClient) GetEntries(prefix string) ([]string, error) {
 	return entries, nil
 }
 
-func (c *fakeClient) CancelWatch() {}
-
 func (c *fakeClient) WatchPrefix(prefix string, ch chan struct{}) {
 }
 

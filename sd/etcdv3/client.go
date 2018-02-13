@@ -16,8 +16,6 @@ var (
 
 	// ErrNoValue indicates a client method needs a value but receives none.
 	ErrNoValue = errors.New("no value provided")
-
-	ErrKeyNotFound = errors.New("requested key not found")
 )
 
 // Client is a wrapper around the etcd client.
@@ -222,7 +220,9 @@ func (c *client) Deregister(s Service) error {
 	return nil
 }
 
-func (c *client) close() error {
+// close will close any open clients and call
+// the watcher cancel func
+func (c *client) close() {
 	if c.leaser != nil {
 		c.leaser.Close()
 	}
@@ -230,5 +230,4 @@ func (c *client) close() error {
 		c.watcher.Close()
 		c.wcf()
 	}
-	return nil
 }

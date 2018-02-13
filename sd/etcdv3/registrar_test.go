@@ -17,8 +17,6 @@ func (tc *testClient) GetEntries(prefix string) ([]string, error) {
 	return nil, nil
 }
 
-func (tc *testClient) CancelWatch() {}
-
 func (tc *testClient) WatchPrefix(prefix string, ch chan struct{}) {
 }
 
@@ -60,20 +58,20 @@ func TestNewRegistar(t *testing.T) {
 	}
 }
 
-// Register log the error returned by the client or log the successful registration action
-// table of test cases for method Register
-var registerTestTable = []struct {
-	registerRes error  // value returned by the client on calls to Register
-	log         string // expected log by the registrar
-
-}{
-	// test case: an error is returned by the client
-	{errors.New("regError"), "key=testKey value=testValue err=regError\n"},
-	// test case: registration successful
-	{nil, "key=testKey value=testValue action=register\n"},
-}
-
 func TestRegister(t *testing.T) {
+	// Register log the error returned by the client or log the successful registration action
+	// table of test cases for method Register
+	var registerTestTable = []struct {
+		registerRes error  // value returned by the client on calls to Register
+		log         string // expected log by the registrar
+
+	}{
+		// test case: an error is returned by the client
+		{errors.New("regError"), "key=testKey value=testValue err=regError\n"},
+		// test case: registration successful
+		{nil, "key=testKey value=testValue action=register\n"},
+	}
+
 	for _, tc := range registerTestTable {
 		c := Client(&testClient{tc.registerRes})
 		buf := &bytes.Buffer{}
@@ -90,19 +88,19 @@ func TestRegister(t *testing.T) {
 	}
 }
 
-// Deregister log the error returned by the client or log the successful deregistration action
-// table of test cases for method Deregister
-var deregisterTestTable = []struct {
-	deregisterRes error  // value returned by the client on calls to Deregister
-	log           string // expected log by the registrar
-}{
-	// test case: an error is returned by the client
-	{errors.New("deregError"), "key=testKey value=testValue err=deregError\n"},
-	// test case: deregistration successful
-	{nil, "key=testKey value=testValue action=deregister\n"},
-}
-
 func TestDeregister(t *testing.T) {
+	// Deregister log the error returned by the client or log the successful deregistration action
+	// table of test cases for method Deregister
+	var deregisterTestTable = []struct {
+		deregisterRes error  // value returned by the client on calls to Deregister
+		log           string // expected log by the registrar
+	}{
+		// test case: an error is returned by the client
+		{errors.New("deregError"), "key=testKey value=testValue err=deregError\n"},
+		// test case: deregistration successful
+		{nil, "key=testKey value=testValue action=deregister\n"},
+	}
+
 	for _, tc := range deregisterTestTable {
 		c := Client(&testClient{tc.deregisterRes})
 		buf := &bytes.Buffer{}

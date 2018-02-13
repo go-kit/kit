@@ -78,29 +78,6 @@ func (r *Registrar) Register() {
 	}
 }
 
-// func (r *Registrar) loop() {
-// 	r.quitmtx.Lock()
-// 	if r.quit != nil {
-// 		return // already running
-// 	}
-// 	r.quit = make(chan struct{})
-// 	r.quitmtx.Unlock()
-
-// 	tick := time.NewTicker(r.service.TTL.heartbeat)
-// 	defer tick.Stop()
-
-// 	for {
-// 		select {
-// 		case <-tick.C:
-// 			if err := r.client.Register(r.service); err != nil {
-// 				r.logger.Log("err", err)
-// 			}
-// 		case <-r.quit:
-// 			return
-// 		}
-// 	}
-// }
-
 // Deregister implements the sd.Registrar interface. Call it when you want your
 // service to be deregistered from etcd, typically just prior to shutdown.
 func (r *Registrar) Deregister() {
