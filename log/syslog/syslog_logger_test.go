@@ -28,6 +28,7 @@ func TestSyslogLoggerDefaultPrioritySelector(t *testing.T) {
 	l.Log("msg", "ten", "level", level.WarnValue())
 
 	l.Log("level", level.ErrorValue(), "msg")
+	l.Log("msg", "eleven", "level")
 
 	want := []string{
 		"warning: level=warn msg=one\n",
@@ -43,6 +44,7 @@ func TestSyslogLoggerDefaultPrioritySelector(t *testing.T) {
 		"warning: msg=ten level=warn\n",
 
 		"err: level=error msg=null\n",
+		"info: msg=eleven level=null\n",
 	}
 	have := w.writes
 	if !reflect.DeepEqual(want, have) {

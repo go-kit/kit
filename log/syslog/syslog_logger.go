@@ -83,9 +83,14 @@ func PrioritySelectorOption(selector PrioritySelector) Option {
 }
 
 func defaultPrioritySelector(keyvals ...interface{}) gosyslog.Priority {
-	for i := 0; i < len(keyvals); i += 2 {
+	l := len(keyvals)
+	for i := 0; i < l; i += 2 {
 		if keyvals[i] == level.Key() {
-			if v, ok := keyvals[i+1].(level.Value); ok {
+			var val interface{}
+			if i+1 < l {
+				val = keyvals[i+1]
+			}
+			if v, ok := val.(level.Value); ok {
 				switch v {
 				case level.DebugValue():
 					return gosyslog.LOG_DEBUG
