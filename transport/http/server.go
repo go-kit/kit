@@ -136,6 +136,12 @@ type ErrorEncoder func(ctx context.Context, err error, w http.ResponseWriter)
 // provided in the context under keys with the ContextKeyResponse prefix.
 type ServerFinalizerFunc func(ctx context.Context, code int, r *http.Request)
 
+// NopRequestDecoder is a DecodeRequestFunc that can be used for requests that do not
+// need to be decoded, and simply returns nil, nil.
+func NopRequestDecoder(ctx context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
 // EncodeJSONResponse is a EncodeResponseFunc that serializes the response as a
 // JSON object to the ResponseWriter. Many JSON-over-HTTP services can use it as
 // a sensible default. If the response implements Headerer, the provided headers
@@ -144,8 +150,10 @@ type ServerFinalizerFunc func(ctx context.Context, code int, r *http.Request)
 func EncodeJSONResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if headerer, ok := response.(Headerer); ok {
-		for k := range headerer.Headers() {
-			w.Header().Set(k, headerer.Headers().Get(k))
+		for k, values := range headerer.Headers() {
+			for _, v := range values {
+				w.Header().Add(k, v)
+			}
 		}
 	}
 	code := http.StatusOK
@@ -175,8 +183,10 @@ func DefaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	}
 	w.Header().Set("Content-Type", contentType)
 	if headerer, ok := err.(Headerer); ok {
-		for k := range headerer.Headers() {
-			w.Header().Set(k, headerer.Headers().Get(k))
+		for k, values := range headerer.Headers() {
+			for _, v := range values {
+				w.Header().Add(k, v)
+			}
 		}
 	}
 	code := http.StatusInternalServerError
