@@ -2,6 +2,29 @@ package jsonrpc
 
 import "testing"
 
+func TestError(t *testing.T) {
+	wantCode := ParseError
+	sut := Error{
+		Code: wantCode,
+	}
+
+	gotCode := sut.ErrorCode()
+	if gotCode != wantCode {
+		t.Fatalf("want=%d, got=%d", gotCode, wantCode)
+	}
+
+	if sut.Error() == "" {
+		t.Fatal("Empty error string.")
+	}
+
+	want := "override"
+	sut.Message = want
+	got := sut.Error()
+	if sut.Error() != want {
+		t.Fatalf("overridden error message: want=%s, got=%s", want, got)
+	}
+
+}
 func TestErrorsSatisfyError(t *testing.T) {
 	errs := []interface{}{
 		parseError("parseError"),
