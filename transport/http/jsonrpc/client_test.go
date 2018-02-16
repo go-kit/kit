@@ -188,7 +188,7 @@ func TestCanUseDefaults(t *testing.T) {
 }
 
 func TestDefaultAutoIncrementer(t *testing.T) {
-	sut := new(jsonrpc.AutoIncrementRequestID)
+	sut := jsonrpc.NewAutoIncrementID(0)
 	for want := 0; want < 100; want++ {
 		id := sut.Generate()
 

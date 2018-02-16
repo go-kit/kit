@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sync/atomic"
 
 	"github.com/go-kit/kit/endpoint"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -27,7 +28,7 @@ type Client struct {
 	before         []httptransport.RequestFunc
 	after          []httptransport.ClientResponseFunc
 	finalizer      httptransport.ClientFinalizerFunc
-	requestID      requestIDGenerator
+	requestID      RequestIDGenerator
 	bufferedStream bool
 }
 
@@ -45,7 +46,7 @@ func NewClient(
 		dec:            DefaultResponseDecoder,
 		before:         []httptransport.RequestFunc{},
 		after:          []httptransport.ClientResponseFunc{},
-		requestID:      new(AutoIncrementRequestID),
+		requestID:      NewAutoIncrementID(0),
 		bufferedStream: false,
 	}
 	for _, option := range options {
@@ -103,21 +104,21 @@ func ClientRequestEncoder(enc EncodeRequestFunc) ClientOption {
 	return func(c *Client) { c.enc = enc }
 }
 
-// ClientResponseEncoder sets the func used to decode the response params to JSON.
-// If not set, DefaultResponseDecoder is used.
+// ClientResponseDecoder sets the func used to decode the response params from
+// JSON. If not set, DefaultResponseDecoder is used.
 func ClientResponseDecoder(dec DecodeResponseFunc) ClientOption {
 	return func(c *Client) { c.dec = dec }
 }
 
-// requestIDGenerator returns an ID for the request.
-type requestIDGenerator interface {
+// RequestIDGenerator returns an ID for the request.
+type RequestIDGenerator interface {
 	Generate() *RequestID
 }
 
 // ClientRequestIDGenerator is executed before each request to generate an ID
 // for the request.
 // By default, AutoIncrementRequestID is used.
-func ClientRequestIDGenerator(g requestIDGenerator) ClientOption {
+func ClientRequestIDGenerator(g RequestIDGenerator) ClientOption {
 	return func(c *Client) { c.requestID = g }
 }
 
@@ -207,14 +208,23 @@ func (c Client) Endpoint() endpoint.Endpoint {
 // depending on when an error occurs.
 type ClientFinalizerFunc func(ctx context.Context, err error)
 
-// AutoIncrementRequestID is a RequestIDGenerator that generates
+// autoIncrementID is a RequestIDGenerator that generates
 // auto-incrementing integer IDs.
-type AutoIncrementRequestID int
+type autoIncrementID struct {
+	v *int32
+}
+
+// NewAutoIncrementID returns an auto-incrementing request ID generator,
+// initialised with the given value.
+func NewAutoIncrementID(init int32) RequestIDGenerator {
+	// Offset by one so that the first generated value = init.
+	v := init - 1
+	return &autoIncrementID{v: &v}
+}
 
 // Generate satisfies RequestIDGenerator
-func (i *AutoIncrementRequestID) Generate() *RequestID {
-	id := *i
-	*i++
+func (i *autoIncrementID) Generate() *RequestID {
+	id := atomic.AddInt32(i.v, 1)
 	return &RequestID{
 		intValue: int(id),
 	}
