@@ -116,7 +116,7 @@ func TestClientHappyPath(t *testing.T) {
 		t.Fatal(err)
 	}
 	if id, _ := requestAtServer.ID.Int(); id != 0 {
-		t.Fatalf("Request ID at server: want=0, got=%d", requestAtServer.ID)
+		t.Fatalf("Request ID at server: want=0, got=%d", id)
 	}
 
 	var paramsAtServer addRequest
@@ -189,13 +189,9 @@ func TestCanUseDefaults(t *testing.T) {
 
 func TestDefaultAutoIncrementer(t *testing.T) {
 	sut := jsonrpc.NewAutoIncrementID(0)
-	for want := 0; want < 100; want++ {
-		id := sut.Generate()
-
-		got, err := id.Int()
-		if err != nil {
-			t.Fatal(err)
-		}
+	var want uint64
+	for ; want < 100; want++ {
+		got := sut.Generate()
 		if got != want {
 			t.Fatalf("want=%d, got=%d", want, got)
 		}

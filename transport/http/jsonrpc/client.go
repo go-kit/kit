@@ -32,6 +32,13 @@ type Client struct {
 	bufferedStream bool
 }
 
+type clientRequest struct {
+	JSONRPC string          `json:"jsonrpc"`
+	Method  string          `json:"method"`
+	Params  json.RawMessage `json:"params"`
+	ID      interface{}     `json:"id"`
+}
+
 // NewClient constructs a usable Client for a single remote method.
 func NewClient(
 	tgt *url.URL,
@@ -112,7 +119,7 @@ func ClientResponseDecoder(dec DecodeResponseFunc) ClientOption {
 
 // RequestIDGenerator returns an ID for the request.
 type RequestIDGenerator interface {
-	Generate() *RequestID
+	Generate() interface{}
 }
 
 // ClientRequestIDGenerator is executed before each request to generate an ID
@@ -152,7 +159,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		if params, err = c.enc(ctx, request); err != nil {
 			return nil, err
 		}
-		rpcReq := Request{
+		rpcReq := clientRequest{
 			JSONRPC: "",
 			Method:  c.method,
 			Params:  params,
@@ -211,21 +218,19 @@ type ClientFinalizerFunc func(ctx context.Context, err error)
 // autoIncrementID is a RequestIDGenerator that generates
 // auto-incrementing integer IDs.
 type autoIncrementID struct {
-	v *int32
+	v *uint64
 }
 
 // NewAutoIncrementID returns an auto-incrementing request ID generator,
 // initialised with the given value.
-func NewAutoIncrementID(init int32) RequestIDGenerator {
+func NewAutoIncrementID(init uint64) RequestIDGenerator {
 	// Offset by one so that the first generated value = init.
 	v := init - 1
 	return &autoIncrementID{v: &v}
 }
 
 // Generate satisfies RequestIDGenerator
-func (i *autoIncrementID) Generate() *RequestID {
-	id := atomic.AddInt32(i.v, 1)
-	return &RequestID{
-		intValue: int(id),
-	}
+func (i *autoIncrementID) Generate() interface{} {
+	id := atomic.AddUint64(i.v, 1)
+	return id
 }
