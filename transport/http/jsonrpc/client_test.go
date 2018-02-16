@@ -58,6 +58,10 @@ func TestClientHappyPath(t *testing.T) {
 		afterFunc = func(ctx context.Context, r *http.Response) context.Context {
 			return context.WithValue(ctx, afterCalledKey, true)
 		}
+		finalizerCalled = false
+		fin             = func(ctx context.Context, err error) {
+			finalizerCalled = true
+		}
 		decode = func(ctx context.Context, res json.RawMessage) (interface{}, error) {
 			if ac := ctx.Value(afterCalledKey); ac == nil {
 				t.Fatal("after not called")
@@ -97,6 +101,9 @@ func TestClientHappyPath(t *testing.T) {
 		jsonrpc.ClientBefore(beforeFunc),
 		jsonrpc.ClientAfter(afterFunc),
 		jsonrpc.ClientRequestIDGenerator(gen),
+		jsonrpc.ClientFinalizer(fin),
+		jsonrpc.SetClient(http.DefaultClient),
+		jsonrpc.BufferedStream(false),
 	)
 
 	type addRequest struct {
@@ -135,6 +142,10 @@ func TestClientHappyPath(t *testing.T) {
 
 	if paramsAtServer != in {
 		t.Fatalf("want=%+v, got=%+v", in, paramsAtServer)
+	}
+
+	if !finalizerCalled {
+		t.Fatal("Expected finalizer to be called. Wasn't.")
 	}
 }
 
