@@ -37,6 +37,10 @@ func TestCanCallBeforeFunc(t *testing.T) {
 	}
 }
 
+type staticIDGenerator int
+
+func (g staticIDGenerator) Generate() interface{} { return g }
+
 func TestClientHappyPath(t *testing.T) {
 	var (
 		afterCalledKey    = "AC"
@@ -65,6 +69,9 @@ func TestClientHappyPath(t *testing.T) {
 			}
 			return result, nil
 		}
+
+		wantID = 666
+		gen    = staticIDGenerator(wantID)
 	)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -89,6 +96,7 @@ func TestClientHappyPath(t *testing.T) {
 		jsonrpc.ClientResponseDecoder(decode),
 		jsonrpc.ClientBefore(beforeFunc),
 		jsonrpc.ClientAfter(afterFunc),
+		jsonrpc.ClientRequestIDGenerator(gen),
 	)
 
 	type addRequest struct {
@@ -115,8 +123,8 @@ func TestClientHappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if id, _ := requestAtServer.ID.Int(); id != 0 {
-		t.Fatalf("Request ID at server: want=0, got=%d", id)
+	if id, _ := requestAtServer.ID.Int(); id != wantID {
+		t.Fatalf("Request ID at server: want=%d, got=%d", wantID, id)
 	}
 
 	var paramsAtServer addRequest
