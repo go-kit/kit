@@ -9,11 +9,12 @@ import (
 	"reflect"
 	"testing"
 
-	zipkinkit "github.com/go-kit/kit/tracing/zipkin"
-	kithttp "github.com/go-kit/kit/transport/http"
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
+
+	zipkinkit "github.com/go-kit/kit/tracing/zipkin"
+	kithttp "github.com/go-kit/kit/transport/http"
 )
 
 const (
@@ -31,7 +32,8 @@ func TestHttpClientTracePropagatesParentSpan(t *testing.T) {
 
 	rURL, _ := url.Parse("http://test.com")
 
-	c := kithttp.NewClient(
+	clientTracer := zipkinkit.HTTPClientTrace(tr)
+	ep := kithttp.NewClient(
 		"GET",
 		rURL,
 		func(ctx context.Context, r *http.Request, i interface{}) error {
@@ -40,16 +42,14 @@ func TestHttpClientTracePropagatesParentSpan(t *testing.T) {
 		func(ctx context.Context, r *http.Response) (response interface{}, err error) {
 			return nil, nil
 		},
-	)
-
-	clientOption := zipkinkit.HTTPClientTrace(tr)
-	clientOption(c)
+		clientTracer,
+	).Endpoint()
 
 	parentSpan := tr.StartSpan("test")
 
 	ctx := zipkin.NewContext(context.Background(), parentSpan)
 
-	_, err := c.Endpoint()(ctx, nil)
+	_, err := ep(ctx, nil)
 	if err != nil {
 		t.Fatalf("unwanted error: %s", err.Error())
 	}
@@ -101,7 +101,13 @@ func testHTTPClientTraceCase(t *testing.T, responseStatusCode int, errTagValue s
 	rMethod := "GET"
 	rURL, _ := url.Parse(ts.URL)
 
-	c := kithttp.NewClient(
+	clientTracer := zipkinkit.HTTPClientTrace(
+		tr,
+		zipkinkit.Name(testName),
+		zipkinkit.Tags(map[string]string{testTagKey: testTagValue}),
+	)
+
+	ep := kithttp.NewClient(
 		rMethod,
 		rURL,
 		func(ctx context.Context, r *http.Request, i interface{}) error {
@@ -110,16 +116,10 @@ func testHTTPClientTraceCase(t *testing.T, responseStatusCode int, errTagValue s
 		func(ctx context.Context, r *http.Response) (response interface{}, err error) {
 			return nil, nil
 		},
-	)
+		clientTracer,
+	).Endpoint()
 
-	clientOption := zipkinkit.HTTPClientTrace(
-		tr,
-		zipkinkit.Name(testName),
-		zipkinkit.Tags(map[string]string{testTagKey: testTagValue}),
-	)
-	clientOption(c)
-
-	_, err = c.Endpoint()(context.Background(), nil)
+	_, err = ep(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("unwanted error: %s", err.Error())
 	}

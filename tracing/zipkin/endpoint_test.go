@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go/reporter/recorder"
+
 	"github.com/go-kit/kit/endpoint"
 	zipkinkit "github.com/go-kit/kit/tracing/zipkin"
-	zipkin "github.com/openzipkin/zipkin-go"
-	"github.com/openzipkin/zipkin-go/reporter/recorder"
 )
 
 const spanName = "test"
