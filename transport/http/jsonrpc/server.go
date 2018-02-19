@@ -13,7 +13,6 @@ import (
 
 // Server wraps an endpoint and implements http.Handler.
 type Server struct {
-	ctx          context.Context
 	ecm          EndpointCodecMap
 	before       []httptransport.RequestFunc
 	after        []httptransport.ServerResponseFunc
@@ -81,7 +80,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		io.WriteString(w, "405 must POST\n")
+		_, _ = io.WriteString(w, "405 must POST\n")
 		return
 	}
 	ctx := r.Context()
@@ -151,7 +150,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	res.Result = resParams
 
 	w.Header().Set("Content-Type", ContentType)
-	json.NewEncoder(w).Encode(res)
+	_ = json.NewEncoder(w).Encode(res)
 }
 
 // DefaultErrorEncoder writes the error to the ResponseWriter,
@@ -177,7 +176,7 @@ func DefaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(Response{
+	_ = json.NewEncoder(w).Encode(Response{
 		JSONRPC: Version,
 		Error:   &e,
 	})

@@ -46,6 +46,9 @@ func TestCanUnMarshalID(t *testing.T) {
 			// Allow an int ID to be interpreted as a float.
 			wantf := float32(c.expValue.(int))
 			gotf, err := id.Float32()
+			if err != nil {
+				t.Fatal(err)
+			}
 			if gotf != wantf {
 				t.Fatalf("'%s' Int value as Float32(): want %f, got %f.", c.JSON, wantf, gotf)
 			}
