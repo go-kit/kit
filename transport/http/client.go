@@ -143,8 +143,8 @@ func (c Client) Endpoint() endpoint.Endpoint {
 // request, after the response is returned. The principal
 // intended use is for error logging. Additional response parameters are
 // provided in the context under keys with the ContextKeyResponse prefix.
-// Note: err may be nil. There maybe also no additional response parameters depending on
-// when an error occurs.
+// Note: err may be nil. There maybe also no additional response parameters
+// depending on when an error occurs.
 type ClientFinalizerFunc func(ctx context.Context, err error)
 
 // EncodeJSONRequest is an EncodeRequestFunc that serializes the request as a

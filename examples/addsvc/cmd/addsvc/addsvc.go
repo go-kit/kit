@@ -42,6 +42,7 @@ func main() {
 		httpAddr       = fs.String("http-addr", ":8081", "HTTP listen address")
 		grpcAddr       = fs.String("grpc-addr", ":8082", "gRPC listen address")
 		thriftAddr     = fs.String("thrift-addr", ":8083", "Thrift listen address")
+		jsonRPCAddr    = fs.String("jsonrpc-addr", ":8084", "JSON RPC listen address")
 		thriftProtocol = fs.String("thrift-protocol", "binary", "binary, compact, json, simplejson")
 		thriftBuffer   = fs.Int("thrift-buffer", 0, "0 for unbuffered")
 		thriftFramed   = fs.Bool("thrift-framed", false, "true to enable framing")
@@ -135,11 +136,12 @@ func main() {
 	// the interfaces that the transports expect. Note that we're not binding
 	// them to ports or anything yet; we'll do that next.
 	var (
-		service      = addservice.New(logger, ints, chars)
-		endpoints    = addendpoint.New(service, logger, duration, tracer)
-		httpHandler  = addtransport.NewHTTPHandler(endpoints, tracer, logger)
-		grpcServer   = addtransport.NewGRPCServer(endpoints, tracer, logger)
-		thriftServer = addtransport.NewThriftServer(endpoints)
+		service        = addservice.New(logger, ints, chars)
+		endpoints      = addendpoint.New(service, logger, duration, tracer)
+		httpHandler    = addtransport.NewHTTPHandler(endpoints, tracer, logger)
+		grpcServer     = addtransport.NewGRPCServer(endpoints, tracer, logger)
+		thriftServer   = addtransport.NewThriftServer(endpoints)
+		jsonrpcHandler = addtransport.NewJSONRPCHandler(endpoints, logger)
 	)
 
 	// Now we're to the part of the func main where we want to start actually
@@ -242,6 +244,19 @@ func main() {
 			).Serve()
 		}, func(error) {
 			thriftSocket.Close()
+		})
+	}
+	{
+		httpListener, err := net.Listen("tcp", *jsonRPCAddr)
+		if err != nil {
+			logger.Log("transport", "JSONRPC over HTTP", "during", "Listen", "err", err)
+			os.Exit(1)
+		}
+		g.Add(func() error {
+			logger.Log("transport", "JSONRPC over HTTP", "addr", *jsonRPCAddr)
+			return http.Serve(httpListener, jsonrpcHandler)
+		}, func(error) {
+			httpListener.Close()
 		})
 	}
 	{
