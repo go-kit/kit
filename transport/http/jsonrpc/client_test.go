@@ -187,7 +187,7 @@ func TestCanUseDefaults(t *testing.T) {
 		t.Fatalf("result is not string: (%T)%+v", result, result)
 	}
 	if rs != "boogaloo" {
-		t.Fatalf("want=boogaloo, got=%d", rs)
+		t.Fatalf("want=boogaloo, got=%s", rs)
 	}
 
 	var requestAtServer jsonrpc.Request
