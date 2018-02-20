@@ -88,3 +88,48 @@ func (gc gaugeCounter) With(labelValues ...string) metrics.Counter {
 func (gc gaugeCounter) Add(delta float64) {
 	gc.g.Set(delta)
 }
+
+type histogramGauge struct {
+	h metrics.Histogram
+}
+
+// NewHistogramAsGauge returns a Gauge that actually writes the
+// value on an underlying Histogram
+func NewHistogramAsGauge(h metrics.Histogram) metrics.Gauge {
+	return histogramGauge{h}
+}
+
+// With implements Gauge.
+func (hg histogramGauge) With(labelValues ...string) metrics.Gauge {
+	return histogramGauge{hg.h.With(labelValues...)}
+}
+
+// Set implements Gauge.
+func (hg histogramGauge) Set(value float64) {
+	hg.h.Observe(value)
+}
+
+// Add implements metrics.Gauge.
+func (hg histogramGauge) Add(delta float64) {
+	hg.h.Observe(delta)
+}
+
+type gaugeHistogram struct {
+	g metrics.Gauge
+}
+
+// NewGaugeAsHistogram returns a Histogram that actually writes the
+// value on an underlying Gauge
+func NewGaugeAsHistogram(g metrics.Gauge) metrics.Histogram {
+	return gaugeHistogram{g}
+}
+
+// With implements Histogram.
+func (gh gaugeHistogram) With(labelValues ...string) metrics.Histogram {
+	return gaugeHistogram{gh.g.With(labelValues...)}
+}
+
+// Observe implements histogram.
+func (gh gaugeHistogram) Observe(value float64) {
+	gh.g.Set(value)
+}
