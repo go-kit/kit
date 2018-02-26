@@ -4,13 +4,13 @@ package cloudwatch2
 
 import (
 	"math"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/cloudwatchiface"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -39,12 +39,6 @@ type CloudWatch struct {
 
 type option func(*CloudWatch)
 
-func (cw *CloudWatch) apply(opt option) {
-	if opt != nil {
-		opt(cw)
-	}
-}
-
 // WithLogger sets the Logger that will recieve error messages generated
 // during the WriteLoop
 func WithLogger(logger log.Logger) option {
@@ -71,12 +65,11 @@ func WithConcurrentRequests(n int) option {
 // manually or with one of the helper methods.
 func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...option) *CloudWatch {
 	cw := &CloudWatch{
-		sem:                   nil, // set below
 		namespace:             namespace,
 		svc:                   svc,
 		counters:              lv.NewSpace(),
 		numConcurrentRequests: 10,
-		logger:                log.NewLogfmtLogger(os.Stderr),
+		logger:                log.NewNopLogger(),
 	}
 
 	for _, optFunc := range options {
@@ -153,9 +146,10 @@ func (cw *CloudWatch) Send() error {
 		batches = append(batches, batch)
 	}
 
-	var errors = make(chan error, len(batches))
+	var g errgroup.Group
 	for _, batch := range batches {
-		go func(batch []cloudwatch.MetricDatum) {
+		batch := batch
+		g.Go(func() error {
 			cw.sem <- struct{}{}
 			defer func() {
 				<-cw.sem
@@ -165,17 +159,10 @@ func (cw *CloudWatch) Send() error {
 				MetricData: batch,
 			})
 			_, err := req.Send()
-			errors <- err
-		}(batch)
+			return err
+		})
 	}
-	var firstErr error
-	for i := 0; i < cap(errors); i++ {
-		if err := <-errors; err != nil && firstErr != nil {
-			firstErr = err
-		}
-	}
-
-	return firstErr
+	return g.Wait()
 }
 
 var zero = float64(0.0)
