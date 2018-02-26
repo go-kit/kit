@@ -166,6 +166,9 @@ func (cw *CloudWatch) Send() error {
 }
 
 var zero = float64(0.0)
+
+// Just build this once to reduce construction costs whenever
+// someone does a Send with no aggregated values.
 var zeros = cloudwatch.StatisticSet{
 	Maximum:     &zero,
 	Minimum:     &zero,
