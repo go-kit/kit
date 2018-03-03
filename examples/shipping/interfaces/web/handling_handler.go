@@ -1,4 +1,4 @@
-package handling
+package web
 
 import (
 	"context"

@@ -2,7 +2,8 @@
 package inspection
 
 import (
-	"github.com/go-kit/kit/examples/shipping/cargo"
+	"github.com/go-kit/kit/examples/shipping/domain/model/cargo"
+	"github.com/go-kit/kit/examples/shipping/domain/repository"
 )
 
 // EventHandler provides means of subscribing to inspection events.
@@ -20,8 +21,8 @@ type Service interface {
 }
 
 type service struct {
-	cargos  cargo.Repository
-	events  cargo.HandlingEventRepository
+	cargos  repository.CargoRepository
+	events  repository.HandlingEventRepository
 	handler EventHandler
 }
 
@@ -48,6 +49,6 @@ func (s *service) InspectCargo(id cargo.TrackingID) {
 }
 
 // NewService creates a inspection service with necessary dependencies.
-func NewService(cargos cargo.Repository, events cargo.HandlingEventRepository, handler EventHandler) Service {
+func NewService(cargos repository.CargoRepository, events repository.HandlingEventRepository, handler EventHandler) Service {
 	return &service{cargos, events, handler}
 }

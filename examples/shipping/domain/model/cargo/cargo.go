@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/examples/shipping/domain/model/location"
 	"github.com/pborman/uuid"
-
-	"github.com/go-kit/kit/examples/shipping/location"
 )
 
 // TrackingID uniquely identifies a particular cargo.
@@ -52,13 +51,6 @@ func New(id TrackingID, rs RouteSpecification) *Cargo {
 		RouteSpecification: rs,
 		Delivery:           DeriveDeliveryFrom(rs, itinerary, history),
 	}
-}
-
-// Repository provides access a cargo store.
-type Repository interface {
-	Store(cargo *Cargo) error
-	Find(id TrackingID) (*Cargo, error)
-	FindAll() []*Cargo
 }
 
 // ErrUnknown is used when a cargo could not be found.

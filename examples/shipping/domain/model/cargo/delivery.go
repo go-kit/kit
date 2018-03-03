@@ -3,8 +3,8 @@ package cargo
 import (
 	"time"
 
-	"github.com/go-kit/kit/examples/shipping/location"
-	"github.com/go-kit/kit/examples/shipping/voyage"
+	"github.com/go-kit/kit/examples/shipping/domain/model/location"
+	"github.com/go-kit/kit/examples/shipping/domain/model/voyage"
 )
 
 // Delivery is the actual transportation of the cargo, as opposed to the
