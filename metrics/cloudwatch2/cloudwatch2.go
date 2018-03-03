@@ -14,7 +14,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/metrics/convert"
+	"github.com/go-kit/kit/metrics/internal/convert"
 	"github.com/go-kit/kit/metrics/internal/lv"
 )
 
@@ -37,11 +37,12 @@ type CloudWatch struct {
 	numConcurrentRequests int
 }
 
-type option func(*CloudWatch)
+// Option is a function adapter to change config of the CloudWatch struct
+type Option func(*CloudWatch)
 
 // WithLogger sets the Logger that will recieve error messages generated
-// during the WriteLoop
-func WithLogger(logger log.Logger) option {
+// during the WriteLoop. By default, no logger is used.
+func WithLogger(logger log.Logger) Option {
 	return func(cw *CloudWatch) {
 		cw.logger = logger
 	}
@@ -49,8 +50,9 @@ func WithLogger(logger log.Logger) option {
 
 // WithConcurrentRequests sets the upper limit on how many
 // cloudwatch.PutMetricDataRequest may be under way at any
-// given time. If n is greater than 20, 20 is used.
-func WithConcurrentRequests(n int) option {
+// given time. If n is greater than 20, 20 is used. By default,
+// the max is set at 10 concurrent requests.
+func WithConcurrentRequests(n int) Option {
 	return func(cw *CloudWatch) {
 		if n > maxConcurrentRequests {
 			n = maxConcurrentRequests
@@ -63,7 +65,7 @@ func WithConcurrentRequests(n int) option {
 // Namespace is applied to all created metrics and maps to the CloudWatch namespace.
 // Callers must ensure that regular calls to Send are performed, either
 // manually or with one of the helper methods.
-func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...option) *CloudWatch {
+func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...Option) *CloudWatch {
 	cw := &CloudWatch{
 		namespace:             namespace,
 		svc:                   svc,

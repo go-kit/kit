@@ -1,9 +1,5 @@
 package convert
 
-// This is package generic_test in order to get around an import cycle: this
-// package imports teststat to do its testing, but package teststat imports
-// generic to use its Histogram in the Quantiles helper function.
-
 import (
 	"testing"
 
