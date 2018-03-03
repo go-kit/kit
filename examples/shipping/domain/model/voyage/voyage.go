@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/go-kit/kit/examples/shipping/location"
+	"github.com/go-kit/kit/examples/shipping/domain/model/location"
 )
 
 // Number uniquely identifies a particular Voyage.
@@ -37,8 +37,3 @@ type CarrierMovement struct {
 
 // ErrUnknown is used when a voyage could not be found.
 var ErrUnknown = errors.New("unknown voyage")
-
-// Repository provides access a voyage store.
-type Repository interface {
-	Find(Number) (*Voyage, error)
-}

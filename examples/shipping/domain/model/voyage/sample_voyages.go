@@ -1,6 +1,6 @@
 package voyage
 
-import "github.com/go-kit/kit/examples/shipping/location"
+import "github.com/go-kit/kit/examples/shipping/domain/model/location"
 
 // A set of sample voyages.
 var (

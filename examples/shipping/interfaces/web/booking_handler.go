@@ -1,4 +1,4 @@
-package booking
+package web
 
 import (
 	"context"
