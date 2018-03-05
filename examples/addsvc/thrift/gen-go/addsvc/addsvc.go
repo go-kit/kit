@@ -373,7 +373,7 @@ func (p *AddServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.T
   oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
   x5.Write(oprot)
   oprot.WriteMessageEnd()
-  oprot.Flush()
+  oprot.Flush(ctx)
   return false, x5
 
 }
@@ -390,7 +390,7 @@ func (p *addServiceProcessorSum) Process(ctx context.Context, seqId int32, iprot
     oprot.WriteMessageBegin("Sum", thrift.EXCEPTION, seqId)
     x.Write(oprot)
     oprot.WriteMessageEnd()
-    oprot.Flush()
+    oprot.Flush(ctx)
     return false, err
   }
 
@@ -403,7 +403,7 @@ var retval *SumReply
     oprot.WriteMessageBegin("Sum", thrift.EXCEPTION, seqId)
     x.Write(oprot)
     oprot.WriteMessageEnd()
-    oprot.Flush()
+    oprot.Flush(ctx)
     return true, err2
   } else {
     result.Success = retval
@@ -417,7 +417,7 @@ var retval *SumReply
   if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
     err = err2
   }
-  if err2 = oprot.Flush(); err == nil && err2 != nil {
+  if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
     err = err2
   }
   if err != nil {
@@ -438,7 +438,7 @@ func (p *addServiceProcessorConcat) Process(ctx context.Context, seqId int32, ip
     oprot.WriteMessageBegin("Concat", thrift.EXCEPTION, seqId)
     x.Write(oprot)
     oprot.WriteMessageEnd()
-    oprot.Flush()
+    oprot.Flush(ctx)
     return false, err
   }
 
@@ -451,7 +451,7 @@ var retval *ConcatReply
     oprot.WriteMessageBegin("Concat", thrift.EXCEPTION, seqId)
     x.Write(oprot)
     oprot.WriteMessageEnd()
-    oprot.Flush()
+    oprot.Flush(ctx)
     return true, err2
   } else {
     result.Success = retval
@@ -465,7 +465,7 @@ var retval *ConcatReply
   if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
     err = err2
   }
-  if err2 = oprot.Flush(); err == nil && err2 != nil {
+  if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
     err = err2
   }
   if err != nil {
