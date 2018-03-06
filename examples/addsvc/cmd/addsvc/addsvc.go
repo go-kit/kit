@@ -98,9 +98,6 @@ func main() {
 			logger.Log("tracer", "Appdash", "addr", *appdashAddr)
 			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
 		} else {
-			if *zipkinV2URL == "" {
-				logger.Log("tracer", "none")
-			}
 			tracer = stdopentracing.GlobalTracer() // no-op
 		}
 	}
@@ -123,9 +120,7 @@ func main() {
 			logger.Log("err", err)
 			os.Exit(1)
 		}
-		if useNoopTracer {
-			logger.Log("tracer", "none")
-		} else {
+		if !useNoopTracer {
 			logger.Log("tracer", "Zipkin", "type", "Native", "URL", *zipkinV2URL)
 		}
 	}
