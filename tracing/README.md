@@ -12,13 +12,13 @@ it.
 
 ## Zipkin
 
-[Zipkin] is the most used OSS distributed tracing platform available with
-support for many different languages and frameworks. Go kit provides bindings
-to the native Go tracing implementation [zipkin-go]. If using Zipkin with Go
-kit in a polyglot microservices environment, this is the preferred binding to
-use. Instrumentation exists for `kit/transport/http` and `kit/transport/grpc`.
-The bindings are highlighted in the [addsvc] example. For more information
-regarding Zipkin feel free to visit [Zipkin's Gitter].
+[Zipkin] is one of the most used OSS distributed tracing platforms available
+with support for many different languages and frameworks. Go kit provides
+bindings to the native Go tracing implementation [zipkin-go]. If using Zipkin
+with Go kit in a polyglot microservices environment, this is the preferred
+binding to use. Instrumentation exists for `kit/transport/http` and
+`kit/transport/grpc`. The bindings are highlighted in the [addsvc] example. For
+more information regarding Zipkin feel free to visit [Zipkin's Gitter].
 
 ## OpenTracing
 
@@ -32,8 +32,9 @@ bridge in Go for your back-end exists, it should work out of the box.
 
 Please note that the "world view" of existing tracing systems do differ.
 OpenTracing can not guarantee you that tracing alignment is perfect in a
-polyglot microservice environment or switching from one tracing backend to
-another truly entails just a change in configuration.
+microservice environment especially one which is not exclusively OpenTracing
+enabled or switching from one tracing backend to another truly entails just a
+change in configuration.
 
 The following tracing back-ends are known to work with Go kit through the
 OpenTracing interface and are highlighted in the [addsvc] example.
