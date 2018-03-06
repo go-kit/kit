@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 
 	stdopentracing "github.com/opentracing/opentracing-go"
+	stdzipkin "github.com/openzipkin/zipkin-go"
 	"github.com/sony/gobreaker"
 	oldcontext "golang.org/x/net/context"
 	"golang.org/x/time/rate"
@@ -17,6 +18,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
+	"github.com/go-kit/kit/tracing/zipkin"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 
 	"github.com/go-kit/kit/examples/addsvc/pb"
@@ -30,7 +32,7 @@ type grpcServer struct {
 }
 
 // NewGRPCServer makes a set of endpoints available as a gRPC AddServer.
-func NewGRPCServer(endpoints addendpoint.Set, tracer stdopentracing.Tracer, logger log.Logger) pb.AddServer {
+func NewGRPCServer(endpoints addendpoint.Set, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) pb.AddServer {
 	options := []grpctransport.ServerOption{
 		grpctransport.ServerErrorLogger(logger),
 	}
@@ -39,13 +41,19 @@ func NewGRPCServer(endpoints addendpoint.Set, tracer stdopentracing.Tracer, logg
 			endpoints.SumEndpoint,
 			decodeGRPCSumRequest,
 			encodeGRPCSumResponse,
-			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "Sum", logger)))...,
+			append(options, grpctransport.ServerBefore(
+				opentracing.GRPCToContext(otTracer, "Sum", logger),
+				zipkin.GRPCToContext(zipkinTracer, "Sum", logger),
+			))...,
 		),
 		concat: grpctransport.NewServer(
 			endpoints.ConcatEndpoint,
 			decodeGRPCConcatRequest,
 			encodeGRPCConcatResponse,
-			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "Concat", logger)))...,
+			append(options, grpctransport.ServerBefore(
+				opentracing.GRPCToContext(otTracer, "Concat", logger),
+				zipkin.GRPCToContext(zipkinTracer, "Concat", logger),
+			))...,
 		),
 	}
 }
@@ -70,7 +78,7 @@ func (s *grpcServer) Concat(ctx oldcontext.Context, req *pb.ConcatRequest) (*pb.
 // of the conn. The caller is responsible for constructing the conn, and
 // eventually closing the underlying transport. We bake-in certain middlewares,
 // implementing the client library pattern.
-func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger log.Logger) addservice.Service {
+func NewGRPCClient(conn *grpc.ClientConn, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) addservice.Service {
 	// We construct a single ratelimiter middleware, to limit the total outgoing
 	// QPS from this client to all methods on the remote instance. We also
 	// construct per-endpoint circuitbreaker middlewares to demonstrate how
@@ -91,9 +99,13 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 			encodeGRPCSumRequest,
 			decodeGRPCSumResponse,
 			pb.SumReply{},
-			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
+			grpctransport.ClientBefore(
+				opentracing.ContextToGRPC(otTracer, logger),
+				zipkin.ContextToGRPC(zipkinTracer, logger),
+			),
 		).Endpoint()
-		sumEndpoint = opentracing.TraceClient(tracer, "Sum")(sumEndpoint)
+		sumEndpoint = opentracing.TraceClient(otTracer, "Sum")(sumEndpoint)
+		sumEndpoint = zipkin.TraceClient(zipkinTracer, "Sum")(sumEndpoint)
 		sumEndpoint = limiter(sumEndpoint)
 		sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
 			Name:    "Sum",
@@ -112,9 +124,13 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 			encodeGRPCConcatRequest,
 			decodeGRPCConcatResponse,
 			pb.ConcatReply{},
-			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
+			grpctransport.ClientBefore(
+				opentracing.ContextToGRPC(otTracer, logger),
+				zipkin.ContextToGRPC(zipkinTracer, logger),
+			),
 		).Endpoint()
-		concatEndpoint = opentracing.TraceClient(tracer, "Concat")(concatEndpoint)
+		concatEndpoint = opentracing.TraceClient(otTracer, "Concat")(concatEndpoint)
+		concatEndpoint = zipkin.TraceClient(zipkinTracer, "Concat")(concatEndpoint)
 		concatEndpoint = limiter(concatEndpoint)
 		concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
 			Name:    "Concat",
