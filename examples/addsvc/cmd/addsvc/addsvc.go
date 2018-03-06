@@ -69,8 +69,8 @@ func main() {
 	// components that use it, as a dependency.
 	var tracer stdopentracing.Tracer
 	{
-		if *zipkinV1URL != "" {
-			logger.Log("tracer", "Zipkin", "URL", *zipkinV1URL)
+		if *zipkinV1URL != "" && *zipkinV2URL == "" {
+			logger.Log("tracer", "Zipkin", "type", "OpenTracing", "URL", *zipkinV1URL)
 			collector, err := zipkinot.NewHTTPCollector(*zipkinV1URL)
 			if err != nil {
 				logger.Log("err", err)
@@ -98,7 +98,9 @@ func main() {
 			logger.Log("tracer", "Appdash", "addr", *appdashAddr)
 			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
 		} else {
-			logger.Log("tracer", "none")
+			if *zipkinV2URL == "" {
+				logger.Log("tracer", "none")
+			}
 			tracer = stdopentracing.GlobalTracer() // no-op
 		}
 	}
@@ -120,6 +122,11 @@ func main() {
 		if err != nil {
 			logger.Log("err", err)
 			os.Exit(1)
+		}
+		if useNoopTracer {
+			logger.Log("tracer", "none")
+		} else {
+			logger.Log("tracer", "Zipkin", "type", "Native", "URL", *zipkinV2URL)
 		}
 	}
 

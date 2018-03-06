@@ -60,7 +60,7 @@ func main() {
 	// Your clients will probably just use one tracer.
 	var otTracer stdopentracing.Tracer
 	{
-		if *zipkinV1URL != "" {
+		if *zipkinV1URL != "" && *zipkinV2URL == "" {
 			collector, err := zipkinot.NewHTTPCollector(*zipkinV1URL)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
