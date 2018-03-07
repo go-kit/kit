@@ -206,6 +206,91 @@ func TestCanUseDefaults(t *testing.T) {
 	}
 }
 
+func TestClientCanHandleJSONRPCError(t *testing.T) {
+	var testbody = `{
+		"jsonrpc": "2.0",
+		"error": {
+			"code": -32603,
+			"message": "Bad thing happened."
+		}
+	}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(testbody))
+	}))
+
+	sut := jsonrpc.NewClient(mustParse(server.URL), "add")
+
+	_, err := sut.Endpoint()(context.Background(), 5)
+	if err == nil {
+		t.Fatal("Expected error, got none.")
+	}
+
+	{
+		want := "Bad thing happened."
+		got := err.Error()
+		if got != want {
+			t.Fatalf("error message: want=%s, got=%s", want, got)
+		}
+	}
+
+	type errorCoder interface {
+		ErrorCode() int
+	}
+	ec, ok := err.(errorCoder)
+	if !ok {
+		t.Fatal("Error is not errorCoder")
+	}
+
+	{
+		want := -32603
+		got := ec.ErrorCode()
+		if got != want {
+			t.Fatalf("error code: want=%d, got=%d", want, got)
+		}
+	}
+}
+
+func TestClientCanHandleJSONRPCErrorWithErrorFunc(t *testing.T) {
+	var testbody = `{
+		"jsonrpc": "2.0",
+		"error": {
+			"code": -32603,
+			"message": "Bad thing happened."
+		}
+	}`
+
+	errfunc := func(err jsonrpc.Error) (interface{}, error) {
+		want := -32603
+		got := err.Code
+		if got != want {
+			t.Fatalf("error code: want=%d, got=%d", want, got)
+		}
+
+		return 5, nil
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(testbody))
+	}))
+
+	sut := jsonrpc.NewClient(
+		mustParse(server.URL),
+		"add",
+		jsonrpc.ClientErrorFunc(errfunc),
+	)
+
+	got, err := sut.Endpoint()(context.Background(), 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := 5
+	if got != want {
+		t.Fatalf("result: want=%d, got=%d", want, got)
+	}
+}
+
 func TestDefaultAutoIncrementer(t *testing.T) {
 	sut := jsonrpc.NewAutoIncrementID(0)
 	var want uint64

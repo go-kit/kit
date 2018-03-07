@@ -27,6 +27,7 @@ type Client struct {
 	dec            DecodeResponseFunc
 	before         []httptransport.RequestFunc
 	after          []httptransport.ClientResponseFunc
+	errf           ErrorFunc
 	finalizer      httptransport.ClientFinalizerFunc
 	requestID      RequestIDGenerator
 	bufferedStream bool
@@ -53,6 +54,7 @@ func NewClient(
 		dec:            DefaultResponseDecoder,
 		before:         []httptransport.RequestFunc{},
 		after:          []httptransport.ClientResponseFunc{},
+		errf:           DefaultErrorFunc,
 		requestID:      NewAutoIncrementID(0),
 		bufferedStream: false,
 	}
@@ -115,6 +117,23 @@ func ClientRequestEncoder(enc EncodeRequestFunc) ClientOption {
 // JSON. If not set, DefaultResponseDecoder is used.
 func ClientResponseDecoder(dec DecodeResponseFunc) ClientOption {
 	return func(c *Client) { c.dec = dec }
+}
+
+// ErrorFunc intercepts RPC errors from responses before they are returned from
+// the endpoint. This gives the server an opportunity to modify the error, or
+// suppress it altogether. The return values of the ErrorFunc are used as the
+// return values of the Endpoint.
+type ErrorFunc func(Error) (interface{}, error)
+
+// ClientErrorFunc sets the func used to intercept response errors.
+// If not set, DefaultErrorFunc is used.
+func ClientErrorFunc(errf ErrorFunc) ClientOption {
+	return func(c *Client) { c.errf = errf }
+}
+
+// DefaultErrorFunc passes its error through without modification.
+func DefaultErrorFunc(err Error) (interface{}, error) {
+	return nil, err
 }
 
 // RequestIDGenerator returns an ID for the request.
@@ -197,6 +216,11 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		err = json.NewDecoder(resp.Body).Decode(&rpcRes)
 		if err != nil {
 			return nil, err
+		}
+
+		// Handle the RPC error, if any.
+		if rpcRes.Error != nil {
+			return c.errf(*rpcRes.Error)
 		}
 
 		for _, f := range c.after {
