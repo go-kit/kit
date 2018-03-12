@@ -1,6 +1,8 @@
 package grpc
 
 import (
+	"context"
+
 	oldcontext "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -18,12 +20,13 @@ type Handler interface {
 
 // Server wraps an endpoint and implements grpc.Handler.
 type Server struct {
-	e      endpoint.Endpoint
-	dec    DecodeRequestFunc
-	enc    EncodeResponseFunc
-	before []ServerRequestFunc
-	after  []ServerResponseFunc
-	logger log.Logger
+	e         endpoint.Endpoint
+	dec       DecodeRequestFunc
+	enc       EncodeResponseFunc
+	before    []ServerRequestFunc
+	after     []ServerResponseFunc
+	finalizer []ServerFinalizerFunc
+	logger    log.Logger
 }
 
 // NewServer constructs a new server, which implements wraps the provided
@@ -70,25 +73,45 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 	return func(s *Server) { s.logger = logger }
 }
 
+// ServerFinalizer is executed at the end of every gRPC request.
+// By default, no finalizer is registered.
+func ServerFinalizer(f ...ServerFinalizerFunc) ServerOption {
+	return func(s *Server) { s.finalizer = append(s.finalizer, f...) }
+}
+
 // ServeGRPC implements the Handler interface.
-func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.Context, interface{}, error) {
+func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (retctx oldcontext.Context, resp interface{}, err error) {
 	// Retrieve gRPC metadata.
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		md = metadata.MD{}
 	}
 
+	if len(s.finalizer) > 0 {
+		defer func() {
+			for _, f := range s.finalizer {
+				f(ctx, err)
+			}
+		}()
+	}
+
 	for _, f := range s.before {
 		ctx = f(ctx, md)
 	}
 
-	request, err := s.dec(ctx, req)
+	var (
+		request  interface{}
+		response interface{}
+		grpcResp interface{}
+	)
+
+	request, err = s.dec(ctx, req)
 	if err != nil {
 		s.logger.Log("err", err)
 		return ctx, nil, err
 	}
 
-	response, err := s.e(ctx, request)
+	response, err = s.e(ctx, request)
 	if err != nil {
 		s.logger.Log("err", err)
 		return ctx, nil, err
@@ -99,7 +122,7 @@ func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.C
 		ctx = f(ctx, &mdHeader, &mdTrailer)
 	}
 
-	grpcResp, err := s.enc(ctx, response)
+	grpcResp, err = s.enc(ctx, response)
 	if err != nil {
 		s.logger.Log("err", err)
 		return ctx, nil, err
@@ -120,4 +143,19 @@ func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (oldcontext.C
 	}
 
 	return ctx, grpcResp, nil
+}
+
+// ServerFinalizerFunc can be used to perform work at the end of an gRPC
+// request, after the response has been written to the client.
+type ServerFinalizerFunc func(ctx context.Context, err error)
+
+// Interceptor is a grpc UnaryInterceptor that injects the method name into
+// context so it can be consumed by Go kit gRPC middlewares. The Interceptor
+// typically is added at creation time of the grpc-go server.
+// Like this: `grpc.NewServer(grpc.UnaryInterceptor(kitgrpc.Interceptor))`
+func Interceptor(
+	ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
+) (resp interface{}, err error) {
+	ctx = context.WithValue(ctx, ContextKeyRequestMethod, info.FullMethod)
+	return handler(ctx, req)
 }

@@ -22,6 +22,7 @@ type Client struct {
 	grpcReply   reflect.Type
 	before      []ClientRequestFunc
 	after       []ClientResponseFunc
+	finalizer   []ClientFinalizerFunc
 }
 
 // NewClient constructs a usable Client for a single remote endpoint.
@@ -75,12 +76,28 @@ func ClientAfter(after ...ClientResponseFunc) ClientOption {
 	return func(c *Client) { c.after = append(c.after, after...) }
 }
 
+// ClientFinalizer is executed at the end of every gRPC request.
+// By default, no finalizer is registered.
+func ClientFinalizer(f ...ClientFinalizerFunc) ClientOption {
+	return func(s *Client) { s.finalizer = append(s.finalizer, f...) }
+}
+
 // Endpoint returns a usable endpoint that will invoke the gRPC specified by the
 // client.
 func (c Client) Endpoint() endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
+
+		if c.finalizer != nil {
+			defer func() {
+				for _, f := range c.finalizer {
+					f(ctx, err)
+				}
+			}()
+		}
+
+		ctx = context.WithValue(ctx, ContextKeyRequestMethod, c.method)
 
 		req, err := c.enc(ctx, request)
 		if err != nil {
@@ -95,9 +112,9 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		var header, trailer metadata.MD
 		grpcReply := reflect.New(c.grpcReply).Interface()
-		if err = grpc.Invoke(
-			ctx, c.method, req, grpcReply, c.client,
-			grpc.Header(&header), grpc.Trailer(&trailer),
+		if err = c.client.Invoke(
+			ctx, c.method, req, grpcReply, grpc.Header(&header),
+			grpc.Trailer(&trailer),
 		); err != nil {
 			return nil, err
 		}
@@ -106,10 +123,18 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			ctx = f(ctx, header, trailer)
 		}
 
-		response, err := c.dec(ctx, grpcReply)
+		response, err = c.dec(ctx, grpcReply)
 		if err != nil {
 			return nil, err
 		}
 		return response, nil
 	}
 }
+
+// ClientFinalizerFunc can be used to perform work at the end of a client gRPC
+// request, after the response is returned. The principal
+// intended use is for error logging. Additional response parameters are
+// provided in the context under keys with the ContextKeyResponse prefix.
+// Note: err may be nil. There maybe also no additional response parameters depending on
+// when an error occurs.
+type ClientFinalizerFunc func(ctx context.Context, err error)

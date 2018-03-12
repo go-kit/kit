@@ -14,7 +14,9 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	lightstep "github.com/lightstep/lightstep-tracer-go"
 	stdopentracing "github.com/opentracing/opentracing-go"
-	zipkin "github.com/openzipkin/zipkin-go-opentracing"
+	zipkin "github.com/openzipkin/zipkin-go"
+	zipkinot "github.com/openzipkin/zipkin-go-opentracing"
+	zipkinhttp "github.com/openzipkin/zipkin-go/reporter/http"
 	"sourcegraph.com/sourcegraph/appdash"
 	appdashot "sourcegraph.com/sourcegraph/appdash/opentracing"
 
@@ -41,9 +43,10 @@ func main() {
 		thriftProtocol = fs.String("thrift-protocol", "binary", "binary, compact, json, simplejson")
 		thriftBuffer   = fs.Int("thrift-buffer", 0, "0 for unbuffered")
 		thriftFramed   = fs.Bool("thrift-framed", false, "true to enable framing")
-		zipkinURL      = fs.String("zipkin-url", "", "Enable Zipkin tracing via a collector URL e.g. http://localhost:9411/api/v1/spans")
-		lightstepToken = flag.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
-		appdashAddr    = flag.String("appdash-addr", "", "Enable Appdash tracing via an Appdash server host:port")
+		zipkinV2URL    = fs.String("zipkin-url", "", "Enable Zipkin v2 tracing (zipkin-go) via HTTP Reporter URL e.g. http://localhost:94111/api/v2/spans")
+		zipkinV1URL    = fs.String("zipkin-v1-url", "", "Enable Zipkin v1 tracing (zipkin-go-opentracing) via a collector URL e.g. http://localhost:9411/api/v1/spans")
+		lightstepToken = fs.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
+		appdashAddr    = fs.String("appdash-addr", "", "Enable Appdash tracing via an Appdash server host:port")
 		method         = fs.String("method", "sum", "sum, concat")
 	)
 	fs.Usage = usageFor(fs, os.Args[0]+" [flags] <a> <b>")
@@ -55,10 +58,10 @@ func main() {
 
 	// This is a demonstration client, which supports multiple tracers.
 	// Your clients will probably just use one tracer.
-	var tracer stdopentracing.Tracer
+	var otTracer stdopentracing.Tracer
 	{
-		if *zipkinURL != "" {
-			collector, err := zipkin.NewHTTPCollector(*zipkinURL)
+		if *zipkinV1URL != "" && *zipkinV2URL == "" {
+			collector, err := zipkinot.NewHTTPCollector(*zipkinV1URL)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(1)
@@ -66,24 +69,46 @@ func main() {
 			defer collector.Close()
 			var (
 				debug       = false
-				hostPort    = "localhost:80"
-				serviceName = "addsvc"
+				hostPort    = "localhost:0"
+				serviceName = "addsvc-cli"
 			)
-			recorder := zipkin.NewRecorder(collector, debug, hostPort, serviceName)
-			tracer, err = zipkin.NewTracer(recorder)
+			recorder := zipkinot.NewRecorder(collector, debug, hostPort, serviceName)
+			otTracer, err = zipkinot.NewTracer(recorder)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(1)
 			}
 		} else if *lightstepToken != "" {
-			tracer = lightstep.NewTracer(lightstep.Options{
+			otTracer = lightstep.NewTracer(lightstep.Options{
 				AccessToken: *lightstepToken,
 			})
-			defer lightstep.FlushLightStepTracer(tracer)
+			defer lightstep.FlushLightStepTracer(otTracer)
 		} else if *appdashAddr != "" {
-			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
+			otTracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
 		} else {
-			tracer = stdopentracing.GlobalTracer() // no-op
+			otTracer = stdopentracing.GlobalTracer() // no-op
+		}
+	}
+
+	// This is a demonstration of the native Zipkin tracing client. If using
+	// Zipkin this is the more idiomatic client over OpenTracing.
+	var zipkinTracer *zipkin.Tracer
+	{
+		var (
+			err           error
+			hostPort      = "" // if host:port is unknown we can keep this empty
+			serviceName   = "addsvc-cli"
+			useNoopTracer = (*zipkinV2URL == "")
+			reporter      = zipkinhttp.NewReporter(*zipkinV2URL)
+		)
+		defer reporter.Close()
+		zEP, _ := zipkin.NewEndpoint(serviceName, hostPort)
+		zipkinTracer, err = zipkin.NewTracer(
+			reporter, zipkin.WithLocalEndpoint(zEP), zipkin.WithNoopTracer(useNoopTracer),
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "unable to create zipkin tracer: %s\n", err.Error())
+			os.Exit(1)
 		}
 	}
 
@@ -94,7 +119,7 @@ func main() {
 		err error
 	)
 	if *httpAddr != "" {
-		svc, err = addtransport.NewHTTPClient(*httpAddr, tracer, log.NewNopLogger())
+		svc, err = addtransport.NewHTTPClient(*httpAddr, otTracer, zipkinTracer, log.NewNopLogger())
 	} else if *grpcAddr != "" {
 		conn, err := grpc.Dial(*grpcAddr, grpc.WithInsecure(), grpc.WithTimeout(time.Second))
 		if err != nil {
@@ -102,9 +127,9 @@ func main() {
 			os.Exit(1)
 		}
 		defer conn.Close()
-		svc = addtransport.NewGRPCClient(conn, tracer, log.NewNopLogger())
+		svc = addtransport.NewGRPCClient(conn, otTracer, zipkinTracer, log.NewNopLogger())
 	} else if *jsonRPCAddr != "" {
-		svc, err = addtransport.NewJSONRPCClient(*jsonRPCAddr, tracer, log.NewNopLogger())
+		svc, err = addtransport.NewJSONRPCClient(*jsonRPCAddr, otTracer, log.NewNopLogger())
 	} else if *thriftAddr != "" {
 		// It's necessary to do all of this construction in the func main,
 		// because (among other reasons) we need to control the lifecycle of the
