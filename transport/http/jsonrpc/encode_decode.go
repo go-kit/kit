@@ -40,9 +40,9 @@ type EncodeResponseFunc func(context.Context, interface{}) (response json.RawMes
 // JSON encodes the object directly.
 type EncodeRequestFunc func(context.Context, interface{}) (request json.RawMessage, err error)
 
-// DecodeResponseFunc extracts a user-domain response object from an HTTP
-// request object. It's designed to be used in JSON RPC clients, for
+// DecodeResponseFunc extracts a user-domain response object from an JSONRPC
+// response object. It's designed to be used in JSON RPC clients, for
 // client-side endpoints. One straightforward DecodeRequestFunc could be
 // something that JSON decodes from the request body to the concrete
 // response type.
-type DecodeResponseFunc func(context.Context, json.RawMessage) (response interface{}, err error)
+type DecodeResponseFunc func(context.Context, Response) (response interface{}, err error)

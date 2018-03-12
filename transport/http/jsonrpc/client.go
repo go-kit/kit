@@ -27,7 +27,6 @@ type Client struct {
 	dec            DecodeResponseFunc
 	before         []httptransport.RequestFunc
 	after          []httptransport.ClientResponseFunc
-	errf           ErrorFunc
 	finalizer      httptransport.ClientFinalizerFunc
 	requestID      RequestIDGenerator
 	bufferedStream bool
@@ -54,7 +53,6 @@ func NewClient(
 		dec:            DefaultResponseDecoder,
 		before:         []httptransport.RequestFunc{},
 		after:          []httptransport.ClientResponseFunc{},
-		errf:           DefaultErrorFunc,
 		requestID:      NewAutoIncrementID(0),
 		bufferedStream: false,
 	}
@@ -69,10 +67,14 @@ func DefaultRequestEncoder(_ context.Context, req interface{}) (json.RawMessage,
 	return json.Marshal(req)
 }
 
-// DefaultResponseDecoder unmarshals the given JSON to interface{}.
-func DefaultResponseDecoder(_ context.Context, res json.RawMessage) (interface{}, error) {
+// DefaultResponseDecoder unmarshals the result to interface{}, or returns an
+// error, if found.
+func DefaultResponseDecoder(_ context.Context, res Response) (interface{}, error) {
+	if res.Error != nil {
+		return nil, *res.Error
+	}
 	var result interface{}
-	err := json.Unmarshal(res, &result)
+	err := json.Unmarshal(res.Result, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -117,23 +119,6 @@ func ClientRequestEncoder(enc EncodeRequestFunc) ClientOption {
 // JSON. If not set, DefaultResponseDecoder is used.
 func ClientResponseDecoder(dec DecodeResponseFunc) ClientOption {
 	return func(c *Client) { c.dec = dec }
-}
-
-// ErrorFunc intercepts RPC errors from responses before they are returned from
-// the endpoint. This gives the server an opportunity to modify the error, or
-// suppress it altogether. The return values of the ErrorFunc are used as the
-// return values of the Endpoint.
-type ErrorFunc func(Error) (interface{}, error)
-
-// ClientErrorFunc sets the func used to intercept response errors.
-// If not set, DefaultErrorFunc is used.
-func ClientErrorFunc(errf ErrorFunc) ClientOption {
-	return func(c *Client) { c.errf = errf }
-}
-
-// DefaultErrorFunc passes its error through without modification.
-func DefaultErrorFunc(err Error) (interface{}, error) {
-	return nil, err
 }
 
 // RequestIDGenerator returns an ID for the request.
@@ -218,16 +203,11 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			return nil, err
 		}
 
-		// Handle the RPC error, if any.
-		if rpcRes.Error != nil {
-			return c.errf(*rpcRes.Error)
-		}
-
 		for _, f := range c.after {
 			ctx = f(ctx, resp)
 		}
 
-		return c.dec(ctx, rpcRes.Result)
+		return c.dec(ctx, rpcRes)
 	}
 }
 
