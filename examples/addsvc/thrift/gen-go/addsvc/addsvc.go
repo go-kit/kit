@@ -5,8 +5,8 @@ package addsvc
 
 import (
 	"bytes"
-	"reflect"
 	"context"
+	"reflect"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 )
@@ -287,14 +287,12 @@ type AddServiceClient struct {
   c thrift.TClient
 }
 
-// Deprecated: Use NewAddService instead
 func NewAddServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *AddServiceClient {
   return &AddServiceClient{
     c: thrift.NewTStandardClient(f.GetProtocol(t), f.GetProtocol(t)),
   }
 }
 
-// Deprecated: Use NewAddService instead
 func NewAddServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *AddServiceClient {
   return &AddServiceClient{
     c: thrift.NewTStandardClient(iprot, oprot),
@@ -307,6 +305,9 @@ func NewAddServiceClient(c thrift.TClient) *AddServiceClient {
   }
 }
 
+func (p *AddServiceClient) Client_() thrift.TClient {
+  return p.c
+}
 // Parameters:
 //  - A
 //  - B
@@ -315,7 +316,7 @@ func (p *AddServiceClient) Sum(ctx context.Context, a int64, b int64) (r *SumRep
   _args0.A = a
   _args0.B = b
   var _result1 AddServiceSumResult
-  if err = p.c.Call(ctx, "Sum", &_args0, &_result1); err != nil {
+  if err = p.Client_().Call(ctx, "Sum", &_args0, &_result1); err != nil {
     return
   }
   return _result1.GetSuccess(), nil
@@ -329,7 +330,7 @@ func (p *AddServiceClient) Concat(ctx context.Context, a string, b string) (r *C
   _args2.A = a
   _args2.B = b
   var _result3 AddServiceConcatResult
-  if err = p.c.Call(ctx, "Concat", &_args2, &_result3); err != nil {
+  if err = p.Client_().Call(ctx, "Concat", &_args2, &_result3); err != nil {
     return
   }
   return _result3.GetSuccess(), nil
@@ -373,7 +374,7 @@ func (p *AddServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.T
   oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
   x5.Write(oprot)
   oprot.WriteMessageEnd()
-  oprot.Flush()
+  oprot.Flush(ctx)
   return false, x5
 
 }
@@ -390,7 +391,7 @@ func (p *addServiceProcessorSum) Process(ctx context.Context, seqId int32, iprot
     oprot.WriteMessageBegin("Sum", thrift.EXCEPTION, seqId)
     x.Write(oprot)
     oprot.WriteMessageEnd()
-    oprot.Flush()
+    oprot.Flush(ctx)
     return false, err
   }
 
@@ -403,7 +404,7 @@ var retval *SumReply
     oprot.WriteMessageBegin("Sum", thrift.EXCEPTION, seqId)
     x.Write(oprot)
     oprot.WriteMessageEnd()
-    oprot.Flush()
+    oprot.Flush(ctx)
     return true, err2
   } else {
     result.Success = retval
@@ -417,7 +418,7 @@ var retval *SumReply
   if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
     err = err2
   }
-  if err2 = oprot.Flush(); err == nil && err2 != nil {
+  if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
     err = err2
   }
   if err != nil {
@@ -438,7 +439,7 @@ func (p *addServiceProcessorConcat) Process(ctx context.Context, seqId int32, ip
     oprot.WriteMessageBegin("Concat", thrift.EXCEPTION, seqId)
     x.Write(oprot)
     oprot.WriteMessageEnd()
-    oprot.Flush()
+    oprot.Flush(ctx)
     return false, err
   }
 
@@ -451,7 +452,7 @@ var retval *ConcatReply
     oprot.WriteMessageBegin("Concat", thrift.EXCEPTION, seqId)
     x.Write(oprot)
     oprot.WriteMessageEnd()
-    oprot.Flush()
+    oprot.Flush(ctx)
     return true, err2
   } else {
     result.Success = retval
@@ -465,7 +466,7 @@ var retval *ConcatReply
   if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
     err = err2
   }
-  if err2 = oprot.Flush(); err == nil && err2 != nil {
+  if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
     err = err2
   }
   if err != nil {
