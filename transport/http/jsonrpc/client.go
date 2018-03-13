@@ -67,10 +67,14 @@ func DefaultRequestEncoder(_ context.Context, req interface{}) (json.RawMessage,
 	return json.Marshal(req)
 }
 
-// DefaultResponseDecoder unmarshals the given JSON to interface{}.
-func DefaultResponseDecoder(_ context.Context, res json.RawMessage) (interface{}, error) {
+// DefaultResponseDecoder unmarshals the result to interface{}, or returns an
+// error, if found.
+func DefaultResponseDecoder(_ context.Context, res Response) (interface{}, error) {
+	if res.Error != nil {
+		return nil, *res.Error
+	}
 	var result interface{}
-	err := json.Unmarshal(res, &result)
+	err := json.Unmarshal(res.Result, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +207,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			ctx = f(ctx, resp)
 		}
 
-		return c.dec(ctx, rpcRes.Result)
+		return c.dec(ctx, rpcRes)
 	}
 }
 

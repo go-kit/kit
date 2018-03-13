@@ -62,12 +62,12 @@ func TestClientHappyPath(t *testing.T) {
 		fin             = func(ctx context.Context, err error) {
 			finalizerCalled = true
 		}
-		decode = func(ctx context.Context, res json.RawMessage) (interface{}, error) {
+		decode = func(ctx context.Context, res jsonrpc.Response) (interface{}, error) {
 			if ac := ctx.Value(afterCalledKey); ac == nil {
 				t.Fatal("after not called")
 			}
 			var result int
-			err := json.Unmarshal(res, &result)
+			err := json.Unmarshal(res.Result, &result)
 			if err != nil {
 				return nil, err
 			}
@@ -203,6 +203,51 @@ func TestCanUseDefaults(t *testing.T) {
 
 	if paramsAtServer != in {
 		t.Fatalf("want=%+v, got=%+v", in, paramsAtServer)
+	}
+}
+
+func TestClientCanHandleJSONRPCError(t *testing.T) {
+	var testbody = `{
+		"jsonrpc": "2.0",
+		"error": {
+			"code": -32603,
+			"message": "Bad thing happened."
+		}
+	}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(testbody))
+	}))
+
+	sut := jsonrpc.NewClient(mustParse(server.URL), "add")
+
+	_, err := sut.Endpoint()(context.Background(), 5)
+	if err == nil {
+		t.Fatal("Expected error, got none.")
+	}
+
+	{
+		want := "Bad thing happened."
+		got := err.Error()
+		if got != want {
+			t.Fatalf("error message: want=%s, got=%s", want, got)
+		}
+	}
+
+	type errorCoder interface {
+		ErrorCode() int
+	}
+	ec, ok := err.(errorCoder)
+	if !ok {
+		t.Fatal("Error is not errorCoder")
+	}
+
+	{
+		want := -32603
+		got := ec.ErrorCode()
+		if got != want {
+			t.Fatalf("error code: want=%d, got=%d", want, got)
+		}
 	}
 }
 
