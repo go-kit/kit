@@ -28,6 +28,22 @@ func Usage() {
   os.Exit(0)
 }
 
+type httpHeaders map[string]string
+
+func (h httpHeaders) String() string {
+  var m map[string]string = h
+  return fmt.Sprintf("%s", m)
+}
+
+func (h httpHeaders) Set(value string) error {
+  parts := strings.Split(value, ": ")
+  if len(parts) != 2 {
+    return fmt.Errorf("header should be of format 'Key: Value'")
+  }
+  h[parts[0]] = parts[1]
+  return nil
+}
+
 func main() {
   flag.Usage = Usage
   var host string
@@ -36,7 +52,8 @@ func main() {
   var urlString string
   var framed bool
   var useHttp bool
-  var parsedUrl url.URL
+  headers := make(httpHeaders)
+  var parsedUrl *url.URL
   var trans thrift.TTransport
   _ = strconv.Atoi
   _ = math.Abs
@@ -47,16 +64,18 @@ func main() {
   flag.StringVar(&urlString, "u", "", "Specify the url")
   flag.BoolVar(&framed, "framed", false, "Use framed transport")
   flag.BoolVar(&useHttp, "http", false, "Use http")
+  flag.Var(headers, "H", "Headers to set on the http(s) request (e.g. -H \"Key: Value\")")
   flag.Parse()
   
   if len(urlString) > 0 {
-    parsedUrl, err := url.Parse(urlString)
+    var err error
+    parsedUrl, err = url.Parse(urlString)
     if err != nil {
       fmt.Fprintln(os.Stderr, "Error parsing URL: ", err)
       flag.Usage()
     }
     host = parsedUrl.Host
-    useHttp = len(parsedUrl.Scheme) <= 0 || parsedUrl.Scheme == "http"
+    useHttp = len(parsedUrl.Scheme) <= 0 || parsedUrl.Scheme == "http" || parsedUrl.Scheme == "https"
   } else if useHttp {
     _, err := url.Parse(fmt.Sprint("http://", host, ":", port))
     if err != nil {
@@ -69,6 +88,12 @@ func main() {
   var err error
   if useHttp {
     trans, err = thrift.NewTHttpClient(parsedUrl.String())
+    if len(headers) > 0 {
+      httptrans := trans.(*thrift.THttpClient)
+      for key, value := range headers {
+        httptrans.SetHeader(key, value)
+      }
+    }
   } else {
     portStr := fmt.Sprint(port)
     if strings.Contains(host, ":") {
