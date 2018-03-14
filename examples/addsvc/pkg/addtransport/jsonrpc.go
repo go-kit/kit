@@ -146,7 +146,7 @@ func decodeSumResponse(_ context.Context, res jsonrpc.Response) (interface{}, er
 	if err != nil {
 		return nil, fmt.Errorf("couldn't unmarshal body to SumResponse: %s", err)
 	}
-	return res, nil
+	return sumres, nil
 }
 
 func encodeSumRequest(_ context.Context, obj interface{}) (json.RawMessage, error) {
@@ -197,7 +197,7 @@ func decodeConcatResponse(_ context.Context, res jsonrpc.Response) (interface{},
 	if err != nil {
 		return nil, fmt.Errorf("couldn't unmarshal body to ConcatResponse: %s", err)
 	}
-	return res, nil
+	return concatres, nil
 }
 
 func encodeConcatRequest(_ context.Context, obj interface{}) (json.RawMessage, error) {
