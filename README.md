@@ -1,7 +1,7 @@
 # Go kit [![Circle CI](https://circleci.com/gh/go-kit/kit.svg?style=shield)](https://circleci.com/gh/go-kit/kit) [![Travis CI](https://travis-ci.org/go-kit/kit.svg?branch=master)](https://travis-ci.org/go-kit/kit) [![GoDoc](https://godoc.org/github.com/go-kit/kit?status.svg)](https://godoc.org/github.com/go-kit/kit) [![Coverage Status](https://coveralls.io/repos/go-kit/kit/badge.svg?branch=master&service=github)](https://coveralls.io/github/go-kit/kit?branch=master) [![Go Report Card](https://goreportcard.com/badge/go-kit/kit)](https://goreportcard.com/report/go-kit/kit) [![Sourcegraph](https://sourcegraph.com/github.com/go-kit/kit/-/badge.svg)](https://sourcegraph.com/github.com/go-kit/kit?badge)
 
-**Go kit** is a **programming toolkit** for building microservices 
-(or elegant monoliths) in Go. We solve common problems in distributed 
+**Go kit** is a **programming toolkit** for building microservices
+(or elegant monoliths) in Go. We solve common problems in distributed
 systems and application architecture so you can focus on delivering
 business value.
 
@@ -91,7 +91,7 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 - [mattheath/phosphor](https://github.com/mondough/phosphor), distributed system tracing
 - [pivotal-golang/lager](https://github.com/pivotal-golang/lager), an opinionated logging library
 - [rubyist/circuitbreaker](https://github.com/rubyist/circuitbreaker), circuit breaker library
-- [Sirupsen/logrus](https://github.com/Sirupsen/logrus), structured, pluggable logging for Go ★
+- [sirupsen/logrus](https://github.com/sirupsen/logrus), structured, pluggable logging for Go ★
 - [sourcegraph/appdash](https://github.com/sourcegraph/appdash), application tracing system based on Google's Dapper
 - [spacemonkeygo/monitor](https://github.com/spacemonkeygo/monitor), data collection, monitoring, instrumentation, and Zipkin client library
 - [streadway/handy](https://github.com/streadway/handy), net/http handler filters
