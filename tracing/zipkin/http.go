@@ -193,6 +193,10 @@ func HTTPServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Ser
 		func(ctx context.Context, code int, r *http.Request) {
 			if span := zipkin.SpanFromContext(ctx); span != nil {
 				zipkin.TagHTTPStatusCode.Set(span, strconv.Itoa(code))
+				if code > 399 {
+					// set http status as error tag (if already set, this is a noop)
+					zipkin.TagError.Set(span, http.StatusText(code))
+				}
 				if rs, ok := ctx.Value(kithttp.ContextKeyResponseSize).(int64); ok {
 					zipkin.TagHTTPResponseSize.Set(span, strconv.FormatInt(rs, 10))
 				}
