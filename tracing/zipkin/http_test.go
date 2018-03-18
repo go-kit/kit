@@ -2,6 +2,7 @@ package zipkin_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -173,7 +174,7 @@ func TestHTTPServerTrace(t *testing.T) {
 	handler := kithttp.NewServer(
 		endpoint.Nop,
 		func(context.Context, *http.Request) (interface{}, error) { return nil, nil },
-		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
+		func(context.Context, http.ResponseWriter, interface{}) error { return errors.New("dummy") },
 		zipkinkit.HTTPServerTrace(tr),
 	)
 
@@ -213,5 +214,9 @@ func TestHTTPServerTrace(t *testing.T) {
 
 	if want, have := httpMethod, spans[0].Name; want != have {
 		t.Errorf("incorrect span name, want %s, have %s", want, have)
+	}
+
+	if want, have := http.StatusText(500), spans[0].Tags["error"]; want != have {
+		t.Fatalf("incorrect error tag, want %s, have %s", want, have)
 	}
 }
