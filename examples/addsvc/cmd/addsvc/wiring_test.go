@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/opentracing/opentracing-go"
+	zipkin "github.com/openzipkin/zipkin-go"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/discard"
@@ -18,9 +19,10 @@ import (
 )
 
 func TestHTTP(t *testing.T) {
+	zkt, _ := zipkin.NewTracer(nil, zipkin.WithNoopTracer(true))
 	svc := addservice.New(log.NewNopLogger(), discard.NewCounter(), discard.NewCounter())
-	eps := addendpoint.New(svc, log.NewNopLogger(), discard.NewHistogram(), opentracing.GlobalTracer())
-	mux := addtransport.NewHTTPHandler(eps, opentracing.GlobalTracer(), log.NewNopLogger())
+	eps := addendpoint.New(svc, log.NewNopLogger(), discard.NewHistogram(), opentracing.GlobalTracer(), zkt)
+	mux := addtransport.NewHTTPHandler(eps, opentracing.GlobalTracer(), zkt, log.NewNopLogger())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 

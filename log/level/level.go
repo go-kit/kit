@@ -177,7 +177,7 @@ func DebugValue() Value { return debugValue }
 
 var (
 	// key is of type interfae{} so that it allocates once during package
-	// initialization and avoids allocating every type the value is added to a
+	// initialization and avoids allocating every time the value is added to a
 	// []interface{} later.
 	key interface{} = "level"
 

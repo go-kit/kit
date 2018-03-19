@@ -20,6 +20,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/consul/api"
 	stdopentracing "github.com/opentracing/opentracing-go"
+	stdzipkin "github.com/openzipkin/zipkin-go"
 	"google.golang.org/grpc"
 
 	"github.com/go-kit/kit/endpoint"
@@ -67,6 +68,7 @@ func main() {
 
 	// Transport domain.
 	tracer := stdopentracing.GlobalTracer() // no-op
+	zipkinTracer, _ := stdzipkin.NewTracer(nil, stdzipkin.WithNoopTracer(true))
 	ctx := context.Background()
 	r := mux.NewRouter()
 
@@ -88,14 +90,14 @@ func main() {
 			instancer   = consulsd.NewInstancer(client, logger, "addsvc", tags, passingOnly)
 		)
 		{
-			factory := addsvcFactory(addendpoint.MakeSumEndpoint, tracer, logger)
+			factory := addsvcFactory(addendpoint.MakeSumEndpoint, tracer, zipkinTracer, logger)
 			endpointer := sd.NewEndpointer(instancer, factory, logger)
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			endpoints.SumEndpoint = retry
 		}
 		{
-			factory := addsvcFactory(addendpoint.MakeConcatEndpoint, tracer, logger)
+			factory := addsvcFactory(addendpoint.MakeConcatEndpoint, tracer, zipkinTracer, logger)
 			endpointer := sd.NewEndpointer(instancer, factory, logger)
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
@@ -106,7 +108,7 @@ func main() {
 		// HTTP handler, and just install it under a particular path prefix in
 		// our router.
 
-		r.PathPrefix("/addsvc").Handler(http.StripPrefix("/addsvc", addtransport.NewHTTPHandler(endpoints, tracer, logger)))
+		r.PathPrefix("/addsvc").Handler(http.StripPrefix("/addsvc", addtransport.NewHTTPHandler(endpoints, tracer, zipkinTracer, logger)))
 	}
 
 	// stringsvc routes.
@@ -165,7 +167,7 @@ func main() {
 	logger.Log("exit", <-errc)
 }
 
-func addsvcFactory(makeEndpoint func(addservice.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, logger log.Logger) sd.Factory {
+func addsvcFactory(makeEndpoint func(addservice.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) sd.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		// We could just as easily use the HTTP or Thrift client package to make
 		// the connection to addsvc. We've chosen gRPC arbitrarily. Note that
@@ -176,7 +178,7 @@ func addsvcFactory(makeEndpoint func(addservice.Service) endpoint.Endpoint, trac
 		if err != nil {
 			return nil, nil, err
 		}
-		service := addtransport.NewGRPCClient(conn, tracer, logger)
+		service := addtransport.NewGRPCClient(conn, tracer, zipkinTracer, logger)
 		endpoint := makeEndpoint(service)
 
 		// Notice that the addsvc gRPC client converts the connection to a
