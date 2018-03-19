@@ -104,7 +104,7 @@ func (m *Manager) loop() {
 		case conn = <-connc:
 			if conn == nil {
 				// didn't work
-				backoff = exponential(backoff) // wait longer
+				backoff = Exponential(backoff) // wait longer
 				reconnectc = m.after(backoff)  // try again
 			} else {
 				// worked!
