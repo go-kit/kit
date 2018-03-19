@@ -5,7 +5,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/go-kit/kit/backoff"
 	"github.com/go-kit/kit/log"
 )
 
@@ -87,7 +86,7 @@ func (m *Manager) loop() {
 		conn       = dial(m.dialer, m.network, m.address, m.logger) // may block slightly
 		connc      = make(chan net.Conn, 1)
 		reconnectc <-chan time.Time // initially nil
-		backoff    = backoff.New(nil)
+		backoff    = time.Second
 	)
 
 	// If the initial dial fails, we need to trigger a reconnect via the loop
@@ -104,11 +103,12 @@ func (m *Manager) loop() {
 		case conn = <-connc:
 			if conn == nil {
 				// didn't work
-				reconnectc = m.after(backoff.NextBackoff()) // try again
+				backoff = exponential(backoff) // wait longer
+				reconnectc = m.after(backoff)  // try again
 			} else {
 				// worked!
-				backoff.Reset()  // reset wait time
-				reconnectc = nil // no retry necessary
+				backoff = time.Second // reset wait time
+				reconnectc = nil      // no retry necessary
 			}
 
 		case m.takec <- conn:
@@ -130,6 +130,14 @@ func dial(d Dialer, network, address string, logger log.Logger) net.Conn {
 		conn = nil // just to be sure
 	}
 	return conn
+}
+
+func exponential(d time.Duration) time.Duration {
+	d *= 2
+	if d > time.Minute {
+		d = time.Minute
+	}
+	return d
 }
 
 // ErrConnectionUnavailable is returned by the Manager's Write method when the
