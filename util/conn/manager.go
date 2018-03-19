@@ -2,6 +2,7 @@ package conn
 
 import (
 	"errors"
+	"math/rand"
 	"net"
 	"time"
 
@@ -134,10 +135,13 @@ func dial(d Dialer, network, address string, logger log.Logger) net.Conn {
 
 func exponential(d time.Duration) time.Duration {
 	d *= 2
+	jitter := rand.Float64() + 0.5
+	d = time.Duration(int64(float64(d.Nanoseconds()) * jitter))
 	if d > time.Minute {
 		d = time.Minute
 	}
 	return d
+
 }
 
 // ErrConnectionUnavailable is returned by the Manager's Write method when the
