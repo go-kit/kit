@@ -3,12 +3,14 @@ package consul
 import (
 	"fmt"
 	"io"
+	"time"
 
 	consul "github.com/hashicorp/consul/api"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/kit/sd/internal/instance"
+	"github.com/go-kit/kit/util/conn"
 )
 
 const defaultIndex = 0
@@ -59,6 +61,7 @@ func (s *Instancer) loop(lastIndex uint64) {
 	var (
 		instances []string
 		err       error
+		d         time.Duration = time.Millisecond * 10
 	)
 	for {
 		instances, lastIndex, err = s.getInstances(lastIndex, s.quitc)
@@ -70,6 +73,8 @@ func (s *Instancer) loop(lastIndex uint64) {
 			s.cache.Update(sd.Event{Err: err})
 		default:
 			s.cache.Update(sd.Event{Instances: instances})
+			time.Sleep(d)
+			d = conn.Exponential(d)
 		}
 	}
 }

@@ -133,7 +133,7 @@ func dial(d Dialer, network, address string, logger log.Logger) net.Conn {
 	return conn
 }
 
-func exponential(d time.Duration) time.Duration {
+func Exponential(d time.Duration) time.Duration {
 	d *= 2
 	jitter := rand.Float64() + 0.5
 	d = time.Duration(int64(float64(d.Nanoseconds()) * jitter))
