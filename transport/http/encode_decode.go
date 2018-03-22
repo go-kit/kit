@@ -8,12 +8,12 @@ import (
 // DecodeRequestFunc extracts a user-domain request object from an HTTP
 // request object. It's designed to be used in HTTP servers, for server-side
 // endpoints. One straightforward DecodeRequestFunc could be something that
-// JSON decodes from the request body to the concrete response type.
+// JSON decodes from the request body to the concrete request type.
 type DecodeRequestFunc func(context.Context, *http.Request) (request interface{}, err error)
 
 // EncodeRequestFunc encodes the passed request object into the HTTP request
 // object. It's designed to be used in HTTP clients, for client-side
-// endpoints. One straightforward EncodeRequestFunc could something that JSON
+// endpoints. One straightforward EncodeRequestFunc could be something that JSON
 // encodes the object directly to the request body.
 type EncodeRequestFunc func(context.Context, *http.Request, interface{}) error
 
