@@ -10,14 +10,29 @@ import (
 
 type jsonLogger struct {
 	io.Writer
+	disableEscapeHTML bool
 }
 
 // NewJSONLogger returns a Logger that encodes keyvals to the Writer as a
 // single JSON object. Each log event produces no more than one call to
 // w.Write. The passed Writer must be safe for concurrent use by multiple
 // goroutines if the returned Logger will be used concurrently.
-func NewJSONLogger(w io.Writer) Logger {
-	return &jsonLogger{w}
+func NewJSONLogger(w io.Writer, options ...JSONLoggerOption) Logger {
+	l := &jsonLogger{
+		Writer: w,
+	}
+	for _, option := range options {
+		option(l)
+	}
+	return l
+}
+
+// JSONLoggerOption sets a parameter for json logger
+type JSONLoggerOption func(*jsonLogger)
+
+// DisableEscapeHTML disable to escape &, <, >.
+func DisableEscapeHTML(v bool) JSONLoggerOption {
+	return func(j *jsonLogger) { j.disableEscapeHTML = v }
 }
 
 func (l *jsonLogger) Log(keyvals ...interface{}) error {
@@ -31,7 +46,9 @@ func (l *jsonLogger) Log(keyvals ...interface{}) error {
 		}
 		merge(m, k, v)
 	}
-	return json.NewEncoder(l.Writer).Encode(m)
+	enc := json.NewEncoder(l.Writer)
+	enc.SetEscapeHTML(!l.disableEscapeHTML)
+	return enc.Encode(m)
 }
 
 func merge(dst map[string]interface{}, k, v interface{}) {
