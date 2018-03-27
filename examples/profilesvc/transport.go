@@ -102,7 +102,7 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 
 func decodePostProfileRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	var req postProfileRequest
-	if e := json.NewDecoder(r.Body).Decode(&req.Profile); e != nil {
+	if e := json.NewDecoder(r.Body).Decode(&req); e != nil {
 		return nil, e
 	}
 	return req, nil
