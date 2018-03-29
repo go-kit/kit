@@ -10,7 +10,7 @@ import (
 
 type jsonLogger struct {
 	io.Writer
-	disableEscapeHTML bool
+	escapeHTML bool
 }
 
 // NewJSONLogger returns a Logger that encodes keyvals to the Writer as a
@@ -30,9 +30,9 @@ func NewJSONLogger(w io.Writer, options ...JSONLoggerOption) Logger {
 // JSONLoggerOption sets a parameter for json logger
 type JSONLoggerOption func(*jsonLogger)
 
-// DisableEscapeHTML disable to escape &, <, >.
-func DisableEscapeHTML(v bool) JSONLoggerOption {
-	return func(j *jsonLogger) { j.disableEscapeHTML = v }
+// SetEscapeHTML escape &, <, > inside JSON quoted strings.
+func SetEscapeHTML(v bool) JSONLoggerOption {
+	return func(j *jsonLogger) { j.escapeHTML = v }
 }
 
 func (l *jsonLogger) Log(keyvals ...interface{}) error {
@@ -47,7 +47,7 @@ func (l *jsonLogger) Log(keyvals ...interface{}) error {
 		merge(m, k, v)
 	}
 	enc := json.NewEncoder(l.Writer)
-	enc.SetEscapeHTML(!l.disableEscapeHTML)
+	enc.SetEscapeHTML(l.escapeHTML)
 	return enc.Encode(m)
 }
 

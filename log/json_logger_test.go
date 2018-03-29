@@ -73,17 +73,24 @@ func TestJSONLoggerNilErrorValue(t *testing.T) {
 	}
 }
 
-func TestJSONLoggerWithDisableHTMLEscapeOption(t *testing.T) {
+func TestJSONLoggerWithSetHTMLEscapeOption(t *testing.T) {
 	t.Parallel()
 
 	buf := &bytes.Buffer{}
-	logger := log.NewJSONLogger(buf, log.DisableEscapeHTML(true))
-	if err := logger.Log("a", "<&>"); err != nil {
-		t.Fatal(err)
+	for b, want := range map[bool]string{
+		false: `{"a":"<&>"}` + "\n",
+		true:  `{"a":"\u003c\u0026\u003e"}` + "\n",
+	} {
+		buf.Reset()
+		logger := log.NewJSONLogger(buf, log.SetEscapeHTML(b))
+		if err := logger.Log("a", "<&>"); err != nil {
+			t.Fatal(err)
+		}
+		if have := buf.String(); want != have {
+			t.Errorf("\nwant %#v\nhave %#v", want, have)
+		}
 	}
-	if want, have := `{"a":"<&>"}`+"\n", buf.String(); want != have {
-		t.Errorf("\nwant %#v\nhave %#v", want, have)
-	}
+
 }
 
 // aller implements json.Marshaler, encoding.TextMarshaler, and fmt.Stringer.
