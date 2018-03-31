@@ -133,6 +133,9 @@ func dial(d Dialer, network, address string, logger log.Logger) net.Conn {
 	return conn
 }
 
+// Exponential takes a duration and returns another one that is twice as long, +/- 50%. It is
+// used to provide backoff for operations that may fail and should avoid thundering herds.
+// See https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/ for rationale
 func Exponential(d time.Duration) time.Duration {
 	d *= 2
 	jitter := rand.Float64() + 0.5
