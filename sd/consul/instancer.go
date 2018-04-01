@@ -61,7 +61,7 @@ func (s *Instancer) loop(lastIndex uint64) {
 	var (
 		instances []string
 		err       error
-		d         time.Duration = time.Millisecond * 10
+		d         time.Duration = 10 * time.Millisecond
 	)
 	for {
 		instances, lastIndex, err = s.getInstances(lastIndex, s.quitc)
@@ -70,11 +70,12 @@ func (s *Instancer) loop(lastIndex uint64) {
 			return // stopped via quitc
 		case err != nil:
 			s.logger.Log("err", err)
+			time.Sleep(d)
+			d = conn.Exponential(d)
 			s.cache.Update(sd.Event{Err: err})
 		default:
 			s.cache.Update(sd.Event{Instances: instances})
-			time.Sleep(d)
-			d = conn.Exponential(d)
+			d = 10 * time.Millisecond
 		}
 	}
 }
