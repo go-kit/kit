@@ -1,13 +1,13 @@
 package nats_test
 
 import (
-	"testing"
 	"context"
-	"time"
 	"strings"
+	"testing"
+	"time"
 
-	"github.com/nats-io/go-nats"
 	natstransport "github.com/go-kit/kit/transport/nats"
+	"github.com/nats-io/go-nats"
 )
 
 func TestPublisher(t *testing.T) {
@@ -19,10 +19,7 @@ func TestPublisher(t *testing.T) {
 		}
 	)
 
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	nc := newNatsConn(t)
 	defer nc.Close()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
@@ -66,10 +63,7 @@ func TestPublisherBefore(t *testing.T) {
 		}
 	)
 
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	nc := newNatsConn(t)
 	defer nc.Close()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
@@ -117,10 +111,7 @@ func TestPublisherAfter(t *testing.T) {
 		}
 	)
 
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	nc := newNatsConn(t)
 	defer nc.Close()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
@@ -167,10 +158,7 @@ func TestPublisherTimeout(t *testing.T) {
 		}
 	)
 
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	nc := newNatsConn(t)
 	defer nc.Close()
 
 	ch := make(chan struct{})
@@ -195,18 +183,13 @@ func TestPublisherTimeout(t *testing.T) {
 	_, err = publisher.Endpoint()(context.Background(), struct{}{})
 	if err != context.DeadlineExceeded {
 		t.Errorf("want %s, have %s", context.DeadlineExceeded, err)
-
 	}
-
 }
 
 func TestEncodeJSONRequest(t *testing.T) {
 	var data string
 
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	nc := newNatsConn(t)
 	defer nc.Close()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
@@ -237,7 +220,9 @@ func TestEncodeJSONRequest(t *testing.T) {
 		{1.2, "1.2"},
 		{true, "true"},
 		{"test", "\"test\""},
-		{struct{ Foo string `json:"foo"` }{"foo"}, "{\"foo\":\"foo\"}"},
+		{struct {
+			Foo string `json:"foo"`
+		}{"foo"}, "{\"foo\":\"foo\"}"},
 	} {
 		if _, err := publisher(context.Background(), test.value); err != nil {
 			t.Fatal(err)
