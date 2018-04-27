@@ -1,13 +1,13 @@
 package nats_test
 
 import (
-	"testing"
 	"context"
-	"time"
 	"strings"
+	"testing"
+	"time"
 
-	"github.com/nats-io/go-nats"
 	natstransport "github.com/go-kit/kit/transport/nats"
+	"github.com/nats-io/go-nats"
 )
 
 func TestPublisher(t *testing.T) {
@@ -19,11 +19,8 @@ func TestPublisher(t *testing.T) {
 		}
 	)
 
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer nc.Close()
+	nc, closenc := newNatsConn(t)
+	defer closenc()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
 		if err := nc.Publish(msg.Reply, []byte(testdata)); err != nil {
@@ -66,11 +63,8 @@ func TestPublisherBefore(t *testing.T) {
 		}
 	)
 
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer nc.Close()
+	nc, closenc := newNatsConn(t)
+	defer closenc()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
 		if err := nc.Publish(msg.Reply, msg.Data); err != nil {
@@ -117,11 +111,8 @@ func TestPublisherAfter(t *testing.T) {
 		}
 	)
 
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer nc.Close()
+	nc, closenc := newNatsConn(t)
+	defer closenc()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
 		if err := nc.Publish(msg.Reply, []byte(testdata)); err != nil {
@@ -167,11 +158,8 @@ func TestPublisherTimeout(t *testing.T) {
 		}
 	)
 
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer nc.Close()
+	nc, closenc := newNatsConn(t)
+	defer closenc()
 
 	ch := make(chan struct{})
 	defer close(ch)
@@ -195,19 +183,14 @@ func TestPublisherTimeout(t *testing.T) {
 	_, err = publisher.Endpoint()(context.Background(), struct{}{})
 	if err != context.DeadlineExceeded {
 		t.Errorf("want %s, have %s", context.DeadlineExceeded, err)
-
 	}
-
 }
 
 func TestEncodeJSONRequest(t *testing.T) {
 	var data string
 
-	nc, err := nats.Connect(nats.DefaultURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer nc.Close()
+	nc, closenc := newNatsConn(t)
+	defer closenc()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
 		data = string(msg.Data)
@@ -237,7 +220,9 @@ func TestEncodeJSONRequest(t *testing.T) {
 		{1.2, "1.2"},
 		{true, "true"},
 		{"test", "\"test\""},
-		{struct{ Foo string `json:"foo"` }{"foo"}, "{\"foo\":\"foo\"}"},
+		{struct {
+			Foo string `json:"foo"`
+		}{"foo"}, "{\"foo\":\"foo\"}"},
 	} {
 		if _, err := publisher(context.Background(), test.value); err != nil {
 			t.Fatal(err)
