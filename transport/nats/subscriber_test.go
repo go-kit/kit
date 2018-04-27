@@ -38,35 +38,33 @@ func init() {
 	}
 }
 
-func newNatsConn(t *testing.T) (*nats.Conn, func()) {
+func newNatsConn(t *testing.T) *nats.Conn {
+	// Subscriptions and connections are closed asynchronously, so it's possible
+	// that there's still a subscription from an old connection that must be closed
+	// before the current test can be run.
+	for tries := 20; tries > 0; tries-- {
+		if natsServer.NumSubscriptions() == 0 {
+			break
+		}
+
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if n := natsServer.NumSubscriptions(); n > 0 {
+		t.Fatalf("found %d active subscriptions on the server", n)
+	}
+
 	nc, err := nats.Connect("nats://"+natsServer.Addr().String(), nats.Name(t.Name()))
 	if err != nil {
 		t.Fatalf("failed to connect to gnatsd server: %s", err)
 	}
 
-	return nc, func() {
-		nc.Close()
-
-		// Connections are closed asynchronously, so when the next test runs
-		// the previous connection could still be open and subscribed to a topic.
-		// To prevent this we wait for the server to remove the connection, before
-		// continuing with the next test.
-		for tries := 20; tries > 0; tries-- {
-			if natsServer.NumClients() == 0 {
-				break
-			}
-
-			time.Sleep(5 * time.Millisecond)
-		}
-
-		// Just fail instead of trying forever
-		t.Log("failed to close connection on the server")
-	}
+	return nc
 }
 
 func TestSubscriberBadDecode(t *testing.T) {
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
@@ -83,8 +81,8 @@ func TestSubscriberBadDecode(t *testing.T) {
 }
 
 func TestSubscriberBadEndpoint(t *testing.T) {
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errors.New("dang") },
@@ -100,8 +98,8 @@ func TestSubscriberBadEndpoint(t *testing.T) {
 }
 
 func TestSubscriberBadEncode(t *testing.T) {
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
@@ -117,8 +115,8 @@ func TestSubscriberBadEncode(t *testing.T) {
 }
 
 func TestSubscriberErrorEncoder(t *testing.T) {
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	errTeapot := errors.New("teapot")
 	code := func(err error) error {
@@ -170,8 +168,8 @@ func TestSubscriberHappySubject(t *testing.T) {
 }
 
 func TestMultipleSubscriberBefore(t *testing.T) {
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	var (
 		response = struct{ Body string }{"go eat a fly ugly\n"}
@@ -231,8 +229,8 @@ func TestMultipleSubscriberBefore(t *testing.T) {
 }
 
 func TestMultipleSubscriberAfter(t *testing.T) {
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	var (
 		response = struct{ Body string }{"go eat a fly ugly\n"}
@@ -292,8 +290,8 @@ func TestMultipleSubscriberAfter(t *testing.T) {
 }
 
 func TestEncodeJSONResponse(t *testing.T) {
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(context.Context, interface{}) (interface{}, error) {
@@ -330,8 +328,8 @@ func (m responseError) Error() string {
 }
 
 func TestErrorEncoder(t *testing.T) {
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	errResp := struct {
 		Error string `json:"err"`
@@ -367,8 +365,8 @@ func TestErrorEncoder(t *testing.T) {
 type noContentResponse struct{}
 
 func TestEncodeNoContent(t *testing.T) {
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(context.Context, interface{}) (interface{}, error) { return noContentResponse{}, nil },
@@ -393,8 +391,8 @@ func TestEncodeNoContent(t *testing.T) {
 }
 
 func TestNoOpRequestDecoder(t *testing.T) {
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -441,8 +439,8 @@ func testSubscriber(t *testing.T) (step func(), resp <-chan *nats.Msg) {
 	)
 
 	go func() {
-		nc, closenc := newNatsConn(t)
-		defer closenc()
+		nc := newNatsConn(t)
+		defer nc.Close()
 
 		sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
 		if err != nil {

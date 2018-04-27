@@ -19,8 +19,8 @@ func TestPublisher(t *testing.T) {
 		}
 	)
 
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
 		if err := nc.Publish(msg.Reply, []byte(testdata)); err != nil {
@@ -63,8 +63,8 @@ func TestPublisherBefore(t *testing.T) {
 		}
 	)
 
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
 		if err := nc.Publish(msg.Reply, msg.Data); err != nil {
@@ -111,8 +111,8 @@ func TestPublisherAfter(t *testing.T) {
 		}
 	)
 
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
 		if err := nc.Publish(msg.Reply, []byte(testdata)); err != nil {
@@ -158,8 +158,8 @@ func TestPublisherTimeout(t *testing.T) {
 		}
 	)
 
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	ch := make(chan struct{})
 	defer close(ch)
@@ -189,8 +189,8 @@ func TestPublisherTimeout(t *testing.T) {
 func TestEncodeJSONRequest(t *testing.T) {
 	var data string
 
-	nc, closenc := newNatsConn(t)
-	defer closenc()
+	nc := newNatsConn(t)
+	defer nc.Close()
 
 	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
 		data = string(msg.Data)
