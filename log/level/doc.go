@@ -4,7 +4,7 @@
 //
 //    var logger log.Logger
 //    logger = log.NewLogfmtLogger(os.Stderr)
-//    logger = level.NewFilter(logger, level.AllowInfoAndAbove()) // <--
+//    logger = level.NewFilter(logger, level.AllowInfo()) // <--
 //    logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 //
 // Then, at the callsites, use one of the level.Debug, Info, Warn, or Error

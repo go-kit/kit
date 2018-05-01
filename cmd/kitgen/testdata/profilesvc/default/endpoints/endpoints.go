@@ -13,7 +13,7 @@ type PostProfileResponse struct {
 	Err error
 }
 
-func makePostProfileEndpoint(s service.Service) endpoint.Endpoint {
+func MakePostProfileEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(PostProfileRequest)
 		err := s.PostProfile(ctx, req.P)
@@ -29,7 +29,7 @@ type GetProfileResponse struct {
 	Err error
 }
 
-func makeGetProfileEndpoint(s service.Service) endpoint.Endpoint {
+func MakeGetProfileEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(GetProfileRequest)
 		P, err := s.GetProfile(ctx, req.Id)
@@ -45,7 +45,7 @@ type PutProfileResponse struct {
 	Err error
 }
 
-func makePutProfileEndpoint(s service.Service) endpoint.Endpoint {
+func MakePutProfileEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(PutProfileRequest)
 		err := s.PutProfile(ctx, req.Id, req.P)
@@ -61,7 +61,7 @@ type PatchProfileResponse struct {
 	Err error
 }
 
-func makePatchProfileEndpoint(s service.Service) endpoint.Endpoint {
+func MakePatchProfileEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(PatchProfileRequest)
 		err := s.PatchProfile(ctx, req.Id, req.P)
@@ -76,7 +76,7 @@ type DeleteProfileResponse struct {
 	Err error
 }
 
-func makeDeleteProfileEndpoint(s service.Service) endpoint.Endpoint {
+func MakeDeleteProfileEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(DeleteProfileRequest)
 		err := s.DeleteProfile(ctx, req.Id)
@@ -92,7 +92,7 @@ type GetAddressesResponse struct {
 	Err error
 }
 
-func makeGetAddressesEndpoint(s service.Service) endpoint.Endpoint {
+func MakeGetAddressesEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(GetAddressesRequest)
 		slice1, err := s.GetAddresses(ctx, req.ProfileID)
@@ -109,7 +109,7 @@ type GetAddressResponse struct {
 	Err error
 }
 
-func makeGetAddressEndpoint(s service.Service) endpoint.Endpoint {
+func MakeGetAddressEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(GetAddressRequest)
 		A, err := s.GetAddress(ctx, req.ProfileID, req.AddressID)
@@ -125,7 +125,7 @@ type PostAddressResponse struct {
 	Err error
 }
 
-func makePostAddressEndpoint(s service.Service) endpoint.Endpoint {
+func MakePostAddressEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(PostAddressRequest)
 		err := s.PostAddress(ctx, req.ProfileID, req.A)
@@ -141,7 +141,7 @@ type DeleteAddressResponse struct {
 	Err error
 }
 
-func makeDeleteAddressEndpoint(s service.Service) endpoint.Endpoint {
+func MakeDeleteAddressEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(DeleteAddressRequest)
 		err := s.DeleteAddress(ctx, req.ProfileID, req.AddressID)

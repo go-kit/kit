@@ -7,6 +7,7 @@ import (
 	"golang.org/x/time/rate"
 
 	stdopentracing "github.com/opentracing/opentracing-go"
+	stdzipkin "github.com/openzipkin/zipkin-go"
 	"github.com/sony/gobreaker"
 
 	"github.com/go-kit/kit/circuitbreaker"
@@ -15,6 +16,7 @@ import (
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
+	"github.com/go-kit/kit/tracing/zipkin"
 
 	"github.com/go-kit/kit/examples/addsvc/pkg/addservice"
 )
@@ -29,13 +31,14 @@ type Set struct {
 
 // New returns a Set that wraps the provided server, and wires in all of the
 // expected endpoint middlewares via the various parameters.
-func New(svc addservice.Service, logger log.Logger, duration metrics.Histogram, trace stdopentracing.Tracer) Set {
+func New(svc addservice.Service, logger log.Logger, duration metrics.Histogram, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) Set {
 	var sumEndpoint endpoint.Endpoint
 	{
 		sumEndpoint = MakeSumEndpoint(svc)
 		sumEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 1))(sumEndpoint)
 		sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(sumEndpoint)
-		sumEndpoint = opentracing.TraceServer(trace, "Sum")(sumEndpoint)
+		sumEndpoint = opentracing.TraceServer(otTracer, "Sum")(sumEndpoint)
+		sumEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Sum")(sumEndpoint)
 		sumEndpoint = LoggingMiddleware(log.With(logger, "method", "Sum"))(sumEndpoint)
 		sumEndpoint = InstrumentingMiddleware(duration.With("method", "Sum"))(sumEndpoint)
 	}
@@ -44,7 +47,8 @@ func New(svc addservice.Service, logger log.Logger, duration metrics.Histogram, 
 		concatEndpoint = MakeConcatEndpoint(svc)
 		concatEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 100))(concatEndpoint)
 		concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(concatEndpoint)
-		concatEndpoint = opentracing.TraceServer(trace, "Concat")(concatEndpoint)
+		concatEndpoint = opentracing.TraceServer(otTracer, "Concat")(concatEndpoint)
+		concatEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Concat")(concatEndpoint)
 		concatEndpoint = LoggingMiddleware(log.With(logger, "method", "Concat"))(concatEndpoint)
 		concatEndpoint = InstrumentingMiddleware(duration.With("method", "Concat"))(concatEndpoint)
 	}

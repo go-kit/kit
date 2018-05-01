@@ -23,7 +23,7 @@ type BarResponse struct {
 	Err error
 }
 
-func makeBarEndpoint(f FooService) endpoint.Endpoint {
+func MakeBarEndpoint(f FooService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(BarRequest)
 		s, err := f.Bar(ctx, req.I, req.S)

@@ -261,6 +261,77 @@ func TestEncodeJSONResponse(t *testing.T) {
 	}
 }
 
+type multiHeaderResponse struct{}
+
+func (_ multiHeaderResponse) Headers() http.Header {
+	return http.Header{"Vary": []string{"Origin", "User-Agent"}}
+}
+
+func TestAddMultipleHeaders(t *testing.T) {
+	handler := httptransport.NewServer(
+		func(context.Context, interface{}) (interface{}, error) { return multiHeaderResponse{}, nil },
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		httptransport.EncodeJSONResponse,
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect := map[string]map[string]struct{}{"Vary": map[string]struct{}{"Origin": struct{}{}, "User-Agent": struct{}{}}}
+	for k, vls := range resp.Header {
+		for _, v := range vls {
+			delete((expect[k]), v)
+		}
+		if len(expect[k]) != 0 {
+			t.Errorf("Header: unexpected header %s: %v", k, expect[k])
+		}
+	}
+}
+
+type multiHeaderResponseError struct {
+	multiHeaderResponse
+	msg string
+}
+
+func (m multiHeaderResponseError) Error() string {
+	return m.msg
+}
+
+func TestAddMultipleHeadersErrorEncoder(t *testing.T) {
+	errStr := "oh no"
+	handler := httptransport.NewServer(
+		func(context.Context, interface{}) (interface{}, error) {
+			return nil, multiHeaderResponseError{msg: errStr}
+		},
+		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
+		httptransport.EncodeJSONResponse,
+	)
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect := map[string]map[string]struct{}{"Vary": map[string]struct{}{"Origin": struct{}{}, "User-Agent": struct{}{}}}
+	for k, vls := range resp.Header {
+		for _, v := range vls {
+			delete((expect[k]), v)
+		}
+		if len(expect[k]) != 0 {
+			t.Errorf("Header: unexpected header %s: %v", k, expect[k])
+		}
+	}
+	if b, _ := ioutil.ReadAll(resp.Body); errStr != string(b) {
+		t.Errorf("ErrorEncoder: got: %q, expected: %q", b, errStr)
+	}
+}
+
 type noContentResponse struct{}
 
 func (e noContentResponse) StatusCode() int { return http.StatusNoContent }
@@ -319,6 +390,28 @@ func TestEnhancedError(t *testing.T) {
 	buf, _ := ioutil.ReadAll(resp.Body)
 	if want, have := `{"err":"enhanced"}`, strings.TrimSpace(string(buf)); want != have {
 		t.Errorf("Body: want %s, have %s", want, have)
+	}
+}
+
+func TestNoOpRequestDecoder(t *testing.T) {
+	resw := httptest.NewRecorder()
+	req, err := http.NewRequest(http.MethodGet, "/", nil)
+	if err != nil {
+		t.Error("Failed to create request")
+	}
+	handler := httptransport.NewServer(
+		func(ctx context.Context, request interface{}) (interface{}, error) {
+			if request != nil {
+				t.Error("Expected nil request in endpoint when using NopRequestDecoder")
+			}
+			return nil, nil
+		},
+		httptransport.NopRequestDecoder,
+		httptransport.EncodeJSONResponse,
+	)
+	handler.ServeHTTP(resw, req)
+	if resw.Code != http.StatusOK {
+		t.Errorf("Expected status code %d but got %d", http.StatusOK, resw.Code)
 	}
 }
 
