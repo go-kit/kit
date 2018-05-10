@@ -14,23 +14,6 @@ import (
 	"github.com/go-kit/kit/sd"
 )
 
-func runIntegrationRegistrarOnly(settings integrationSettings, client Client, service Service, t *testing.T) {
-	// Instantiate a new Registrar, passing in test data.
-	registrar := NewRegistrar(
-		client,
-		service,
-		log.With(log.NewLogfmtLogger(os.Stderr), "component", "registrar"),
-	)
-
-	// Register our instance.
-	registrar.Register()
-	t.Log("Registered")
-
-	// Deregister our instance.
-	registrar.Deregister()
-	t.Log("Deregistered")
-}
-
 func runIntegration(settings integrationSettings, client Client, service Service, t *testing.T) {
 	// Verify test data is initially empty.
 	entries, err := client.GetEntries(settings.key)
@@ -50,6 +33,14 @@ func runIntegration(settings integrationSettings, client Client, service Service
 	)
 
 	// Register our instance.
+	registrar.Register()
+	t.Log("Registered")
+
+	// Deregister our instance. (so we test registrar only scenario)
+	registrar.Deregister()
+	t.Log("Deregistered")
+
+	// Re-Register our instance.
 	registrar.Register()
 	t.Log("Registered")
 
@@ -158,7 +149,6 @@ func TestIntegration(t *testing.T) {
 		Value: settings.value,
 	}
 
-	runIntegrationRegistrarOnly(settings, client, service, t)
 	runIntegration(settings, client, service, t)
 }
 
