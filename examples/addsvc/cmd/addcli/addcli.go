@@ -205,7 +205,7 @@ func main() {
 		fmt.Fprintf(os.Stdout, "%q + %q = %q\n", a, b, v)
 
 	default:
-		fmt.Fprintf(os.Stderr, "error: invalid method %q\n", method)
+		fmt.Fprintf(os.Stderr, "error: invalid method %q\n", *method)
 		os.Exit(1)
 	}
 }

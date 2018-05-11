@@ -34,7 +34,15 @@ func runIntegration(settings integrationSettings, client Client, service Service
 
 	// Register our instance.
 	registrar.Register()
-	t.Logf("Registered")
+	t.Log("Registered")
+
+	// Deregister our instance. (so we test registrar only scenario)
+	registrar.Deregister()
+	t.Log("Deregistered")
+
+	// Re-Register our instance.
+	registrar.Register()
+	t.Log("Registered")
 
 	// Retrieve entries from etcd manually.
 	entries, err = client.GetEntries(settings.key)
@@ -56,7 +64,7 @@ func runIntegration(settings integrationSettings, client Client, service Service
 	if err != nil {
 		t.Fatalf("NewInstancer: %v", err)
 	}
-	t.Logf("Constructed Instancer OK")
+	t.Log("Constructed Instancer OK")
 	defer instancer.Stop()
 
 	endpointer := sd.NewEndpointer(
@@ -64,20 +72,20 @@ func runIntegration(settings integrationSettings, client Client, service Service
 		func(string) (endpoint.Endpoint, io.Closer, error) { return endpoint.Nop, nil, nil },
 		log.With(log.NewLogfmtLogger(os.Stderr), "component", "instancer"),
 	)
-	t.Logf("Constructed Endpointer OK")
+	t.Log("Constructed Endpointer OK")
 	defer endpointer.Close()
 
 	if !within(time.Second, func() bool {
 		endpoints, err := endpointer.Endpoints()
 		return err == nil && len(endpoints) == 1
 	}) {
-		t.Fatalf("Endpointer didn't see Register in time")
+		t.Fatal("Endpointer didn't see Register in time")
 	}
-	t.Logf("Endpointer saw Register OK")
+	t.Log("Endpointer saw Register OK")
 
 	// Deregister first instance of test data.
 	registrar.Deregister()
-	t.Logf("Deregistered")
+	t.Log("Deregistered")
 
 	// Check it was deregistered.
 	if !within(time.Second, func() bool {

@@ -228,6 +228,8 @@ func (c *client) close() {
 	}
 	if c.watcher != nil {
 		c.watcher.Close()
+	}
+	if c.wcf != nil {
 		c.wcf()
 	}
 }
