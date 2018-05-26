@@ -69,8 +69,7 @@ func SetResponseTrailer(key, val string) ServerResponseFunc {
 func EncodeKeyValue(key, val string) (string, string) {
 	key = strings.ToLower(key)
 	if strings.HasSuffix(key, binHdrSuffix) {
-		v := base64.StdEncoding.EncodeToString([]byte(val))
-		val = string(v)
+		val = base64.StdEncoding.EncodeToString([]byte(val))
 	}
 	return key, val
 }

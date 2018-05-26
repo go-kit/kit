@@ -53,7 +53,7 @@ type metadataReaderWriter struct {
 func (w metadataReaderWriter) Set(key, val string) {
 	key = strings.ToLower(key)
 	if strings.HasSuffix(key, "-bin") {
-		val = string(base64.StdEncoding.EncodeToString([]byte(val)))
+		val = base64.StdEncoding.EncodeToString([]byte(val))
 	}
 	(*w.MD)[key] = append((*w.MD)[key], val)
 }
