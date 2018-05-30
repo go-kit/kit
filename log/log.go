@@ -30,15 +30,14 @@ func With(logger Logger, keyvals ...interface{}) Logger {
 	if len(kvs)%2 != 0 {
 		kvs = append(kvs, ErrMissingValue)
 	}
-	return &context{
-		logger: l.logger,
-		// Limiting the capacity of the stored keyvals ensures that a new
-		// backing array is created if the slice must grow in Log or With.
-		// Using the extra capacity without copying risks a data race that
-		// would violate the Logger interface contract.
-		keyvals:   kvs[:len(kvs):len(kvs)],
-		hasValuer: l.hasValuer || containsValuer(keyvals),
-	}
+
+	// Limiting the capacity of the stored keyvals ensures that a new
+	// backing array is created if the slice must grow in Log or With.
+	// Using the extra capacity without copying risks a data race that
+	// would violate the Logger interface contract.
+	l.keyvals = kvs[:len(kvs):len(kvs)]
+	l.hasValuer = l.hasValuer || containsValuer(keyvals)
+	return l
 }
 
 // WithPrefix returns a new contextual logger with keyvals prepended to those
