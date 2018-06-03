@@ -26,3 +26,17 @@ func Chain(outer Middleware, others ...Middleware) Middleware {
 		return outer(next)
 	}
 }
+
+// Failer is an interface that should be implemented by response types that
+// hold error properties as to separate business errors from transport errors.
+// If the response type can hold business errors it is highly advised to
+// implement Failer.
+// Response encoders can check if responses are Failer, and if so if they've
+// failed encode them using a separate write path based on the error.
+// Endpoint middlewares can test if a response type failed and also act or
+// report upon it.
+//
+// The addsvc example shows Failer's intended usage.
+type Failer interface {
+	Failed() error
+}
