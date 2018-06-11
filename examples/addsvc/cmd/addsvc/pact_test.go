@@ -16,7 +16,6 @@ func TestPactStringsvcUppercase(t *testing.T) {
 	}
 
 	pact := dsl.Pact{
-		Port:     6666,
 		Consumer: "addsvc",
 		Provider: "stringsvc",
 	}
@@ -25,14 +24,14 @@ func TestPactStringsvcUppercase(t *testing.T) {
 	pact.AddInteraction().
 		UponReceiving("stringsvc uppercase").
 		WithRequest(dsl.Request{
-			Headers: map[string]string{"Content-Type": "application/json; charset=utf-8"},
+			Headers: dsl.MapMatcher{"Content-Type": dsl.String("application/json; charset=utf-8")},
 			Method:  "POST",
-			Path:    "/uppercase",
+			Path:    dsl.String("/uppercase"),
 			Body:    `{"s":"foo"}`,
 		}).
 		WillRespondWith(dsl.Response{
 			Status:  200,
-			Headers: map[string]string{"Content-Type": "application/json; charset=utf-8"},
+			Headers: dsl.MapMatcher{"Content-Type": dsl.String("application/json; charset=utf-8")},
 			Body:    `{"v":"FOO"}`,
 		})
 
