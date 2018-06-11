@@ -17,7 +17,7 @@ import (
 func TestIntegration(t *testing.T) {
 	consulAddr := os.Getenv("CONSUL_ADDR")
 	if consulAddr == "" {
-		t.Fatal("CONSUL_ADDR is not set")
+		t.Skip("CONSUL_ADDR not set; skipping integration test")
 	}
 	stdClient, err := stdconsul.NewClient(&stdconsul.Config{
 		Address: consulAddr,
