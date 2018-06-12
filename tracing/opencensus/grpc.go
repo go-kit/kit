@@ -73,7 +73,9 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 
 // GRPCServerTrace enables OpenCensus tracing of a Go kit gRPC transport server.
 func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
-	cfg := TracerOptions{}
+	cfg := TracerOptions{
+		sampler: trace.AlwaysSample(),
+	}
 
 	for _, option := range options {
 		option(&cfg)
