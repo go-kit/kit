@@ -23,10 +23,10 @@ const (
 )
 
 var (
-	err1 = errors.New("someError")
-	err2 = errors.New("otherError")
-	err3 = errors.New("someBusinessError")
-	err4 = errors.New("otherBusinessError")
+	err1 = errors.New("some error")
+	err2 = errors.New("other error")
+	err3 = errors.New("some business error")
+	err4 = errors.New("other business error")
 )
 
 // compile time assertion

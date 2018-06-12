@@ -55,8 +55,7 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 	clientFinalizer := kitgrpc.ClientFinalizer(
 		func(ctx context.Context, err error) {
 			if span := trace.FromContext(ctx); span != nil {
-				s, ok := status.FromError(err)
-				if ok {
+				if s, ok := status.FromError(err); ok {
 					span.SetStatus(trace.Status{Code: int32(s.Code()), Message: s.Message()})
 				} else {
 					span.SetStatus(trace.Status{Code: int32(codes.Unknown), Message: err.Error()})
@@ -70,7 +69,6 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 		clientBefore(c)
 		clientFinalizer(c)
 	}
-
 }
 
 // GRPCServerTrace enables OpenCensus tracing of a Go kit gRPC transport server.
@@ -83,33 +81,33 @@ func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
 
 	serverBefore := kitgrpc.ServerBefore(
 		func(ctx context.Context, md metadata.MD) context.Context {
-			var (
-				spanContext trace.SpanContext
-				ok          bool
-				name        string
-			)
+			var name string
 
 			if cfg.name != "" {
 				name = cfg.name
 			} else {
-				name, ok = ctx.Value(kitgrpc.ContextKeyRequestMethod).(string)
-				if !ok || name == "" {
+				name, _ = ctx.Value(kitgrpc.ContextKeyRequestMethod).(string)
+				if name == "" {
 					// we can't find the gRPC method. probably the
 					// unaryInterceptor was not wired up.
 					name = "unknown grpc method"
 				}
 			}
 
-			traceContext := md[propagationKey]
+			var (
+				parentContext trace.SpanContext
+				traceContext  = md[propagationKey]
+				ok            bool
+			)
 
 			if len(traceContext) > 0 {
 				traceContextBinary := []byte(traceContext[0])
-				spanContext, ok = propagation.FromBinary(traceContextBinary)
+				parentContext, ok = propagation.FromBinary(traceContextBinary)
 				if ok && !cfg.public {
 					ctx, _ = trace.StartSpanWithRemoteParent(
 						ctx,
 						name,
-						spanContext,
+						parentContext,
 						trace.WithSpanKind(trace.SpanKindServer),
 						trace.WithSampler(cfg.sampler),
 					)
@@ -125,8 +123,8 @@ func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
 			if ok {
 				span.AddLink(
 					trace.Link{
-						TraceID: spanContext.TraceID,
-						SpanID:  spanContext.SpanID,
+						TraceID: parentContext.TraceID,
+						SpanID:  parentContext.SpanID,
 						Type:    trace.LinkTypeChild,
 					},
 				)
@@ -138,8 +136,7 @@ func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
 	serverFinalizer := kitgrpc.ServerFinalizer(
 		func(ctx context.Context, err error) {
 			if span := trace.FromContext(ctx); span != nil {
-				s, ok := status.FromError(err)
-				if ok {
+				if s, ok := status.FromError(err); ok {
 					span.SetStatus(trace.Status{Code: int32(s.Code()), Message: s.Message()})
 				} else {
 					span.SetStatus(trace.Status{Code: int32(codes.Internal), Message: err.Error()})

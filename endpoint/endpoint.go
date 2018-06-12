@@ -27,16 +27,14 @@ func Chain(outer Middleware, others ...Middleware) Middleware {
 	}
 }
 
-// Failer is an interface that should be implemented by response types that
-// hold error properties as to separate business errors from transport errors.
-// If the response type can hold business errors it is highly advised to
-// implement Failer.
-// Response encoders can check if responses are Failer, and if so if they've
-// failed encode them using a separate write path based on the error.
-// Endpoint middlewares can test if a response type failed and also act or
-// report upon it.
+// Failer may be implemented by Go kit response types that contain business
+// logic error details. If Failed returns a non-nil error, the Go kit transport
+// layer may interpret this as a business logic error, and may encode it
+// differently than a regular, successful response.
 //
-// The addsvc example shows Failer's intended usage.
+// It's not necessary for your response types to implement Failer, but it may
+// help for more sophisticated use cases. The addsvc example shows how Failer
+// should be used by a complete application.
 type Failer interface {
 	Failed() error
 }

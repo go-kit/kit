@@ -19,7 +19,7 @@ import (
 	kithttp "github.com/go-kit/kit/transport/http"
 )
 
-func TestHttpClientTrace(t *testing.T) {
+func TestHTTPClientTrace(t *testing.T) {
 	var (
 		err     error
 		rec     = &recordingExporter{}
@@ -38,7 +38,6 @@ func TestHttpClientTrace(t *testing.T) {
 	}
 
 	for _, tr := range traces {
-
 		clientTracer := ockit.HTTPClientTrace(ockit.WithName(tr.name))
 		ep := kithttp.NewClient(
 			"GET",
