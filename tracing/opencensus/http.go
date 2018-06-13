@@ -13,21 +13,26 @@ import (
 
 // HTTPClientTrace enables OpenCensus tracing of a Go kit HTTP transport client.
 func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
-	cfg := TracerOptions{
-		sampler:       trace.AlwaysSample(),
-		httpPropagate: &b3.HTTPFormat{},
-	}
+	cfg := TracerOptions{}
 
 	for _, option := range options {
 		option(&cfg)
+	}
+
+	if cfg.Sampler == nil {
+		cfg.Sampler = trace.AlwaysSample()
+	}
+
+	if !cfg.Public && cfg.HTTPPropagate == nil {
+		cfg.HTTPPropagate = &b3.HTTPFormat{}
 	}
 
 	clientBefore := kithttp.ClientBefore(
 		func(ctx context.Context, req *http.Request) context.Context {
 			var name string
 
-			if cfg.name != "" {
-				name = cfg.name
+			if cfg.Name != "" {
+				name = cfg.Name
 			} else {
 				// OpenCensus states Path being default naming for a client span
 				name = req.Method + " " + req.URL.Path
@@ -37,7 +42,7 @@ func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
 				name,
 				trace.FromContext(ctx),
 				trace.StartOptions{
-					Sampler:  cfg.sampler,
+					Sampler:  cfg.Sampler,
 					SpanKind: trace.SpanKindClient,
 				},
 			)
@@ -49,8 +54,8 @@ func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
 				trace.StringAttribute(ochttp.UserAgentAttribute, req.UserAgent()),
 			)
 
-			if !cfg.public {
-				cfg.httpPropagate.SpanContextToRequest(span.SpanContext(), req)
+			if !cfg.Public {
+				cfg.HTTPPropagate.SpanContextToRequest(span.SpanContext(), req)
 			}
 
 			return trace.NewContext(ctx, span)
@@ -92,13 +97,18 @@ func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
 
 // HTTPServerTrace enables OpenCensus tracing of a Go kit HTTP transport server.
 func HTTPServerTrace(options ...TracerOption) kithttp.ServerOption {
-	cfg := TracerOptions{
-		sampler:       trace.AlwaysSample(),
-		httpPropagate: &b3.HTTPFormat{},
-	}
+	cfg := TracerOptions{}
 
 	for _, option := range options {
 		option(&cfg)
+	}
+
+	if cfg.Sampler == nil {
+		cfg.Sampler = trace.AlwaysSample()
+	}
+
+	if !cfg.Public && cfg.HTTPPropagate == nil {
+		cfg.HTTPPropagate = &b3.HTTPFormat{}
 	}
 
 	serverBefore := kithttp.ServerBefore(
@@ -110,27 +120,27 @@ func HTTPServerTrace(options ...TracerOption) kithttp.ServerOption {
 				ok          bool
 			)
 
-			if cfg.name != "" {
-				name = cfg.name
+			if cfg.Name != "" {
+				name = cfg.Name
 			} else {
 				name = req.Method + " " + req.URL.Path
 			}
 
-			spanContext, ok = cfg.httpPropagate.SpanContextFromRequest(req)
-			if ok && !cfg.public {
+			spanContext, ok = cfg.HTTPPropagate.SpanContextFromRequest(req)
+			if ok && !cfg.Public {
 				ctx, span = trace.StartSpanWithRemoteParent(
 					ctx,
 					name,
 					spanContext,
 					trace.WithSpanKind(trace.SpanKindServer),
-					trace.WithSampler(cfg.sampler),
+					trace.WithSampler(cfg.Sampler),
 				)
 			} else {
 				ctx, span = trace.StartSpan(
 					ctx,
 					name,
 					trace.WithSpanKind(trace.SpanKindServer),
-					trace.WithSampler(cfg.sampler),
+					trace.WithSampler(cfg.Sampler),
 				)
 				if ok {
 					span.AddLink(trace.Link{

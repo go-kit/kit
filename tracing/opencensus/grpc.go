@@ -16,20 +16,22 @@ const propagationKey = "grpc-trace-bin"
 
 // GRPCClientTrace enables OpenCensus tracing of a Go kit gRPC transport client.
 func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
-	cfg := TracerOptions{
-		sampler: trace.AlwaysSample(),
-	}
+	cfg := TracerOptions{}
 
 	for _, option := range options {
 		option(&cfg)
+	}
+
+	if cfg.Sampler == nil {
+		cfg.Sampler = trace.AlwaysSample()
 	}
 
 	clientBefore := kitgrpc.ClientBefore(
 		func(ctx context.Context, md *metadata.MD) context.Context {
 			var name string
 
-			if cfg.name != "" {
-				name = cfg.name
+			if cfg.Name != "" {
+				name = cfg.Name
 			} else {
 				name = ctx.Value(kitgrpc.ContextKeyRequestMethod).(string)
 			}
@@ -38,12 +40,12 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 				name,
 				trace.FromContext(ctx),
 				trace.StartOptions{
-					Sampler:  cfg.sampler,
+					Sampler:  cfg.Sampler,
 					SpanKind: trace.SpanKindClient,
 				},
 			)
 
-			if !cfg.public {
+			if !cfg.Public {
 				traceContextBinary := string(propagation.Binary(span.SpanContext()))
 				(*md)[propagationKey] = append((*md)[propagationKey], traceContextBinary)
 			}
@@ -73,20 +75,22 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 
 // GRPCServerTrace enables OpenCensus tracing of a Go kit gRPC transport server.
 func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
-	cfg := TracerOptions{
-		sampler: trace.AlwaysSample(),
-	}
+	cfg := TracerOptions{}
 
 	for _, option := range options {
 		option(&cfg)
+	}
+
+	if cfg.Sampler == nil {
+		cfg.Sampler = trace.AlwaysSample()
 	}
 
 	serverBefore := kitgrpc.ServerBefore(
 		func(ctx context.Context, md metadata.MD) context.Context {
 			var name string
 
-			if cfg.name != "" {
-				name = cfg.name
+			if cfg.Name != "" {
+				name = cfg.Name
 			} else {
 				name, _ = ctx.Value(kitgrpc.ContextKeyRequestMethod).(string)
 				if name == "" {
@@ -105,13 +109,13 @@ func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
 			if len(traceContext) > 0 {
 				traceContextBinary := []byte(traceContext[0])
 				parentContext, ok = propagation.FromBinary(traceContextBinary)
-				if ok && !cfg.public {
+				if ok && !cfg.Public {
 					ctx, _ = trace.StartSpanWithRemoteParent(
 						ctx,
 						name,
 						parentContext,
 						trace.WithSpanKind(trace.SpanKindServer),
-						trace.WithSampler(cfg.sampler),
+						trace.WithSampler(cfg.Sampler),
 					)
 					return ctx
 				}
@@ -120,7 +124,7 @@ func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
 				ctx,
 				name,
 				trace.WithSpanKind(trace.SpanKindServer),
-				trace.WithSampler(cfg.sampler),
+				trace.WithSampler(cfg.Sampler),
 			)
 			if ok {
 				span.AddLink(

@@ -5,7 +5,7 @@ import "go.opencensus.io/trace"
 // EndpointOptions holds the options for tracing an endpoint
 type EndpointOptions struct {
 	// IgnoreBusinessError if set to true will not treat a business error
-	// identified trough the endpoint.Failer interface as a span error.
+	// identified through the endpoint.Failer interface as a span error.
 	IgnoreBusinessError bool
 
 	// Attributes holds the default attributes which will be set on span

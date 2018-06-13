@@ -24,7 +24,7 @@ func WithTracerConfig(options TracerOptions) TracerOption {
 // WithSampler sets the sampler to use by our OpenCensus Tracer.
 func WithSampler(sampler trace.Sampler) TracerOption {
 	return func(o *TracerOptions) {
-		o.sampler = sampler
+		o.Sampler = sampler
 	}
 }
 
@@ -33,7 +33,7 @@ func WithSampler(sampler trace.Sampler) TracerOption {
 // name is used.
 func WithName(name string) TracerOption {
 	return func(o *TracerOptions) {
-		o.name = name
+		o.Name = name
 	}
 }
 
@@ -44,7 +44,7 @@ func WithName(name string) TracerOption {
 // is found, it will be added as a linked trace instead.
 func IsPublic(isPublic bool) TracerOption {
 	return func(o *TracerOptions) {
-		o.public = isPublic
+		o.Public = isPublic
 	}
 }
 
@@ -54,17 +54,17 @@ func WithHTTPPropagation(p propagation.HTTPFormat) TracerOption {
 	return func(o *TracerOptions) {
 		if p == nil {
 			// reset to default OC HTTP format
-			o.httpPropagate = defaultHTTPPropagate
+			o.HTTPPropagate = defaultHTTPPropagate
 			return
 		}
-		o.httpPropagate = p
+		o.HTTPPropagate = p
 	}
 }
 
 // TracerOptions holds configuration for our tracing middlewares
 type TracerOptions struct {
-	sampler       trace.Sampler
-	name          string
-	public        bool
-	httpPropagate propagation.HTTPFormat
+	Sampler       trace.Sampler
+	Name          string
+	Public        bool
+	HTTPPropagate propagation.HTTPFormat
 }
