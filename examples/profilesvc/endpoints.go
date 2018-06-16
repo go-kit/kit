@@ -68,8 +68,8 @@ func MakeClientEndpoints(instance string) (Endpoints, error) {
 	options := []httptransport.ClientOption{}
 
 	// Note that the request encoders need to modify the request URL, changing
-	// the path and method. That's fine: we simply need to provide specific
-	// encoders for each endpoint.
+	// the path. That's fine: we simply need to provide specific encoders for
+	// each endpoint.
 
 	return Endpoints{
 		PostProfileEndpoint:   httptransport.NewClient("POST", tgt, encodePostProfileRequest, decodePostProfileResponse, options...).Endpoint(),
