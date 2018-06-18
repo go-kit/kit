@@ -55,8 +55,8 @@ func main() {
 ```
 
 In order for the parser and the signer to work, the authorization headers need
-to be passed between the request and the context. `ToHTTPContext()`,
-`FromHTTPContext()`, `ToGRPCContext()`, and `FromGRPCContext()` are given as
+to be passed between the request and the context. `HTTPToContext()`,
+`ContextToHTTP()`, `GRPCToContext()`, and `ContextToGRPC()` are given as
 helpers to do this. These functions implement the correlating transport's
 RequestFunc interface and can be passed as ClientBefore or ServerBefore
 options.
@@ -77,7 +77,7 @@ func main() {
 	options := []httptransport.ClientOption{}
 	var exampleEndpoint endpoint.Endpoint
 	{
-		exampleEndpoint = grpctransport.NewClient(..., grpctransport.ClientBefore(jwt.FromGRPCContext())).Endpoint()
+		exampleEndpoint = grpctransport.NewClient(..., grpctransport.ClientBefore(jwt.ContextToGRPC())).Endpoint()
 		exampleEndpoint = jwt.NewSigner(
 			"kid-header",
 			[]byte("SigningString"),
@@ -108,7 +108,7 @@ func MakeGRPCServer(ctx context.Context, endpoints Endpoints, logger log.Logger)
 			endpoints.CreateUserEndpoint,
 			DecodeGRPCCreateUserRequest,
 			EncodeGRPCCreateUserResponse,
-			append(options, grpctransport.ServerBefore(jwt.ToGRPCContext()))...,
+			append(options, grpctransport.ServerBefore(jwt.GRPCToContext()))...,
 		),
 		getUser: grpctransport.NewServer(
 			ctx,
