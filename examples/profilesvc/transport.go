@@ -217,7 +217,7 @@ func decodeDeleteAddressRequest(_ context.Context, r *http.Request) (request int
 
 func encodePostProfileRequest(ctx context.Context, req *http.Request, request interface{}) error {
 	// r.Methods("POST").Path("/profiles/")
-	req.Method, req.URL.Path = "POST", "/profiles/"
+	req.URL.Path = "/profiles/"
 	return encodeRequest(ctx, req, request)
 }
 
@@ -225,7 +225,7 @@ func encodeGetProfileRequest(ctx context.Context, req *http.Request, request int
 	// r.Methods("GET").Path("/profiles/{id}")
 	r := request.(getProfileRequest)
 	profileID := url.QueryEscape(r.ID)
-	req.Method, req.URL.Path = "GET", "/profiles/"+profileID
+	req.URL.Path = "/profiles/" + profileID
 	return encodeRequest(ctx, req, request)
 }
 
@@ -233,7 +233,7 @@ func encodePutProfileRequest(ctx context.Context, req *http.Request, request int
 	// r.Methods("PUT").Path("/profiles/{id}")
 	r := request.(putProfileRequest)
 	profileID := url.QueryEscape(r.ID)
-	req.Method, req.URL.Path = "PUT", "/profiles/"+profileID
+	req.URL.Path = "/profiles/" + profileID
 	return encodeRequest(ctx, req, request)
 }
 
@@ -241,7 +241,7 @@ func encodePatchProfileRequest(ctx context.Context, req *http.Request, request i
 	// r.Methods("PATCH").Path("/profiles/{id}")
 	r := request.(patchProfileRequest)
 	profileID := url.QueryEscape(r.ID)
-	req.Method, req.URL.Path = "PATCH", "/profiles/"+profileID
+	req.URL.Path = "/profiles/" + profileID
 	return encodeRequest(ctx, req, request)
 }
 
@@ -249,7 +249,7 @@ func encodeDeleteProfileRequest(ctx context.Context, req *http.Request, request 
 	// r.Methods("DELETE").Path("/profiles/{id}")
 	r := request.(deleteProfileRequest)
 	profileID := url.QueryEscape(r.ID)
-	req.Method, req.URL.Path = "DELETE", "/profiles/"+profileID
+	req.URL.Path = "/profiles/" + profileID
 	return encodeRequest(ctx, req, request)
 }
 
@@ -257,7 +257,7 @@ func encodeGetAddressesRequest(ctx context.Context, req *http.Request, request i
 	// r.Methods("GET").Path("/profiles/{id}/addresses/")
 	r := request.(getAddressesRequest)
 	profileID := url.QueryEscape(r.ProfileID)
-	req.Method, req.URL.Path = "GET", "/profiles/"+profileID+"/addresses/"
+	req.URL.Path = "/profiles/" + profileID + "/addresses/"
 	return encodeRequest(ctx, req, request)
 }
 
@@ -266,7 +266,7 @@ func encodeGetAddressRequest(ctx context.Context, req *http.Request, request int
 	r := request.(getAddressRequest)
 	profileID := url.QueryEscape(r.ProfileID)
 	addressID := url.QueryEscape(r.AddressID)
-	req.Method, req.URL.Path = "GET", "/profiles/"+profileID+"/addresses/"+addressID
+	req.URL.Path = "/profiles/" + profileID + "/addresses/" + addressID
 	return encodeRequest(ctx, req, request)
 }
 
@@ -274,7 +274,7 @@ func encodePostAddressRequest(ctx context.Context, req *http.Request, request in
 	// r.Methods("POST").Path("/profiles/{id}/addresses/")
 	r := request.(postAddressRequest)
 	profileID := url.QueryEscape(r.ProfileID)
-	req.Method, req.URL.Path = "POST", "/profiles/"+profileID+"/addresses/"
+	req.URL.Path = "/profiles/" + profileID + "/addresses/"
 	return encodeRequest(ctx, req, request)
 }
 
@@ -283,7 +283,7 @@ func encodeDeleteAddressRequest(ctx context.Context, req *http.Request, request 
 	r := request.(deleteAddressRequest)
 	profileID := url.QueryEscape(r.ProfileID)
 	addressID := url.QueryEscape(r.AddressID)
-	req.Method, req.URL.Path = "DELETE", "/profiles/"+profileID+"/addresses/"+addressID
+	req.URL.Path = "/profiles/" + profileID + "/addresses/" + addressID
 	return encodeRequest(ctx, req, request)
 }
 
