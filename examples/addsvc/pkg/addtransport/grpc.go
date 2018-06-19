@@ -107,7 +107,7 @@ func NewGRPCClient(conn *grpc.ClientConn, otTracer stdopentracing.Tracer, zipkin
 		zipkinClient,
 	}
 
-	// Each individual endpoint is an http/transport.Client (which implements
+	// Each individual endpoint is an grpc/transport.Client (which implements
 	// endpoint.Endpoint) that gets wrapped with various middlewares. If you
 	// made your own client library, you'd do this work there, so your server
 	// could rely on a consistent set of client behavior.

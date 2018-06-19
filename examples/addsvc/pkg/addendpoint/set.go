@@ -98,12 +98,11 @@ func MakeConcatEndpoint(s addservice.Service) endpoint.Endpoint {
 	}
 }
 
-// Failer is an interface that should be implemented by response types.
-// Response encoders can check if responses are Failer, and if so if they've
-// failed, and if so encode them using a separate write path based on the error.
-type Failer interface {
-	Failed() error
-}
+// compile time assertions for our response types implementing endpoint.Failer.
+var (
+	_ endpoint.Failer = SumResponse{}
+	_ endpoint.Failer = ConcatResponse{}
+)
 
 // SumRequest collects the request parameters for the Sum method.
 type SumRequest struct {
@@ -116,7 +115,7 @@ type SumResponse struct {
 	Err error `json:"-"` // should be intercepted by Failed/errorEncoder
 }
 
-// Failed implements Failer.
+// Failed implements endpoint.Failer.
 func (r SumResponse) Failed() error { return r.Err }
 
 // ConcatRequest collects the request parameters for the Concat method.
@@ -130,5 +129,5 @@ type ConcatResponse struct {
 	Err error  `json:"-"`
 }
 
-// Failed implements Failer.
+// Failed implements endpoint.Failer.
 func (r ConcatResponse) Failed() error { return r.Err }

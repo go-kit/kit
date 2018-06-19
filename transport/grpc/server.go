@@ -55,13 +55,13 @@ func NewServer(
 // ServerOption sets an optional parameter for servers.
 type ServerOption func(*Server)
 
-// ServerBefore functions are executed on the HTTP request object before the
+// ServerBefore functions are executed on the gRPC request object before the
 // request is decoded.
 func ServerBefore(before ...ServerRequestFunc) ServerOption {
 	return func(s *Server) { s.before = append(s.before, before...) }
 }
 
-// ServerAfter functions are executed on the HTTP response writer after the
+// ServerAfter functions are executed on the gRPC response writer after the
 // endpoint is invoked, but before anything is written to the client.
 func ServerAfter(after ...ServerResponseFunc) ServerOption {
 	return func(s *Server) { s.after = append(s.after, after...) }

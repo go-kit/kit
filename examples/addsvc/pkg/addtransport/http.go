@@ -235,7 +235,7 @@ func encodeHTTPGenericRequest(_ context.Context, r *http.Request, request interf
 // encodeHTTPGenericResponse is a transport/http.EncodeResponseFunc that encodes
 // the response as JSON to the response writer. Primarily useful in a server.
 func encodeHTTPGenericResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if f, ok := response.(addendpoint.Failer); ok && f.Failed() != nil {
+	if f, ok := response.(endpoint.Failer); ok && f.Failed() != nil {
 		errorEncoder(ctx, f.Failed(), w)
 		return nil
 	}
