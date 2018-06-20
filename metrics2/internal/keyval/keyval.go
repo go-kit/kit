@@ -2,6 +2,7 @@ package keyval
 
 import metrics "github.com/go-kit/kit/metrics2"
 
+// MakeWith populates a map of the keys with unknown (unspecified) values.
 func MakeWith(keys []string) map[string]string {
 	m := make(map[string]string, len(keys))
 	for _, key := range keys {

@@ -40,61 +40,85 @@ func NewProvider() *Provider {
 	}
 }
 
+// NewCounter is an alias for NewFloatCounter.
+func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
+	return p.NewFloatCounter(id), nil
+}
+
 // NewIntCounter returns a Counter whose values are truncated and exposed as
-// expvar.Int. The name can include template interpolation to support With; see
-// package documentation for details.
-func (p *Provider) NewIntCounter(name string) *IntCounter {
+// expvar.Int.
+//
+// Only the NameTemplate field from the identifier is used. It can include
+// template interpolation to support With; see package documentation for
+// details.
+func (p *Provider) NewIntCounter(id metrics.Identifier) *IntCounter {
 	return &IntCounter{
 		parent:  p,
-		name:    name,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
+		name:    id.NameTemplate,
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 	}
 }
 
 // NewFloatCounter returns a Counter whose values are exposed as an
-// expvar.Float. The name can include template interpolation to support With;
-// see package documentation for details.
-func (p *Provider) NewFloatCounter(name string) *FloatCounter {
+// expvar.Float.
+//
+// Only the NameTemplate field from the identifier is used. It can include
+// template interpolation to support With; see package documentation for
+// details.
+func (p *Provider) NewFloatCounter(id metrics.Identifier) *FloatCounter {
 	return &FloatCounter{
 		parent:  p,
-		name:    name,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
+		name:    id.NameTemplate,
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 	}
 }
 
+// NewGauge is an alias for NewFloatGauge.
+func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
+	return p.NewFloatGauge(id), nil
+}
+
 // NewIntGauge returns a Gauge whose values are truncated and exposed as
-// expvar.Int. The name can include template interpolation to support With; see
-// package documentation for details.
-func (p *Provider) NewIntGauge(name string) *IntGauge {
+// expvar.Int.
+//
+// Only the NameTemplate field from the identifier is used. It can include
+// template interpolation to support With; see package documentation for
+// details.
+func (p *Provider) NewIntGauge(id metrics.Identifier) *IntGauge {
 	return &IntGauge{
 		parent:  p,
-		name:    name,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
+		name:    id.NameTemplate,
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 	}
 }
 
 // NewFloatGauge returns a Gauge whose values are exposed as an expvar.Float.
-// The name can include template interpolation to support With; see package
-// documentation for details.
-func (p *Provider) NewFloatGauge(name string) *FloatGauge {
+//
+// Only the NameTemplate field from the identifier is used. It can include
+// template interpolation to support With; see package documentation for
+// details.
+func (p *Provider) NewFloatGauge(id metrics.Identifier) *FloatGauge {
 	return &FloatGauge{
 		parent:  p,
-		name:    name,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
+		name:    id.NameTemplate,
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 	}
 }
 
 // NewHistogram returns a Histogram whose observations are collected and exposed
 // as 4 per-quantile expvar.Floats. The exposed quantiles are 50th, 90th, 95th,
 // and 99th percentile, with names suffixed by _p50, _p90, _p95, and _p99,
-// respectively. The name can include template interpolation to support With;
-// see package documentation for details.
-func (p *Provider) NewHistogram(name string) *Histogram {
+// respectively.
+//
+// Only the NameTemplate field from the identifier is used. It can include
+// template interpolation to support With; see package documentation for
+// details.
+func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error) {
 	return &Histogram{
 		parent:  p,
-		name:    name,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
-	}
+		name:    id.NameTemplate,
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
+	}, nil
 }
 
 func (p *Provider) int(name string) *expvar.Int {

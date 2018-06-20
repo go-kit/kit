@@ -9,7 +9,7 @@ import (
 )
 
 // Histogram accumulates observations and provides quantile summaries of
-// observations. Note that it's implemented with a TDigest, which
+// observations. Note that it's implemented with a TDigest.
 type Histogram struct {
 	d *tdigest.TDigest
 }

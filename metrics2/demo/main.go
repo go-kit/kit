@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+	// Build the flags.
 	fs := flag.NewFlagSet("main", flag.ExitOnError)
 	var (
 		listen = fs.String("listen", ":8080", "HTTP listen address")
@@ -22,16 +23,30 @@ func main() {
 	fs.Usage = usageFor(fs)
 	fs.Parse(os.Args[1:])
 
-	p := expvar.NewProvider()
-	var requestCount metrics.Counter
+	// Build the provider and metrics.
+	var (
+		provider       metrics.Provider
+		requestCount   metrics.Counter
+		requestLatency metrics.Histogram
+	)
 	{
-		requestCount = p.NewIntCounter("http_request_{method}_{code}_count")
-	}
-	var requestLatency metrics.Histogram
-	{
-		requestLatency = p.NewHistogram("http_request_{method}_{code}_seconds")
+		var err error
+		provider = expvar.NewProvider()
+		requestCount, err = provider.NewCounter(metrics.Identifier{
+			NameTemplate: "http_request_{method}_{code}_count",
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		requestLatency, err = provider.NewHistogram(metrics.Identifier{
+			NameTemplate: "http_request_{method}_{code}_seconds",
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
+	// An instrumenting middleware, to update the metrics.
 	instrument := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			begin := time.Now()
@@ -42,6 +57,7 @@ func main() {
 		})
 	}
 
+	// The business logic HTTP handler.
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		code := http.StatusOK
 		if i, err := strconv.Atoi(r.FormValue("code")); err == nil {
@@ -51,6 +67,7 @@ func main() {
 		w.WriteHeader(code)
 	})
 
+	// Launch the HTTP server.
 	http.Handle("/", instrument(handler))
 	log.Printf("listening on %s", *listen)
 	log.Fatal(http.ListenAndServe(*listen, nil))
