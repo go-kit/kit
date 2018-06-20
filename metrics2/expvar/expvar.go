@@ -5,7 +5,7 @@
 // illustrated with an example.
 //
 //    p := NewProvider(...)
-//    c := p.NewIntCounter("foo_{x}_{y}_bar")
+//    c := p.NewCounter("foo_{x}_{y}_bar")
 //    c.Add(1)                          // foo_unknown_unknown_bar += 1
 //    c.With("x", "hello").Add(2)       // foo_hello_unknown_bar += 2
 //    c.With("x", "1", "y", "2").Add(4) // foo_1_2_bar += 4
@@ -26,7 +26,6 @@ import (
 // Provider constructs and stores expvar metrics.
 type Provider struct {
 	mtx        sync.Mutex
-	ints       map[string]*expvar.Int
 	floats     map[string]*expvar.Float
 	histograms map[string]*histogram.Histogram // demuxed to per-quantile gauges
 }
@@ -34,75 +33,35 @@ type Provider struct {
 // NewProvider returns a new, empty provider.
 func NewProvider() *Provider {
 	return &Provider{
-		ints:       map[string]*expvar.Int{},
 		floats:     map[string]*expvar.Float{},
 		histograms: map[string]*histogram.Histogram{},
 	}
 }
 
-// NewCounter is an alias for NewFloatCounter.
+// NewCounter returns a Counter whose values are exposed as an expvar.Float.
+//
+// Only the NameTemplate field from the identifier is used. It can include
+// template interpolation to support With; see package documentation for
+// details.
 func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
-	return p.NewFloatCounter(id), nil
+	return &Counter{
+		parent:  p,
+		name:    id.NameTemplate,
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
+	}, nil
 }
 
-// NewIntCounter returns a Counter whose values are truncated and exposed as
-// expvar.Int.
+// NewGauge returns a Gauge whose values are exposed as an expvar.Float.
 //
 // Only the NameTemplate field from the identifier is used. It can include
 // template interpolation to support With; see package documentation for
 // details.
-func (p *Provider) NewIntCounter(id metrics.Identifier) *IntCounter {
-	return &IntCounter{
-		parent:  p,
-		name:    id.NameTemplate,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
-	}
-}
-
-// NewFloatCounter returns a Counter whose values are exposed as an
-// expvar.Float.
-//
-// Only the NameTemplate field from the identifier is used. It can include
-// template interpolation to support With; see package documentation for
-// details.
-func (p *Provider) NewFloatCounter(id metrics.Identifier) *FloatCounter {
-	return &FloatCounter{
-		parent:  p,
-		name:    id.NameTemplate,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
-	}
-}
-
-// NewGauge is an alias for NewFloatGauge.
 func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
-	return p.NewFloatGauge(id), nil
-}
-
-// NewIntGauge returns a Gauge whose values are truncated and exposed as
-// expvar.Int.
-//
-// Only the NameTemplate field from the identifier is used. It can include
-// template interpolation to support With; see package documentation for
-// details.
-func (p *Provider) NewIntGauge(id metrics.Identifier) *IntGauge {
-	return &IntGauge{
+	return &Gauge{
 		parent:  p,
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
-	}
-}
-
-// NewFloatGauge returns a Gauge whose values are exposed as an expvar.Float.
-//
-// Only the NameTemplate field from the identifier is used. It can include
-// template interpolation to support With; see package documentation for
-// details.
-func (p *Provider) NewFloatGauge(id metrics.Identifier) *FloatGauge {
-	return &FloatGauge{
-		parent:  p,
-		name:    id.NameTemplate,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
-	}
+	}, nil
 }
 
 // NewHistogram returns a Histogram whose observations are collected and exposed
@@ -119,15 +78,6 @@ func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 	}, nil
-}
-
-func (p *Provider) int(name string) *expvar.Int {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	if _, ok := p.ints[name]; !ok {
-		p.ints[name] = expvar.NewInt(name)
-	}
-	return p.ints[name]
 }
 
 func (p *Provider) float(name string) *expvar.Float {
@@ -171,42 +121,17 @@ func (p *Provider) observe(name string, value float64) {
 	}
 }
 
-// IntCounter is a Counter whose values are truncated to integers and exposed as
-// expvar.Int. IntCounters must be constructed via the Provider; the zero value
-// of an IntCounter is not useful.
-type IntCounter struct {
+// Counter exposes values as as expvar.Float. Counters must be constructed via
+// the Provider; the zero value of a Counter is not useful.
+type Counter struct {
 	parent  *Provider
 	name    string
 	keyvals map[string]string
 }
 
 // With implements Counter.
-func (c *IntCounter) With(keyvals ...string) metrics.Counter {
-	return &IntCounter{
-		parent:  c.parent,
-		name:    c.name,
-		keyvals: keyval.Merge(c.keyvals, keyvals...),
-	}
-}
-
-// Add inplements Counter.
-func (c *IntCounter) Add(delta float64) {
-	name := template.Render(c.name, c.keyvals)
-	c.parent.int(name).Add(int64(delta))
-}
-
-// FloatCounter is a Counter whose values are exposed as expvar.Float.
-// FloatCounters must be constructed via the Provider; the zero value of a
-// FloatCounter is not useful.
-type FloatCounter struct {
-	parent  *Provider
-	name    string
-	keyvals map[string]string
-}
-
-// With implements Counter.
-func (c *FloatCounter) With(keyvals ...string) metrics.Counter {
-	return &FloatCounter{
+func (c *Counter) With(keyvals ...string) metrics.Counter {
+	return &Counter{
 		parent:  c.parent,
 		name:    c.name,
 		keyvals: keyval.Merge(c.keyvals, keyvals...),
@@ -214,23 +139,22 @@ func (c *FloatCounter) With(keyvals ...string) metrics.Counter {
 }
 
 // Add implements Counter.
-func (c *FloatCounter) Add(delta float64) {
+func (c *Counter) Add(delta float64) {
 	name := template.Render(c.name, c.keyvals)
 	c.parent.float(name).Add(delta)
 }
 
-// IntGauge is a Gauge whose values are truncated and exposed as expvar.Int.
-// IntGauges must be constructed via the Provider; the zero value of an IntGauge
-// is not useful.
-type IntGauge struct {
+// Gauge exposes values as expvar.Float. Gauges must be constructed via the
+// Provider; the zero value of a Gauge is not useful.
+type Gauge struct {
 	parent  *Provider
 	name    string
 	keyvals map[string]string
 }
 
 // With implements Gauge.
-func (g *IntGauge) With(keyvals ...string) metrics.Gauge {
-	return &IntGauge{
+func (g *Gauge) With(keyvals ...string) metrics.Gauge {
+	return &Gauge{
 		parent:  g.parent,
 		name:    g.name,
 		keyvals: keyval.Merge(g.keyvals, keyvals...),
@@ -238,43 +162,13 @@ func (g *IntGauge) With(keyvals ...string) metrics.Gauge {
 }
 
 // Set implements Gauge.
-func (g *IntGauge) Set(value float64) {
-	name := template.Render(g.name, g.keyvals)
-	g.parent.int(name).Set(int64(value))
-}
-
-// Add implements Gauge.
-func (g *IntGauge) Add(delta float64) {
-	name := template.Render(g.name, g.keyvals)
-	g.parent.int(name).Add(int64(delta))
-}
-
-// FloatGauge is a Gauge whose values are exposed as expvar.Float. FloatGauges
-// must be constructed via the Provider; the zero value of a FloatGauge is not
-// useful.
-type FloatGauge struct {
-	parent  *Provider
-	name    string
-	keyvals map[string]string
-}
-
-// With implements Gauge.
-func (g *FloatGauge) With(keyvals ...string) metrics.Gauge {
-	return &FloatGauge{
-		parent:  g.parent,
-		name:    g.name,
-		keyvals: keyval.Merge(g.keyvals, keyvals...),
-	}
-}
-
-// Set implements Gauge.
-func (g *FloatGauge) Set(value float64) {
+func (g *Gauge) Set(value float64) {
 	name := template.Render(g.name, g.keyvals)
 	g.parent.float(name).Set(value)
 }
 
 // Add implements Gauge.
-func (g *FloatGauge) Add(delta float64) {
+func (g *Gauge) Add(delta float64) {
 	name := template.Render(g.name, g.keyvals)
 	g.parent.float(name).Add(delta)
 }
