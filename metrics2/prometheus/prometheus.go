@@ -58,7 +58,7 @@ func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
 	for _, label := range id.Labels {
 		keyvals[label] = metrics.UnknownValue
 	}
-	return &Counter{
+	return &counter{
 		counter: c,
 		keyvals: keyvals,
 	}, nil
@@ -84,7 +84,7 @@ func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
 	for _, label := range id.Labels {
 		keyvals[label] = metrics.UnknownValue
 	}
-	return &Gauge{
+	return &gauge{
 		gauge:   g,
 		keyvals: keyvals,
 	}, nil
@@ -110,78 +110,60 @@ func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error
 	for _, label := range id.Labels {
 		keyvals[label] = metrics.UnknownValue
 	}
-	return &Histogram{
+	return &histogram{
 		histogram: h,
 		keyvals:   keyvals,
 	}, nil
 }
 
-// Counter wraps a prometheus.CounterVec and implements metrics.Counter.
-// Counters must be constructed via the Provider; the zero value of a Counter is
-// not useful.
-type Counter struct {
+type counter struct {
 	counter *prometheus.CounterVec
 	keyvals map[string]string
 }
 
-// With implements Counter. Keyvals whose keys haven't been predeclared as
-// labels are silently dropped.
-func (c *Counter) With(keyvals ...string) metrics.Counter {
-	return &Counter{
+func (c *counter) With(keyvals ...string) metrics.Counter {
+	return &counter{
 		counter: c.counter,
 		keyvals: keyval.Merge(c.keyvals, keyvals...),
 	}
 }
 
-// Add implements Counter.
-func (c *Counter) Add(value float64) {
+func (c *counter) Add(value float64) {
 	c.counter.With(prometheus.Labels(c.keyvals)).Add(value)
 }
 
-// Gauge wraps a prometheus.GaugeVec and implements metrics.Gauge. Gauges must
-// be constructed via the Provider; the zero value of a Gauge is not useful.
-type Gauge struct {
+type gauge struct {
 	gauge   *prometheus.GaugeVec
 	keyvals map[string]string
 }
 
-// With implements Gauge. Keyvals whose keys haven't been predeclared as labels
-// are silently dropped.
-func (g *Gauge) With(keyvals ...string) metrics.Gauge {
-	return &Gauge{
+func (g *gauge) With(keyvals ...string) metrics.Gauge {
+	return &gauge{
 		gauge:   g.gauge,
 		keyvals: keyval.Merge(g.keyvals, keyvals...),
 	}
 }
 
-// Add implements Gauge.
-func (g *Gauge) Add(value float64) {
+func (g *gauge) Add(value float64) {
 	g.gauge.With(prometheus.Labels(g.keyvals)).Add(value)
 }
 
-// Set implements Gauge.
-func (g *Gauge) Set(value float64) {
+func (g *gauge) Set(value float64) {
 	g.gauge.With(prometheus.Labels(g.keyvals)).Set(value)
 }
 
-// Histogram wraps a prometheus.HistogramVec and implements metrics.Histogram.
-// Histograms must be constructed via the Provider; the zero value of a
-// Histogram is not useful.
-type Histogram struct {
+type histogram struct {
 	histogram *prometheus.HistogramVec
 	keyvals   map[string]string
 }
 
-// With implements Histogram. Keyvals whose keys haven't been predeclared as
-// labels are silently dropped.
-func (h *Histogram) With(keyvals ...string) metrics.Histogram {
-	return &Histogram{
+func (h *histogram) With(keyvals ...string) metrics.Histogram {
+	return &histogram{
 		histogram: h.histogram,
 		keyvals:   keyval.Merge(h.keyvals, keyvals...),
 	}
 }
 
-// Observe implements Histogram.
-func (h *Histogram) Observe(value float64) {
+func (h *histogram) Observe(value float64) {
 	h.histogram.With(prometheus.Labels(h.keyvals)).Observe(value)
 }

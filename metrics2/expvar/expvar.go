@@ -18,7 +18,7 @@ import (
 	"sync"
 
 	"github.com/go-kit/kit/metrics2"
-	"github.com/go-kit/kit/metrics2/internal/histogram"
+	internalhistogram "github.com/go-kit/kit/metrics2/internal/histogram"
 	"github.com/go-kit/kit/metrics2/internal/keyval"
 	"github.com/go-kit/kit/metrics2/internal/template"
 )
@@ -27,14 +27,14 @@ import (
 type Provider struct {
 	mtx        sync.Mutex
 	floats     map[string]*expvar.Float
-	histograms map[string]*histogram.Histogram // demuxed to per-quantile gauges
+	histograms map[string]*internalhistogram.Histogram // demuxed to per-quantile gauges
 }
 
 // NewProvider returns a new, empty provider.
 func NewProvider() *Provider {
 	return &Provider{
 		floats:     map[string]*expvar.Float{},
-		histograms: map[string]*histogram.Histogram{},
+		histograms: map[string]*internalhistogram.Histogram{},
 	}
 }
 
@@ -44,7 +44,7 @@ func NewProvider() *Provider {
 // template interpolation to support With; see package documentation for
 // details.
 func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
-	return &Counter{
+	return &counter{
 		parent:  p,
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
@@ -57,7 +57,7 @@ func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
 // template interpolation to support With; see package documentation for
 // details.
 func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
-	return &Gauge{
+	return &gauge{
 		parent:  p,
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
@@ -73,7 +73,7 @@ func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
 // template interpolation to support With; see package documentation for
 // details.
 func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error) {
-	return &Histogram{
+	return &histogram{
 		parent:  p,
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
@@ -96,7 +96,7 @@ func (p *Provider) observe(name string, value float64) {
 	// Observe the value in the histogram.
 	h, ok := p.histograms[name]
 	if !ok {
-		h = histogram.New()
+		h = internalhistogram.New()
 		p.histograms[name] = h
 	}
 	h.Observe(value)
@@ -121,78 +121,64 @@ func (p *Provider) observe(name string, value float64) {
 	}
 }
 
-// Counter exposes values as as expvar.Float. Counters must be constructed via
-// the Provider; the zero value of a Counter is not useful.
-type Counter struct {
+type counter struct {
 	parent  *Provider
 	name    string
 	keyvals map[string]string
 }
 
-// With implements Counter.
-func (c *Counter) With(keyvals ...string) metrics.Counter {
-	return &Counter{
+func (c *counter) With(keyvals ...string) metrics.Counter {
+	return &counter{
 		parent:  c.parent,
 		name:    c.name,
 		keyvals: keyval.Merge(c.keyvals, keyvals...),
 	}
 }
 
-// Add implements Counter.
-func (c *Counter) Add(delta float64) {
+func (c *counter) Add(delta float64) {
 	name := template.Render(c.name, c.keyvals)
 	c.parent.float(name).Add(delta)
 }
 
-// Gauge exposes values as expvar.Float. Gauges must be constructed via the
-// Provider; the zero value of a Gauge is not useful.
-type Gauge struct {
+type gauge struct {
 	parent  *Provider
 	name    string
 	keyvals map[string]string
 }
 
-// With implements Gauge.
-func (g *Gauge) With(keyvals ...string) metrics.Gauge {
-	return &Gauge{
+func (g *gauge) With(keyvals ...string) metrics.Gauge {
+	return &gauge{
 		parent:  g.parent,
 		name:    g.name,
 		keyvals: keyval.Merge(g.keyvals, keyvals...),
 	}
 }
 
-// Set implements Gauge.
-func (g *Gauge) Set(value float64) {
+func (g *gauge) Set(value float64) {
 	name := template.Render(g.name, g.keyvals)
 	g.parent.float(name).Set(value)
 }
 
-// Add implements Gauge.
-func (g *Gauge) Add(delta float64) {
+func (g *gauge) Add(delta float64) {
 	name := template.Render(g.name, g.keyvals)
 	g.parent.float(name).Add(delta)
 }
 
-// Histogram collects observations and exposes them as per-quantile Gauges.
-// Histograms must be constructed via the Provider; the zero value of a
-// Histogram is not useful.
-type Histogram struct {
+type histogram struct {
 	parent  *Provider
 	name    string
 	keyvals map[string]string
 }
 
-// With implements Histogram.
-func (h *Histogram) With(keyvals ...string) metrics.Histogram {
-	return &Histogram{
+func (h *histogram) With(keyvals ...string) metrics.Histogram {
+	return &histogram{
 		parent:  h.parent,
 		name:    h.name,
 		keyvals: keyval.Merge(h.keyvals, keyvals...),
 	}
 }
 
-// Observe implements Histogram.
-func (h *Histogram) Observe(value float64) {
+func (h *histogram) Observe(value float64) {
 	name := template.Render(h.name, h.keyvals)
 	h.parent.observe(name, value)
 }

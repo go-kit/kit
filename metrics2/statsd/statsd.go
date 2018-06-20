@@ -183,7 +183,7 @@ func (p *Provider) format(value float64) string {
 // template interpolation to support With; see package documentation for
 // details.
 func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
-	return &Counter{
+	return &counter{
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 		add:     p.counterAdd,
@@ -196,7 +196,7 @@ func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
 // template interpolation to support With; see package documentation for
 // details.
 func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
-	return &Gauge{
+	return &gauge{
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 		add:     p.gaugeAdd,
@@ -212,7 +212,7 @@ func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
 // template interpolation to support With; see package documentation for
 // details.
 func (p *Provider) NewTimer(id metrics.Identifier) (metrics.Histogram, error) {
-	return &Histogram{
+	return &histogram{
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 		observe: p.timerObserve,
@@ -226,7 +226,7 @@ func (p *Provider) NewTimer(id metrics.Identifier) (metrics.Histogram, error) {
 // template interpolation to support With; see package documentation for
 // details.
 func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error) {
-	return &Histogram{
+	return &histogram{
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 		observe: p.histogramObserve,
@@ -269,41 +269,34 @@ func (p *Provider) sampleExec(f func()) {
 	}
 }
 
-// Counter is a StatsD counter object. Counters must be constructed via the
-// Provider; the zero value of a Counter is not useful.
-type Counter struct {
+type counter struct {
 	name    string
 	keyvals map[string]string
 	add     func(name string, delta float64)
 }
 
-// With implements Counter.
-func (c *Counter) With(keyvals ...string) metrics.Counter {
-	return &Counter{
+func (c *counter) With(keyvals ...string) metrics.Counter {
+	return &counter{
 		name:    c.name,
 		keyvals: keyval.Merge(c.keyvals, keyvals...),
 		add:     c.add,
 	}
 }
 
-// Add implements Counter.
-func (c *Counter) Add(delta float64) {
+func (c *counter) Add(delta float64) {
 	name := template.Render(c.name, c.keyvals)
 	c.add(name, delta)
 }
 
-// Gauge is a StatsD gauge object. Gauges must be constructed via the Provider;
-// the zero value of a Gauge is not useful.
-type Gauge struct {
+type gauge struct {
 	name    string
 	keyvals map[string]string
 	add     func(name string, delta float64)
 	set     func(name string, value float64)
 }
 
-// With implements Gauge.
-func (g *Gauge) With(keyvals ...string) metrics.Gauge {
-	return &Gauge{
+func (g *gauge) With(keyvals ...string) metrics.Gauge {
+	return &gauge{
 		name:    g.name,
 		keyvals: keyval.Merge(g.keyvals, keyvals...),
 		add:     g.add,
@@ -311,38 +304,31 @@ func (g *Gauge) With(keyvals ...string) metrics.Gauge {
 	}
 }
 
-// Add implements Gauge.
-func (g *Gauge) Add(delta float64) {
+func (g *gauge) Add(delta float64) {
 	name := template.Render(g.name, g.keyvals)
 	g.add(name, delta)
 }
 
-// Set implements Gauge.
-func (g *Gauge) Set(value float64) {
+func (g *gauge) Set(value float64) {
 	name := template.Render(g.name, g.keyvals)
 	g.set(name, value)
 }
 
-// Histogram is a StatsD histogram object. Histogram observations are unitless
-// in the protocol. Histograms must be constructed via the Provider; the zero
-// value of a Histogram is not useful.
-type Histogram struct {
+type histogram struct {
 	name    string
 	keyvals map[string]string
 	observe func(name string, value float64)
 }
 
-// With implements Histogram.
-func (h *Histogram) With(keyvals ...string) metrics.Histogram {
-	return &Histogram{
+func (h *histogram) With(keyvals ...string) metrics.Histogram {
+	return &histogram{
 		name:    h.name,
 		keyvals: keyval.Merge(h.keyvals, keyvals...),
 		observe: h.observe,
 	}
 }
 
-// Observe implements Histogram.
-func (h *Histogram) Observe(value float64) {
+func (h *histogram) Observe(value float64) {
 	name := template.Render(h.name, h.keyvals)
 	h.observe(name, value)
 }

@@ -4,7 +4,7 @@ import "github.com/go-kit/kit/metrics2"
 
 var (
 	_ metrics.Provider  = (*Provider)(nil)
-	_ metrics.Counter   = (*Counter)(nil)
-	_ metrics.Gauge     = (*Gauge)(nil)
-	_ metrics.Histogram = (*Histogram)(nil)
+	_ metrics.Counter   = (*counter)(nil)
+	_ metrics.Gauge     = (*gauge)(nil)
+	_ metrics.Histogram = (*histogram)(nil)
 )
