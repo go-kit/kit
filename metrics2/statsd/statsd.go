@@ -178,48 +178,59 @@ func (p *Provider) format(value float64) string {
 }
 
 // NewCounter returns a Counter whose values are emitted to a StatsD backend.
-// The name can include template interpolation to support With; see package
-// documentation for details.
-func (p *Provider) NewCounter(name string) *Counter {
+//
+// Only the NameTemplate field from the identifier is used. It can include
+// template interpolation to support With; see package documentation for
+// details.
+func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
 	return &Counter{
-		parent:  p,
-		name:    name,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
-	}
+		name:    id.NameTemplate,
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
+		add:     p.counterAdd,
+	}, nil
 }
 
 // NewGauge returns a Gauge whose values are emitted to a StatsD backend.
-// The name can include template interpolation to support With; see package
-// documentation for details.
-func (p *Provider) NewGauge(name string) *Gauge {
+//
+// Only the NameTemplate field from the identifier is used. It can include
+// template interpolation to support With; see package documentation for
+// details.
+func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
 	return &Gauge{
-		parent:  p,
-		name:    name,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
-	}
+		name:    id.NameTemplate,
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
+		add:     p.gaugeAdd,
+		set:     p.gaugeSet,
+	}, nil
 }
 
 // NewTimer returns a Timer whose values are emitted to a StatsD backend. StatsD
 // timers map to Go kit histograms, and must take observations in units of
-// milliseconds. The name can include template interpolation to support With;
-// see package documentation for details.
-func (p *Provider) NewTimer(name string) *Timer {
-	return &Timer{
-		parent:  p,
-		name:    name,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
-	}
+// milliseconds.
+//
+// Only the NameTemplate field from the identifier is used. It can include
+// template interpolation to support With; see package documentation for
+// details.
+func (p *Provider) NewTimer(id metrics.Identifier) (metrics.Histogram, error) {
+	return &Histogram{
+		name:    id.NameTemplate,
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
+		observe: p.timerObserve,
+	}, nil
 }
 
 // NewHistogram returns a Histogram whose values are emitted to a StatsD
-// backend. The name can include template interpolation to support With; see
-// package documentation for details.
-func (p *Provider) NewHistogram(name string) *Histogram {
+// backend.
+//
+// Only the NameTemplate field from the identifier is used. It can include
+// template interpolation to support With; see package documentation for
+// details.
+func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error) {
 	return &Histogram{
-		parent:  p,
-		name:    name,
-		keyvals: keyval.MakeWith(template.ExtractKeysFrom(name)),
-	}
+		name:    id.NameTemplate,
+		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
+		observe: p.histogramObserve,
+	}, nil
 }
 
 func (p *Provider) counterAdd(name string, delta float64) {
@@ -261,99 +272,77 @@ func (p *Provider) sampleExec(f func()) {
 // Counter is a StatsD counter object. Counters must be constructed via the
 // Provider; the zero value of a Counter is not useful.
 type Counter struct {
-	parent  *Provider
 	name    string
 	keyvals map[string]string
+	add     func(name string, delta float64)
 }
 
 // With implements Counter.
 func (c *Counter) With(keyvals ...string) metrics.Counter {
 	return &Counter{
-		parent:  c.parent,
 		name:    c.name,
 		keyvals: keyval.Merge(c.keyvals, keyvals...),
+		add:     c.add,
 	}
 }
 
 // Add implements Counter.
 func (c *Counter) Add(delta float64) {
 	name := template.Render(c.name, c.keyvals)
-	c.parent.counterAdd(name, delta)
+	c.add(name, delta)
 }
 
 // Gauge is a StatsD gauge object. Gauges must be constructed via the Provider;
 // the zero value of a Gauge is not useful.
 type Gauge struct {
-	parent  *Provider
 	name    string
 	keyvals map[string]string
+	add     func(name string, delta float64)
+	set     func(name string, value float64)
 }
 
 // With implements Gauge.
 func (g *Gauge) With(keyvals ...string) metrics.Gauge {
 	return &Gauge{
-		parent:  g.parent,
 		name:    g.name,
 		keyvals: keyval.Merge(g.keyvals, keyvals...),
+		add:     g.add,
+		set:     g.set,
 	}
 }
 
 // Add implements Gauge.
 func (g *Gauge) Add(delta float64) {
 	name := template.Render(g.name, g.keyvals)
-	g.parent.gaugeAdd(name, delta)
+	g.add(name, delta)
 }
 
 // Set implements Gauge.
 func (g *Gauge) Set(value float64) {
 	name := template.Render(g.name, g.keyvals)
-	g.parent.gaugeSet(name, value)
-}
-
-// Timer is a StatsD timer object, modeled as a Go kit histogram. Timer
-// observations are expected to be in units of milliseconds. Timers must be
-// constructed via the Provider; the zero value of a Timer is not useful.
-type Timer struct {
-	parent  *Provider
-	name    string
-	keyvals map[string]string
-}
-
-// With implements Histogram.
-func (t *Timer) With(keyvals ...string) metrics.Histogram {
-	return &Timer{
-		parent:  t.parent,
-		name:    t.name,
-		keyvals: keyval.Merge(t.keyvals, keyvals...),
-	}
-}
-
-// Observe implements Histogram.
-func (t *Timer) Observe(value float64) {
-	name := template.Render(t.name, t.keyvals)
-	t.parent.timerObserve(name, value)
+	g.set(name, value)
 }
 
 // Histogram is a StatsD histogram object. Histogram observations are unitless
 // in the protocol. Histograms must be constructed via the Provider; the zero
 // value of a Histogram is not useful.
 type Histogram struct {
-	parent  *Provider
 	name    string
 	keyvals map[string]string
+	observe func(name string, value float64)
 }
 
 // With implements Histogram.
 func (h *Histogram) With(keyvals ...string) metrics.Histogram {
 	return &Histogram{
-		parent:  h.parent,
 		name:    h.name,
 		keyvals: keyval.Merge(h.keyvals, keyvals...),
+		observe: h.observe,
 	}
 }
 
 // Observe implements Histogram.
 func (h *Histogram) Observe(value float64) {
 	name := template.Render(h.name, h.keyvals)
-	h.parent.histogramObserve(name, value)
+	h.observe(name, value)
 }
