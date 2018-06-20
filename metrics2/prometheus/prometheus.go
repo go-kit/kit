@@ -93,15 +93,16 @@ func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
 // NewHistogram constructs a prometheus.HistogramVec, registers it via the
 // Provider's configured Registerer, and returns a Histogram wrapping it.
 //
-// The namespace, subsystem, name, help, and labels fields from the identifier
-// are used. Labels (keys) must be completely specified at construction time,
-// and take the default value of metrics.UnknownValue.
+// The namespace, subsystem, name, help, buckets, and labels fields from the
+// identifier are used. Labels (keys) must be completely specified at
+// construction time, and take the default value of metrics.UnknownValue.
 func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error) {
 	h := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: id.Namespace,
 		Subsystem: id.Subsystem,
 		Name:      id.Name,
 		Help:      id.Help,
+		Buckets:   id.Buckets,
 	}, id.Labels)
 	if err := p.registerer.Register(h); err != nil {
 		return nil, err

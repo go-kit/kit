@@ -10,6 +10,15 @@ type Provider interface {
 // Identifier uniquely identifies a metric.
 // Different backends may use different fields from the identifier.
 type Identifier struct {
+	// NameTemplate is used by the expvar and statsd providers. It supports
+	// basic template interpolation. Strings surrounded by {} will be
+	// interpreted as label keys and replaced with corresponding label values.
+	//
+	// For example, a NameTemplate `http_request_{method}_{code}_count` with
+	// labels `{foo: bar, code: 200}` will be rendered as
+	// `http_request_unknown_200_count`.
+	NameTemplate string
+
 	// Namespace is used by the Prometheus provider.
 	Namespace string
 
@@ -19,17 +28,11 @@ type Identifier struct {
 	// Name is used by the Prometheus provider.
 	Name string
 
-	// NameTemplate is used by the expvar provider. It supports basic template
-	// interpolation. Strings surrounded by {} will be interpreted as label keys
-	// and replaced with label values at render time.
-	//
-	// For example, a NameTemplate `http_request_{method}_{code}_count`
-	// with labels `{foo: bar, code: 200}` will be rendered as
-	// `http_request_unknown_200_count`.
-	NameTemplate string
-
 	// Help is used by the Prometheus provider.
 	Help string
+
+	// Buckets is used by the Prometheus provider for histograms only.
+	Buckets []float64
 
 	// Labels are used by the Prometheus provider. All labels must be
 	// predeclared when metrics are constructed.
