@@ -30,20 +30,13 @@ func main() {
 		requestLatency metrics.Histogram
 	)
 	{
-		var err error
 		provider = expvar.NewProvider()
-		requestCount, err = provider.NewCounter(metrics.Identifier{
+		requestCount = provider.NewCounter(metrics.Identifier{
 			NameTemplate: "http_request_{method}_{code}_count",
 		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		requestLatency, err = provider.NewHistogram(metrics.Identifier{
+		requestLatency = provider.NewHistogram(metrics.Identifier{
 			NameTemplate: "http_request_{method}_{code}_seconds",
 		})
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	// An instrumenting middleware, to update the metrics.

@@ -44,12 +44,12 @@ func NewProvider() *Provider {
 // Only the NameTemplate field from the identifier is used. It can include
 // template interpolation to support With; see package documentation for
 // details.
-func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
+func (p *Provider) NewCounter(id metrics.Identifier) metrics.Counter {
 	return &counter{
 		parent:  p,
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
-	}, nil
+	}
 }
 
 // NewGauge returns a Gauge whose values are exposed as an expvar.Float.
@@ -57,12 +57,12 @@ func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
 // Only the NameTemplate field from the identifier is used. It can include
 // template interpolation to support With; see package documentation for
 // details.
-func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
+func (p *Provider) NewGauge(id metrics.Identifier) metrics.Gauge {
 	return &gauge{
 		parent:  p,
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
-	}, nil
+	}
 }
 
 // NewHistogram returns a Histogram whose observations are collected and exposed
@@ -73,12 +73,12 @@ func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
 // Only the NameTemplate field from the identifier is used. It can include
 // template interpolation to support With; see package documentation for
 // details.
-func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error) {
+func (p *Provider) NewHistogram(id metrics.Identifier) metrics.Histogram {
 	return &histogram{
 		parent:  p,
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
-	}, nil
+	}
 }
 
 func (p *Provider) float(name string) *expvar.Float {

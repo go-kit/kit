@@ -2,9 +2,9 @@ package metrics
 
 // Provider abstracts over metrics backends, and constructs metrics.
 type Provider interface {
-	NewCounter(Identifier) (Counter, error)
-	NewGauge(Identifier) (Gauge, error)
-	NewHistogram(Identifier) (Histogram, error)
+	NewCounter(Identifier) Counter
+	NewGauge(Identifier) Gauge
+	NewHistogram(Identifier) Histogram
 }
 
 // Identifier uniquely identifies a metric.

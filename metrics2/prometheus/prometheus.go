@@ -34,16 +34,14 @@ func NewProvider() *Provider {
 // The namespace, subsystem, name, help, and labels fields from the identifier
 // are used. Labels (keys) must be completely specified at construction time,
 // and take the default value of metrics.UnknownValue.
-func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
+func (p *Provider) NewCounter(id metrics.Identifier) metrics.Counter {
 	c := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: id.Namespace,
 		Subsystem: id.Subsystem,
 		Name:      id.Name,
 		Help:      id.Help,
 	}, id.Labels)
-	if err := p.Registerer.Register(c); err != nil {
-		return nil, err
-	}
+	p.Registerer.MustRegister(c)
 	keyvals := map[string]string{}
 	for _, label := range id.Labels {
 		keyvals[label] = metrics.UnknownValue
@@ -51,7 +49,7 @@ func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
 	return &counter{
 		counter: c,
 		keyvals: keyvals,
-	}, nil
+	}
 }
 
 // NewGauge constructs a prometheus.GaugeVec, registers it via the
@@ -60,16 +58,14 @@ func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
 // The namespace, subsystem, name, help, and labels fields from the identifier
 // are used. Labels (keys) must be completely specified at construction time,
 // and take the default value of metrics.UnknownValue.
-func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
+func (p *Provider) NewGauge(id metrics.Identifier) metrics.Gauge {
 	g := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: id.Namespace,
 		Subsystem: id.Subsystem,
 		Name:      id.Name,
 		Help:      id.Help,
 	}, id.Labels)
-	if err := p.Registerer.Register(g); err != nil {
-		return nil, err
-	}
+	p.Registerer.MustRegister(g)
 	keyvals := map[string]string{}
 	for _, label := range id.Labels {
 		keyvals[label] = metrics.UnknownValue
@@ -77,7 +73,7 @@ func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
 	return &gauge{
 		gauge:   g,
 		keyvals: keyvals,
-	}, nil
+	}
 }
 
 // NewHistogram constructs a prometheus.HistogramVec, registers it via the
@@ -86,7 +82,7 @@ func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
 // The namespace, subsystem, name, help, buckets, and labels fields from the
 // identifier are used. Labels (keys) must be completely specified at
 // construction time, and take the default value of metrics.UnknownValue.
-func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error) {
+func (p *Provider) NewHistogram(id metrics.Identifier) metrics.Histogram {
 	h := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: id.Namespace,
 		Subsystem: id.Subsystem,
@@ -94,9 +90,7 @@ func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error
 		Help:      id.Help,
 		Buckets:   id.Buckets,
 	}, id.Labels)
-	if err := p.Registerer.Register(h); err != nil {
-		return nil, err
-	}
+	p.Registerer.MustRegister(h)
 	keyvals := map[string]string{}
 	for _, label := range id.Labels {
 		keyvals[label] = metrics.UnknownValue
@@ -104,7 +98,7 @@ func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error
 	return &histogram{
 		histogram: h,
 		keyvals:   keyvals,
-	}, nil
+	}
 }
 
 type counter struct {

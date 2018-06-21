@@ -46,7 +46,7 @@ type Provider struct {
 	// SampleRate, between 0.0 and 1.0 inclusive, instructs the provider to only
 	// record and emit a percentage of actual observations. The primary purpose
 	// is to restrict the amount of bandwidth used to transmit reports to a
-	// StatsD server. If not set, the default behavior is to record and emit all
+	// server. If not set, the default behavior is to record and emit all
 	// observations, i.e. a sample rate of 1.0 or 100%.
 	SampleRate float64
 
@@ -56,8 +56,7 @@ type Provider struct {
 }
 
 // NewProvider returns a new, empty, idle provider. Callers must be sure to
-// invoke WriteLoop or SendLoop to actually emit information to a StatsD
-// backend. The logger is used to report transport errors.
+// invoke WriteLoop or SendLoop to actually emit information to a server.
 func NewProvider() *Provider {
 	return &Provider{
 		counters:   map[string]float64{},
@@ -176,12 +175,12 @@ func (p *Provider) format(value float64) string {
 // Only the NameTemplate field from the identifier is used. It can include
 // template interpolation to support With; see package documentation for
 // details.
-func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
+func (p *Provider) NewCounter(id metrics.Identifier) metrics.Counter {
 	return &counter{
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 		add:     p.counterAdd,
-	}, nil
+	}
 }
 
 // NewGauge returns a Gauge whose values are emitted to a StatsD backend.
@@ -189,13 +188,13 @@ func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
 // Only the NameTemplate field from the identifier is used. It can include
 // template interpolation to support With; see package documentation for
 // details.
-func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
+func (p *Provider) NewGauge(id metrics.Identifier) metrics.Gauge {
 	return &gauge{
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 		add:     p.gaugeAdd,
 		set:     p.gaugeSet,
-	}, nil
+	}
 }
 
 // NewTimer returns a Timer whose values are emitted to a StatsD backend. StatsD
@@ -205,12 +204,12 @@ func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
 // Only the NameTemplate field from the identifier is used. It can include
 // template interpolation to support With; see package documentation for
 // details.
-func (p *Provider) NewTimer(id metrics.Identifier) (metrics.Histogram, error) {
+func (p *Provider) NewTimer(id metrics.Identifier) metrics.Histogram {
 	return &histogram{
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 		observe: p.timerObserve,
-	}, nil
+	}
 }
 
 // NewHistogram returns a Histogram whose values are emitted to a StatsD
@@ -219,12 +218,12 @@ func (p *Provider) NewTimer(id metrics.Identifier) (metrics.Histogram, error) {
 // Only the NameTemplate field from the identifier is used. It can include
 // template interpolation to support With; see package documentation for
 // details.
-func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error) {
+func (p *Provider) NewHistogram(id metrics.Identifier) metrics.Histogram {
 	return &histogram{
 		name:    id.NameTemplate,
 		keyvals: keyval.MakeWith(template.ExtractKeysFrom(id.NameTemplate)),
 		observe: p.histogramObserve,
-	}, nil
+	}
 }
 
 func (p *Provider) counterAdd(name string, delta float64) {
