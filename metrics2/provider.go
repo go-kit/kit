@@ -25,7 +25,7 @@ type Identifier struct {
 	// Subsystem is used by the Prometheus provider.
 	Subsystem string
 
-	// Name is used by the Prometheus provider.
+	// Name is used by the Prometheus and DogStatsD providers.
 	Name string
 
 	// Help is used by the Prometheus provider.
@@ -34,7 +34,8 @@ type Identifier struct {
 	// Buckets is used by the Prometheus provider for histograms only.
 	Buckets []float64
 
-	// Labels are used by the Prometheus provider. All labels must be
-	// predeclared when metrics are constructed.
+	// Labels are used by the Prometheus provider.
+	// They are predeclared label names (keys) for a metric.
+	// All labels must be predeclared when metrics are constructed.
 	Labels []string
 }

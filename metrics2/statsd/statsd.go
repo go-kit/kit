@@ -44,10 +44,9 @@ type Provider struct {
 	EmitFloatValues bool
 
 	// SampleRate, between 0.0 and 1.0 inclusive, instructs the provider to only
-	// record and emit a percentage of actual observations. The primary purpose
-	// is to restrict the amount of bandwidth used to transmit reports to a
-	// server. If not set, the default behavior is to record and emit all
-	// observations, i.e. a sample rate of 1.0 or 100%.
+	// record and emit a percentage of actual observations. If not set, the
+	// default behavior is to record and emit all observations, i.e. a sample
+	// rate of 1.0 or 100%.
 	SampleRate float64
 
 	// Logger is used to report transport errors.
