@@ -23,7 +23,8 @@ import (
 	"github.com/go-kit/kit/metrics2/internal/template"
 )
 
-// Provider constructs and stores expvar metrics.
+// Provider constructs and stores expvar metrics. Provider must be constructed
+// via NewProvider; the zero value of a provider is not useful.
 type Provider struct {
 	mtx        sync.Mutex
 	floats     map[string]*expvar.Float

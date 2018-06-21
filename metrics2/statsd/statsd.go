@@ -28,60 +28,47 @@ import (
 	"github.com/go-kit/kit/util/conn"
 )
 
-// Provider constructs and stores StatsD metrics.
-// Definitions from https://github.com/b/statsd_spec.
+// Provider constructs and stores StatsD metrics. Definitions from
+// https://github.com/b/statsd_spec. Provider must be constructed via
+// NewProvider; the zero value of a provider is not useful.
 type Provider struct {
-	mtx         sync.RWMutex
-	counters    map[string]float64
-	gauges      map[string]float64
-	timers      map[string][]float64
-	histograms  map[string][]float64
-	floatValues bool
-	sampleRate  float64
-	logger      log.Logger
-}
+	mtx        sync.RWMutex
+	counters   map[string]float64
+	gauges     map[string]float64
+	timers     map[string][]float64
+	histograms map[string][]float64
 
-// ProviderOption changes some behavior of the provider.
-// Applied globally to all constructed metrics.
-type ProviderOption func(*Provider)
+	// EmitFloatValues instructs the provider to emit values to the StatsD
+	// server as floats. Only certain StatsD servers support this mode, so check
+	// to make sure. By default, the provider will truncate all values to ints.
+	EmitFloatValues bool
 
-// WithFloatValues instructs the provider to emit values to the StatsD backend
-// as floats. Only certain StatsD servers support this mode, so check to make
-// sure. If this option isn't provided, all values will be truncated to ints.
-func WithFloatValues() ProviderOption {
-	return func(p *Provider) { p.floatValues = true }
-}
+	// SampleRate, between 0.0 and 1.0 inclusive, instructs the provider to only
+	// record and emit a percentage of actual observations. The primary purpose
+	// is to restrict the amount of bandwidth used to transmit reports to a
+	// StatsD server. If not set, the default behavior is to record and emit all
+	// observations, i.e. a sample rate of 1.0 or 100%.
+	SampleRate float64
 
-// WithSampleRate instructs the provider to only record, and emit, a percentage
-// of actual observations. The primary purpose is to restrict the amount of
-// bandwidth used to transmit a report to a StatsD backend.
-func WithSampleRate(rate float64) ProviderOption {
-	if rate < 0.0 {
-		rate = 0.0
-	}
-	if rate > 1.0 {
-		rate = 1.0
-	}
-	return func(p *Provider) { p.sampleRate = rate }
+	// Logger is used to report transport errors.
+	// By default, no errors are logged.
+	Logger log.Logger
 }
 
 // NewProvider returns a new, empty, idle provider. Callers must be sure to
 // invoke WriteLoop or SendLoop to actually emit information to a StatsD
 // backend. The logger is used to report transport errors.
-func NewProvider(logger log.Logger, options ...ProviderOption) *Provider {
-	p := &Provider{
-		counters:    map[string]float64{},
-		gauges:      map[string]float64{},
-		timers:      map[string][]float64{},
-		histograms:  map[string][]float64{},
-		floatValues: false,
-		sampleRate:  1.0,
-		logger:      logger,
+func NewProvider() *Provider {
+	return &Provider{
+		counters:   map[string]float64{},
+		gauges:     map[string]float64{},
+		timers:     map[string][]float64{},
+		histograms: map[string][]float64{},
+
+		EmitFloatValues: false,
+		SampleRate:      1.0,
+		Logger:          log.NewNopLogger(),
 	}
-	for _, option := range options {
-		option(p)
-	}
-	return p
 }
 
 // SendLoop connects to a StatsD backend on the given network and address, and
@@ -89,7 +76,7 @@ func NewProvider(logger log.Logger, options ...ProviderOption) *Provider {
 // a time.NewTicker and pass the ticker.C channel to this function. The channel
 // blocks until the passed channel is closed.
 func (p *Provider) SendLoop(c <-chan time.Time, network, address string) {
-	p.WriteLoop(c, conn.NewDefaultManager(network, address, p.logger))
+	p.WriteLoop(c, conn.NewDefaultManager(network, address, p.Logger))
 }
 
 // WriteLoop writes a report to the passed writer every time the passed channel
@@ -102,7 +89,7 @@ func (p *Provider) SendLoop(c <-chan time.Time, network, address string) {
 func (p *Provider) WriteLoop(c <-chan time.Time, w io.Writer) {
 	for range c {
 		if _, err := p.WriteTo(w); err != nil {
-			p.logger.Log("err", err)
+			p.Logger.Log("err", err)
 		}
 	}
 }
@@ -117,17 +104,24 @@ func (p *Provider) WriteLoop(c <-chan time.Time, w io.Writer) {
 func (p *Provider) WriteTo(w io.Writer) (int64, error) {
 	// Copy the maps and reset them to empty.
 	// Do this in a closure to minimize lock time.
-	c, g, t, h := func() (c, g map[string]float64, t, h map[string][]float64) {
+	var (
+		c, g map[string]float64
+		t, h map[string][]float64
+	)
+	{
 		p.mtx.Lock()
-		defer p.mtx.Unlock()
 		c, p.counters = p.counters, map[string]float64{}
 		g, p.gauges = p.gauges, map[string]float64{}
 		t, p.timers = p.timers, map[string][]float64{}
 		h, p.histograms = p.histograms, map[string][]float64{}
-		return
-	}()
-	sampling := p.sampling()
-	var count int64
+		p.mtx.Unlock()
+	}
+
+	// Write the captured data out.
+	var (
+		sampling = p.sampling()
+		count    int64
+	)
 	for name, value := range c {
 		n, err := fmt.Fprintln(w, name+":"+p.format(value)+"|c"+sampling)
 		if err != nil {
@@ -164,14 +158,14 @@ func (p *Provider) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (p *Provider) sampling() string {
-	if p.sampleRate < 1.0 {
-		return "|@" + strconv.FormatFloat(p.sampleRate, 'f', 6, 64)
+	if 0.0 < p.SampleRate && p.SampleRate < 1.0 {
+		return "|@" + strconv.FormatFloat(p.SampleRate, 'f', 6, 64)
 	}
 	return ""
 }
 
 func (p *Provider) format(value float64) string {
-	if p.floatValues {
+	if p.EmitFloatValues {
 		return strconv.FormatFloat(value, 'f', 6, 64)
 	}
 	return strconv.FormatInt(int64(value), 10)
@@ -264,7 +258,7 @@ func (p *Provider) histogramObserve(name string, value float64) {
 }
 
 func (p *Provider) sampleExec(f func()) {
-	if p.sampleRate >= 1.0 || rand.Float64() < p.sampleRate {
+	if p.SampleRate >= 1.0 || p.SampleRate < 0.0 || rand.Float64() < p.SampleRate {
 		f()
 	}
 }

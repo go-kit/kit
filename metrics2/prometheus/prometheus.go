@@ -13,29 +13,19 @@ import (
 	"github.com/go-kit/kit/metrics2/internal/keyval"
 )
 
-// Provider constructs and stores Prometheus metrics.
+// Provider constructs and stores Prometheus metrics. Provider must be
+// constructed via NewProvider; the zero value of a provider is not useful.
 type Provider struct {
-	registerer prometheus.Registerer
+	// Registerer is used to register constructed metrics.
+	// By default, prometheus.DefaultRegisterer is used.
+	Registerer prometheus.Registerer
 }
 
 // NewProvider returns a new, empty provider.
-func NewProvider(options ...ProviderOption) *Provider {
-	p := &Provider{
-		registerer: prometheus.DefaultRegisterer,
+func NewProvider() *Provider {
+	return &Provider{
+		Registerer: prometheus.DefaultRegisterer,
 	}
-	for _, option := range options {
-		option(p)
-	}
-	return p
-}
-
-// ProviderOption modifies the behavior of the provider.
-type ProviderOption func(*Provider)
-
-// WithRegisterer changes the registry into which Prometheus metrics are
-// registered. By default, the prometheus.DefaultRegisterer is used.
-func WithRegisterer(r prometheus.Registerer) ProviderOption {
-	return func(p *Provider) { p.registerer = r }
 }
 
 // NewCounter constructs a prometheus.CounterVec, registers it via the
@@ -51,7 +41,7 @@ func (p *Provider) NewCounter(id metrics.Identifier) (metrics.Counter, error) {
 		Name:      id.Name,
 		Help:      id.Help,
 	}, id.Labels)
-	if err := p.registerer.Register(c); err != nil {
+	if err := p.Registerer.Register(c); err != nil {
 		return nil, err
 	}
 	keyvals := map[string]string{}
@@ -77,7 +67,7 @@ func (p *Provider) NewGauge(id metrics.Identifier) (metrics.Gauge, error) {
 		Name:      id.Name,
 		Help:      id.Help,
 	}, id.Labels)
-	if err := p.registerer.Register(g); err != nil {
+	if err := p.Registerer.Register(g); err != nil {
 		return nil, err
 	}
 	keyvals := map[string]string{}
@@ -104,7 +94,7 @@ func (p *Provider) NewHistogram(id metrics.Identifier) (metrics.Histogram, error
 		Help:      id.Help,
 		Buckets:   id.Buckets,
 	}, id.Labels)
-	if err := p.registerer.Register(h); err != nil {
+	if err := p.Registerer.Register(h); err != nil {
 		return nil, err
 	}
 	keyvals := map[string]string{}
