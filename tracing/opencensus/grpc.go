@@ -36,7 +36,7 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 				name = ctx.Value(kitgrpc.ContextKeyRequestMethod).(string)
 			}
 
-			span := trace.NewSpan(
+			ctx, span := trace.StartSpan(
 				name,
 				trace.FromContext(ctx),
 				trace.StartOptions{
@@ -50,7 +50,7 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 				(*md)[propagationKey] = append((*md)[propagationKey], traceContextBinary)
 			}
 
-			return trace.NewContext(ctx, span)
+			return ctx
 		},
 	)
 
