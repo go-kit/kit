@@ -39,12 +39,10 @@ func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
 			}
 
 			ctx, span := trace.StartSpan(
+				ctx,
 				name,
-				trace.FromContext(ctx),
-				trace.StartOptions{
-					Sampler:  cfg.Sampler,
-					SpanKind: trace.SpanKindClient,
-				},
+				trace.WithSampler(cfg.Sampler),
+				trace.WithSpanKind(trace.SpanKindClient),
 			)
 
 			span.AddAttributes(

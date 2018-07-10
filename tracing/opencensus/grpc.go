@@ -37,12 +37,10 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 			}
 
 			ctx, span := trace.StartSpan(
+				ctx,
 				name,
-				trace.FromContext(ctx),
-				trace.StartOptions{
-					Sampler:  cfg.Sampler,
-					SpanKind: trace.SpanKindClient,
-				},
+				trace.WithSampler(cfg.Sampler),
+				trace.WithSpanKind(trace.SpanKindClient),
 			)
 
 			if !cfg.Public {
