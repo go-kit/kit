@@ -27,7 +27,7 @@ func TestPactStringsvcUppercase(t *testing.T) {
 		WithRequest(dsl.Request{
 			Headers: map[string]string{"Content-Type": "application/json; charset=utf-8"},
 			Method:  "POST",
-			Path:    "/uppercase",
+			Path:    dsl.String("/uppercase"),
 			Body:    `{"s":"foo"}`,
 		}).
 		WillRespondWith(dsl.Response{
