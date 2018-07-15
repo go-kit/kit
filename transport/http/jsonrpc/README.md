@@ -87,6 +87,5 @@ With all of this done, our example request above should result in a response lik
 
 	{
 	    "jsonrpc": "2.0",
-	    "result": 4,
-	    "error": null
+	    "result": 4
 	}
