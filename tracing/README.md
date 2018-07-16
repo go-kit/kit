@@ -20,6 +20,16 @@ binding to use. Instrumentation exists for `kit/transport/http` and
 `kit/transport/grpc`. The bindings are highlighted in the [addsvc] example. For
 more information regarding Zipkin feel free to visit [Zipkin's Gitter].
 
+## OpenCensus
+
+Go kit supports transport and endpoint middlewares for the [OpenCensus]
+instrumentation library. OpenCensus provides a cross language consistent data
+model and instrumentation libraries for tracing and metrics. From this data
+model it allows exports to various tracing and metrics backends including but
+not limited to Zipkin, Prometheus, Stackdriver Trace & Monitoring, Jaeger,
+AWS X-Ray and Datadog. Go kit uses the [opencensus-go] implementation to power
+its middlewares.
+
 ## OpenTracing
 
 Go kit supports the [OpenTracing] API and uses the [opentracing-go] package to
@@ -71,3 +81,6 @@ OpenTracing interface and are highlighted in the [addsvc] example.
 
 [LightStep]: http://lightstep.com/
 [lightstep-tracer-go]: https://github.com/lightstep/lightstep-tracer-go
+
+[OpenCensus]: https://opencensus.io/
+[opencensus-go]: https://github.com/census-instrumentation/opencensus-go
