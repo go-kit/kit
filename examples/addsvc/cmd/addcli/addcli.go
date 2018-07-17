@@ -43,7 +43,7 @@ func main() {
 		thriftProtocol = fs.String("thrift-protocol", "binary", "binary, compact, json, simplejson")
 		thriftBuffer   = fs.Int("thrift-buffer", 0, "0 for unbuffered")
 		thriftFramed   = fs.Bool("thrift-framed", false, "true to enable framing")
-		zipkinV2URL    = fs.String("zipkin-url", "", "Enable Zipkin v2 tracing (zipkin-go) via HTTP Reporter URL e.g. http://localhost:94111/api/v2/spans")
+		zipkinV2URL    = fs.String("zipkin-url", "", "Enable Zipkin v2 tracing (zipkin-go) via HTTP Reporter URL e.g. http://localhost:9411/api/v2/spans")
 		zipkinV1URL    = fs.String("zipkin-v1-url", "", "Enable Zipkin v1 tracing (zipkin-go-opentracing) via a collector URL e.g. http://localhost:9411/api/v1/spans")
 		lightstepToken = fs.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
 		appdashAddr    = fs.String("appdash-addr", "", "Enable Appdash tracing via an Appdash server host:port")
