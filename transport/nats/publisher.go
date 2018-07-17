@@ -19,7 +19,7 @@ type Publisher struct {
 	timeout   time.Duration
 }
 
-// NewClient constructs a usable Publisher for a single remote method.
+// NewPublisher constructs a usable Publisher for a single remote method.
 func NewPublisher(
 	publisher *nats.Conn,
 	subject string,
