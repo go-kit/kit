@@ -72,7 +72,7 @@ OpenTracing interface and are highlighted in the [addsvc] example.
 
 [Zipkin]: http://zipkin.io/
 [Open Zipkin GitHub]: https://github.com/openzipkin
-[zipkin-go-opentracing]: https://github.com/openzipkin/zipkin-go-opentracing
+[zipkin-go-opentracing]: https://github.com/openzipkin-contrib/zipkin-go-opentracing
 [zipkin-go]: https://github.com/openzipkin/zipkin-go
 [Zipkin's Gitter]: https://gitter.im/openzipkin/zipkin
 
