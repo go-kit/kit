@@ -1,3 +1,7 @@
+// +build !windows
+// +build !plan9
+// +build !nacl
+
 package syslog
 
 import (
