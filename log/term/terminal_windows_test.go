@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// +build windows
-
 type myWriter struct {
 	fd uintptr
 }

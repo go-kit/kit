@@ -1,7 +1,5 @@
 // The code in this file is adapted from github.com/mattn/go-colorable.
 
-// +build windows
-
 package term
 
 import (
