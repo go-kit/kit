@@ -35,7 +35,7 @@ kitgen ./service.go
 kitgen -repo-layout flat ./service.go
 
 # put generated code elsewhere
-kitgen -target-dir ~/Projects/gohome/home.com/kitchenservice/brewcoffee
+kitgen -target-dir ~/Projects/gohome/src/home.com/kitchenservice/brewcoffee
 ```
 
 ## Installation
