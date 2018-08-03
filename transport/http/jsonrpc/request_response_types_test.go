@@ -119,6 +119,7 @@ func TestCanMarshalID(t *testing.T) {
 		{`12345`, "int", 12345},
 		{`12345.6`, "float", 12345.6},
 		{`"stringaling"`, "string", "stringaling"},
+		{`null`, "null", nil},
 	}
 
 	for _, c := range cases {
@@ -133,19 +134,5 @@ func TestCanMarshalID(t *testing.T) {
 		if got != want {
 			t.Fatalf("'%s': want %s, got %s.", c.expType, want, got)
 		}
-	}
-}
-
-func TestCanMarshalNullID(t *testing.T) {
-	req := jsonrpc.Request{}
-	JSON := `{"jsonrpc":"2.0","id":null}`
-	json.Unmarshal([]byte(JSON), &req)
-	resp := jsonrpc.Response{ID: req.ID, JSONRPC: req.JSONRPC}
-
-	want := JSON
-	bol, _ := json.Marshal(resp)
-	got := string(bol)
-	if got != want {
-		t.Fatalf("'null': want %s, got %s.", want, got)
 	}
 }
