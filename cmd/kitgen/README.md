@@ -25,8 +25,8 @@ type Profile struct {
     Name      string    `json:"name,omitempty"`
     // ...
 }
-```  
-1. **Generate** your code. Run the following command:
+```
+2. **Generate** your code. Run the following command:
 ```sh
 kitgen ./service.go
 # kitgen has a couple of flags that you may find useful
@@ -36,7 +36,6 @@ kitgen -repo-layout flat ./service.go
 
 # put generated code elsewhere
 kitgen -target-dir ~/Projects/gohome/home.com/kitchenservice/brewcoffee
-
 ```
 
 ## Installation
