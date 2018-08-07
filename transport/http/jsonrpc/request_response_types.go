@@ -35,6 +35,16 @@ func (id *RequestID) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+func (id *RequestID) MarshalJSON() ([]byte, error) {
+	if id.intError == nil {
+		return json.Marshal(id.intValue)
+	} else if id.floatError == nil {
+		return json.Marshal(id.floatValue)
+	} else {
+		return json.Marshal(id.stringValue)
+	}
+}
+
 // Int returns the ID as an integer value.
 // An error is returned if the ID can't be treated as an int.
 func (id *RequestID) Int() (int, error) {
@@ -59,6 +69,7 @@ type Response struct {
 	JSONRPC string          `json:"jsonrpc"`
 	Result  json.RawMessage `json:"result,omitempty"`
 	Error   *Error          `json:"error,omitempty"`
+	ID      *RequestID      `json:"id"`
 }
 
 const (

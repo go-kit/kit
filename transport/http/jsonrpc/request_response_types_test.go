@@ -109,3 +109,30 @@ func TestCanUnmarshalNullID(t *testing.T) {
 		t.Fatalf("Expected ID to be nil, got %+v.\n", r.ID)
 	}
 }
+
+func TestCanMarshalID(t *testing.T) {
+	cases := []struct {
+		JSON     string
+		expType  string
+		expValue interface{}
+	}{
+		{`12345`, "int", 12345},
+		{`12345.6`, "float", 12345.6},
+		{`"stringaling"`, "string", "stringaling"},
+		{`null`, "null", nil},
+	}
+
+	for _, c := range cases {
+		req := jsonrpc.Request{}
+		JSON := fmt.Sprintf(`{"jsonrpc":"2.0","id":%s}`, c.JSON)
+		json.Unmarshal([]byte(JSON), &req)
+		resp := jsonrpc.Response{ID: req.ID, JSONRPC: req.JSONRPC}
+
+		want := JSON
+		bol, _ := json.Marshal(resp)
+		got := string(bol)
+		if got != want {
+			t.Fatalf("'%s': want %s, got %s.", c.expType, want, got)
+		}
+	}
+}
