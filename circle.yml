@@ -8,7 +8,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: docker-compose -f docker-compose-integration.yml up -d --force-recreate
       - run: go env
       - run: pwd
       - run: ls -ltar
+      - run: docker-compose -f docker-compose-integration.yml up -d --force-recreate
