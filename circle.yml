@@ -3,8 +3,11 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.11beta3-browsers
+      - image: circleci/golang:1.11beta3
     steps:
       - checkout
+      - setup_remote_docker
       - run: go version
       - run: go env
+      - run: pwd
+      - run: docker ps -a
