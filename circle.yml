@@ -4,10 +4,11 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.11beta3
+    working_directory: $GOPATH/src/github.com/go-kit/kit
     steps:
       - checkout
       - setup_remote_docker
-      - run: go version
+      - run: docker-compose -f docker-compose-integration.yml up -d --force-recreate
       - run: go env
       - run: pwd
-      - run: docker ps -a
+      - run: ls -ltar
