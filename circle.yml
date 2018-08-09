@@ -3,7 +3,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang-1.11beta3-browsers
+      - image: circleci/golang:1.11beta3-browsers
     steps:
       - checkout
       - run: go version
