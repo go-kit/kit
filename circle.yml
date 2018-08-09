@@ -3,7 +3,7 @@ version: 2
 jobs:
   build:
     machine: true
-    working_directory: /go/src/github.com/go-kit/kit
+    working_directory: /home/circleci/.go_workspace/src/github.com/go-kit/kit
     environment:
       ETCD_ADDR: http://localhost:2379
       CONSUL_ADDR: localhost:8500
