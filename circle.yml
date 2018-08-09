@@ -2,8 +2,7 @@ version: 2
 
 jobs:
   build:
-    docker:
-      - image: circleci/golang:1.11beta3
+    machine: true
     working_directory: /go/src/github.com/go-kit/kit
     environment:
       ETCD_ADDR: http://localhost:2379
@@ -12,7 +11,6 @@ jobs:
       EUREKA_ADDR: http://localhost:8761/eureka     
     steps:
       - checkout
-      - setup_remote_docker
       - run: docker-compose -f docker-compose-integration.yml up -d --force-recreate
       - run: go get -t github.com/go-kit/kit/...
       - run: go test -v -race -tags integration github.com/go-kit/kit/...
