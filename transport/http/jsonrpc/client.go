@@ -15,7 +15,7 @@ import (
 
 // Client wraps a JSON RPC method and provides a method that implements endpoint.Endpoint.
 type Client struct {
-	client *http.Client
+	client httptransport.HTTPClient
 
 	// JSON RPC endpoint URL
 	tgt *url.URL
@@ -86,7 +86,7 @@ type ClientOption func(*Client)
 
 // SetClient sets the underlying HTTP client used for requests.
 // By default, http.DefaultClient is used.
-func SetClient(client *http.Client) ClientOption {
+func SetClient(client httptransport.HTTPClient) ClientOption {
 	return func(c *Client) { c.client = client }
 }
 
