@@ -12,7 +12,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// HTTPClient is an interface for http clients
+// HTTPClient is an interface that models *http.Client.
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
