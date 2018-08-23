@@ -12,9 +12,14 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
+// HTTPClient is an interface that models *http.Client.
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 // Client wraps a URL and provides a method that implements endpoint.Endpoint.
 type Client struct {
-	client         *http.Client
+	client         HTTPClient
 	method         string
 	tgt            *url.URL
 	enc            EncodeRequestFunc
@@ -54,7 +59,7 @@ type ClientOption func(*Client)
 
 // SetClient sets the underlying HTTP client used for requests.
 // By default, http.DefaultClient is used.
-func SetClient(client *http.Client) ClientOption {
+func SetClient(client HTTPClient) ClientOption {
 	return func(c *Client) { c.client = client }
 }
 

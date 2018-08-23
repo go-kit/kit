@@ -1,6 +1,7 @@
 package http_test
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"io/ioutil"
@@ -252,6 +253,43 @@ func TestEncodeJSONRequest(t *testing.T) {
 	}
 }
 
+func TestSetClient(t *testing.T) {
+	var (
+		encode = func(context.Context, *http.Request, interface{}) error { return nil }
+		decode = func(_ context.Context, r *http.Response) (interface{}, error) {
+			t, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				return nil, err
+			}
+			return string(t), nil
+		}
+	)
+
+	testHttpClient := httpClientFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Request:    req,
+			Body:       ioutil.NopCloser(bytes.NewBufferString("hello, world!")),
+		}, nil
+	})
+
+	client := httptransport.NewClient(
+		"GET",
+		&url.URL{},
+		encode,
+		decode,
+		httptransport.SetClient(testHttpClient),
+	).Endpoint()
+
+	resp, err := client(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, ok := resp.(string); !ok || r != "hello, world!" {
+		t.Fatal("Expected response to be 'hello, world!' string")
+	}
+}
+
 func mustParse(s string) *url.URL {
 	u, err := url.Parse(s)
 	if err != nil {
@@ -265,3 +303,9 @@ type enhancedRequest struct {
 }
 
 func (e enhancedRequest) Headers() http.Header { return http.Header{"X-Edward": []string{"Snowden"}} }
+
+type httpClientFunc func(req *http.Request) (*http.Response, error)
+
+func (f httpClientFunc) Do(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
