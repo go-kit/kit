@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	etcd "github.com/coreos/etcd/client"
+	etcd "go.etcd.io/etcd/client"
 )
 
 var (
