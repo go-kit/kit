@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	etcd "github.com/coreos/etcd/client"
+	etcd "go.etcd.io/etcd/client"
 
 	"github.com/go-kit/kit/log"
 )
