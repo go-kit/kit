@@ -3,17 +3,20 @@ package log_test
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
 	"strings"
 	"testing"
 
-	"github.com/go-kit/kit/log"
+	log "github.com/go-kit/kit/log/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func TestLogrusLogger(t *testing.T) {
 	t.Parallel()
 	buf := &bytes.Buffer{}
-	logger := log.NewLogrusLogger(buf)
+	logrusLogger := logrus.New()
+	logrusLogger.Out = buf
+	logrusLogger.Formatter = &logrus.TextFormatter{TimestampFormat: "02-01-2006 15:04:05", FullTimestamp: true}
+	logger := log.NewLogrusLogger(logrusLogger)
 
 	if err := logger.Log("hello", "world"); err != nil {
 		t.Fatal(err)
@@ -39,15 +42,6 @@ func TestLogrusLogger(t *testing.T) {
 	}
 }
 
-func BenchmarkLogrusLoggerSimple(b *testing.B) {
-	benchmarkRunner(b, log.NewLogrusLogger(ioutil.Discard), baseMessage)
-}
+type mymap map[int]int
 
-func BenchmarkLogrusLoggerContextual(b *testing.B) {
-	benchmarkRunner(b, log.NewLogrusLogger(ioutil.Discard), withMessage)
-}
-
-func TestLogrusLoggerConcurrency(t *testing.T) {
-	t.Parallel()
-	testConcurrency(t, log.NewLogrusLogger(ioutil.Discard), 10000)
-}
+func (m mymap) String() string { return "special_behavior" }

@@ -2,8 +2,8 @@ package log
 
 import (
 	"fmt"
-	"io"
 
+	"github.com/go-kit/kit/log"
 	"github.com/sirupsen/logrus"
 )
 
@@ -11,13 +11,10 @@ type logrusLogger struct {
 	*logrus.Logger
 }
 
-// NewLogrusLogger returns a logger that logs the keyvals to Writer
-// with a time stamp at the logrus.InfoLevel
-func NewLogrusLogger(w io.Writer) Logger {
-	newLogger := logrus.New()
-	newLogger.Out = w
-	newLogger.Formatter = &logrus.TextFormatter{TimestampFormat: "02-01-2006 15:04:05", FullTimestamp: true}
-	return &logrusLogger{newLogger}
+// NewLogrusLogger takes a *logrus.Logger and returns
+//a logger that stisfies the go-kit log.Logger interface
+func NewLogrusLogger(logger *logrus.Logger) log.Logger {
+	return &logrusLogger{logger}
 }
 
 func (l logrusLogger) Log(keyvals ...interface{}) error {
