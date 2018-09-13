@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -11,7 +12,7 @@ type loggingMiddleware struct {
 	next   StringService
 }
 
-func (mw loggingMiddleware) Uppercase(s string) (output string, err error) {
+func (mw loggingMiddleware) Uppercase(ctx context.Context, s string) (output string, err error) {
 	defer func(begin time.Time) {
 		_ = mw.logger.Log(
 			"method", "uppercase",
@@ -22,11 +23,11 @@ func (mw loggingMiddleware) Uppercase(s string) (output string, err error) {
 		)
 	}(time.Now())
 
-	output, err = mw.next.Uppercase(s)
+	output, err = mw.next.Uppercase(ctx, s)
 	return
 }
 
-func (mw loggingMiddleware) Count(s string) (n int) {
+func (mw loggingMiddleware) Count(ctx context.Context, s string) (n int) {
 	defer func(begin time.Time) {
 		_ = mw.logger.Log(
 			"method", "count",
@@ -36,6 +37,6 @@ func (mw loggingMiddleware) Count(s string) (n int) {
 		)
 	}(time.Now())
 
-	n = mw.next.Count(s)
+	n = mw.next.Count(ctx, s)
 	return
 }
