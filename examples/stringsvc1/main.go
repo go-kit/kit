@@ -14,21 +14,21 @@ import (
 
 // StringService provides operations on strings.
 type StringService interface {
-	Uppercase(context.Context, string) (string, error)
-	Count(context.Context, string) int
+	Uppercase(string) (string, error)
+	Count(string) int
 }
 
 // stringService is a concrete implementation of StringService
 type stringService struct{}
 
-func (stringService) Uppercase(_ context.Context, s string) (string, error) {
+func (stringService) Uppercase(s string) (string, error) {
 	if s == "" {
 		return "", ErrEmpty
 	}
 	return strings.ToUpper(s), nil
 }
 
-func (stringService) Count(_ context.Context, s string) int {
+func (stringService) Count(s string) int {
 	return len(s)
 }
 
@@ -55,9 +55,9 @@ type countResponse struct {
 
 // Endpoints are a primary abstraction in go-kit. An endpoint represents a single RPC (method in our service interface)
 func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(_ context.Context, request interface{}) (interface{}, error) {
 		req := request.(uppercaseRequest)
-		v, err := svc.Uppercase(ctx, req.S)
+		v, err := svc.Uppercase(req.S)
 		if err != nil {
 			return uppercaseResponse{v, err.Error()}, nil
 		}
@@ -66,9 +66,9 @@ func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
 }
 
 func makeCountEndpoint(svc StringService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(_ context.Context, request interface{}) (interface{}, error) {
 		req := request.(countRequest)
-		v := svc.Count(ctx, req.S)
+		v := svc.Count(req.S)
 		return countResponse{v}, nil
 	}
 }
