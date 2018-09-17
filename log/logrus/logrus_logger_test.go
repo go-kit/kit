@@ -1,4 +1,4 @@
-package log_test
+package logrus_test
 
 import (
 	"bytes"
@@ -30,6 +30,14 @@ func TestLogrusLogger(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := "a=1 err=error", strings.TrimSpace(strings.SplitAfterN(buf.String(), " ", 4)[3]); want != have {
+		t.Errorf("want %#v, have %#v", want, have)
+	}
+
+	buf.Reset()
+	if err := logger.Log("a", 1, "b"); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := "a=1 b=\"(MISSING)\"", strings.TrimSpace(strings.SplitAfterN(buf.String(), " ", 4)[3]); want != have {
 		t.Errorf("want %#v, have %#v", want, have)
 	}
 
