@@ -9,7 +9,7 @@ import (
 )
 
 func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(_ context.Context, request interface{}) (interface{}, error) {
 		req := request.(uppercaseRequest)
 		v, err := svc.Uppercase(req.S)
 		if err != nil {
@@ -20,7 +20,7 @@ func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
 }
 
 func makeCountEndpoint(svc StringService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(_ context.Context, request interface{}) (interface{}, error) {
 		req := request.(countRequest)
 		v := svc.Count(req.S)
 		return countResponse{v}, nil
