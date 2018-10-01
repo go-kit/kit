@@ -12,6 +12,7 @@ jobs:
     steps:
       - checkout
       - run: wget -q https://storage.googleapis.com/golang/go1.11.linux-amd64.tar.gz
+      - run: rm -rf /usr/local/go
       - run: tar -C /usr/local -xzf go1.11.linux-amd64.tar.gz
       - run: docker-compose -f docker-compose-integration.yml up -d --force-recreate
       - run: go get -t github.com/go-kit/kit/...
