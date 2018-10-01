@@ -25,7 +25,7 @@ func (rr *roundRobin) Endpoint() (endpoint.Endpoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(endpoints) <= 0 {
+	if len(endpoints) == 0 {
 		return nil, ErrNoEndpoints
 	}
 	old := atomic.AddUint64(&rr.c, 1) - 1
