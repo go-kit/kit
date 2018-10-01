@@ -17,8 +17,7 @@ func TestCounterHistogramConversion(t *testing.T) {
 	if want, have := name, low.Name; want != have {
 		t.Errorf("Name: want %q, have %q", want, have)
 	}
-	value := func() float64 { return low.Value() }
-	if err := teststat.TestCounter(top, value); err != nil {
+	if err := teststat.TestCounter(top, low.Value); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -33,8 +32,7 @@ func TestCounterGaugeConversion(t *testing.T) {
 	if want, have := name, low.Name; want != have {
 		t.Errorf("Name: want %q, have %q", want, have)
 	}
-	value := func() float64 { return low.Value() }
-	if err := teststat.TestCounter(top, value); err != nil {
+	if err := teststat.TestCounter(top, low.Value); err != nil {
 		t.Fatal(err)
 	}
 }
