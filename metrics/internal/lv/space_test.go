@@ -40,7 +40,6 @@ func TestSpaceWalkSums(t *testing.T) {
 
 	have := map[string]float64{}
 	s.Walk(func(name string, lvs LabelValues, obs []float64) bool {
-		//t.Logf("%s %v => %v", name, lvs, obs)
 		have[name+" ["+strings.Join(lvs, "")+"]"] += sum(obs)
 		return true
 	})
