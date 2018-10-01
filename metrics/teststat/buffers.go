@@ -47,7 +47,6 @@ func stats(w io.WriterTo, regex string, h *generic.Histogram) (sum, final float6
 	re := regexp.MustCompile(regex)
 	buf := &bytes.Buffer{}
 	w.WriteTo(buf)
-	//fmt.Fprintf(os.Stderr, "%s\n", buf.String())
 	s := bufio.NewScanner(buf)
 	for s.Scan() {
 		match := re.FindStringSubmatch(s.Text())
