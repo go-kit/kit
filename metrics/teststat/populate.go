@@ -64,8 +64,8 @@ func erfinv(y float64) float64 {
 			z = math.Sqrt(-math.Log((1.0 - y) / 2.0))
 			x = (((c[3]*z+c[2])*z+c[1])*z + c[0]) / ((d[1]*z+d[0])*z + 1.0)
 		}
-		x = x - (math.Erf(x)-y)/(2.0/math.SqrtPi*math.Exp(-x*x))
-		x = x - (math.Erf(x)-y)/(2.0/math.SqrtPi*math.Exp(-x*x))
+		x -= (math.Erf(x) - y) / (2.0 / math.SqrtPi * math.Exp(-x*x))
+		x -= (math.Erf(x) - y) / (2.0 / math.SqrtPi * math.Exp(-x*x))
 	}
 
 	return x
