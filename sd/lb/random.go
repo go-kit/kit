@@ -25,7 +25,7 @@ func (r *random) Endpoint() (endpoint.Endpoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(endpoints) <= 0 {
+	if len(endpoints) == 0 {
 		return nil, ErrNoEndpoints
 	}
 	return endpoints[r.r.Intn(len(endpoints))], nil
