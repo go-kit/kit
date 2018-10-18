@@ -99,7 +99,7 @@ func TestHTTPClient(t *testing.T) {
 
 func TestHTTPClientBufferedStream(t *testing.T) {
 	var (
-		testbody = "testbody"
+		testbody = string(make([]byte, 6000))
 		encode   = func(context.Context, *http.Request, interface{}) error { return nil }
 		decode   = func(_ context.Context, r *http.Response) (interface{}, error) {
 			return TestResponse{r.Body, ""}, nil
@@ -129,6 +129,7 @@ func TestHTTPClientBufferedStream(t *testing.T) {
 	if !ok {
 		t.Fatal("response should be TestResponse")
 	}
+	time.Sleep(time.Second * 1)
 
 	// Check that response body was NOT closed
 	b := make([]byte, len(testbody))
