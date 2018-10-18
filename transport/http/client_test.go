@@ -129,6 +129,7 @@ func TestHTTPClientBufferedStream(t *testing.T) {
 	if !ok {
 		t.Fatal("response should be TestResponse")
 	}
+	defer response.Body.Close()
 	time.Sleep(time.Second * 1)
 
 	// Check that response body was NOT closed
