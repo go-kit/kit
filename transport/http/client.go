@@ -85,6 +85,7 @@ func ClientFinalizer(f ...ClientFinalizerFunc) ClientOption {
 
 // BufferedStream sets whether the Response.Body is left open, allowing it
 // to be read from later. Useful for transporting a file as a buffered stream.
+// That body has to be Closed to propery end the request
 func BufferedStream(buffered bool) ClientOption {
 	return func(c *Client) { c.bufferedStream = buffered }
 }
@@ -132,6 +133,8 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			return nil, err
 		}
 
+		// If we expect a buffered stream, we don't cancel the context when the endpoint returns.
+		// Instead, we should call the cancel func when closing the response body.
 		if c.bufferedStream {
 			resp.Body = bodyWithCancel{ReadCloser: resp.Body, cancel: cancel}
 		} else {
