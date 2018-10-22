@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -84,6 +85,7 @@ func ClientFinalizer(f ...ClientFinalizerFunc) ClientOption {
 
 // BufferedStream sets whether the Response.Body is left open, allowing it
 // to be read from later. Useful for transporting a file as a buffered stream.
+// That body has to be Closed to propery end the request.
 func BufferedStream(buffered bool) ClientOption {
 	return func(c *Client) { c.bufferedStream = buffered }
 }
@@ -92,7 +94,6 @@ func BufferedStream(buffered bool) ClientOption {
 func (c Client) Endpoint() endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 
 		var (
 			resp *http.Response
@@ -112,10 +113,12 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		req, err := http.NewRequest(c.method, c.tgt.String(), nil)
 		if err != nil {
+			cancel()
 			return nil, err
 		}
 
 		if err = c.enc(ctx, req, request); err != nil {
+			cancel()
 			return nil, err
 		}
 
@@ -126,11 +129,17 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		resp, err = c.client.Do(req.WithContext(ctx))
 
 		if err != nil {
+			cancel()
 			return nil, err
 		}
 
-		if !c.bufferedStream {
+		// If we expect a buffered stream, we don't cancel the context when the endpoint returns.
+		// Instead, we should call the cancel func when closing the response body.
+		if c.bufferedStream {
+			resp.Body = bodyWithCancel{ReadCloser: resp.Body, cancel: cancel}
+		} else {
 			defer resp.Body.Close()
+			defer cancel()
 		}
 
 		for _, f := range c.after {
@@ -144,6 +153,20 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		return response, nil
 	}
+}
+
+// bodyWithCancel is a wrapper for an io.ReadCloser with also a
+// cancel function which is called when the Close is used
+type bodyWithCancel struct {
+	io.ReadCloser
+
+	cancel context.CancelFunc
+}
+
+func (bwc bodyWithCancel) Close() error {
+	bwc.ReadCloser.Close()
+	bwc.cancel()
+	return nil
 }
 
 // ClientFinalizerFunc can be used to perform work at the end of a client HTTP

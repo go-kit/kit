@@ -98,8 +98,12 @@ func TestHTTPClient(t *testing.T) {
 }
 
 func TestHTTPClientBufferedStream(t *testing.T) {
+	// bodysize has a size big enought to make the resopnse.Body not an instant read
+	// so if the response is cancelled it wount be all readed and the test would fail
+	// The 6000 has not a particular meaning, it big enough to fulfill the usecase.
+	const bodysize = 6000
 	var (
-		testbody = "testbody"
+		testbody = string(make([]byte, bodysize))
 		encode   = func(context.Context, *http.Request, interface{}) error { return nil }
 		decode   = func(_ context.Context, r *http.Response) (interface{}, error) {
 			return TestResponse{r.Body, ""}, nil
@@ -129,6 +133,9 @@ func TestHTTPClientBufferedStream(t *testing.T) {
 	if !ok {
 		t.Fatal("response should be TestResponse")
 	}
+	defer response.Body.Close()
+	// Faking work
+	time.Sleep(time.Second * 1)
 
 	// Check that response body was NOT closed
 	b := make([]byte, len(testbody))
