@@ -4,9 +4,8 @@ import (
 	"sync"
 	"time"
 
-	etcd "go.etcd.io/etcd/client"
-
 	"github.com/go-kit/kit/log"
+	etcd "go.etcd.io/etcd/client"
 )
 
 const minHeartBeatTime = 500 * time.Millisecond
@@ -69,8 +68,9 @@ func NewRegistrar(client Client, service Service, logger log.Logger) *Registrar 
 
 // Register implements the sd.Registrar interface. Call it when you want your
 // service to be registered in etcd, typically at startup.
-func (r *Registrar) Register() {
-	if err := r.client.Register(r.service); err != nil {
+func (r *Registrar) Register() error {
+	err := r.client.Register(r.service)
+	if err != nil {
 		r.logger.Log("err", err)
 	} else {
 		r.logger.Log("action", "register")
@@ -78,6 +78,7 @@ func (r *Registrar) Register() {
 	if r.service.TTL != nil {
 		go r.loop()
 	}
+	return err
 }
 
 func (r *Registrar) loop() {
@@ -104,17 +105,18 @@ func (r *Registrar) loop() {
 
 // Deregister implements the sd.Registrar interface. Call it when you want your
 // service to be deregistered from etcd, typically just prior to shutdown.
-func (r *Registrar) Deregister() {
-	if err := r.client.Deregister(r.service); err != nil {
+func (r *Registrar) Deregister() error {
+	err := r.client.Deregister(r.service)
+	if err != nil {
 		r.logger.Log("err", err)
 	} else {
 		r.logger.Log("action", "deregister")
 	}
-
 	r.quitmtx.Lock()
 	defer r.quitmtx.Unlock()
 	if r.quit != nil {
 		close(r.quit)
 		r.quit = nil
 	}
+	return err
 }

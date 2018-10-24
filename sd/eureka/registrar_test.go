@@ -14,34 +14,52 @@ func TestRegistrar(t *testing.T) {
 	registrar2 := NewRegistrar(connection, instanceTest2, loggerTest)
 
 	// Not registered.
-	registrar1.Deregister()
+	err := registrar1.Deregister()
+	if err != nil {
+		t.Errorf("error when deregistering %s", err)
+	}
 	if want, have := 0, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// Register.
-	registrar1.Register()
+	err = registrar1.Register()
+	if err != nil {
+		t.Errorf("error when registering %s", err)
+	}
 	if want, have := 1, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
-	registrar2.Register()
+	err = registrar2.Register()
+	if err != nil {
+		t.Errorf("error when registering %s", err)
+	}
 	if want, have := 2, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// Deregister.
-	registrar1.Deregister()
+	err = registrar1.Deregister()
+	if err != nil {
+		t.Errorf("error when deregistering %s", err)
+	}
 	if want, have := 1, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
 	// Already registered.
-	registrar1.Register()
+	err = registrar1.Register()
+	if err != nil {
+		t.Errorf("error when registering %s", err)
+	}
 	if want, have := 2, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
-	registrar1.Register()
+	err = registrar1.Register()
+	if err != nil {
+		t.Errorf("error when registering %s", err)
+	}
 	if want, have := 2, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
@@ -51,7 +69,10 @@ func TestRegistrar(t *testing.T) {
 	if want, have := 2, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
-	registrar1.Deregister()
+	err = registrar1.Deregister()
+	if err != nil {
+		t.Errorf("error when deregistering %s", err)
+	}
 	if want, have := 1, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
@@ -75,7 +96,10 @@ func TestBadDeregister(t *testing.T) {
 	}
 
 	registrar := NewRegistrar(connection, instanceTest1, loggerTest)
-	registrar.Register()
+	err := registrar.Register()
+	if err != nil {
+		t.Errorf("error when registering %s", err)
+	}
 	if want, have := 1, len(connection.instances); want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
@@ -91,7 +115,10 @@ func TestExpiredInstance(t *testing.T) {
 	}
 
 	registrar := NewRegistrar(connection, instanceTest1, loggerTest)
-	registrar.Register()
+	err := registrar.Register()
+	if err != nil {
+		t.Errorf("error when registering %s", err)
+	}
 
 	// Wait for a heartbeat failure.
 	time.Sleep(1010 * time.Millisecond)

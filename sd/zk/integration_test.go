@@ -193,7 +193,10 @@ func TestGetEntriesPayloadOnServer(t *testing.T) {
 		Data: []byte("just some payload"),
 	}
 	registrar := NewRegistrar(c, instance3, logger)
-	registrar.Register()
+	err = registrar.Register()
+	if err != nil {
+		t.Errorf("error when registering %s", err)
+	}
 	select {
 	case event := <-eventc:
 		if want, have := stdzk.EventNodeChildrenChanged.String(), event.Type.String(); want != have {
@@ -208,7 +211,10 @@ func TestGetEntriesPayloadOnServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	registrar.Deregister()
+	err = registrar.Deregister()
+	if err != nil {
+		t.Errorf("error when registering %s", err)
+	}
 	select {
 	case event := <-eventc:
 		if want, have := stdzk.EventNodeChildrenChanged.String(), event.Type.String(); want != have {

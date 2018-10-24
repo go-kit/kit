@@ -33,7 +33,10 @@ func runIntegration(settings integrationSettings, client Client, service Service
 	)
 
 	// Register our instance.
-	registrar.Register()
+	err = registrar.Register()
+	if err != nil {
+		t.Errorf("error when registering %s", err)
+	}
 	t.Log("Registered")
 
 	// Retrieve entries from etcd manually.
@@ -76,7 +79,10 @@ func runIntegration(settings integrationSettings, client Client, service Service
 	t.Log("Endpointer saw Register OK")
 
 	// Deregister first instance of test data.
-	registrar.Deregister()
+	err = registrar.Deregister()
+	if err != nil {
+		t.Errorf("error when deregistering %s", err)
+	}
 	t.Log("Deregistered")
 
 	// Check it was deregistered.
@@ -199,11 +205,17 @@ func TestIntegrationRegistrarOnly(t *testing.T) {
 	)
 
 	// Register our instance.
-	registrar.Register()
+	err = registrar.Register()
+	if err != nil {
+		t.Errorf("error when registering %s", err)
+	}
 	t.Log("Registered")
 
 	// Deregister our instance. (so we test registrar only scenario)
-	registrar.Deregister()
+	err = registrar.Deregister()
+	if err != nil {
+		t.Errorf("error when deregistering %s", err)
+	}
 	t.Log("Deregistered")
 
 }

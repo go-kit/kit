@@ -6,10 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hudl/fargo"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
+	"github.com/hudl/fargo"
 )
 
 // Matches official Netflix Java client default.
@@ -39,7 +38,7 @@ type Registrar struct {
 	conn     fargoConnection
 	instance *fargo.Instance
 	logger   log.Logger
-	quitc    chan chan struct{}
+	quitc    chan chan error
 	sync.Mutex
 }
 
@@ -56,35 +55,37 @@ func NewRegistrar(conn fargoConnection, instance *fargo.Instance, logger log.Log
 }
 
 // Register implements sd.Registrar.
-func (r *Registrar) Register() {
+func (r *Registrar) Register() error {
 	r.Lock()
 	defer r.Unlock()
 
 	if r.quitc != nil {
-		return // Already in the registration loop.
+		return nil // Already in the registration loop.
 	}
-
-	if err := r.conn.RegisterInstance(r.instance); err != nil {
+	err := r.conn.RegisterInstance(r.instance)
+	if err != nil {
 		r.logger.Log("during", "Register", "err", err)
 	}
 
-	r.quitc = make(chan chan struct{})
+	r.quitc = make(chan chan error)
 	go r.loop()
+	return err
 }
 
 // Deregister implements sd.Registrar.
-func (r *Registrar) Deregister() {
+func (r *Registrar) Deregister() error {
 	r.Lock()
 	defer r.Unlock()
 
 	if r.quitc == nil {
-		return // Already deregistered.
+		return nil // Already deregistered.
 	}
 
-	q := make(chan struct{})
+	q := make(chan error)
 	r.quitc <- q
-	<-q
+	err := <-q
 	r.quitc = nil
+	return err
 }
 
 func (r *Registrar) loop() {
@@ -105,9 +106,11 @@ func (r *Registrar) loop() {
 			}
 
 		case q := <-r.quitc:
-			if err := r.conn.DeregisterInstance(r.instance); err != nil {
+			err := r.conn.DeregisterInstance(r.instance)
+			if err != nil {
 				r.logger.Log("during", "Deregister", "err", err)
 			}
+			q <- err
 			close(q)
 			return
 		}

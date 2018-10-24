@@ -8,6 +8,6 @@ package sd
 // that identifying instance information (e.g. host:port) must be given via the
 // concrete constructor; this interface merely signals lifecycle changes.
 type Registrar interface {
-	Register()
-	Deregister()
+	Register() error
+	Deregister() error
 }

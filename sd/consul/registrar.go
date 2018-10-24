@@ -3,9 +3,8 @@ package consul
 import (
 	"fmt"
 
-	stdconsul "github.com/hashicorp/consul/api"
-
 	"github.com/go-kit/kit/log"
+	stdconsul "github.com/hashicorp/consul/api"
 )
 
 // Registrar registers service instance liveness information to Consul.
@@ -26,19 +25,23 @@ func NewRegistrar(client Client, r *stdconsul.AgentServiceRegistration, logger l
 }
 
 // Register implements sd.Registrar interface.
-func (p *Registrar) Register() {
-	if err := p.client.Register(p.registration); err != nil {
+func (p *Registrar) Register() error {
+	err := p.client.Register(p.registration)
+	if err != nil {
 		p.logger.Log("err", err)
-	} else {
-		p.logger.Log("action", "register")
+		return err
 	}
+	p.logger.Log("action", "register")
+	return nil
 }
 
 // Deregister implements sd.Registrar interface.
-func (p *Registrar) Deregister() {
-	if err := p.client.Deregister(p.registration); err != nil {
+func (p *Registrar) Deregister() error {
+	err := p.client.Deregister(p.registration)
+	if err != nil {
 		p.logger.Log("err", err)
-	} else {
-		p.logger.Log("action", "deregister")
+		return err
 	}
+	p.logger.Log("action", "deregister")
+	return nil
 }

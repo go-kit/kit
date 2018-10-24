@@ -33,19 +33,23 @@ func NewRegistrar(client Client, service Service, logger log.Logger) *Registrar 
 }
 
 // Register implements sd.Registrar interface.
-func (r *Registrar) Register() {
-	if err := r.client.Register(&r.service); err != nil {
+func (r *Registrar) Register() error {
+	err := r.client.Register(&r.service)
+	if err != nil {
 		r.logger.Log("err", err)
-	} else {
-		r.logger.Log("action", "register")
+		return err
 	}
+	r.logger.Log("action", "register")
+	return nil
 }
 
 // Deregister implements sd.Registrar interface.
-func (r *Registrar) Deregister() {
-	if err := r.client.Deregister(&r.service); err != nil {
+func (r *Registrar) Deregister() error {
+	err := r.client.Deregister(&r.service)
+	if err != nil {
 		r.logger.Log("err", err)
-	} else {
-		r.logger.Log("action", "deregister")
+		return err
 	}
+	r.logger.Log("action", "deregister")
+	return nil
 }
