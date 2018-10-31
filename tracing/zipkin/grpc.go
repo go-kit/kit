@@ -142,7 +142,7 @@ func GRPCServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Ser
 
 			rpcMethod, ok := ctx.Value(kitgrpc.ContextKeyRequestMethod).(string)
 			if !ok {
-				config.logger.Log("unable to retrieve method name: missing gRPC interceptor hook")
+				config.logger.Log("err", "unable to retrieve method name: missing gRPC interceptor hook")
 			} else {
 				tags["grpc.method"] = rpcMethod
 			}
