@@ -1,8 +1,8 @@
 package consul
 
 import (
+	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	consul "github.com/hashicorp/consul/api"
@@ -14,6 +14,9 @@ import (
 )
 
 const defaultIndex = 0
+
+// errStopped notifies the loop to quit. aka stopped via quitc
+var errStopped = errors.New("quit and closed consul instancer")
 
 // Instancer yields instances for a service in Consul.
 type Instancer struct {
@@ -66,7 +69,7 @@ func (s *Instancer) loop(lastIndex uint64) {
 	for {
 		instances, lastIndex, err = s.getInstances(lastIndex, s.quitc)
 		switch {
-		case err == io.EOF:
+		case err == errStopped:
 			return // stopped via quitc
 		case err != nil:
 			s.logger.Log("err", err)
@@ -125,7 +128,7 @@ func (s *Instancer) getInstances(lastIndex uint64, interruptc chan struct{}) ([]
 	case res := <-resc:
 		return res.instances, res.index, nil
 	case <-interruptc:
-		return nil, 0, io.EOF
+		return nil, 0, errStopped
 	}
 }
 
