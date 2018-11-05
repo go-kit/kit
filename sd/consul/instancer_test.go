@@ -2,9 +2,10 @@ package consul
 
 import (
 	"context"
-	"testing"
-
 	consul "github.com/hashicorp/consul/api"
+	"io"
+	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
@@ -129,5 +130,75 @@ func TestInstancerAddressOverride(t *testing.T) {
 
 	if want, have := "10.0.0.10:9000", response.(string); want != have {
 		t.Errorf("want %q, have %q", want, have)
+	}
+}
+
+type eofTestClient struct {
+	client *testClient
+	eofSig chan bool
+	called chan struct{}
+}
+
+func neweofTestClient(client *testClient, sig chan bool, called chan struct{}) Client {
+	return &eofTestClient{client: client, eofSig: sig, called: called}
+}
+
+func (c *eofTestClient) Register(r *consul.AgentServiceRegistration) error {
+	return c.client.Register(r)
+}
+
+func (c *eofTestClient) Deregister(r *consul.AgentServiceRegistration) error {
+	return c.client.Deregister(r)
+}
+
+func (c *eofTestClient) Service(service, tag string, passingOnly bool, queryOpts *consul.QueryOptions) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
+	c.called <- struct{}{}
+	shouldEOF := <-c.eofSig
+	if shouldEOF {
+		return nil, &consul.QueryMeta{}, io.EOF
+	}
+	return c.client.Service(service, tag, passingOnly, queryOpts)
+}
+
+func TestInstancerWithEOF(t *testing.T) {
+	var (
+		sig    = make(chan bool, 1)
+		called = make(chan struct{}, 1)
+		logger = log.NewNopLogger()
+		client = neweofTestClient(newTestClient(consulState), sig, called)
+	)
+
+	sig <- false
+	s := NewInstancer(client, logger, "search", []string{"api"}, true)
+	defer s.Stop()
+
+	select {
+	case <-called:
+	case <-time.Tick(time.Millisecond * 500):
+		t.Error("failed, to receive call")
+	}
+
+	state := s.cache.State()
+	if want, have := 2, len(state.Instances); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	// some error occurred resulting in io.EOF
+	sig <- true
+
+	// Service Called Once
+	select {
+	case <-called:
+	case <-time.Tick(time.Millisecond * 500):
+		t.Error("failed, to receive call in time")
+	}
+
+	sig <- false
+
+	// loop should continue
+	select {
+	case <-called:
+	case <-time.Tick(time.Millisecond * 500):
+		t.Error("failed, to receive call in time")
 	}
 }
