@@ -12,9 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
-
 	"github.com/go-kit/kit/metrics/teststat"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 func TestCounter(t *testing.T) {
@@ -198,7 +197,7 @@ func TestInconsistentLabelCardinality(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected error, got %s", reflect.TypeOf(x))
 		}
-		if want, have := "inconsistent label cardinality", err.Error(); want != have {
+		if want, have := "inconsistent label cardinality", err.Error(); !strings.HasPrefix(have, want) {
 			t.Fatalf("want %q, have %q", want, have)
 		}
 	}()
