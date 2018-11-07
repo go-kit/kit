@@ -289,6 +289,57 @@ func TestMultipleSubscriberAfter(t *testing.T) {
 	wg.Wait()
 }
 
+func TestSubscriberFinalizerFunc(t *testing.T) {
+	nc := newNatsConn(t)
+	defer nc.Close()
+
+	var (
+		response = struct{ Body string }{"go eat a fly ugly\n"}
+		wg       sync.WaitGroup
+		done     = make(chan struct{})
+	)
+	handler := natstransport.NewSubscriber(
+		endpoint.Nop,
+		func(context.Context, *nats.Msg) (interface{}, error) {
+			return struct{}{}, nil
+		},
+		func(_ context.Context, reply string, nc *nats.Conn, _ interface{}) error {
+			b, err := json.Marshal(response)
+			if err != nil {
+				return err
+			}
+
+			return nc.Publish(reply, b)
+		},
+		natstransport.SubscriberFinalizer(func(ctx context.Context, _ *nats.Msg) {
+			close(done)
+		}),
+	)
+
+	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Unsubscribe()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for finalizer")
+	}
+
+	wg.Wait()
+}
+
 func TestEncodeJSONResponse(t *testing.T) {
 	nc := newNatsConn(t)
 	defer nc.Close()
