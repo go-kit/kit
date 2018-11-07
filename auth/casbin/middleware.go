@@ -8,39 +8,55 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-var (
-	// ErrModelContextMissing required CasbinModel
-	ErrModelContextMissing = errors.New("CasbinModel is required in context")
-	// ErrPolicyContextMissing required CasbinPolicy
-	ErrPolicyContextMissing = errors.New("CasbinPolicy is required in context")
-	// ErrUnauthorized describes unauthorized access
-	ErrUnauthorized = errors.New("Unauthorized Access")
-)
-
 type contextKey string
 
 const (
-	// CasbinModelContextKey key to store the model, can be a file or casbin model
-	// a model file e.g. "path/to/basic_model.conf"
+	// CasbinModelContextKey holds the key to store the access control model
+	// in context, it can be a path to configuration file or a casbin/model
+	// Model
 	CasbinModelContextKey contextKey = "CasbinModel"
-	// CasbinPolicyContextKey key to store the policy, can be a file or casbin policy adapter
-	// a policy file e.g. "path/to/basic_policy.csv"
+
+	// CasbinPolicyContextKey holds the key to store the access control policy
+	// in context, it can be a path to policy file or an implementation of
+	// casbin/persist Adapter interface
 	CasbinPolicyContextKey contextKey = "CasbinPolicy"
-	// CasbinEnforcerContextKey key where the active enforcer can be retrieved
+
+	// CasbinEnforcerContextKey holds the key to retrieve the active casbin
+	// Enforcer
 	CasbinEnforcerContextKey contextKey = "CasbinEnforcer"
 )
 
-// NewEnforcer installs casbin enforcer into the context
-// while also checking the authorization for the corresponding subject, object, and action
-func NewEnforcer(subject string, object interface{}, action string) endpoint.Middleware {
+var (
+	// ErrModelContextMissing denotes a casbin model was not passed into
+	// the parsing of middleware's context
+	ErrModelContextMissing = errors.New("CasbinModel is required in context")
+
+	// ErrPolicyContextMissing denotes a casbin policy was not passed into
+	// the parsing of middleware's context
+	ErrPolicyContextMissing = errors.New("CasbinPolicy is required in context")
+
+	// ErrUnauthorized denotes the subject is not authorized to do the action
+	// intended on the given object, based on the context model and policy
+	ErrUnauthorized = errors.New("Unauthorized Access")
+)
+
+// NewEnforcer checks whether the subject is authorized to do the specified
+// action on the given object. If a valid access controlmodel and policy
+// is given, then the generated casbin Enforcer is stored in the context
+// with CasbinEnforcer as the key
+func NewEnforcer(
+	subject string, object interface{}, action string,
+) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		return func(ctx context.Context, request interface{}) (
+			response interface{}, err error,
+		) {
 			casbinModel := ctx.Value(CasbinModelContextKey)
 			casbinPolicy := ctx.Value(CasbinPolicyContextKey)
 
 			enforcer := stdcasbin.NewEnforcer(casbinModel, casbinPolicy)
 			ctx = context.WithValue(ctx, CasbinEnforcerContextKey, enforcer)
-			if enforcer.Enforce(subject, object, action) == false {
+			if !enforcer.Enforce(subject, object, action) {
 				return nil, ErrUnauthorized
 			}
 			return next(ctx, request)
