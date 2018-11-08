@@ -18,6 +18,7 @@ type Subscriber struct {
 	before       []RequestFunc
 	after        []SubscriberResponseFunc
 	errorEncoder ErrorEncoder
+	finalizer    []SubscriberFinalizerFunc
 	logger       log.Logger
 }
 
@@ -73,11 +74,25 @@ func SubscriberErrorLogger(logger log.Logger) SubscriberOption {
 	return func(s *Subscriber) { s.logger = logger }
 }
 
+// SubscriberFinalizer is executed at the end of every request from a publisher through NATS.
+// By default, no finalizer is registered.
+func SubscriberFinalizer(f ...SubscriberFinalizerFunc) SubscriberOption {
+	return func(s *Subscriber) { s.finalizer = f }
+}
+
 // ServeMsg provides nats.MsgHandler.
 func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 	return func(msg *nats.Msg) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
+
+		if len(s.finalizer) > 0 {
+			defer func() {
+				for _, f := range s.finalizer {
+					f(ctx, msg)
+				}
+			}()
+		}
 
 		for _, f := range s.before {
 			ctx = f(ctx, msg)
@@ -124,6 +139,11 @@ func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 // their replies, and will likely want to pass and check for their own error
 // types.
 type ErrorEncoder func(ctx context.Context, err error, reply string, nc *nats.Conn)
+
+// ServerFinalizerFunc can be used to perform work at the end of an request
+// from a publisher, after the response has been written to the publisher. The principal
+// intended use is for request logging.
+type SubscriberFinalizerFunc func(ctx context.Context, msg *nats.Msg)
 
 // NopRequestDecoder is a DecodeRequestFunc that can be used for requests that do not
 // need to be decoded, and simply returns nil, nil.
