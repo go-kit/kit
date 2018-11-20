@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/openzipkin/zipkin-go"
+	zipkin "github.com/openzipkin/zipkin-go"
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
@@ -166,7 +166,7 @@ func TestHTTPServerTrace(t *testing.T) {
 	rec := recorder.NewReporter()
 	defer rec.Close()
 
-	// explicitely show we use the default of RPC shared spans in Zipkin as it
+	// explicitly show we use the default of RPC shared spans in Zipkin as it
 	// is idiomatic for Zipkin to share span identifiers between client and
 	// server side.
 	tr, _ := zipkin.NewTracer(rec, zipkin.WithSharedSpans(true))

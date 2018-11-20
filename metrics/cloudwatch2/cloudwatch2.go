@@ -40,7 +40,7 @@ type CloudWatch struct {
 // Option is a function adapter to change config of the CloudWatch struct
 type Option func(*CloudWatch)
 
-// WithLogger sets the Logger that will recieve error messages generated
+// WithLogger sets the Logger that will receive error messages generated
 // during the WriteLoop. By default, no logger is used.
 func WithLogger(logger log.Logger) Option {
 	return func(cw *CloudWatch) {

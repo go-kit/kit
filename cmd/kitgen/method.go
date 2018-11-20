@@ -17,7 +17,7 @@ func (m method) definition(ifc iface) ast.Decl {
 	notImpl := fetchFuncDecl("ExampleEndpoint")
 
 	notImpl.Name = m.name
-	notImpl.Recv = fieldList(ifc.reciever())
+	notImpl.Recv = fieldList(ifc.receiver())
 	scope := scopeWith(notImpl.Recv.List[0].Names[0].Name)
 	notImpl.Type.Params = m.funcParams(scope)
 	notImpl.Type.Results = m.funcResults()
@@ -42,7 +42,7 @@ func (m method) endpointMaker(ifc iface) ast.Decl {
 
 	endpointFn.Body.List[0].(*ast.ReturnStmt).Results[0] = anonFunc
 	endpointFn.Name = m.endpointMakerName()
-	endpointFn.Type.Params = fieldList(ifc.reciever())
+	endpointFn.Type.Params = fieldList(ifc.receiver())
 	endpointFn.Type.Results = fieldList(typeField(sel(id("endpoint"), id("Endpoint"))))
 	return endpointFn
 }
