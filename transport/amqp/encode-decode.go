@@ -2,6 +2,7 @@ package amqp
 
 import (
 	"context"
+
 	"github.com/streadway/amqp"
 )
 
@@ -13,7 +14,7 @@ type DecodeRequestFunc func(context.Context, *amqp.Delivery) (request interface{
 // an AMQP Publishing object. It is designed to be used in AMQP Publishers.
 type EncodeRequestFunc func(context.Context, *amqp.Publishing, interface{}) error
 
-// EncodeResponseFunc encodes the passed reponse object to
+// EncodeResponseFunc encodes the passed response object to
 // an AMQP Publishing object. It is designed to be used in AMQP Subscribers.
 type EncodeResponseFunc func(context.Context, *amqp.Publishing, interface{}) error
 
