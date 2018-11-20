@@ -60,7 +60,7 @@ func TestContextMissingValue(t *testing.T) {
 // Valuers, regardless of how many times With has been called.
 func TestContextStackDepth(t *testing.T) {
 	t.Parallel()
-	fn := fmt.Sprintf("%n", stack.Caller(0))
+	fn := fmt.Sprintf("%v", stack.Caller(0))
 
 	var output []interface{}
 
@@ -71,7 +71,7 @@ func TestContextStackDepth(t *testing.T) {
 
 	stackValuer := log.Valuer(func() interface{} {
 		for i, c := range stack.Trace() {
-			if fmt.Sprintf("%n", c) == fn {
+			if fmt.Sprintf("%v", c) == fn {
 				return i
 			}
 		}
