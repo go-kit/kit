@@ -84,7 +84,7 @@ func (s Subscriber) ServeDelivery(ch Channel) func(deliv *amqp.Delivery) {
 		pub := amqp.Publishing{}
 
 		for _, f := range s.before {
-			ctx = f(ctx, &pub)
+			ctx = f(ctx, &pub, deliv)
 		}
 
 		request, err := s.dec(ctx, deliv)
