@@ -27,7 +27,15 @@ func TraceServer(tracer opentracing.Tracer, operationName string) endpoint.Middl
 			defer serverSpan.Finish()
 			otext.SpanKindRPCServer.Set(serverSpan)
 			ctx = opentracing.ContextWithSpan(ctx, serverSpan)
-			return next(ctx, request)
+
+			response, err := next(ctx, request)
+
+			spanErr := effectiveSpanError(response, err)
+			if spanErr != nil {
+				markSpanWithError(serverSpan, spanErr)
+			}
+
+			return response, err
 		}
 	}
 }
@@ -49,7 +57,32 @@ func TraceClient(tracer opentracing.Tracer, operationName string) endpoint.Middl
 			defer clientSpan.Finish()
 			otext.SpanKindRPCClient.Set(clientSpan)
 			ctx = opentracing.ContextWithSpan(ctx, clientSpan)
-			return next(ctx, request)
+
+			response, err := next(ctx, request)
+
+			spanErr := effectiveSpanError(response, err)
+			if spanErr != nil {
+				markSpanWithError(clientSpan, spanErr)
+			}
+
+			return response, err
 		}
 	}
+}
+
+func effectiveSpanError(endpointResp interface{}, endpointErr error) error {
+	if endpointErr != nil {
+		return endpointErr
+	}
+
+	if res, ok := endpointResp.(endpoint.Failer); ok && res.Failed() != nil {
+		return res.Failed()
+	}
+
+	return nil
+}
+
+func markSpanWithError(span opentracing.Span, err error) {
+	otext.Error.Set(span, true)
+	span.LogKV("error.object", err)
 }
