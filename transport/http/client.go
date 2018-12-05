@@ -5,14 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
-	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/golang/protobuf/proto"
 )
 
 // HTTPClient is an interface that models *http.Client.
@@ -208,29 +206,4 @@ func EncodeXMLRequest(c context.Context, r *http.Request, request interface{}) e
 	var b bytes.Buffer
 	r.Body = ioutil.NopCloser(&b)
 	return xml.NewEncoder(&b).Encode(request)
-}
-
-// EncodeProtoRequest is an EncodeRequestFunc that serializes the request as Protobuf.
-// If the request implements Headerer, the provided headers will be applied
-// to the request. If the given request does not implement proto.Message, an error will
-// be returned.
-func EncodeProtoRequest(_ context.Context, r *http.Request, preq interface{}) error {
-	r.Header.Set("Content-Type", "application/x-protobuf")
-	if headerer, ok := preq.(Headerer); ok {
-		for k := range headerer.Headers() {
-			r.Header.Set(k, headerer.Headers().Get(k))
-		}
-	}
-	req, ok := preq.(proto.Message)
-	if !ok {
-		return errors.New("response does not implement proto.Message")
-	}
-
-	b, err := proto.Marshal(req)
-	if err != nil {
-		return err
-	}
-	r.ContentLength = int64(len(b))
-	r.Body = ioutil.NopCloser(bytes.NewReader(b))
-	return nil
 }

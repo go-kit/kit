@@ -1,4 +1,4 @@
-package http
+package proto
 
 import (
 	"io/ioutil"
