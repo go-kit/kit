@@ -199,13 +199,11 @@ func EncodeProtoResponse(ctx context.Context, w http.ResponseWriter, pres interf
 	}
 	b, err := proto.Marshal(res)
 	if err != nil {
-		// returning an error here will cause a second header write, swallowing :(
-		return nil
+		return err
 	}
 	_, err = w.Write(b)
 	if err != nil {
-		// returning an error here will cause a second header write, swallowing :(
-		return nil
+		return err
 	}
 	return nil
 }
