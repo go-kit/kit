@@ -10,7 +10,6 @@ import (
 	stdopentracing "github.com/opentracing/opentracing-go"
 	stdzipkin "github.com/openzipkin/zipkin-go"
 	"github.com/sony/gobreaker"
-	oldcontext "golang.org/x/net/context"
 	"golang.org/x/time/rate"
 
 	"github.com/go-kit/kit/circuitbreaker"
@@ -65,7 +64,7 @@ func NewGRPCServer(endpoints addendpoint.Set, otTracer stdopentracing.Tracer, zi
 	}
 }
 
-func (s *grpcServer) Sum(ctx oldcontext.Context, req *pb.SumRequest) (*pb.SumReply, error) {
+func (s *grpcServer) Sum(ctx context.Context, req *pb.SumRequest) (*pb.SumReply, error) {
 	_, rep, err := s.sum.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
@@ -73,7 +72,7 @@ func (s *grpcServer) Sum(ctx oldcontext.Context, req *pb.SumRequest) (*pb.SumRep
 	return rep.(*pb.SumReply), nil
 }
 
-func (s *grpcServer) Concat(ctx oldcontext.Context, req *pb.ConcatRequest) (*pb.ConcatReply, error) {
+func (s *grpcServer) Concat(ctx context.Context, req *pb.ConcatRequest) (*pb.ConcatReply, error) {
 	_, rep, err := s.concat.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err

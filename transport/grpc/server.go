@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 
-	oldcontext "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
@@ -15,7 +14,7 @@ import (
 // implementation. The incoming request parameter, and returned response
 // parameter, are both gRPC types, not user-domain.
 type Handler interface {
-	ServeGRPC(ctx oldcontext.Context, request interface{}) (oldcontext.Context, interface{}, error)
+	ServeGRPC(ctx context.Context, request interface{}) (context.Context, interface{}, error)
 }
 
 // Server wraps an endpoint and implements grpc.Handler.
@@ -80,7 +79,7 @@ func ServerFinalizer(f ...ServerFinalizerFunc) ServerOption {
 }
 
 // ServeGRPC implements the Handler interface.
-func (s Server) ServeGRPC(ctx oldcontext.Context, req interface{}) (retctx oldcontext.Context, resp interface{}, err error) {
+func (s Server) ServeGRPC(ctx context.Context, req interface{}) (retctx context.Context, resp interface{}, err error) {
 	// Retrieve gRPC metadata.
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
