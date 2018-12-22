@@ -11,3 +11,9 @@ import (
 // in the request scoped context. ServerRequestFuncs are executed
 // prior to invoking the endpoint.
 type ServerRequestFunc func(context.Context, events.APIGatewayProxyRequest) context.Context
+
+// ServerResponseFunc may take information from a request context
+// and use it to manipulate APIGatewayProxyResponse.
+// ServerResponseFunc are only executed after invoking the endpoint
+// but prior to returning a response.
+type ServerResponseFunc func(context.Context, events.APIGatewayProxyResponse) context.Context

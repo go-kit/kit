@@ -14,6 +14,7 @@ type Server struct {
 	dec    DecodeRequestFunc
 	enc    EncodeResponseFunc
 	before []ServerRequestFunc
+	after  []ServerResponseFunc
 	logger log.Logger
 }
 
@@ -46,6 +47,12 @@ func ServerBefore(before ...ServerRequestFunc) ServerOption {
 	return func(s *Server) { s.before = append(s.before, before...) }
 }
 
+// ServerAfter functions are only executed after invoking the endpoint
+// but prior to returning a response.
+func ServerAfter(after ...ServerResponseFunc) ServerOption {
+	return func(s *Server) { s.after = append(s.after, after...) }
+}
+
 // ServerErrorLogger is used to log non-terminal errors.
 // By default, no errors are logged.
 func ServerErrorLogger(logger log.Logger) ServerOption {
@@ -73,6 +80,10 @@ func (s *Server) ServeHTTPLambda(
 	if err != nil {
 		s.logger.Log("err", err)
 		return
+	}
+
+	for _, f := range s.after {
+		ctx = f(ctx, resp)
 	}
 
 	if resp, err = s.enc(ctx, response); err != nil {
