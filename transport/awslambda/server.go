@@ -13,11 +13,12 @@ type Server struct {
 	e      endpoint.Endpoint
 	dec    DecodeRequestFunc
 	enc    EncodeResponseFunc
+	before []ServerRequestFunc
 	logger log.Logger
 }
 
 // NewServer constructs a new server, which implements the rules
-// of handling AWS API gateway event with AWS lambda.
+// of handling AWS APIGatewayProxy event with AWS lambda.
 func NewServer(
 	e endpoint.Endpoint,
 	dec DecodeRequestFunc,
@@ -39,19 +40,29 @@ func NewServer(
 // ServerOption sets an optional parameter for servers.
 type ServerOption func(*Server)
 
-// ServerErrorLogger is used to log non-terminal errors. By default, no errors
-// are logged.
+// ServerBefore functions are executed on the AWS APIGatewayProxy
+// request object before the request is decoded.
+func ServerBefore(before ...ServerRequestFunc) ServerOption {
+	return func(s *Server) { s.before = append(s.before, before...) }
+}
+
+// ServerErrorLogger is used to log non-terminal errors.
+// By default, no errors are logged.
 func ServerErrorLogger(logger log.Logger) ServerOption {
 	return func(s *Server) { s.logger = logger }
 }
 
 // ServeHTTPLambda implements the rules of AWS lambda handler of
-// AWS API gateway event.
+// AWS APIGatewayProxy event.
 func (s *Server) ServeHTTPLambda(
 	ctx context.Context, req events.APIGatewayProxyRequest,
 ) (
 	resp events.APIGatewayProxyResponse, err error,
 ) {
+	for _, f := range s.before {
+		ctx = f(ctx, req)
+	}
+
 	request, err := s.dec(ctx, req)
 	if err != nil {
 		s.logger.Log("err", err)
