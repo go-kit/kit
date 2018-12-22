@@ -10,12 +10,13 @@ import (
 
 // Server wraps an endpoint.
 type Server struct {
-	e      endpoint.Endpoint
-	dec    DecodeRequestFunc
-	enc    EncodeResponseFunc
-	before []ServerRequestFunc
-	after  []ServerResponseFunc
-	logger log.Logger
+	e            endpoint.Endpoint
+	dec          DecodeRequestFunc
+	enc          EncodeResponseFunc
+	before       []ServerRequestFunc
+	after        []ServerResponseFunc
+	errorEncoder ErrorEncoder
+	logger       log.Logger
 }
 
 // NewServer constructs a new server, which implements the rules
@@ -59,6 +60,12 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 	return func(s *Server) { s.logger = logger }
 }
 
+// ServerErrorEncoder is used to encode errors for
+// AWS APIGatewayProxy response.
+func ServerErrorEncoder(ee ErrorEncoder) ServerOption {
+	return func(s *Server) { s.errorEncoder = ee }
+}
+
 // ServeHTTPLambda implements the rules of AWS lambda handler of
 // AWS APIGatewayProxy event.
 func (s *Server) ServeHTTPLambda(
@@ -73,12 +80,14 @@ func (s *Server) ServeHTTPLambda(
 	request, err := s.dec(ctx, req)
 	if err != nil {
 		s.logger.Log("err", err)
+		resp, err = s.errorEncoder(ctx, err, resp)
 		return
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
 		s.logger.Log("err", err)
+		resp, err = s.errorEncoder(ctx, err, resp)
 		return
 	}
 
@@ -86,8 +95,9 @@ func (s *Server) ServeHTTPLambda(
 		ctx = f(ctx, resp)
 	}
 
-	if resp, err = s.enc(ctx, response); err != nil {
+	if resp, err = s.enc(ctx, response, resp); err != nil {
 		s.logger.Log("err", err)
+		resp, err = s.errorEncoder(ctx, err, resp)
 		return
 	}
 

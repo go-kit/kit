@@ -16,5 +16,10 @@ type DecodeRequestFunc func(
 // EncodeResponseFunc encodes the passed response object into
 // API gateway proxy response format.
 type EncodeResponseFunc func(
-	ctx context.Context, response interface{},
+	ctx context.Context, response interface{}, resp events.APIGatewayProxyResponse,
+) (events.APIGatewayProxyResponse, error)
+
+// ErrorEncoder is responsible for encoding an error.
+type ErrorEncoder func(
+	ctx context.Context, err error, resp events.APIGatewayProxyResponse,
 ) (events.APIGatewayProxyResponse, error)
