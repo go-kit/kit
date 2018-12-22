@@ -17,3 +17,7 @@ type ServerRequestFunc func(context.Context, events.APIGatewayProxyRequest) cont
 // ServerResponseFunc are only executed after invoking the endpoint
 // but prior to returning a response.
 type ServerResponseFunc func(context.Context, events.APIGatewayProxyResponse) context.Context
+
+// ServerFinalizerFunc is executed at the end of every
+// APIGatewayProxy request.
+type ServerFinalizerFunc func(context.Context, events.APIGatewayProxyResponse, error)

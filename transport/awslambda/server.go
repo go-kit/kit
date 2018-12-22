@@ -16,6 +16,7 @@ type Server struct {
 	before       []ServerRequestFunc
 	after        []ServerResponseFunc
 	errorEncoder ErrorEncoder
+	finalizer    []ServerFinalizerFunc
 	logger       log.Logger
 }
 
@@ -66,6 +67,12 @@ func ServerErrorEncoder(ee ErrorEncoder) ServerOption {
 	return func(s *Server) { s.errorEncoder = ee }
 }
 
+// ServerFinalizer sets finalizer which are called at the end of
+// request. By default no finalizer is registered.
+func ServerFinalizer(f ...ServerFinalizerFunc) ServerOption {
+	return func(s *Server) { s.finalizer = append(s.finalizer, f...) }
+}
+
 // ServeHTTPLambda implements the rules of AWS lambda handler of
 // AWS APIGatewayProxy event.
 func (s *Server) ServeHTTPLambda(
@@ -73,6 +80,14 @@ func (s *Server) ServeHTTPLambda(
 ) (
 	resp events.APIGatewayProxyResponse, err error,
 ) {
+	if len(s.finalizer) < 0 {
+		defer func() {
+			for _, f := range s.finalizer {
+				f(ctx, resp, err)
+			}
+		}()
+	}
+
 	for _, f := range s.before {
 		ctx = f(ctx, req)
 	}
