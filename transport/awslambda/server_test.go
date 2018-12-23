@@ -10,6 +10,13 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
+type key int
+
+const (
+	KeyBeforeOne key = iota
+	KeyBeforeTwo key = iota
+)
+
 func TestServeHTTPLambdaHappyPath(t *testing.T) {
 	svc := serviceTest01{}
 
@@ -17,6 +24,18 @@ func TestServeHTTPLambdaHappyPath(t *testing.T) {
 		makeTest01HelloEndpoint(svc),
 		decodeHelloRequest,
 		encodeResponse,
+		ServerBefore(func(
+			ctx context.Context, req events.APIGatewayProxyRequest,
+		) context.Context {
+			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
+			return ctx
+		}),
+		ServerBefore(func(
+			ctx context.Context, req events.APIGatewayProxyRequest,
+		) context.Context {
+			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
+			return ctx
+		}),
 	)
 
 	ctx := context.Background()
@@ -34,7 +53,7 @@ func TestServeHTTPLambdaHappyPath(t *testing.T) {
 		t.Fatalf("\nshould have no error, but got: %+v", err)
 	}
 
-	expectedGreeting := "hello john doe"
+	expectedGreeting := "hello john doe bef1 bef2"
 	if response.Greeting != expectedGreeting {
 		t.Fatalf(
 			"\nexpect: %s\nactual: %s", expectedGreeting, response.Greeting)
@@ -42,10 +61,27 @@ func TestServeHTTPLambdaHappyPath(t *testing.T) {
 }
 
 func decodeHelloRequest(
-	_ context.Context, req events.APIGatewayProxyRequest,
+	ctx context.Context, req events.APIGatewayProxyRequest,
 ) (interface{}, error) {
 	request := helloRequest{}
 	err := json.Unmarshal([]byte(req.Body), &request)
+	if err != nil {
+		return request, err
+	}
+
+	valOne, ok := ctx.Value(KeyBeforeOne).(string)
+	if !ok {
+		return request, fmt.Errorf(
+			"Value was not set properly when multiple ServerBefores are used")
+	}
+
+	valTwo, ok := ctx.Value(KeyBeforeTwo).(string)
+	if !ok {
+		return request, fmt.Errorf(
+			"Value was not set properly when multiple ServerBefores are used")
+	}
+
+	request.Name += " " + valOne + " " + valTwo
 	return request, err
 }
 

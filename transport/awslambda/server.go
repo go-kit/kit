@@ -95,14 +95,18 @@ func (s *Server) ServeHTTPLambda(
 	request, err := s.dec(ctx, req)
 	if err != nil {
 		s.logger.Log("err", err)
-		resp, err = s.errorEncoder(ctx, err, resp)
+		if s.errorEncoder != nil {
+			resp, err = s.errorEncoder(ctx, err, resp)
+		}
 		return
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
 		s.logger.Log("err", err)
-		resp, err = s.errorEncoder(ctx, err, resp)
+		if s.errorEncoder != nil {
+			resp, err = s.errorEncoder(ctx, err, resp)
+		}
 		return
 	}
 
@@ -112,7 +116,9 @@ func (s *Server) ServeHTTPLambda(
 
 	if resp, err = s.enc(ctx, response, resp); err != nil {
 		s.logger.Log("err", err)
-		resp, err = s.errorEncoder(ctx, err, resp)
+		if s.errorEncoder != nil {
+			resp, err = s.errorEncoder(ctx, err, resp)
+		}
 		return
 	}
 
