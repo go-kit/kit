@@ -80,7 +80,7 @@ func (s *Server) ServeHTTPLambda(
 ) (
 	resp events.APIGatewayProxyResponse, err error,
 ) {
-	if len(s.finalizer) < 0 {
+	if len(s.finalizer) > 0 {
 		defer func() {
 			for _, f := range s.finalizer {
 				f(ctx, resp, err)
