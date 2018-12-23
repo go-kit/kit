@@ -60,6 +60,36 @@ func TestServeHTTPLambdaHappyPath(t *testing.T) {
 	}
 }
 
+func TestServeHTTPLambdaFailDecode(t *testing.T) {
+	svc := serviceTest01{}
+
+	helloHandler := NewServer(
+		makeTest01HelloEndpoint(svc),
+		decodeHelloRequest,
+		encodeResponse,
+		ServerErrorEncoder(func(
+			ctx context.Context, err error, resp events.APIGatewayProxyResponse,
+		) (events.APIGatewayProxyResponse, error) {
+			resp.Body = `{"error":"yes"}`
+			resp.StatusCode = 500
+			return resp, err
+		}),
+	)
+
+	ctx := context.Background()
+	resp, err := helloHandler.ServeHTTPLambda(ctx, events.APIGatewayProxyRequest{
+		Body: `{"name":"john doe"}`,
+	})
+
+	if err == nil {
+		t.Fatalf("\nshould have error, but got: %+v", err)
+	}
+
+	if resp.StatusCode != 500 {
+		t.Fatalf("\nexpect status code of 500, instead of %d", resp.StatusCode)
+	}
+}
+
 func decodeHelloRequest(
 	ctx context.Context, req events.APIGatewayProxyRequest,
 ) (interface{}, error) {
