@@ -20,7 +20,7 @@ const (
 	KeyEncMode   key = iota
 )
 
-func TestServeHTTPLambdaHappyPath(t *testing.T) {
+func TestInvokeHappyPath(t *testing.T) {
 	svc := serviceTest01{}
 
 	helloHandler := NewServer(
@@ -29,25 +29,25 @@ func TestServeHTTPLambdaHappyPath(t *testing.T) {
 		encodeResponse,
 		ServerErrorLogger(log.NewNopLogger()),
 		ServerBefore(func(
-			ctx context.Context, req events.APIGatewayProxyRequest,
+			ctx context.Context, payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
 		ServerBefore(func(
-			ctx context.Context, req events.APIGatewayProxyRequest,
+			ctx context.Context, payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
 		ServerAfter(func(
-			ctx context.Context, resp events.APIGatewayProxyResponse,
+			ctx context.Context, response interface{},
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyAfterOne, "af1")
 			return ctx
 		}),
 		ServerAfter(func(
-			ctx context.Context, resp events.APIGatewayProxyResponse,
+			ctx context.Context, response interface{},
 		) context.Context {
 			if _, ok := ctx.Value(KeyAfterOne).(string); !ok {
 				t.Fatalf("\nValue was not set properly during multi ServerAfter")
@@ -55,10 +55,16 @@ func TestServeHTTPLambdaHappyPath(t *testing.T) {
 			return ctx
 		}),
 		ServerFinalizer(func(
-			_ context.Context, resp events.APIGatewayProxyResponse, _ error,
+			_ context.Context, resp []byte, _ error,
 		) {
+			apigwResp := events.APIGatewayProxyResponse{}
+			err := json.Unmarshal(resp, &apigwResp)
+			if err != nil {
+				t.Fatalf("\nshould have no error, but got: %+v", err)
+			}
+
 			response := helloResponse{}
-			err := json.Unmarshal([]byte(resp.Body), &response)
+			err = json.Unmarshal([]byte(apigwResp.Body), &response)
 			if err != nil {
 				t.Fatalf("\nshould have no error, but got: %+v", err)
 			}
@@ -72,16 +78,23 @@ func TestServeHTTPLambdaHappyPath(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	resp, err := helloHandler.ServeHTTPLambda(ctx, events.APIGatewayProxyRequest{
+	req, _ := json.Marshal(events.APIGatewayProxyRequest{
 		Body: `{"name":"john doe"}`,
 	})
+	resp, err := helloHandler.Invoke(ctx, req)
 
 	if err != nil {
 		t.Fatalf("\nshould have no error, but got: %+v", err)
 	}
 
+	apigwResp := events.APIGatewayProxyResponse{}
+	err = json.Unmarshal(resp, &apigwResp)
+	if err != nil {
+		t.Fatalf("\nshould have no error, but got: %+v", err)
+	}
+
 	response := helloResponse{}
-	err = json.Unmarshal([]byte(resp.Body), &response)
+	err = json.Unmarshal([]byte(apigwResp.Body), &response)
 	if err != nil {
 		t.Fatalf("\nshould have no error, but got: %+v", err)
 	}
@@ -93,7 +106,7 @@ func TestServeHTTPLambdaHappyPath(t *testing.T) {
 	}
 }
 
-func TestServeHTTPLambdaFailDecode(t *testing.T) {
+func TestInvokeFailDecode(t *testing.T) {
 	svc := serviceTest01{}
 
 	helloHandler := NewServer(
@@ -101,29 +114,37 @@ func TestServeHTTPLambdaFailDecode(t *testing.T) {
 		decodeHelloRequest,
 		encodeResponse,
 		ServerErrorEncoder(func(
-			ctx context.Context, err error, resp events.APIGatewayProxyResponse,
-		) (events.APIGatewayProxyResponse, error) {
-			resp.Body = `{"error":"yes"}`
-			resp.StatusCode = 500
+			ctx context.Context, err error,
+		) ([]byte, error) {
+			apigwResp := events.APIGatewayProxyResponse{}
+			apigwResp.Body = `{"error":"yes"}`
+			apigwResp.StatusCode = 500
+			resp, merr := json.Marshal(apigwResp)
+			if merr != nil {
+				return resp, merr
+			}
 			return resp, err
 		}),
 	)
 
 	ctx := context.Background()
-	resp, err := helloHandler.ServeHTTPLambda(ctx, events.APIGatewayProxyRequest{
+	req, _ := json.Marshal(events.APIGatewayProxyRequest{
 		Body: `{"name":"john doe"}`,
 	})
+	resp, err := helloHandler.Invoke(ctx, req)
 
 	if err == nil {
 		t.Fatalf("\nshould have error, but got: %+v", err)
 	}
 
-	if resp.StatusCode != 500 {
-		t.Fatalf("\nexpect status code of 500, instead of %d", resp.StatusCode)
+	apigwResp := events.APIGatewayProxyResponse{}
+	json.Unmarshal(resp, &apigwResp)
+	if apigwResp.StatusCode != 500 {
+		t.Fatalf("\nexpect status code of 500, instead of %d", apigwResp.StatusCode)
 	}
 }
 
-func TestServeHTTPLambdaFailEndpoint(t *testing.T) {
+func TestInvokeFailEndpoint(t *testing.T) {
 	svc := serviceTest01{}
 
 	helloHandler := NewServer(
@@ -131,41 +152,49 @@ func TestServeHTTPLambdaFailEndpoint(t *testing.T) {
 		decodeHelloRequest,
 		encodeResponse,
 		ServerBefore(func(
-			ctx context.Context, req events.APIGatewayProxyRequest,
+			ctx context.Context, payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
 		ServerBefore(func(
-			ctx context.Context, req events.APIGatewayProxyRequest,
+			ctx context.Context, payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
 		ServerErrorEncoder(func(
-			ctx context.Context, err error, resp events.APIGatewayProxyResponse,
-		) (events.APIGatewayProxyResponse, error) {
-			resp.Body = `{"error":"yes"}`
-			resp.StatusCode = 500
+			ctx context.Context, err error,
+		) ([]byte, error) {
+			apigwResp := events.APIGatewayProxyResponse{}
+			apigwResp.Body = `{"error":"yes"}`
+			apigwResp.StatusCode = 500
+			resp, merr := json.Marshal(apigwResp)
+			if merr != nil {
+				return resp, merr
+			}
 			return resp, err
 		}),
 	)
 
 	ctx := context.Background()
-	resp, err := helloHandler.ServeHTTPLambda(ctx, events.APIGatewayProxyRequest{
+	req, _ := json.Marshal(events.APIGatewayProxyRequest{
 		Body: `{"name":"john doe"}`,
 	})
+	resp, err := helloHandler.Invoke(ctx, req)
 
 	if err == nil {
 		t.Fatalf("\nshould have error, but got: %+v", err)
 	}
 
-	if resp.StatusCode != 500 {
-		t.Fatalf("\nexpect status code of 500, instead of %d", resp.StatusCode)
+	apigwResp := events.APIGatewayProxyResponse{}
+	json.Unmarshal(resp, &apigwResp)
+	if apigwResp.StatusCode != 500 {
+		t.Fatalf("\nexpect status code of 500, instead of %d", apigwResp.StatusCode)
 	}
 }
 
-func TestServeHTTPLambdaFailEncode(t *testing.T) {
+func TestInvokeFailEncode(t *testing.T) {
 	svc := serviceTest01{}
 
 	helloHandler := NewServer(
@@ -173,51 +202,65 @@ func TestServeHTTPLambdaFailEncode(t *testing.T) {
 		decodeHelloRequest,
 		encodeResponse,
 		ServerBefore(func(
-			ctx context.Context, req events.APIGatewayProxyRequest,
+			ctx context.Context, payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
 		ServerBefore(func(
-			ctx context.Context, req events.APIGatewayProxyRequest,
+			ctx context.Context, payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
 		ServerAfter(func(
-			ctx context.Context, resp events.APIGatewayProxyResponse,
+			ctx context.Context, response interface{},
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyEncMode, "fail_encode")
 			return ctx
 		}),
 		ServerErrorEncoder(func(
-			ctx context.Context, err error, resp events.APIGatewayProxyResponse,
-		) (events.APIGatewayProxyResponse, error) {
-			resp.Body = `{"error":"yes"}`
-			resp.StatusCode = 500
+			ctx context.Context, err error,
+		) ([]byte, error) {
+			apigwResp := events.APIGatewayProxyResponse{}
+			apigwResp.Body = `{"error":"yes"}`
+			apigwResp.StatusCode = 500
+			resp, merr := json.Marshal(apigwResp)
+			if merr != nil {
+				return resp, merr
+			}
 			return resp, err
 		}),
 	)
 
 	ctx := context.Background()
-	resp, err := helloHandler.ServeHTTPLambda(ctx, events.APIGatewayProxyRequest{
+	req, _ := json.Marshal(events.APIGatewayProxyRequest{
 		Body: `{"name":"john doe"}`,
 	})
+	resp, err := helloHandler.Invoke(ctx, req)
 
 	if err == nil {
 		t.Fatalf("\nshould have error, but got: %+v", err)
 	}
 
-	if resp.StatusCode != 500 {
-		t.Fatalf("\nexpect status code of 500, instead of %d", resp.StatusCode)
+	apigwResp := events.APIGatewayProxyResponse{}
+	json.Unmarshal(resp, &apigwResp)
+	if apigwResp.StatusCode != 500 {
+		t.Fatalf("\nexpect status code of 500, instead of %d", apigwResp.StatusCode)
 	}
 }
 
 func decodeHelloRequest(
-	ctx context.Context, req events.APIGatewayProxyRequest,
+	ctx context.Context, req []byte,
 ) (interface{}, error) {
+	apigwReq := events.APIGatewayProxyRequest{}
+	err := json.Unmarshal([]byte(req), &apigwReq)
+	if err != nil {
+		return apigwReq, err
+	}
+
 	request := helloRequest{}
-	err := json.Unmarshal([]byte(req.Body), &request)
+	err = json.Unmarshal([]byte(apigwReq.Body), &request)
 	if err != nil {
 		return request, err
 	}
@@ -239,22 +282,27 @@ func decodeHelloRequest(
 }
 
 func encodeResponse(
-	ctx context.Context, response interface{}, resp events.APIGatewayProxyResponse,
-) (events.APIGatewayProxyResponse, error) {
+	ctx context.Context, response interface{},
+) ([]byte, error) {
+	apigwResp := events.APIGatewayProxyResponse{}
+
 	mode, ok := ctx.Value(KeyEncMode).(string)
-	fmt.Println(mode)
+	fmt.Printf("\nmode: %s ok: %+v\n", mode, ok)
 	if ok && mode == "fail_encode" {
-		return resp, fmt.Errorf("fail encoding")
+		fmt.Printf("\nEnter\n")
+		return nil, fmt.Errorf("fail encoding")
 	}
 
 	respByte, err := json.Marshal(response)
 	if err != nil {
-		return resp, err
+		return nil, err
 	}
 
-	resp.Body = string(respByte)
-	resp.StatusCode = 200
-	return resp, nil
+	apigwResp.Body = string(respByte)
+	apigwResp.StatusCode = 200
+
+	resp, err := json.Marshal(apigwResp)
+	return resp, err
 }
 
 type helloRequest struct {

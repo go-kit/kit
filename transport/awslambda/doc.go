@@ -1,3 +1,2 @@
-// Package awslambda provides AWS lambda Handler
-// with APIGatewayProxy Event transport layer.
+// Package awslambda provides AWS lambda Handler transport layer.
 package awslambda

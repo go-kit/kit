@@ -3,7 +3,6 @@ package awslambda
 import (
 	"context"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 )
@@ -20,8 +19,8 @@ type Server struct {
 	logger       log.Logger
 }
 
-// NewServer constructs a new server, which implements the rules
-// of handling AWS APIGatewayProxy event with AWS lambda.
+// NewServer constructs a new server, which implements
+// the AWS lambda.Handler interface.
 func NewServer(
 	e endpoint.Endpoint,
 	dec DecodeRequestFunc,
@@ -43,8 +42,8 @@ func NewServer(
 // ServerOption sets an optional parameter for servers.
 type ServerOption func(*Server)
 
-// ServerBefore functions are executed on the AWS APIGatewayProxy
-// request object before the request is decoded.
+// ServerBefore functions are executed on the payload byte,
+// before the request is decoded.
 func ServerBefore(before ...ServerRequestFunc) ServerOption {
 	return func(s *Server) { s.before = append(s.before, before...) }
 }
@@ -61,8 +60,7 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 	return func(s *Server) { s.logger = logger }
 }
 
-// ServerErrorEncoder is used to encode errors for
-// AWS APIGatewayProxy response.
+// ServerErrorEncoder is used to encode errors.
 func ServerErrorEncoder(ee ErrorEncoder) ServerOption {
 	return func(s *Server) { s.errorEncoder = ee }
 }
@@ -73,13 +71,10 @@ func ServerFinalizer(f ...ServerFinalizerFunc) ServerOption {
 	return func(s *Server) { s.finalizer = append(s.finalizer, f...) }
 }
 
-// ServeHTTPLambda implements the rules of AWS lambda handler of
-// AWS APIGatewayProxy event.
-func (s *Server) ServeHTTPLambda(
-	ctx context.Context, req events.APIGatewayProxyRequest,
-) (
-	resp events.APIGatewayProxyResponse, err error,
-) {
+// Invoke represents implementation of the AWS lambda.Handler interface.
+func (s *Server) Invoke(
+	ctx context.Context, payload []byte,
+) (resp []byte, err error) {
 	if len(s.finalizer) > 0 {
 		defer func() {
 			for _, f := range s.finalizer {
@@ -89,14 +84,14 @@ func (s *Server) ServeHTTPLambda(
 	}
 
 	for _, f := range s.before {
-		ctx = f(ctx, req)
+		ctx = f(ctx, payload)
 	}
 
-	request, err := s.dec(ctx, req)
+	request, err := s.dec(ctx, payload)
 	if err != nil {
 		s.logger.Log("err", err)
 		if s.errorEncoder != nil {
-			resp, err = s.errorEncoder(ctx, err, resp)
+			resp, err = s.errorEncoder(ctx, err)
 		}
 		return
 	}
@@ -105,19 +100,19 @@ func (s *Server) ServeHTTPLambda(
 	if err != nil {
 		s.logger.Log("err", err)
 		if s.errorEncoder != nil {
-			resp, err = s.errorEncoder(ctx, err, resp)
+			resp, err = s.errorEncoder(ctx, err)
 		}
 		return
 	}
 
 	for _, f := range s.after {
-		ctx = f(ctx, resp)
+		ctx = f(ctx, response)
 	}
 
-	if resp, err = s.enc(ctx, response, resp); err != nil {
+	if resp, err = s.enc(ctx, response); err != nil {
 		s.logger.Log("err", err)
 		if s.errorEncoder != nil {
-			resp, err = s.errorEncoder(ctx, err, resp)
+			resp, err = s.errorEncoder(ctx, err)
 		}
 		return
 	}
