@@ -25,7 +25,7 @@ func TestInvokeHappyPath(t *testing.T) {
 
 	helloHandler := NewServer(
 		makeTest01HelloEndpoint(svc),
-		decodeHelloRequest,
+		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
 		ServerErrorLogger(log.NewNopLogger()),
 		ServerBefore(func(
@@ -60,19 +60,19 @@ func TestInvokeHappyPath(t *testing.T) {
 			apigwResp := events.APIGatewayProxyResponse{}
 			err := json.Unmarshal(resp, &apigwResp)
 			if err != nil {
-				t.Fatalf("\nshould have no error, but got: %+v", err)
+				t.Fatalf("\nShould have no error, but got: %+v", err)
 			}
 
 			response := helloResponse{}
 			err = json.Unmarshal([]byte(apigwResp.Body), &response)
 			if err != nil {
-				t.Fatalf("\nshould have no error, but got: %+v", err)
+				t.Fatalf("\nShould have no error, but got: %+v", err)
 			}
 
 			expectedGreeting := "hello john doe bef1 bef2"
 			if response.Greeting != expectedGreeting {
 				t.Fatalf(
-					"\nexpect: %s\nactual: %s", expectedGreeting, response.Greeting)
+					"\nExpect: %s\nActual: %s", expectedGreeting, response.Greeting)
 			}
 		}),
 	)
@@ -84,25 +84,25 @@ func TestInvokeHappyPath(t *testing.T) {
 	resp, err := helloHandler.Invoke(ctx, req)
 
 	if err != nil {
-		t.Fatalf("\nshould have no error, but got: %+v", err)
+		t.Fatalf("\nShould have no error, but got: %+v", err)
 	}
 
 	apigwResp := events.APIGatewayProxyResponse{}
 	err = json.Unmarshal(resp, &apigwResp)
 	if err != nil {
-		t.Fatalf("\nshould have no error, but got: %+v", err)
+		t.Fatalf("\nShould have no error, but got: %+v", err)
 	}
 
 	response := helloResponse{}
 	err = json.Unmarshal([]byte(apigwResp.Body), &response)
 	if err != nil {
-		t.Fatalf("\nshould have no error, but got: %+v", err)
+		t.Fatalf("\nShould have no error, but got: %+v", err)
 	}
 
 	expectedGreeting := "hello john doe bef1 bef2"
 	if response.Greeting != expectedGreeting {
 		t.Fatalf(
-			"\nexpect: %s\nactual: %s", expectedGreeting, response.Greeting)
+			"\nExpect: %s\nActual: %s", expectedGreeting, response.Greeting)
 	}
 }
 
@@ -111,7 +111,7 @@ func TestInvokeFailDecode(t *testing.T) {
 
 	helloHandler := NewServer(
 		makeTest01HelloEndpoint(svc),
-		decodeHelloRequest,
+		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
 		ServerErrorEncoder(func(
 			ctx context.Context, err error,
@@ -130,14 +130,14 @@ func TestInvokeFailDecode(t *testing.T) {
 	})
 	resp, err := helloHandler.Invoke(ctx, req)
 
-	if err == nil {
-		t.Fatalf("\nshould have error, but got: %+v", err)
+	if err != nil {
+		t.Fatalf("\nShould have no error, but got: %+v", err)
 	}
 
 	apigwResp := events.APIGatewayProxyResponse{}
 	json.Unmarshal(resp, &apigwResp)
 	if apigwResp.StatusCode != 500 {
-		t.Fatalf("\nexpect status code of 500, instead of %d", apigwResp.StatusCode)
+		t.Fatalf("\nExpect status code of 500, instead of %d", apigwResp.StatusCode)
 	}
 }
 
@@ -146,7 +146,7 @@ func TestInvokeFailEndpoint(t *testing.T) {
 
 	helloHandler := NewServer(
 		makeTest01FailEndpoint(svc),
-		decodeHelloRequest,
+		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
 		ServerBefore(func(
 			ctx context.Context, payload []byte,
@@ -177,14 +177,14 @@ func TestInvokeFailEndpoint(t *testing.T) {
 	})
 	resp, err := helloHandler.Invoke(ctx, req)
 
-	if err == nil {
-		t.Fatalf("\nshould have error, but got: %+v", err)
+	if err != nil {
+		t.Fatalf("\nShould have no error, but got: %+v", err)
 	}
 
 	apigwResp := events.APIGatewayProxyResponse{}
 	json.Unmarshal(resp, &apigwResp)
 	if apigwResp.StatusCode != 500 {
-		t.Fatalf("\nexpect status code of 500, instead of %d", apigwResp.StatusCode)
+		t.Fatalf("\nExpect status code of 500, instead of %d", apigwResp.StatusCode)
 	}
 }
 
@@ -193,7 +193,7 @@ func TestInvokeFailEncode(t *testing.T) {
 
 	helloHandler := NewServer(
 		makeTest01HelloEndpoint(svc),
-		decodeHelloRequest,
+		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
 		ServerBefore(func(
 			ctx context.Context, payload []byte,
@@ -216,6 +216,7 @@ func TestInvokeFailEncode(t *testing.T) {
 		ServerErrorEncoder(func(
 			ctx context.Context, err error,
 		) ([]byte, error) {
+			// convert error into proper APIGateway response.
 			apigwResp := events.APIGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
 			apigwResp.StatusCode = 500
@@ -230,18 +231,18 @@ func TestInvokeFailEncode(t *testing.T) {
 	})
 	resp, err := helloHandler.Invoke(ctx, req)
 
-	if err == nil {
-		t.Fatalf("\nshould have error, but got: %+v", err)
+	if err != nil {
+		t.Fatalf("\nShould have no error, but got: %+v", err)
 	}
 
 	apigwResp := events.APIGatewayProxyResponse{}
 	json.Unmarshal(resp, &apigwResp)
 	if apigwResp.StatusCode != 500 {
-		t.Fatalf("\nexpect status code of 500, instead of %d", apigwResp.StatusCode)
+		t.Fatalf("\nExpect status code of 500, instead of %d", apigwResp.StatusCode)
 	}
 }
 
-func decodeHelloRequest(
+func decodeHelloRequestWithTwoBefores(
 	ctx context.Context, req []byte,
 ) (interface{}, error) {
 	apigwReq := events.APIGatewayProxyRequest{}
@@ -278,9 +279,7 @@ func encodeResponse(
 	apigwResp := events.APIGatewayProxyResponse{}
 
 	mode, ok := ctx.Value(KeyEncMode).(string)
-	fmt.Printf("\nmode: %s ok: %+v\n", mode, ok)
 	if ok && mode == "fail_encode" {
-		fmt.Printf("\nEnter\n")
 		return nil, fmt.Errorf("fail encoding")
 	}
 
