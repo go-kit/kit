@@ -119,10 +119,7 @@ func TestInvokeFailDecode(t *testing.T) {
 			apigwResp := events.APIGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
 			apigwResp.StatusCode = 500
-			resp, merr := json.Marshal(apigwResp)
-			if merr != nil {
-				return resp, merr
-			}
+			resp, err := json.Marshal(apigwResp)
 			return resp, err
 		}),
 	)
@@ -169,10 +166,7 @@ func TestInvokeFailEndpoint(t *testing.T) {
 			apigwResp := events.APIGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
 			apigwResp.StatusCode = 500
-			resp, merr := json.Marshal(apigwResp)
-			if merr != nil {
-				return resp, merr
-			}
+			resp, err := json.Marshal(apigwResp)
 			return resp, err
 		}),
 	)
@@ -225,10 +219,7 @@ func TestInvokeFailEncode(t *testing.T) {
 			apigwResp := events.APIGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
 			apigwResp.StatusCode = 500
-			resp, merr := json.Marshal(apigwResp)
-			if merr != nil {
-				return resp, merr
-			}
+			resp, err := json.Marshal(apigwResp)
 			return resp, err
 		}),
 	)
