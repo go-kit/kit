@@ -157,7 +157,7 @@ func HTTPServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Ser
 			if config.propagate {
 				spanContext = tracer.Extract(b3.ExtractHTTP(req))
 
-				if config.requestSampler != nil && spanContext.Sampled == nil {
+				if spanContext.Sampled == nil && config.requestSampler != nil {
 					sample := config.requestSampler(req)
 					spanContext.Sampled = &sample
 				}
