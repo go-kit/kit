@@ -31,7 +31,12 @@ func (c *client) Register(r *consul.AgentServiceRegistration) error {
 }
 
 func (c *client) Deregister(r *consul.AgentServiceRegistration) error {
-	return c.consul.Agent().ServiceDeregister(r.ID)
+	id := r.ID
+	if id == "" {
+		id = r.Name	
+	}
+	
+	return c.consul.Agent().ServiceDeregister(id)
 }
 
 func (c *client) Service(service, tag string, passingOnly bool, queryOpts *consul.QueryOptions) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
