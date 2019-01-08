@@ -163,13 +163,14 @@ func TestHistogram(t *testing.T) {
 
 	// Then, we use ExpectedObservationsLessThan to validate.
 	for _, line := range strings.Split(scrape(), "\n") {
+		t.Logf("### %s", line)
 		match := re.FindStringSubmatch(line)
 		if match == nil {
 			continue
 		}
 
 		bucket, _ := strconv.ParseInt(match[1], 10, 64)
-		have, _ := strconv.ParseInt(match[2], 10, 64)
+		have, _ := strconv.ParseFloat(match[2], 64)
 
 		want := teststat.ExpectedObservationsLessThan(bucket)
 		if match[1] == "+Inf" {
@@ -182,7 +183,7 @@ func TestHistogram(t *testing.T) {
 		// with my Expected calculation, or in Prometheus.
 		tolerance := 0.25
 		if delta := math.Abs(float64(want) - float64(have)); (delta / float64(want)) > tolerance {
-			t.Errorf("Bucket %d: want %d, have %d (%.1f%%)", bucket, want, have, (100.0 * delta / float64(want)))
+			t.Errorf("Bucket %d: want %d, have %d (%.1f%%)", bucket, want, int(have), (100.0 * delta / float64(want)))
 		}
 	}
 }
