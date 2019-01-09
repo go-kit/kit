@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/opentracing/opentracing-go"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/mocktracer"
 
@@ -89,7 +89,7 @@ func TestHTTPToContextTags(t *testing.T) {
 	parentSpan := tracer.StartSpan("to_extract").(*mocktracer.MockSpan)
 	defer parentSpan.Finish()
 	req, _ := http.NewRequest("GET", "http://test.biz/path", nil)
-	tracer.Inject(parentSpan.Context(), opentracing.TextMap, opentracing.HTTPHeadersCarrier(req.Header))
+	tracer.Inject(parentSpan.Context(), opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(req.Header))
 
 	ctx := kitot.HTTPToContext(tracer, "op", log.NewNopLogger())(context.Background(), req)
 	opentracing.SpanFromContext(ctx).Finish()
