@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/opentracing/opentracing-go"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 
 	"github.com/go-kit/kit/log"
@@ -36,7 +36,7 @@ func ContextToHTTP(tracer opentracing.Tracer, logger log.Logger) kithttp.Request
 			// There's nothing we can do with any errors here.
 			if err = tracer.Inject(
 				span.Context(),
-				opentracing.TextMap,
+				opentracing.HTTPHeaders,
 				opentracing.HTTPHeadersCarrier(req.Header),
 			); err != nil {
 				logger.Log("err", err)
@@ -56,7 +56,7 @@ func HTTPToContext(tracer opentracing.Tracer, operationName string, logger log.L
 		// Try to join to a trace propagated in `req`.
 		var span opentracing.Span
 		wireContext, err := tracer.Extract(
-			opentracing.TextMap,
+			opentracing.HTTPHeaders,
 			opentracing.HTTPHeadersCarrier(req.Header),
 		)
 		if err != nil && err != opentracing.ErrSpanContextNotFound {
