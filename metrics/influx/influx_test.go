@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	influxdb "github.com/influxdata/influxdb/client/v2"
+	influxdb "github.com/influxdata/influxdb1-client/v2"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/teststat"
