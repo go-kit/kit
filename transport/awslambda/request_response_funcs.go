@@ -12,7 +12,7 @@ type ServerRequestFunc func(ctx context.Context, payload []byte) context.Context
 
 // ServerResponseFunc may take information from a request context
 // and use it to manipulate the response before it's marshaled.
-// ServerResponseFunc are only executed after invoking the endpoint
+// ServerResponseFunc are executed after invoking the endpoint
 // but prior to returning a response.
 type ServerResponseFunc func(ctx context.Context, response interface{}) context.Context
 
