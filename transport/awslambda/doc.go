@@ -1,2 +1,2 @@
-// Package awslambda provides an AWS Lambda Handler transport layer.
+// Package awslambda provides an AWS Lambda transport layer.
 package awslambda
