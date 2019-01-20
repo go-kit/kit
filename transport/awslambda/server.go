@@ -73,7 +73,8 @@ func ServerFinalizer(f ...ServerFinalizerFunc) ServerOption {
 
 // Invoke represents implementation of the AWS lambda.Handler interface.
 func (s *Server) Invoke(
-	ctx context.Context, payload []byte,
+	ctx context.Context,
+	payload []byte,
 ) (resp []byte, err error) {
 	if len(s.finalizer) > 0 {
 		defer func() {
