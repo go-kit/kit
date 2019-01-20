@@ -44,25 +44,25 @@ func TestInvokeWithWrapperHappyPath(t *testing.T) {
 	resp, err := helloHandler.Invoke(ctx, req)
 
 	if err != nil {
-		t.Fatalf("\nshould have no error, but got: %+v", err)
+		t.Fatalf("should have no error, but got: %+v", err)
 	}
 
 	apigwResp := events.APIGatewayProxyResponse{}
 	err = json.Unmarshal(resp, &apigwResp)
 	if err != nil {
-		t.Fatalf("\nShould have no error, but got: %+v", err)
+		t.Fatalf("Should have no error, but got: %+v", err)
 	}
 
 	response := helloResponse{}
 	err = json.Unmarshal([]byte(apigwResp.Body), &response)
 	if err != nil {
-		t.Fatalf("\nShould have no error, but got: %+v", err)
+		t.Fatalf("Should have no error, but got: %+v", err)
 	}
 
 	expectedGreeting := "hello john doe"
 	if response.Greeting != expectedGreeting {
 		t.Fatalf(
-			"\nExpect: %s\nActual: %s", expectedGreeting, response.Greeting)
+			"Expect: %s, Actual: %s", expectedGreeting, response.Greeting)
 	}
 }
 
@@ -109,13 +109,13 @@ func TestInvokeWithWrapperErrorEncoder(t *testing.T) {
 	resp, err := helloHandler.Invoke(ctx, req)
 
 	if err != nil {
-		t.Fatalf("\nShould have no error, but got: %+v", err)
+		t.Fatalf("Should have no error, but got: %+v", err)
 	}
 
 	apigwResp := events.APIGatewayProxyResponse{}
 	json.Unmarshal(resp, &apigwResp)
 	if apigwResp.StatusCode != 500 {
-		t.Fatalf("\nExpect status code of 500, instead of %d", apigwResp.StatusCode)
+		t.Fatalf("Expect status code of 500, instead of %d", apigwResp.StatusCode)
 	}
 }
 
@@ -189,11 +189,11 @@ func TestInvalidDecodeRequestWrapper(t *testing.T) {
 		_, err := helloHandler.Invoke(ctx, req)
 
 		if err == nil {
-			t.Errorf("\nShould have error")
+			t.Errorf("Should have error")
 		}
 		if err.Error() != tc.expectedErrMsg {
 			t.Fatalf(
-				"\nExpected:\n%+v\nActual:\n%+v",
+				"Expected: %+v Actual: %+v",
 				tc.expectedErrMsg, err.Error())
 		}
 	}
@@ -270,11 +270,11 @@ func TestInvalidEncodeResponseWrapper(t *testing.T) {
 		_, err := helloHandler.Invoke(ctx, req)
 
 		if err == nil {
-			t.Errorf("\nShould have error")
+			t.Errorf("Should have error")
 		}
 		if err.Error() != tc.expectedErrMsg {
 			t.Fatalf(
-				"\nExpected:\n%+v\nActual:\n%+v",
+				"Expected: %+v Actual: %+v",
 				tc.expectedErrMsg, err.Error())
 		}
 	}
@@ -369,11 +369,11 @@ func TestInvalidErrorEncoderWrapper(t *testing.T) {
 		_, err := helloHandler.Invoke(ctx, req)
 
 		if err == nil {
-			t.Errorf("\nShould have error")
+			t.Errorf("Should have error")
 		}
 		if err.Error() != tc.expectedErrMsg {
 			t.Fatalf(
-				"\nExpected:\n%+v\nActual:\n%+v",
+				"Expected: %+v Actual: %+v",
 				tc.expectedErrMsg, err.Error())
 		}
 	}
@@ -412,7 +412,7 @@ func TestWrapperInvalidPayloadFormat(t *testing.T) {
 	_, err := helloHandler.Invoke(ctx, req)
 
 	if err == nil {
-		t.Fatalf("\nShould have error")
+		t.Fatalf("Should have error")
 	}
 }
 
@@ -444,7 +444,7 @@ func TestWrapperErrorInEncodeResponse(t *testing.T) {
 	_, err := helloHandler.Invoke(ctx, req)
 
 	if err == nil {
-		t.Fatalf("\nShould have error")
+		t.Fatalf("Should have error")
 	}
 }
 
@@ -489,6 +489,6 @@ func TestInvokeWithWrapperErrorEncoderReturnsError(t *testing.T) {
 	_, err := helloHandler.Invoke(ctx, req)
 
 	if err == nil {
-		t.Fatalf("\nShould have error")
+		t.Fatalf("Should have error")
 	}
 }
