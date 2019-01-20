@@ -29,25 +29,29 @@ func TestInvokeHappyPath(t *testing.T) {
 		encodeResponse,
 		ServerErrorLogger(log.NewNopLogger()),
 		ServerBefore(func(
-			ctx context.Context, payload []byte,
+			ctx context.Context,
+			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
 		ServerBefore(func(
-			ctx context.Context, payload []byte,
+			ctx context.Context,
+			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
 		ServerAfter(func(
-			ctx context.Context, response interface{},
+			ctx context.Context,
+			response interface{},
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyAfterOne, "af1")
 			return ctx
 		}),
 		ServerAfter(func(
-			ctx context.Context, response interface{},
+			ctx context.Context,
+			response interface{},
 		) context.Context {
 			if _, ok := ctx.Value(KeyAfterOne).(string); !ok {
 				t.Fatalf("\nValue was not set properly during multi ServerAfter")
@@ -55,7 +59,9 @@ func TestInvokeHappyPath(t *testing.T) {
 			return ctx
 		}),
 		ServerFinalizer(func(
-			_ context.Context, resp []byte, _ error,
+			_ context.Context,
+			resp []byte,
+			_ error,
 		) {
 			apigwResp := events.APIGatewayProxyResponse{}
 			err := json.Unmarshal(resp, &apigwResp)
@@ -114,7 +120,8 @@ func TestInvokeFailDecode(t *testing.T) {
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
 		ServerErrorEncoder(func(
-			ctx context.Context, err error,
+			ctx context.Context,
+			err error,
 		) ([]byte, error) {
 			apigwResp := events.APIGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
@@ -149,19 +156,22 @@ func TestInvokeFailEndpoint(t *testing.T) {
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
 		ServerBefore(func(
-			ctx context.Context, payload []byte,
+			ctx context.Context,
+			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
 		ServerBefore(func(
-			ctx context.Context, payload []byte,
+			ctx context.Context,
+			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
 		ServerErrorEncoder(func(
-			ctx context.Context, err error,
+			ctx context.Context,
+			err error,
 		) ([]byte, error) {
 			apigwResp := events.APIGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
@@ -196,25 +206,29 @@ func TestInvokeFailEncode(t *testing.T) {
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
 		ServerBefore(func(
-			ctx context.Context, payload []byte,
+			ctx context.Context,
+			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
 		ServerBefore(func(
-			ctx context.Context, payload []byte,
+			ctx context.Context,
+			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
 		ServerAfter(func(
-			ctx context.Context, response interface{},
+			ctx context.Context,
+			response interface{},
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyEncMode, "fail_encode")
 			return ctx
 		}),
 		ServerErrorEncoder(func(
-			ctx context.Context, err error,
+			ctx context.Context,
+			err error,
 		) ([]byte, error) {
 			// convert error into proper APIGateway response.
 			apigwResp := events.APIGatewayProxyResponse{}

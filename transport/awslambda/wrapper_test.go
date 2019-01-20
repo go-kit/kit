@@ -15,14 +15,16 @@ func TestInvokeWithWrapperHappyPath(t *testing.T) {
 	helloHandler := NewServer(
 		makeTest01HelloEndpoint(svc),
 		DecodeRequestWrapper(func(
-			_ context.Context, apigwReq events.APIGatewayProxyRequest,
+			_ context.Context,
+			apigwReq events.APIGatewayProxyRequest,
 		) (helloRequest, error) {
 			request := helloRequest{}
 			err := json.Unmarshal([]byte(apigwReq.Body), &request)
 			return request, err
 		}),
 		EncodeResponseWrapper(func(
-			_ context.Context, response helloResponse,
+			_ context.Context,
+			response helloResponse,
 		) (apigwResp events.APIGatewayProxyResponse, err error) {
 			respByte, err := json.Marshal(response)
 			if err != nil {
@@ -70,14 +72,16 @@ func TestInvokeWithWrapperErrorEncoder(t *testing.T) {
 	helloHandler := NewServer(
 		makeTest01HelloEndpoint(svc),
 		DecodeRequestWrapper(func(
-			_ context.Context, apigwReq events.APIGatewayProxyRequest,
+			_ context.Context,
+			apigwReq events.APIGatewayProxyRequest,
 		) (helloRequest, error) {
 			request := helloRequest{}
 			err := json.Unmarshal([]byte(apigwReq.Body), &request)
 			return request, err
 		}),
 		EncodeResponseWrapper(func(
-			_ context.Context, response helloResponse,
+			_ context.Context,
+			response helloResponse,
 		) (apigwResp events.APIGatewayProxyResponse, err error) {
 			respByte, err := json.Marshal(response)
 			if err != nil {
@@ -89,7 +93,8 @@ func TestInvokeWithWrapperErrorEncoder(t *testing.T) {
 			return apigwResp, err
 		}),
 		ServerErrorEncoder(ErrorEncoderWrapper(func(
-			_ context.Context, err error,
+			_ context.Context,
+			err error,
 		) (apigwResp events.APIGatewayProxyResponse, returnErr error) {
 			apigwResp.Body = `{"error":"yes"}`
 			apigwResp.StatusCode = 500
@@ -117,7 +122,8 @@ func TestInvokeWithWrapperErrorEncoder(t *testing.T) {
 func TestInvalidDecodeRequestWrapper(t *testing.T) {
 	svc := serviceTest01{}
 	validEncodeResponse := EncodeResponseWrapper(func(
-		_ context.Context, response helloResponse,
+		_ context.Context,
+		response helloResponse,
 	) (apigwResp events.APIGatewayProxyResponse, err error) {
 		respByte, err := json.Marshal(response)
 		if err != nil {
@@ -151,7 +157,8 @@ func TestInvalidDecodeRequestWrapper(t *testing.T) {
 		},
 		{
 			decoder: func(
-				ctx context.Context, req events.APIGatewayProxyRequest,
+				ctx context.Context,
+				req events.APIGatewayProxyRequest,
 			) {
 			},
 			expectedErrMsg: "decoder must return two values",
@@ -195,7 +202,8 @@ func TestInvalidDecodeRequestWrapper(t *testing.T) {
 func TestInvalidEncodeResponseWrapper(t *testing.T) {
 	svc := serviceTest01{}
 	validDecoder := DecodeRequestWrapper(func(
-		_ context.Context, apigwReq events.APIGatewayProxyRequest,
+		_ context.Context,
+		apigwReq events.APIGatewayProxyRequest,
 	) (helloRequest, error) {
 		request := helloRequest{}
 		err := json.Unmarshal([]byte(apigwReq.Body), &request)
@@ -231,7 +239,8 @@ func TestInvalidEncodeResponseWrapper(t *testing.T) {
 		},
 		{
 			encoder: func(
-				ctx context.Context, response helloResponse,
+				ctx context.Context,
+				response helloResponse,
 			) (apigwResp events.APIGatewayProxyResponse, s string) {
 				respByte, err := json.Marshal(response)
 				if err != nil {
@@ -274,14 +283,16 @@ func TestInvalidEncodeResponseWrapper(t *testing.T) {
 func TestInvalidErrorEncoderWrapper(t *testing.T) {
 	svc := serviceTest01{}
 	validDecoder := DecodeRequestWrapper(func(
-		_ context.Context, apigwReq events.APIGatewayProxyRequest,
+		_ context.Context,
+		apigwReq events.APIGatewayProxyRequest,
 	) (helloRequest, error) {
 		request := helloRequest{}
 		err := json.Unmarshal([]byte(apigwReq.Body), &request)
 		return request, err
 	})
 	validEncoder := EncodeResponseWrapper(func(
-		_ context.Context, response helloResponse,
+		_ context.Context,
+		response helloResponse,
 	) (apigwResp events.APIGatewayProxyResponse, err error) {
 		respByte, err := json.Marshal(response)
 		if err != nil {
@@ -315,21 +326,24 @@ func TestInvalidErrorEncoderWrapper(t *testing.T) {
 		},
 		{
 			errorEncoder: func(
-				ctx context.Context, b string,
+				ctx context.Context,
+				b string,
 			) {
 			},
 			expectedErrMsg: "errorEncoder takes two arguments, but the second is not error. got string",
 		},
 		{
 			errorEncoder: func(
-				ctx context.Context, err error,
+				ctx context.Context,
+				err error,
 			) {
 			},
 			expectedErrMsg: "errorEncoder must return two values",
 		},
 		{
 			errorEncoder: func(
-				ctx context.Context, err error,
+				ctx context.Context,
+				err error,
 			) (apigwResp events.APIGatewayProxyResponse, s string) {
 				apigwResp.Body = `{"error":"yes"}`
 				apigwResp.StatusCode = 500
@@ -371,14 +385,16 @@ func TestWrapperInvalidPayloadFormat(t *testing.T) {
 	helloHandler := NewServer(
 		makeTest01HelloEndpoint(svc),
 		DecodeRequestWrapper(func(
-			_ context.Context, apigwReq events.APIGatewayProxyRequest,
+			_ context.Context,
+			apigwReq events.APIGatewayProxyRequest,
 		) (helloRequest, error) {
 			request := helloRequest{}
 			err := json.Unmarshal([]byte(apigwReq.Body), &request)
 			return request, err
 		}),
 		EncodeResponseWrapper(func(
-			_ context.Context, response helloResponse,
+			_ context.Context,
+			response helloResponse,
 		) (apigwResp events.APIGatewayProxyResponse, err error) {
 			respByte, err := json.Marshal(response)
 			if err != nil {
@@ -406,14 +422,16 @@ func TestWrapperErrorInEncodeResponse(t *testing.T) {
 	helloHandler := NewServer(
 		makeTest01HelloEndpoint(svc),
 		DecodeRequestWrapper(func(
-			_ context.Context, apigwReq events.APIGatewayProxyRequest,
+			_ context.Context,
+			apigwReq events.APIGatewayProxyRequest,
 		) (helloRequest, error) {
 			request := helloRequest{}
 			err := json.Unmarshal([]byte(apigwReq.Body), &request)
 			return request, err
 		}),
 		EncodeResponseWrapper(func(
-			_ context.Context, response helloResponse,
+			_ context.Context,
+			response helloResponse,
 		) (apigwResp events.APIGatewayProxyResponse, err error) {
 			return apigwResp, fmt.Errorf("error")
 		}),
@@ -436,14 +454,16 @@ func TestInvokeWithWrapperErrorEncoderReturnsError(t *testing.T) {
 	helloHandler := NewServer(
 		makeTest01HelloEndpoint(svc),
 		DecodeRequestWrapper(func(
-			_ context.Context, apigwReq events.APIGatewayProxyRequest,
+			_ context.Context,
+			apigwReq events.APIGatewayProxyRequest,
 		) (helloRequest, error) {
 			request := helloRequest{}
 			err := json.Unmarshal([]byte(apigwReq.Body), &request)
 			return request, err
 		}),
 		EncodeResponseWrapper(func(
-			_ context.Context, response helloResponse,
+			_ context.Context,
+			response helloResponse,
 		) (apigwResp events.APIGatewayProxyResponse, err error) {
 			respByte, err := json.Marshal(response)
 			if err != nil {
@@ -455,7 +475,8 @@ func TestInvokeWithWrapperErrorEncoderReturnsError(t *testing.T) {
 			return apigwResp, err
 		}),
 		ServerErrorEncoder(ErrorEncoderWrapper(func(
-			_ context.Context, err error,
+			_ context.Context,
+			err error,
 		) (apigwResp events.APIGatewayProxyResponse, returnErr error) {
 			return apigwResp, fmt.Errorf("error")
 		})),
