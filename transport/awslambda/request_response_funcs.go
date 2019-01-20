@@ -16,6 +16,6 @@ type ServerRequestFunc func(ctx context.Context, payload []byte) context.Context
 // but prior to returning a response.
 type ServerResponseFunc func(ctx context.Context, response interface{}) context.Context
 
-// ServerFinalizerFunc is executed at the end of Invocation.
+// ServerFinalizerFunc is executed at the end of Invoke.
 // This can be used for logging purposes.
 type ServerFinalizerFunc func(ctx context.Context, resp []byte, err error)
