@@ -22,10 +22,6 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 		option(&cfg)
 	}
 
-	if cfg.Sampler == nil {
-		cfg.Sampler = trace.AlwaysSample()
-	}
-
 	clientBefore := kitgrpc.ClientBefore(
 		func(ctx context.Context, md *metadata.MD) context.Context {
 			var name string
@@ -77,10 +73,6 @@ func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
 
 	for _, option := range options {
 		option(&cfg)
-	}
-
-	if cfg.Sampler == nil {
-		cfg.Sampler = trace.AlwaysSample()
 	}
 
 	serverBefore := kitgrpc.ServerBefore(
