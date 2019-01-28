@@ -98,15 +98,13 @@ func (h *Handler) Invoke(
 	request, err := h.dec(ctx, payload)
 	if err != nil {
 		h.logger.Log("err", err)
-		resp, err = h.errorEncoder(ctx, err)
-		return
+		return h.errorEncoder(ctx, err)
 	}
 
 	response, err := h.e(ctx, request)
 	if err != nil {
 		h.logger.Log("err", err)
-		resp, err = h.errorEncoder(ctx, err)
-		return
+		return h.errorEncoder(ctx, err)
 	}
 
 	for _, f := range h.after {
@@ -115,8 +113,7 @@ func (h *Handler) Invoke(
 
 	if resp, err = h.enc(ctx, response); err != nil {
 		h.logger.Log("err", err)
-		resp, err = h.errorEncoder(ctx, err)
-		return
+		return h.errorEncoder(ctx, err)
 	}
 
 	return resp, err
