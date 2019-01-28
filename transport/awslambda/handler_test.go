@@ -23,42 +23,42 @@ const (
 func TestInvokeHappyPath(t *testing.T) {
 	svc := serviceTest01{}
 
-	helloHandler := NewServer(
+	helloHandler := NewHandler(
 		makeTest01HelloEndpoint(svc),
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
-		ServerErrorLogger(log.NewNopLogger()),
-		ServerBefore(func(
+		HandlerErrorLogger(log.NewNopLogger()),
+		HandlerBefore(func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
-		ServerBefore(func(
+		HandlerBefore(func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
-		ServerAfter(func(
+		HandlerAfter(func(
 			ctx context.Context,
 			response interface{},
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyAfterOne, "af1")
 			return ctx
 		}),
-		ServerAfter(func(
+		HandlerAfter(func(
 			ctx context.Context,
 			response interface{},
 		) context.Context {
 			if _, ok := ctx.Value(KeyAfterOne).(string); !ok {
-				t.Fatalf("Value was not set properly during multi ServerAfter")
+				t.Fatalf("Value was not set properly during multi HandlerAfter")
 			}
 			return ctx
 		}),
-		ServerFinalizer(func(
+		HandlerFinalizer(func(
 			_ context.Context,
 			resp []byte,
 			_ error,
@@ -115,11 +115,11 @@ func TestInvokeHappyPath(t *testing.T) {
 func TestInvokeFailDecode(t *testing.T) {
 	svc := serviceTest01{}
 
-	helloHandler := NewServer(
+	helloHandler := NewHandler(
 		makeTest01HelloEndpoint(svc),
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
-		ServerErrorEncoder(func(
+		HandlerErrorEncoder(func(
 			ctx context.Context,
 			err error,
 		) ([]byte, error) {
@@ -151,25 +151,25 @@ func TestInvokeFailDecode(t *testing.T) {
 func TestInvokeFailEndpoint(t *testing.T) {
 	svc := serviceTest01{}
 
-	helloHandler := NewServer(
+	helloHandler := NewHandler(
 		makeTest01FailEndpoint(svc),
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
-		ServerBefore(func(
+		HandlerBefore(func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
-		ServerBefore(func(
+		HandlerBefore(func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
-		ServerErrorEncoder(func(
+		HandlerErrorEncoder(func(
 			ctx context.Context,
 			err error,
 		) ([]byte, error) {
@@ -201,32 +201,32 @@ func TestInvokeFailEndpoint(t *testing.T) {
 func TestInvokeFailEncode(t *testing.T) {
 	svc := serviceTest01{}
 
-	helloHandler := NewServer(
+	helloHandler := NewHandler(
 		makeTest01HelloEndpoint(svc),
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
-		ServerBefore(func(
+		HandlerBefore(func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
-		ServerBefore(func(
+		HandlerBefore(func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
-		ServerAfter(func(
+		HandlerAfter(func(
 			ctx context.Context,
 			response interface{},
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyEncMode, "fail_encode")
 			return ctx
 		}),
-		ServerErrorEncoder(func(
+		HandlerErrorEncoder(func(
 			ctx context.Context,
 			err error,
 		) ([]byte, error) {
@@ -274,13 +274,13 @@ func decodeHelloRequestWithTwoBefores(
 	valOne, ok := ctx.Value(KeyBeforeOne).(string)
 	if !ok {
 		return request, fmt.Errorf(
-			"Value was not set properly when multiple ServerBefores are used")
+			"Value was not set properly when multiple HandlerBefores are used")
 	}
 
 	valTwo, ok := ctx.Value(KeyBeforeTwo).(string)
 	if !ok {
 		return request, fmt.Errorf(
-			"Value was not set properly when multiple ServerBefores are used")
+			"Value was not set properly when multiple HandlerBefores are used")
 	}
 
 	request.Name += " " + valOne + " " + valTwo

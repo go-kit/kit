@@ -7,27 +7,27 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-// Server wraps an endpoint.
-type Server struct {
+// Handler wraps an endpoint.
+type Handler struct {
 	e            endpoint.Endpoint
 	dec          DecodeRequestFunc
 	enc          EncodeResponseFunc
-	before       []ServerRequestFunc
-	after        []ServerResponseFunc
+	before       []HandlerRequestFunc
+	after        []HandlerResponseFunc
 	errorEncoder ErrorEncoder
-	finalizer    []ServerFinalizerFunc
+	finalizer    []HandlerFinalizerFunc
 	logger       log.Logger
 }
 
-// NewServer constructs a new server, which implements
+// NewHandler constructs a new handler, which implements
 // the AWS lambda.Handler interface.
-func NewServer(
+func NewHandler(
 	e endpoint.Endpoint,
 	dec DecodeRequestFunc,
 	enc EncodeResponseFunc,
-	options ...ServerOption,
-) *Server {
-	s := &Server{
+	options ...HandlerOption,
+) *Handler {
+	s := &Handler{
 		e:            e,
 		dec:          dec,
 		enc:          enc,
@@ -40,36 +40,36 @@ func NewServer(
 	return s
 }
 
-// ServerOption sets an optional parameter for servers.
-type ServerOption func(*Server)
+// HandlerOption sets an optional parameter for handlers.
+type HandlerOption func(*Handler)
 
-// ServerBefore functions are executed on the payload byte,
+// HandlerBefore functions are executed on the payload byte,
 // before the request is decoded.
-func ServerBefore(before ...ServerRequestFunc) ServerOption {
-	return func(s *Server) { s.before = append(s.before, before...) }
+func HandlerBefore(before ...HandlerRequestFunc) HandlerOption {
+	return func(s *Handler) { s.before = append(s.before, before...) }
 }
 
-// ServerAfter functions are only executed after invoking the endpoint
+// HandlerAfter functions are only executed after invoking the endpoint
 // but prior to returning a response.
-func ServerAfter(after ...ServerResponseFunc) ServerOption {
-	return func(s *Server) { s.after = append(s.after, after...) }
+func HandlerAfter(after ...HandlerResponseFunc) HandlerOption {
+	return func(s *Handler) { s.after = append(s.after, after...) }
 }
 
-// ServerErrorLogger is used to log non-terminal errors.
+// HandlerErrorLogger is used to log non-terminal errors.
 // By default, no errors are logged.
-func ServerErrorLogger(logger log.Logger) ServerOption {
-	return func(s *Server) { s.logger = logger }
+func HandlerErrorLogger(logger log.Logger) HandlerOption {
+	return func(s *Handler) { s.logger = logger }
 }
 
-// ServerErrorEncoder is used to encode errors.
-func ServerErrorEncoder(ee ErrorEncoder) ServerOption {
-	return func(s *Server) { s.errorEncoder = ee }
+// HandlerErrorEncoder is used to encode errors.
+func HandlerErrorEncoder(ee ErrorEncoder) HandlerOption {
+	return func(s *Handler) { s.errorEncoder = ee }
 }
 
-// ServerFinalizer sets finalizer which are called at the end of
+// HandlerFinalizer sets finalizer which are called at the end of
 // request. By default no finalizer is registered.
-func ServerFinalizer(f ...ServerFinalizerFunc) ServerOption {
-	return func(s *Server) { s.finalizer = append(s.finalizer, f...) }
+func HandlerFinalizer(f ...HandlerFinalizerFunc) HandlerOption {
+	return func(s *Handler) { s.finalizer = append(s.finalizer, f...) }
 }
 
 // DefaultErrorEncoder defines the default behavior of encoding an error response,
@@ -79,7 +79,7 @@ func DefaultErrorEncoder(ctx context.Context, err error) ([]byte, error) {
 }
 
 // Invoke represents implementation of the AWS lambda.Handler interface.
-func (s *Server) Invoke(
+func (s *Handler) Invoke(
 	ctx context.Context,
 	payload []byte,
 ) (resp []byte, err error) {

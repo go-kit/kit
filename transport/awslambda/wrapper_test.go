@@ -12,7 +12,7 @@ import (
 func TestInvokeWithWrapperHappyPath(t *testing.T) {
 	svc := serviceTest01{}
 
-	helloHandler := NewServer(
+	helloHandler := NewHandler(
 		makeTest01HelloEndpoint(svc),
 		DecodeRequestWrapper(func(
 			_ context.Context,
@@ -69,7 +69,7 @@ func TestInvokeWithWrapperHappyPath(t *testing.T) {
 func TestInvokeWithWrapperErrorEncoder(t *testing.T) {
 	svc := serviceTest01{}
 
-	helloHandler := NewServer(
+	helloHandler := NewHandler(
 		makeTest01HelloEndpoint(svc),
 		DecodeRequestWrapper(func(
 			_ context.Context,
@@ -92,7 +92,7 @@ func TestInvokeWithWrapperErrorEncoder(t *testing.T) {
 			apigwResp.StatusCode = 200
 			return apigwResp, err
 		}),
-		ServerErrorEncoder(ErrorEncoderWrapper(func(
+		HandlerErrorEncoder(ErrorEncoderWrapper(func(
 			_ context.Context,
 			err error,
 		) (apigwResp events.APIGatewayProxyResponse, returnErr error) {
@@ -175,7 +175,7 @@ func TestInvalidDecodeRequestWrapper(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		helloHandler := NewServer(
+		helloHandler := NewHandler(
 			makeTest01HelloEndpoint(svc),
 			DecodeRequestWrapper(tc.decoder),
 			validEncodeResponse,
@@ -256,7 +256,7 @@ func TestInvalidEncodeResponseWrapper(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		helloHandler := NewServer(
+		helloHandler := NewHandler(
 			makeTest01HelloEndpoint(svc),
 			validDecoder,
 			EncodeResponseWrapper(tc.encoder),
@@ -354,11 +354,11 @@ func TestInvalidErrorEncoderWrapper(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		helloHandler := NewServer(
+		helloHandler := NewHandler(
 			makeTest01HelloEndpoint(svc),
 			validDecoder,
 			validEncoder,
-			ServerErrorEncoder(ErrorEncoderWrapper(tc.errorEncoder)),
+			HandlerErrorEncoder(ErrorEncoderWrapper(tc.errorEncoder)),
 		)
 
 		ctx := context.Background()
@@ -382,7 +382,7 @@ func TestInvalidErrorEncoderWrapper(t *testing.T) {
 func TestWrapperInvalidPayloadFormat(t *testing.T) {
 	svc := serviceTest01{}
 
-	helloHandler := NewServer(
+	helloHandler := NewHandler(
 		makeTest01HelloEndpoint(svc),
 		DecodeRequestWrapper(func(
 			_ context.Context,
@@ -419,7 +419,7 @@ func TestWrapperInvalidPayloadFormat(t *testing.T) {
 func TestWrapperErrorInEncodeResponse(t *testing.T) {
 	svc := serviceTest01{}
 
-	helloHandler := NewServer(
+	helloHandler := NewHandler(
 		makeTest01HelloEndpoint(svc),
 		DecodeRequestWrapper(func(
 			_ context.Context,
@@ -451,7 +451,7 @@ func TestWrapperErrorInEncodeResponse(t *testing.T) {
 func TestInvokeWithWrapperErrorEncoderReturnsError(t *testing.T) {
 	svc := serviceTest01{}
 
-	helloHandler := NewServer(
+	helloHandler := NewHandler(
 		makeTest01HelloEndpoint(svc),
 		DecodeRequestWrapper(func(
 			_ context.Context,
@@ -474,7 +474,7 @@ func TestInvokeWithWrapperErrorEncoderReturnsError(t *testing.T) {
 			apigwResp.StatusCode = 200
 			return apigwResp, err
 		}),
-		ServerErrorEncoder(ErrorEncoderWrapper(func(
+		HandlerErrorEncoder(ErrorEncoderWrapper(func(
 			_ context.Context,
 			err error,
 		) (apigwResp events.APIGatewayProxyResponse, returnErr error) {
