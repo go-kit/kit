@@ -28,10 +28,11 @@ func NewServer(
 	options ...ServerOption,
 ) *Server {
 	s := &Server{
-		e:      e,
-		dec:    dec,
-		enc:    enc,
-		logger: log.NewNopLogger(),
+		e:            e,
+		dec:          dec,
+		enc:          enc,
+		logger:       log.NewNopLogger(),
+		errorEncoder: DefaultErrorEncoder,
 	}
 	for _, option := range options {
 		option(s)
@@ -71,6 +72,12 @@ func ServerFinalizer(f ...ServerFinalizerFunc) ServerOption {
 	return func(s *Server) { s.finalizer = append(s.finalizer, f...) }
 }
 
+// DefaultErrorEncoder defines the default behavior of encoding an error response,
+// where it returns nil, and the error itself.
+func DefaultErrorEncoder(ctx context.Context, err error) ([]byte, error) {
+	return nil, err
+}
+
 // Invoke represents implementation of the AWS lambda.Handler interface.
 func (s *Server) Invoke(
 	ctx context.Context,
@@ -91,18 +98,14 @@ func (s *Server) Invoke(
 	request, err := s.dec(ctx, payload)
 	if err != nil {
 		s.logger.Log("err", err)
-		if s.errorEncoder != nil {
-			resp, err = s.errorEncoder(ctx, err)
-		}
+		resp, err = s.errorEncoder(ctx, err)
 		return
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
 		s.logger.Log("err", err)
-		if s.errorEncoder != nil {
-			resp, err = s.errorEncoder(ctx, err)
-		}
+		resp, err = s.errorEncoder(ctx, err)
 		return
 	}
 
@@ -112,9 +115,7 @@ func (s *Server) Invoke(
 
 	if resp, err = s.enc(ctx, response); err != nil {
 		s.logger.Log("err", err)
-		if s.errorEncoder != nil {
-			resp, err = s.errorEncoder(ctx, err)
-		}
+		resp, err = s.errorEncoder(ctx, err)
 		return
 	}
 
