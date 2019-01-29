@@ -61,7 +61,7 @@ func HandlerErrorLogger(logger log.Logger) HandlerOption {
 	return func(h *Handler) { h.logger = logger }
 }
 
-// HandlerErrorEncoder is used to encode errorh.
+// HandlerErrorEncoder is used to encode errors.
 func HandlerErrorEncoder(ee ErrorEncoder) HandlerOption {
 	return func(h *Handler) { h.errorEncoder = ee }
 }
