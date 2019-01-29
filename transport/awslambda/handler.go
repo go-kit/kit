@@ -55,7 +55,7 @@ func HandlerAfter(after ...HandlerResponseFunc) HandlerOption {
 	return func(h *Handler) { h.after = append(h.after, after...) }
 }
 
-// HandlerErrorLogger is used to log non-terminal errorh.
+// HandlerErrorLogger is used to log non-terminal errors.
 // By default, no errors are logged.
 func HandlerErrorLogger(logger log.Logger) HandlerOption {
 	return func(h *Handler) { h.logger = logger }
