@@ -40,7 +40,7 @@ func NewHandler(
 	return h
 }
 
-// HandlerOption sets an optional parameter for handlerh.
+// HandlerOption sets an optional parameter for handlers.
 type HandlerOption func(*Handler)
 
 // HandlerBefore functions are executed on the payload byte,
