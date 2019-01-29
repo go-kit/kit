@@ -20,6 +20,18 @@ const (
 	KeyEncMode   key = iota
 )
 
+func TestDefaultErrorEncoder(t *testing.T) {
+	ctx := context.Background()
+	rootErr := fmt.Errorf("root")
+	b, err := DefaultErrorEncoder(ctx, rootErr)
+	if b != nil {
+		t.Fatalf("DefaultErrorEncoder should return nil as []byte")
+	}
+	if err != rootErr {
+		t.Fatalf("DefaultErrorEncoder expects return back the given error.")
+	}
+}
+
 func TestInvokeHappyPath(t *testing.T) {
 	svc := serviceTest01{}
 
