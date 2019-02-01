@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"strings"
 	"unicode"
 )
@@ -204,5 +205,5 @@ func importFor(is *ast.ImportSpec) *ast.GenDecl {
 }
 
 func importSpec(path string) *ast.ImportSpec {
-	return &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: `"` + path + `"`}}
+	return &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: `"` + filepath.ToSlash(path) + `"`}}
 }
