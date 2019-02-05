@@ -100,7 +100,7 @@ func extractAndPrintMessage(expected []string, msg string) error {
 		re := regexp.MustCompile(pattern)
 		match := re.FindStringSubmatch(msg)
 		if len(match) != 2 {
-			return fmt.Errorf("Pattern not found! {%s} [%s]: %v\n", pattern, msg, match)
+			return fmt.Errorf("pattern not found! {%s} [%s]: %v\n", pattern, msg, match)
 		}
 		fmt.Println(match[1])
 	}

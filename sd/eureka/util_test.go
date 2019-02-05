@@ -118,7 +118,7 @@ func (c *testConnection) GetApp(name string) (*fargo.Application, error) {
 	}
 	instances := c.instancesForApplication(name)
 	if len(instances) == 0 {
-		return nil, fmt.Errorf("Application not found for name=%s", name)
+		return nil, fmt.Errorf("application not found for name=%s", name)
 	}
 	return &fargo.Application{Name: name, Instances: instances}, nil
 }
