@@ -125,7 +125,7 @@ func fetchFuncDecl(name string) *ast.FuncDecl {
 			return f
 		}
 	}
-	panic(fmt.Errorf("No function called %q in 'templates/full.go'", name))
+	panic(fmt.Errorf("no function called %q in 'templates/full.go'", name))
 }
 
 func id(name string) *ast.Ident {
