@@ -36,6 +36,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.0 // indirect
 	github.com/hashicorp/serf v0.8.2 // indirect
 	github.com/hudl/fargo v1.2.0
+	github.com/influxdata/influxdb1-client v0.0.0-20190124185755-16c852ea613f
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
 	github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1 // indirect
