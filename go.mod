@@ -24,7 +24,7 @@ require (
 	github.com/go-stack/stack v1.8.0
 	github.com/gogo/protobuf v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
-	github.com/golang/protobuf v1.2.1-0.20181127190454-8d0c54c12466
+	github.com/golang/protobuf v1.2.1-0.20190109072247-347cf4a86c1c
 	github.com/google/uuid v1.1.0 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/gorilla/mux v1.7.0
@@ -72,7 +72,6 @@ require (
 	github.com/streadway/amqp v0.0.0-20190214183023-884228600bc9
 	github.com/streadway/handy v0.0.0-20190108123426-d5acb3125c2a
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
-	github.com/ugorji/go/codec v0.0.0-20190204201341-e444a5086c43 // indirect
 	go.etcd.io/etcd v0.0.0-20190215181705-784daa04988c
 	go.opencensus.io v0.19.0
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
