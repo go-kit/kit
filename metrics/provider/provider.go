@@ -14,7 +14,7 @@
 //    case "statsd":
 //        s := statsd.New(...)
 //        t := time.NewTicker(5*time.Second)
-//        go s.SendLoop(t.C, "tcp", "statsd.local:8125")
+//        go s.SendLoop(ctx, t.C, "tcp", "statsd.local:8125")
 //        latency = s.NewHistogram(...)
 //        requests = s.NewCounter(...)
 //    default:
