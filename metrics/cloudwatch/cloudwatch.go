@@ -1,8 +1,10 @@
 package cloudwatch
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -14,7 +16,6 @@ import (
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/generic"
 	"github.com/go-kit/kit/metrics/internal/lv"
-	"strconv"
 )
 
 const (
@@ -136,13 +137,18 @@ func (cw *CloudWatch) NewHistogram(name string) metrics.Histogram {
 }
 
 // WriteLoop is a helper method that invokes Send every time the passed
-// channel fires. This method blocks until the channel is closed, so clients
+// channel fires. This method blocks until ctx is canceled, so clients
 // probably want to run it in its own goroutine. For typical usage, create a
 // time.Ticker and pass its C channel to this method.
-func (cw *CloudWatch) WriteLoop(c <-chan time.Time) {
-	for range c {
-		if err := cw.Send(); err != nil {
-			cw.logger.Log("during", "Send", "err", err)
+func (cw *CloudWatch) WriteLoop(ctx context.Context, c <-chan time.Time) {
+	for {
+		select {
+		case <-c:
+			if err := cw.Send(); err != nil {
+				cw.logger.Log("during", "Send", "err", err)
+			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }
