@@ -1,15 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
+
+	"github.com/aryann/difflib"
 )
 
 var update = flag.Bool("update", false, "update golden files")
@@ -54,19 +55,13 @@ func TestProcess(t *testing.T) {
 				}
 
 				if !bytes.Equal(expected, actual) {
-					name := kind + filename
-					name = strings.Replace(name, "/", "-", -1)
-
-					errfile, err := ioutil.TempFile("", name)
-					if err != nil {
-						t.Fatal("opening tempfile for output", err)
+					results := difflib.Diff(splitLines(expected), splitLines(actual))
+					for _, result := range results {
+						if result.Delta == difflib.Common {
+							continue
+						}
+						t.Error(result)
 					}
-					io.WriteString(errfile, string(actual))
-
-					diffCmd := exec.Command("diff", outpath, errfile.Name())
-					diffOut, _ := diffCmd.Output()
-					t.Log(string(diffOut))
-					t.Errorf("Processing output didn't match %q. Results recorded in %q.", outpath, errfile.Name())
 				}
 			}
 
@@ -110,4 +105,13 @@ func TestTemplatesBuild(t *testing.T) {
 	if err != nil {
 		t.Fatal(err, "\n", string(out))
 	}
+}
+
+func splitLines(txt []byte) []string {
+	s := bufio.NewScanner(bytes.NewReader(txt))
+	var ss []string
+	for s.Scan() {
+		ss = append(ss, s.Text())
+	}
+	return ss
 }
