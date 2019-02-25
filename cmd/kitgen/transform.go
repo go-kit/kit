@@ -178,7 +178,7 @@ func addImport(root *ast.File, path string) {
 	for _, d := range root.Decls {
 		if imp, is := d.(*ast.GenDecl); is && imp.Tok == token.IMPORT {
 			for _, s := range imp.Specs {
-				if s.(*ast.ImportSpec).Path.Value == `"`+path+`"` {
+				if s.(*ast.ImportSpec).Path.Value == `"`+filepath.ToSlash(path)+`"` {
 					return // already have one
 					// xxx aliased imports?
 				}

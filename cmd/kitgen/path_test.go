@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -19,10 +20,17 @@ func TestImportPath(t *testing.T) {
 		})
 	}
 
-	testcase("/gopath/", "/gopath/src/somewhere", "somewhere")
-	testcase("/gopath", "/gopath/src/somewhere", "somewhere")
-	testcase("/gopath:/other", "/gopath/src/somewhere", "somewhere")
-	testcase("/other:/gopath/", "/gopath/src/somewhere", "somewhere")
+	if runtime.GOOS == "windows" {
+		testcase("c:\\gopath\\", "c:\\gopath\\src\\somewhere", "somewhere")
+		testcase("c:\\gopath", "c:\\gopath\\src\\somewhere", "somewhere")
+		testcase("c:\\gopath;\\other", "c:\\gopath\\src\\somewhere", "somewhere")
+		testcase("c:\\other;c:\\gopath\\", "c:\\gopath\\src\\somewhere", "somewhere")
+	} else {
+		testcase("/gopath/", "/gopath/src/somewhere", "somewhere")
+		testcase("/gopath", "/gopath/src/somewhere", "somewhere")
+		testcase("/gopath:/other", "/gopath/src/somewhere", "somewhere")
+		testcase("/other:/gopath/", "/gopath/src/somewhere", "somewhere")
+	}
 }
 
 func TestImportPathSadpath(t *testing.T) {
@@ -37,7 +45,10 @@ func TestImportPathSadpath(t *testing.T) {
 			}
 		})
 	}
-
-	testcase("", "/gopath/src/somewhere", "is not in")
+	if runtime.GOOS == "windows" {
+		testcase("", "c:\\gopath\\src\\somewhere", "is not in")
+	} else {
+		testcase("", "/gopath/src/somewhere", "is not in")
+	}
 	testcase("", "./somewhere", "not an absolute")
 }
