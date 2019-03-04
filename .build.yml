@@ -1,0 +1,14 @@
+image: debian/stable
+sources:
+    - https://github.com/go-kit/kit
+tasks:
+    - go_toolchain: |
+        wget https://dl.google.com/go/go1.12.linux-amd64.tar.gz
+        tar -C /usr/local -xzf go1.12.linux-amd64.tar.gz
+        go env
+    - placement: |
+        mkdir -p $HOME/go/src/github.com/go-kit/kit
+        cp -r kit/* $HOME/go/src/github.com/go-kit/kit
+    - test: |
+        cd $HOME/go/src/github.com/go-kit/kit
+        go test -race -v ./...
