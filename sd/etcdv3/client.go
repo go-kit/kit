@@ -204,6 +204,18 @@ func (c *client) Register(s Service) error {
 		return err
 	}
 
+	// discard the keepalive response, make etcd library not to complain
+	// fix bug #799
+	go func() {
+		for {
+			select {
+			case <-c.hbch:
+			case <-c.ctx.Done():
+				return
+			}
+		}
+	}()
+
 	return nil
 }
 
