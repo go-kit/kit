@@ -209,7 +209,7 @@ func (c *client) Register(s Service) error {
 	go func() {
 		for {
 			select {
-			case r := <-client.hbch:
+			case r := <-c.hbch:
 				// avoid dead loop when channel was closed
 				if r == nil {
 					return
