@@ -224,3 +224,47 @@ func TestSuccessfulPublisher(t *testing.T) {
 		t.Errorf("want %s, have %s", want, have)
 	}
 }
+
+// TestSendAndForgetPublisher tests that the SendAndForgetDeliverer is working
+func TestSendAndForgetPublisher(t *testing.T) {
+	ch := &mockChannel{
+		f:          nullFunc,
+		c:          make(chan amqp.Publishing, 1),
+		deliveries: []amqp.Delivery{}, // no reply from mock subscriber
+	}
+	q := &amqp.Queue{Name: "some queue"}
+
+	pub := amqptransport.NewPublisher(
+		ch,
+		q,
+		func(context.Context, *amqp.Publishing, interface{}) error { return nil },
+		func(context.Context, *amqp.Delivery) (response interface{}, err error) {
+			return struct{}{}, nil
+		},
+		amqptransport.PublisherDeliverer(amqptransport.SendAndForgetDeliverer),
+		amqptransport.PublisherTimeout(50*time.Millisecond),
+	)
+
+	var err error
+	errChan := make(chan error, 1)
+	finishChan := make(chan bool, 1)
+	go func() {
+		_, err := pub.Endpoint()(context.Background(), struct{}{})
+		if err != nil {
+			errChan <- err
+		} else {
+			finishChan <- true
+		}
+
+	}()
+
+	select {
+	case <-finishChan:
+		break
+	case err = <-errChan:
+		t.Errorf("unexpected error %s", err)
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timed out waiting for result")
+	}
+
+}
