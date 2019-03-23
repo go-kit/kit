@@ -160,3 +160,31 @@ func TestJSONLoggerConcurrency(t *testing.T) {
 	t.Parallel()
 	testConcurrency(t, log.NewJSONLogger(ioutil.Discard), 10000)
 }
+
+func TestJSONArrayWriter(t *testing.T) {
+	t.Parallel()
+
+	// Sub-events
+	jw := log.NewJSONArrayWriter()
+	children := log.NewJSONLogger(jw)
+	if err := children.Log("one", 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := children.Log("two", 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := children.Log("three", 3); err != nil {
+		t.Fatal(err)
+	}
+
+	// Parent logger
+	buf := &bytes.Buffer{}
+	parent := log.NewJSONLogger(buf)
+	if err := parent.Log("events", jw); err != nil {
+		t.Fatal(err)
+	}
+
+	if want, have := `{"events":[{"one":1},{"two":2},{"three":3}]}`+"\n", buf.String(); want != have {
+		t.Errorf("\nwant %#v\nhave %#v", want, have)
+	}
+}

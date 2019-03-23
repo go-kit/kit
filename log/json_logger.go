@@ -87,3 +87,28 @@ func safeError(err error) (s interface{}) {
 	s = err.Error()
 	return
 }
+
+type jsonArrayWriter struct {
+	events []json.RawMessage
+}
+
+// NewJSONArrayWriter returns an io.Writer that accumulates log events
+// in memory, so that you can emit them all as sub-events within a single
+// outer event, by passing the writer itself as a log value. This can
+// help to achieve the modern observability
+// recommendation to emit one very wide event per request.
+//
+// The accumulation happens by appending to a slice, so if you
+// need to guarantee goroutine-safe logging, wrap it with NewSyncWriter.
+func NewJSONArrayWriter() io.Writer {
+	return &jsonArrayWriter{[]json.RawMessage{}}
+}
+
+func (w *jsonArrayWriter) Write(p []byte) (int, error) {
+	w.events = append(w.events, json.RawMessage(append([]byte{}, p...)))
+	return len(p), nil
+}
+
+func (w *jsonArrayWriter) MarshalJSON() ([]byte, error) {
+	return json.Marshal(w.events)
+}
