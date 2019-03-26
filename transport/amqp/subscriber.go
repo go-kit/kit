@@ -12,13 +12,14 @@ import (
 
 // Subscriber wraps an endpoint and provides a handler for AMQP Delivery messages.
 type Subscriber struct {
-	e            endpoint.Endpoint
-	dec          DecodeRequestFunc
-	enc          EncodeResponseFunc
-	before       []RequestFunc
-	after        []SubscriberResponseFunc
-	errorEncoder ErrorEncoder
-	logger       log.Logger
+	e                 endpoint.Endpoint
+	dec               DecodeRequestFunc
+	enc               EncodeResponseFunc
+	before            []RequestFunc
+	after             []SubscriberResponseFunc
+	responsePublisher ResponsePublisher
+	errorEncoder      ErrorEncoder
+	logger            log.Logger
 }
 
 // NewSubscriber constructs a new subscriber, which provides a handler
@@ -30,11 +31,12 @@ func NewSubscriber(
 	options ...SubscriberOption,
 ) *Subscriber {
 	s := &Subscriber{
-		e:            e,
-		dec:          dec,
-		enc:          enc,
-		errorEncoder: DefaultErrorEncoder,
-		logger:       log.NewNopLogger(),
+		e:                 e,
+		dec:               dec,
+		enc:               enc,
+		responsePublisher: DefaultResponsePublisher,
+		errorEncoder:      DefaultErrorEncoder,
+		logger:            log.NewNopLogger(),
 	}
 	for _, option := range options {
 		option(s)
@@ -55,6 +57,13 @@ func SubscriberBefore(before ...RequestFunc) SubscriberOption {
 // endpoint is invoked, but before anything is published to the reply.
 func SubscriberAfter(after ...SubscriberResponseFunc) SubscriberOption {
 	return func(s *Subscriber) { s.after = append(s.after, after...) }
+}
+
+// SubscriberResponsePublisher is used by the subscriber to deliver response
+// objects to the original sender.
+// By default, the DefaultResponsePublisher is used.
+func SubscriberResponsePublisher(rp ResponsePublisher) SubscriberOption {
+	return func(s *Subscriber) { s.responsePublisher = rp }
 }
 
 // SubscriberErrorEncoder is used to encode errors to the subscriber reply
@@ -111,7 +120,7 @@ func (s Subscriber) ServeDelivery(ch Channel) func(deliv *amqp.Delivery) {
 			return
 		}
 
-		if err := s.publishResponse(ctx, deliv, ch, &pub); err != nil {
+		if err := s.responsePublisher(ctx, deliv, ch, &pub); err != nil {
 			s.logger.Log("err", err)
 			s.errorEncoder(ctx, err, deliv, ch, &pub)
 			return
@@ -120,7 +129,45 @@ func (s Subscriber) ServeDelivery(ch Channel) func(deliv *amqp.Delivery) {
 
 }
 
-func (s Subscriber) publishResponse(
+// EncodeJSONResponse marshals the response as JSON as part of the
+// payload of the AMQP Publishing object.
+func EncodeJSONResponse(
+	ctx context.Context,
+	pub *amqp.Publishing,
+	response interface{},
+) error {
+	b, err := json.Marshal(response)
+	if err != nil {
+		return err
+	}
+	pub.Body = b
+	return nil
+}
+
+// EncodeNopResponse is a response function that does nothing.
+func EncodeNopResponse(
+	ctx context.Context,
+	pub *amqp.Publishing,
+	response interface{},
+) error {
+	return nil
+}
+
+// ResponsePublisher functions are executed by the subscriber to
+// publish response object to the original sender.
+// Please note that the word "publisher" does not refer
+// to the publisher of pub/sub.
+// Rather, publisher is merely a function that publishes, or sends responses.
+type ResponsePublisher func(
+	context.Context,
+	*amqp.Delivery,
+	Channel,
+	*amqp.Publishing,
+) error
+
+// DefaultResponsePublisher extracts the reply exchange and reply key
+// from the request, and sends the response object to that destination.
+func DefaultResponsePublisher(
 	ctx context.Context,
 	deliv *amqp.Delivery,
 	ch Channel,
@@ -145,26 +192,14 @@ func (s Subscriber) publishResponse(
 	)
 }
 
-// EncodeJSONResponse marshals the response as JSON as part of the
-// payload of the AMQP Publishing object.
-func EncodeJSONResponse(
+// NopResponsePublisher does not deliver a response to the original sender.
+// This response publisher is used when the user wants the subscriber to
+// receive and forget.
+func NopResponsePublisher(
 	ctx context.Context,
+	deliv *amqp.Delivery,
+	ch Channel,
 	pub *amqp.Publishing,
-	response interface{},
-) error {
-	b, err := json.Marshal(response)
-	if err != nil {
-		return err
-	}
-	pub.Body = b
-	return nil
-}
-
-// EncodeNopResponse is a response function that does nothing.
-func EncodeNopResponse(
-	ctx context.Context,
-	pub *amqp.Publishing,
-	response interface{},
 ) error {
 	return nil
 }

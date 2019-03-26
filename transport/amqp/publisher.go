@@ -15,13 +15,14 @@ const maxCorrelationIdLength = 255
 // Publisher wraps an AMQP channel and queue, and provides a method that
 // implements endpoint.Endpoint.
 type Publisher struct {
-	ch      Channel
-	q       *amqp.Queue
-	enc     EncodeRequestFunc
-	dec     DecodeResponseFunc
-	before  []RequestFunc
-	after   []PublisherResponseFunc
-	timeout time.Duration
+	ch        Channel
+	q         *amqp.Queue
+	enc       EncodeRequestFunc
+	dec       DecodeResponseFunc
+	before    []RequestFunc
+	after     []PublisherResponseFunc
+	deliverer Deliverer
+	timeout   time.Duration
 }
 
 // NewPublisher constructs a usable Publisher for a single remote method.
@@ -33,11 +34,12 @@ func NewPublisher(
 	options ...PublisherOption,
 ) *Publisher {
 	p := &Publisher{
-		ch:      ch,
-		q:       q,
-		enc:     enc,
-		dec:     dec,
-		timeout: 10 * time.Second,
+		ch:        ch,
+		q:         q,
+		enc:       enc,
+		dec:       dec,
+		deliverer: DefaultDeliverer,
+		timeout:   10 * time.Second,
 	}
 	for _, option := range options {
 		option(p)
@@ -59,6 +61,11 @@ func PublisherBefore(before ...RequestFunc) PublisherOption {
 // of the response and adding onto the context prior to decoding.
 func PublisherAfter(after ...PublisherResponseFunc) PublisherOption {
 	return func(p *Publisher) { p.after = append(p.after, after...) }
+}
+
+// PublisherDeliverer sets the deliverer function that the Publisher invokes.
+func PublisherDeliverer(deliverer Deliverer) PublisherOption {
+	return func(p *Publisher) { p.deliverer = deliverer }
 }
 
 // PublisherTimeout sets the available timeout for an AMQP request.
@@ -86,7 +93,7 @@ func (p Publisher) Endpoint() endpoint.Endpoint {
 			ctx = f(ctx, &pub, nil)
 		}
 
-		deliv, err := p.publishAndConsumeFirstMatchingResponse(ctx, &pub)
+		deliv, err := p.deliverer(ctx, p, &pub)
 		if err != nil {
 			return nil, err
 		}
@@ -103,11 +110,20 @@ func (p Publisher) Endpoint() endpoint.Endpoint {
 	}
 }
 
-// publishAndConsumeFirstMatchingResponse publishes the specified Publishing
+// Deliverer is invoked by the Publisher to publish the specified Publishing, and to
+// retrieve the appropriate response Delivery object.
+type Deliverer func(
+	context.Context,
+	Publisher,
+	*amqp.Publishing,
+) (*amqp.Delivery, error)
+
+// DefaultDeliverer is a deliverer that publishes the specified Publishing
 // and returns the first Delivery object with the matching correlationId.
 // If the context times out while waiting for a reply, an error will be returned.
-func (p Publisher) publishAndConsumeFirstMatchingResponse(
+func DefaultDeliverer(
 	ctx context.Context,
+	p Publisher,
 	pub *amqp.Publishing,
 ) (*amqp.Delivery, error) {
 	err := p.ch.Publish(
@@ -150,4 +166,23 @@ func (p Publisher) publishAndConsumeFirstMatchingResponse(
 		}
 	}
 
+}
+
+// SendAndForgetDeliverer delivers the supplied publishing and
+// returns a nil response.
+// When using this deliverer please ensure that the supplied DecodeResponseFunc and
+// PublisherResponseFunc are able to handle nil-type responses.
+func SendAndForgetDeliverer(
+	ctx context.Context,
+	p Publisher,
+	pub *amqp.Publishing,
+) (*amqp.Delivery, error) {
+	err := p.ch.Publish(
+		getPublishExchange(ctx),
+		getPublishKey(ctx),
+		false, //mandatory
+		false, //immediate
+		*pub,
+	)
+	return nil, err
 }
