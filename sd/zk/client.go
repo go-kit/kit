@@ -238,6 +238,9 @@ func (c *client) Register(s *Service) error {
 	if err := c.CreateParentNodes(path); err != nil {
 		return err
 	}
+	if path[len(path)-1] != '/' {
+		path += "/"
+	}
 	node, err := c.CreateProtectedEphemeralSequential(path, s.Data, c.acl)
 	if err != nil {
 		return err
