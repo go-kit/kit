@@ -46,6 +46,7 @@ func main() {
 		grpcAddr       = fs.String("grpc-addr", ":8082", "gRPC listen address")
 		thriftAddr     = fs.String("thrift-addr", ":8083", "Thrift listen address")
 		jsonRPCAddr    = fs.String("jsonrpc-addr", ":8084", "JSON RPC listen address")
+		wsAddr         = fs.String("ws-addr", ":8085", "Web Socket listen address")
 		thriftProtocol = fs.String("thrift-protocol", "binary", "binary, compact, json, simplejson")
 		thriftBuffer   = fs.Int("thrift-buffer", 0, "0 for unbuffered")
 		thriftFramed   = fs.Bool("thrift-framed", false, "true to enable framing")
@@ -168,6 +169,7 @@ func main() {
 		grpcServer     = addtransport.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
 		thriftServer   = addtransport.NewThriftServer(endpoints)
 		jsonrpcHandler = addtransport.NewJSONRPCHandler(endpoints, logger)
+		wsHandler      = addtransport.NewWSHandler(endpoints, logger)
 	)
 
 	// Now we're to the part of the func main where we want to start actually
@@ -285,6 +287,19 @@ func main() {
 			return http.Serve(httpListener, jsonrpcHandler)
 		}, func(error) {
 			httpListener.Close()
+		})
+	}
+	{
+		wsListener, err := net.Listen("tcp", *wsAddr)
+		if err != nil {
+			logger.Log("transport", "Web Sockets over HTTP", "during", "Listen", "err", err)
+			os.Exit(1)
+		}
+		g.Add(func() error {
+			logger.Log("transport", "Web Sockets over HTTP", "addr", *wsAddr)
+			return http.Serve(wsListener, wsHandler)
+		}, func(error) {
+			wsListener.Close()
 		})
 	}
 	{
