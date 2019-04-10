@@ -1,6 +1,6 @@
 # WebSocket
 
-[JSON RPC](http://www.ws.org) is "A light weight remote procedure call protocol". It allows for the creation of simple RPC-style APIs with human-readable messages that are front-end friendly.
+> [The WebSocket Protocol](https://tools.ietf.org/html/rfc6455) enables two-way communication between a client running untrusted code in a controlled environment to a remote host that has opted-in to communications from that code.  The security model used for this is the origin-based security model commonly used by web browsers.  The protocol consists of an opening handshake followed by basic message framing, layered over TCP.
 
 ## Using WebSocket with Go-Kit
 Using WebSocket and go-kit together is quite simple.
