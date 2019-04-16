@@ -19,7 +19,7 @@ type Subscriber struct {
 	after        []SubscriberResponseFunc
 	errorEncoder ErrorEncoder
 	finalizer    []SubscriberFinalizerFunc
-	logger       log.Logger
+	errorHandler ErrorHandler
 }
 
 // NewSubscriber constructs a new subscriber, which provides nats.MsgHandler and wraps
@@ -35,7 +35,7 @@ func NewSubscriber(
 		dec:          dec,
 		enc:          enc,
 		errorEncoder: DefaultErrorEncoder,
-		logger:       log.NewNopLogger(),
+		errorHandler: log.NewErrorHandler(log.NewNopLogger()),
 	}
 	for _, option := range options {
 		option(s)
@@ -70,8 +70,21 @@ func SubscriberErrorEncoder(ee ErrorEncoder) SubscriberOption {
 // are logged. This is intended as a diagnostic measure. Finer-grained control
 // of error handling, including logging in more detail, should be performed in a
 // custom SubscriberErrorEncoder which has access to the context.
+// Deprecated: Use SubscriberErrorHandler instead.
 func SubscriberErrorLogger(logger log.Logger) SubscriberOption {
-	return func(s *Subscriber) { s.logger = logger }
+	return func(s *Subscriber) {
+		if s.errorHandler == nil {
+			s.errorHandler = log.NewErrorHandler(logger)
+		}
+	}
+}
+
+// SubscriberErrorHandler is used to handle non-terminal errors. By default, no errors
+// are handled. This is intended as a diagnostic measure. Finer-grained control
+// of error handling, including logging in more detail, should be performed in a
+// custom SubscriberErrorEncoder which has access to the context.
+func SubscriberErrorHandler(errorHandler ErrorHandler) SubscriberOption {
+	return func(s *Subscriber) { s.errorHandler = errorHandler }
 }
 
 // SubscriberFinalizer is executed at the end of every request from a publisher through NATS.
@@ -100,7 +113,7 @@ func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 
 		request, err := s.dec(ctx, msg)
 		if err != nil {
-			s.logger.Log("err", err)
+			s.errorHandler.Handle(err)
 			if msg.Reply == "" {
 				return
 			}
@@ -110,7 +123,7 @@ func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 
 		response, err := s.e(ctx, request)
 		if err != nil {
-			s.logger.Log("err", err)
+			s.errorHandler.Handle(err)
 			if msg.Reply == "" {
 				return
 			}
@@ -127,7 +140,7 @@ func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 		}
 
 		if err := s.enc(ctx, msg.Reply, nc, response); err != nil {
-			s.logger.Log("err", err)
+			s.errorHandler.Handle(err)
 			s.errorEncoder(ctx, err, msg.Reply, nc)
 			return
 		}
