@@ -22,5 +22,5 @@ func NewLogErrorHandler(logger log.Logger) *LogErrorHandler {
 }
 
 func (h *LogErrorHandler) Handle(err error) {
-	_ = h.logger.Log("err", err)
+	h.logger.Log("err", err)
 }
