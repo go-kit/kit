@@ -30,13 +30,11 @@ require (
 	github.com/golang/protobuf v1.3.1
 	github.com/gorilla/mux v1.7.1
 	github.com/gorilla/websocket v1.4.0 // indirect
-	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
-	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.8.5 // indirect
 	github.com/hashicorp/consul/api v1.0.1
-	github.com/hudl/fargo v1.2.0
-  github.com/influxdata/influxdb1-client v0.0.0-20190124185755-16c852ea613f
-	github.com/jonboulle/clockwork v0.1.0 // indirect
+	github.com/hashicorp/go-version v1.1.0 // indirect
+	github.com/hudl/fargo v1.2.1-0.20160928160052-14ced469f7dc
+	github.com/influxdata/influxdb1-client v0.0.0-20190124185755-16c852ea613f
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/lightstep/lightstep-tracer-go v0.15.6
 	github.com/nats-io/gnatsd v1.4.1
@@ -51,7 +49,7 @@ require (
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.3.5
 	github.com/openzipkin/zipkin-go v0.1.6
-	github.com/pact-foundation/pact-go v0.0.13
+	github.com/pact-foundation/pact-go v1.0.0-beta.3
 	github.com/pborman/uuid v1.2.0
 	github.com/performancecopilot/speed v3.0.0+incompatible
 	github.com/pkg/errors v0.8.1
@@ -59,13 +57,11 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 	github.com/sirupsen/logrus v1.4.1
 	github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a // indirect
-	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/sony/gobreaker v0.0.0-20190329013020-a9b2a3fc7395
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/streadway/handy v0.0.0-20190108123426-d5acb3125c2a
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/ugorji/go v1.1.4 // indirect
-	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/bbolt v1.3.2 // indirect
 	go.etcd.io/etcd v3.3.12+incompatible
 	go.opencensus.io v0.20.2
