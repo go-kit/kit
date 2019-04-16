@@ -18,7 +18,7 @@ type Server struct {
 	after        []ServerResponseFunc
 	errorEncoder ErrorEncoder
 	finalizer    []ServerFinalizerFunc
-	logger       log.Logger
+	errorHandler ErrorHandler
 }
 
 // NewServer constructs a new server, which implements http.Handler and wraps
@@ -34,7 +34,7 @@ func NewServer(
 		dec:          dec,
 		enc:          enc,
 		errorEncoder: DefaultErrorEncoder,
-		logger:       log.NewNopLogger(),
+		errorHandler: log.NewErrorHandler(log.NewNopLogger()),
 	}
 	for _, option := range options {
 		option(s)
@@ -70,8 +70,22 @@ func ServerErrorEncoder(ee ErrorEncoder) ServerOption {
 // of error handling, including logging in more detail, should be performed in a
 // custom ServerErrorEncoder or ServerFinalizer, both of which have access to
 // the context.
+// Deprecated: Use ServerErrorHandler instead.
 func ServerErrorLogger(logger log.Logger) ServerOption {
-	return func(s *Server) { s.logger = logger }
+	return func(s *Server) {
+		if s.errorHandler == nil {
+			s.errorHandler = log.NewErrorHandler(logger)
+		}
+	}
+}
+
+// ServerErrorHandler is used to handle non-terminal errors. By default, no errors
+// are handled. This is intended as a diagnostic measure. Finer-grained control
+// of error handling, including logging in more detail, should be performed in a
+// custom ServerErrorEncoder or ServerFinalizer, both of which have access to
+// the context.
+func ServerErrorHandler(errorHandler ErrorHandler) ServerOption {
+	return func(s *Server) { s.errorHandler = errorHandler }
 }
 
 // ServerFinalizer is executed at the end of every HTTP request.
@@ -102,14 +116,14 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	request, err := s.dec(ctx, r)
 	if err != nil {
-		s.logger.Log("err", err)
+		s.errorHandler.Handle(err)
 		s.errorEncoder(ctx, err, w)
 		return
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
-		s.logger.Log("err", err)
+		s.errorHandler.Handle(err)
 		s.errorEncoder(ctx, err, w)
 		return
 	}
@@ -119,7 +133,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.enc(ctx, w, response); err != nil {
-		s.logger.Log("err", err)
+		s.errorHandler.Handle(err)
 		s.errorEncoder(ctx, err, w)
 		return
 	}
