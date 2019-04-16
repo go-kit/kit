@@ -23,6 +23,7 @@ import (
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/kit/tracing/zipkin"
+	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
 
 	"github.com/go-kit/kit/examples/addsvc/pkg/addendpoint"
@@ -41,7 +42,7 @@ func NewHTTPHandler(endpoints addendpoint.Set, otTracer stdopentracing.Tracer, z
 
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorEncoder(errorEncoder),
-		httptransport.ServerErrorLogger(logger),
+		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 		zipkinServer,
 	}
 

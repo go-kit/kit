@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 
 	kitlog "github.com/go-kit/kit/log"
+	kittransport "github.com/go-kit/kit/transport"
 	kithttp "github.com/go-kit/kit/transport/http"
 
 	"github.com/go-kit/kit/examples/shipping/cargo"
@@ -19,7 +20,7 @@ func MakeHandler(ts Service, logger kitlog.Logger) http.Handler {
 	r := mux.NewRouter()
 
 	opts := []kithttp.ServerOption{
-		kithttp.ServerErrorLogger(logger),
+		kithttp.ServerErrorHandler(kittransport.NewLogErrorHandler(logger)),
 		kithttp.ServerErrorEncoder(encodeError),
 	}
 

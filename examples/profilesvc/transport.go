@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
@@ -29,7 +30,7 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 	e := MakeServerEndpoints(s)
 	options := []httptransport.ServerOption{
-		httptransport.ServerErrorLogger(logger),
+		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 		httptransport.ServerErrorEncoder(encodeError),
 	}
 
