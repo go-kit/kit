@@ -64,7 +64,7 @@ func HandlerErrorLogger(logger log.Logger) HandlerOption {
 }
 
 // HandlerErrorHandler is used to handle non-terminal errors.
-// By default, no errors are handled.
+// By default, non-terminal errors are ignored.
 func HandlerErrorHandler(errorHandler transport.ErrorHandler) HandlerOption {
 	return func(h *Handler) { h.errorHandler = errorHandler }
 }

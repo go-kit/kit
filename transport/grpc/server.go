@@ -74,8 +74,8 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 	return func(s *Server) { s.errorHandler = transport.NewLogErrorHandler(logger) }
 }
 
-// ServerErrorHandler is used to handle non-terminal errors. By default, no errors
-// are handled.
+// ServerErrorHandler is used to handle non-terminal errors. By default, non-terminal errors
+// are ignored.
 func ServerErrorHandler(errorHandler transport.ErrorHandler) ServerOption {
 	return func(s *Server) { s.errorHandler = errorHandler }
 }

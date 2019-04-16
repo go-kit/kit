@@ -84,8 +84,8 @@ func SubscriberErrorLogger(logger log.Logger) SubscriberOption {
 	return func(s *Subscriber) { s.errorHandler = transport.NewLogErrorHandler(logger) }
 }
 
-// SubscriberErrorHandler is used to handle non-terminal errors. By default, no errors
-// are handled. This is intended as a diagnostic measure. Finer-grained control
+// SubscriberErrorHandler is used to handle non-terminal errors. By default, non-terminal errors
+// are ignored. This is intended as a diagnostic measure. Finer-grained control
 // of error handling, including logging in more detail, should be performed in a
 // custom SubscriberErrorEncoder which has access to the context.
 func SubscriberErrorHandler(errorHandler transport.ErrorHandler) SubscriberOption {
