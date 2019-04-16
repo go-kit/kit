@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/transport"
 )
 
 // Server wraps an endpoint and implements http.Handler.
@@ -18,7 +19,7 @@ type Server struct {
 	after        []ServerResponseFunc
 	errorEncoder ErrorEncoder
 	finalizer    []ServerFinalizerFunc
-	errorHandler ErrorHandler
+	errorHandler transport.ErrorHandler
 }
 
 // NewServer constructs a new server, which implements http.Handler and wraps
@@ -84,7 +85,7 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 // of error handling, including logging in more detail, should be performed in a
 // custom ServerErrorEncoder or ServerFinalizer, both of which have access to
 // the context.
-func ServerErrorHandler(errorHandler ErrorHandler) ServerOption {
+func ServerErrorHandler(errorHandler transport.ErrorHandler) ServerOption {
 	return func(s *Server) { s.errorHandler = errorHandler }
 }
 

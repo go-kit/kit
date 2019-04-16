@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/transport"
 	"github.com/streadway/amqp"
 )
 
@@ -19,7 +20,7 @@ type Subscriber struct {
 	after             []SubscriberResponseFunc
 	responsePublisher ResponsePublisher
 	errorEncoder      ErrorEncoder
-	errorHandler      ErrorHandler
+	errorHandler      transport.ErrorHandler
 }
 
 // NewSubscriber constructs a new subscriber, which provides a handler
@@ -91,7 +92,7 @@ func SubscriberErrorLogger(logger log.Logger) SubscriberOption {
 // are handled. This is intended as a diagnostic measure. Finer-grained control
 // of error handling, including logging in more detail, should be performed in a
 // custom SubscriberErrorEncoder which has access to the context.
-func SubscriberErrorHandler(errorHandler ErrorHandler) SubscriberOption {
+func SubscriberErrorHandler(errorHandler transport.ErrorHandler) SubscriberOption {
 	return func(s *Subscriber) { s.errorHandler = errorHandler }
 }
 

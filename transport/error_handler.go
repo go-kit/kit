@@ -1,4 +1,4 @@
-package grpc
+package transport
 
 // ErrorHandler receives a transport error to be processed for diagnostic purposes.
 // Usually this means logging the error.

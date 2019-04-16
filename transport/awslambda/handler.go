@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/transport"
 )
 
 // Handler wraps an endpoint.
@@ -16,7 +17,7 @@ type Handler struct {
 	after        []HandlerResponseFunc
 	errorEncoder ErrorEncoder
 	finalizer    []HandlerFinalizerFunc
-	errorHandler ErrorHandler
+	errorHandler transport.ErrorHandler
 }
 
 // NewHandler constructs a new handler, which implements
@@ -68,7 +69,7 @@ func HandlerErrorLogger(logger log.Logger) HandlerOption {
 
 // HandlerErrorHandler is used to handle non-terminal errors.
 // By default, no errors are handled.
-func HandlerErrorHandler(errorHandler ErrorHandler) HandlerOption {
+func HandlerErrorHandler(errorHandler transport.ErrorHandler) HandlerOption {
 	return func(h *Handler) { h.errorHandler = errorHandler }
 }
 

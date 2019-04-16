@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/transport"
 )
 
 // Handler which should be called from the gRPC binding of the service
@@ -25,7 +26,7 @@ type Server struct {
 	before       []ServerRequestFunc
 	after        []ServerResponseFunc
 	finalizer    []ServerFinalizerFunc
-	errorHandler ErrorHandler
+	errorHandler transport.ErrorHandler
 }
 
 // NewServer constructs a new server, which implements wraps the provided
@@ -79,7 +80,7 @@ func ServerErrorLogger(logger log.Logger) ServerOption {
 
 // ServerErrorHandler is used to handle non-terminal errors. By default, no errors
 // are handled.
-func ServerErrorHandler(errorHandler ErrorHandler) ServerOption {
+func ServerErrorHandler(errorHandler transport.ErrorHandler) ServerOption {
 	return func(s *Server) { s.errorHandler = errorHandler }
 }
 
