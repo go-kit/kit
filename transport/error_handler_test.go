@@ -1,6 +1,7 @@
 package transport_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestLogErrorHandler(t *testing.T) {
 
 	err := errors.New("error")
 
-	errorHandler.Handle(err)
+	errorHandler.Handle(context.Background(), err)
 
 	if output[1] != err {
 		t.Errorf("expected an error log event: have %v, want %v", output[1], err)

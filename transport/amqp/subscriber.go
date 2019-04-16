@@ -108,14 +108,14 @@ func (s Subscriber) ServeDelivery(ch Channel) func(deliv *amqp.Delivery) {
 
 		request, err := s.dec(ctx, deliv)
 		if err != nil {
-			s.errorHandler.Handle(err)
+			s.errorHandler.Handle(ctx, err)
 			s.errorEncoder(ctx, err, deliv, ch, &pub)
 			return
 		}
 
 		response, err := s.e(ctx, request)
 		if err != nil {
-			s.errorHandler.Handle(err)
+			s.errorHandler.Handle(ctx, err)
 			s.errorEncoder(ctx, err, deliv, ch, &pub)
 			return
 		}
@@ -125,13 +125,13 @@ func (s Subscriber) ServeDelivery(ch Channel) func(deliv *amqp.Delivery) {
 		}
 
 		if err := s.enc(ctx, &pub, response); err != nil {
-			s.errorHandler.Handle(err)
+			s.errorHandler.Handle(ctx, err)
 			s.errorEncoder(ctx, err, deliv, ch, &pub)
 			return
 		}
 
 		if err := s.responsePublisher(ctx, deliv, ch, &pub); err != nil {
-			s.errorHandler.Handle(err)
+			s.errorHandler.Handle(ctx, err)
 			s.errorEncoder(ctx, err, deliv, ch, &pub)
 			return
 		}

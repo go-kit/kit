@@ -113,14 +113,14 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	request, err := s.dec(ctx, r)
 	if err != nil {
-		s.errorHandler.Handle(err)
+		s.errorHandler.Handle(ctx, err)
 		s.errorEncoder(ctx, err, w)
 		return
 	}
 
 	response, err := s.e(ctx, request)
 	if err != nil {
-		s.errorHandler.Handle(err)
+		s.errorHandler.Handle(ctx, err)
 		s.errorEncoder(ctx, err, w)
 		return
 	}
@@ -130,7 +130,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.enc(ctx, w, response); err != nil {
-		s.errorHandler.Handle(err)
+		s.errorHandler.Handle(ctx, err)
 		s.errorEncoder(ctx, err, w)
 		return
 	}

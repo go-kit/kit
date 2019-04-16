@@ -105,13 +105,13 @@ func (h *Handler) Invoke(
 
 	request, err := h.dec(ctx, payload)
 	if err != nil {
-		h.errorHandler.Handle(err)
+		h.errorHandler.Handle(ctx, err)
 		return h.errorEncoder(ctx, err)
 	}
 
 	response, err := h.e(ctx, request)
 	if err != nil {
-		h.errorHandler.Handle(err)
+		h.errorHandler.Handle(ctx, err)
 		return h.errorEncoder(ctx, err)
 	}
 
@@ -120,7 +120,7 @@ func (h *Handler) Invoke(
 	}
 
 	if resp, err = h.enc(ctx, response); err != nil {
-		h.errorHandler.Handle(err)
+		h.errorHandler.Handle(ctx, err)
 		return h.errorEncoder(ctx, err)
 	}
 

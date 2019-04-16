@@ -114,13 +114,13 @@ func (s Server) ServeGRPC(ctx context.Context, req interface{}) (retctx context.
 
 	request, err = s.dec(ctx, req)
 	if err != nil {
-		s.errorHandler.Handle(err)
+		s.errorHandler.Handle(ctx, err)
 		return ctx, nil, err
 	}
 
 	response, err = s.e(ctx, request)
 	if err != nil {
-		s.errorHandler.Handle(err)
+		s.errorHandler.Handle(ctx, err)
 		return ctx, nil, err
 	}
 
@@ -131,20 +131,20 @@ func (s Server) ServeGRPC(ctx context.Context, req interface{}) (retctx context.
 
 	grpcResp, err = s.enc(ctx, response)
 	if err != nil {
-		s.errorHandler.Handle(err)
+		s.errorHandler.Handle(ctx, err)
 		return ctx, nil, err
 	}
 
 	if len(mdHeader) > 0 {
 		if err = grpc.SendHeader(ctx, mdHeader); err != nil {
-			s.errorHandler.Handle(err)
+			s.errorHandler.Handle(ctx, err)
 			return ctx, nil, err
 		}
 	}
 
 	if len(mdTrailer) > 0 {
 		if err = grpc.SetTrailer(ctx, mdTrailer); err != nil {
-			s.errorHandler.Handle(err)
+			s.errorHandler.Handle(ctx, err)
 			return ctx, nil, err
 		}
 	}

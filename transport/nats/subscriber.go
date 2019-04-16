@@ -110,7 +110,7 @@ func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 
 		request, err := s.dec(ctx, msg)
 		if err != nil {
-			s.errorHandler.Handle(err)
+			s.errorHandler.Handle(ctx, err)
 			if msg.Reply == "" {
 				return
 			}
@@ -120,7 +120,7 @@ func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 
 		response, err := s.e(ctx, request)
 		if err != nil {
-			s.errorHandler.Handle(err)
+			s.errorHandler.Handle(ctx, err)
 			if msg.Reply == "" {
 				return
 			}
@@ -137,7 +137,7 @@ func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 		}
 
 		if err := s.enc(ctx, msg.Reply, nc, response); err != nil {
-			s.errorHandler.Handle(err)
+			s.errorHandler.Handle(ctx, err)
 			s.errorEncoder(ctx, err, msg.Reply, nc)
 			return
 		}
