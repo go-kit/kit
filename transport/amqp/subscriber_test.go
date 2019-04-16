@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	typeAssertionError = errors.New("type assertion error")
+	errTypeAssertion = errors.New("type assertion error")
 )
 
 // mockChannel is a mock of *amqp.Channel.
@@ -205,7 +205,7 @@ func TestSubscriberSuccess(t *testing.T) {
 	}
 	res, ok := response.(testRes)
 	if !ok {
-		t.Error(typeAssertionError)
+		t.Error(errTypeAssertion)
 	}
 
 	if want, have := obj.Squadron, res.Squadron; want != have {
@@ -213,6 +213,45 @@ func TestSubscriberSuccess(t *testing.T) {
 	}
 	if want, have := names[obj.Squadron], res.Name; want != have {
 		t.Errorf("want %s, have %s", want, have)
+	}
+}
+
+// TestNopResponseSubscriber checks if setting responsePublisher to
+// NopResponsePublisher works properly by disabling response.
+func TestNopResponseSubscriber(t *testing.T) {
+	cid := "correlation"
+	replyTo := "sender"
+	obj := testReq{
+		Squadron: 436,
+	}
+	b, err := json.Marshal(obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sub := amqptransport.NewSubscriber(
+		testEndpoint,
+		testReqDecoder,
+		amqptransport.EncodeJSONResponse,
+		amqptransport.SubscriberResponsePublisher(amqptransport.NopResponsePublisher),
+		amqptransport.SubscriberErrorEncoder(amqptransport.ReplyErrorEncoder),
+	)
+
+	checkReplyToFunc := func(exchange, key string, mandatory, immediate bool) {}
+
+	outputChan := make(chan amqp.Publishing, 1)
+	ch := &mockChannel{f: checkReplyToFunc, c: outputChan}
+	sub.ServeDelivery(ch)(&amqp.Delivery{
+		CorrelationId: cid,
+		ReplyTo:       replyTo,
+		Body:          b,
+	})
+
+	select {
+	case <-outputChan:
+		t.Fatal("Subscriber with NopResponsePublisher replied.")
+	case <-time.After(100 * time.Millisecond):
+		break
 	}
 }
 
@@ -294,7 +333,7 @@ func TestDefaultContentMetaData(t *testing.T) {
 		amqptransport.EncodeJSONResponse,
 		amqptransport.SubscriberErrorEncoder(amqptransport.ReplyErrorEncoder),
 	)
-	checkReplyToFunc := func(exch, k string, mandatory, immediate bool) { return }
+	checkReplyToFunc := func(exch, k string, mandatory, immediate bool) {}
 	outputChan := make(chan amqp.Publishing, 1)
 	ch := &mockChannel{f: checkReplyToFunc, c: outputChan}
 	sub.ServeDelivery(ch)(&amqp.Delivery{})
@@ -344,7 +383,7 @@ type testRes struct {
 func testEndpoint(_ context.Context, request interface{}) (interface{}, error) {
 	req, ok := request.(testReq)
 	if !ok {
-		return nil, typeAssertionError
+		return nil, errTypeAssertion
 	}
 	name, prs := names[req.Squadron]
 	if !prs {

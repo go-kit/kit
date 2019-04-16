@@ -68,6 +68,7 @@ A gauge for the number of goroutines currently running, exported via StatsD.
 
 ```go
 import (
+	"context"
 	"net"
 	"os"
 	"runtime"
@@ -81,7 +82,7 @@ func main() {
 	statsd := statsd.New("foo_svc.", log.NewNopLogger())
 	report := time.NewTicker(5 * time.Second)
 	defer report.Stop()
-	go statsd.SendLoop(report.C, "tcp", "statsd.internal:8125")
+	go statsd.SendLoop(context.Background(), report.C, "tcp", "statsd.internal:8125")
 	goroutines := statsd.NewGauge("goroutine_count")
 	go exportGoroutines(goroutines)
 	// ...
