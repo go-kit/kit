@@ -35,6 +35,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.8.5 // indirect
 	github.com/hashicorp/consul/api v1.0.1
 	github.com/hudl/fargo v1.2.0
+  github.com/influxdata/influxdb1-client v0.0.0-20190124185755-16c852ea613f
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/lightstep/lightstep-tracer-go v0.15.6
