@@ -19,7 +19,7 @@ type Subscriber struct {
 	after             []SubscriberResponseFunc
 	responsePublisher ResponsePublisher
 	errorEncoder      ErrorEncoder
-	logger            log.Logger
+	errorHandler      ErrorHandler
 }
 
 // NewSubscriber constructs a new subscriber, which provides a handler
@@ -36,7 +36,7 @@ func NewSubscriber(
 		enc:               enc,
 		responsePublisher: DefaultResponsePublisher,
 		errorEncoder:      DefaultErrorEncoder,
-		logger:            log.NewNopLogger(),
+		errorHandler:      log.NewErrorHandler(log.NewNopLogger()),
 	}
 	for _, option := range options {
 		option(s)
@@ -78,8 +78,21 @@ func SubscriberErrorEncoder(ee ErrorEncoder) SubscriberOption {
 // are logged. This is intended as a diagnostic measure. Finer-grained control
 // of error handling, including logging in more detail, should be performed in a
 // custom SubscriberErrorEncoder which has access to the context.
+// Deprecated: Use SubscriberErrorHandler instead.
 func SubscriberErrorLogger(logger log.Logger) SubscriberOption {
-	return func(s *Subscriber) { s.logger = logger }
+	return func(s *Subscriber) {
+		if s.errorHandler == nil {
+			s.errorHandler = log.NewErrorHandler(logger)
+		}
+	}
+}
+
+// SubscriberErrorHandler is used to handle non-terminal errors. By default, no errors
+// are handled. This is intended as a diagnostic measure. Finer-grained control
+// of error handling, including logging in more detail, should be performed in a
+// custom SubscriberErrorEncoder which has access to the context.
+func SubscriberErrorHandler(errorHandler ErrorHandler) SubscriberOption {
+	return func(s *Subscriber) { s.errorHandler = errorHandler }
 }
 
 // ServeDelivery handles AMQP Delivery messages
@@ -98,14 +111,14 @@ func (s Subscriber) ServeDelivery(ch Channel) func(deliv *amqp.Delivery) {
 
 		request, err := s.dec(ctx, deliv)
 		if err != nil {
-			s.logger.Log("err", err)
+			s.errorHandler.Handle(err)
 			s.errorEncoder(ctx, err, deliv, ch, &pub)
 			return
 		}
 
 		response, err := s.e(ctx, request)
 		if err != nil {
-			s.logger.Log("err", err)
+			s.errorHandler.Handle(err)
 			s.errorEncoder(ctx, err, deliv, ch, &pub)
 			return
 		}
@@ -115,13 +128,13 @@ func (s Subscriber) ServeDelivery(ch Channel) func(deliv *amqp.Delivery) {
 		}
 
 		if err := s.enc(ctx, &pub, response); err != nil {
-			s.logger.Log("err", err)
+			s.errorHandler.Handle(err)
 			s.errorEncoder(ctx, err, deliv, ch, &pub)
 			return
 		}
 
 		if err := s.responsePublisher(ctx, deliv, ch, &pub); err != nil {
-			s.logger.Log("err", err)
+			s.errorHandler.Handle(err)
 			s.errorEncoder(ctx, err, deliv, ch, &pub)
 			return
 		}
