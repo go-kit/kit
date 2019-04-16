@@ -44,7 +44,7 @@ func NewServer(
 		e:            e,
 		dec:          dec,
 		enc:          enc,
-		errorHandler: log.NewErrorHandler(log.NewNopLogger()),
+		errorHandler: transport.NewLogErrorHandler(log.NewNopLogger()),
 	}
 	for _, option := range options {
 		option(s)
@@ -73,7 +73,7 @@ func ServerAfter(after ...ServerResponseFunc) ServerOption {
 func ServerErrorLogger(logger log.Logger) ServerOption {
 	return func(s *Server) {
 		if s.errorHandler == nil {
-			s.errorHandler = log.NewErrorHandler(logger)
+			s.errorHandler = transport.NewLogErrorHandler(logger)
 		}
 	}
 }

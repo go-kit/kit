@@ -1,21 +1,22 @@
-package log_test
+package transport_test
 
 import (
 	"errors"
 	"testing"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/transport"
 )
 
-func TestErrorHandler(t *testing.T) {
+func TestLogErrorHandler(t *testing.T) {
 	var output []interface{}
 
 	logger := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {
-		output = keyvals
+		output = append(output, keyvals...)
 		return nil
 	}))
 
-	errorHandler := log.NewErrorHandler(logger)
+	errorHandler := transport.NewLogErrorHandler(logger)
 
 	err := errors.New("error")
 

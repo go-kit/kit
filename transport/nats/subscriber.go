@@ -36,7 +36,7 @@ func NewSubscriber(
 		dec:          dec,
 		enc:          enc,
 		errorEncoder: DefaultErrorEncoder,
-		errorHandler: log.NewErrorHandler(log.NewNopLogger()),
+		errorHandler: transport.NewLogErrorHandler(log.NewNopLogger()),
 	}
 	for _, option := range options {
 		option(s)
@@ -75,7 +75,7 @@ func SubscriberErrorEncoder(ee ErrorEncoder) SubscriberOption {
 func SubscriberErrorLogger(logger log.Logger) SubscriberOption {
 	return func(s *Subscriber) {
 		if s.errorHandler == nil {
-			s.errorHandler = log.NewErrorHandler(logger)
+			s.errorHandler = transport.NewLogErrorHandler(logger)
 		}
 	}
 }

@@ -33,7 +33,7 @@ func NewHandler(
 		dec:          dec,
 		enc:          enc,
 		errorEncoder: DefaultErrorEncoder,
-		errorHandler: log.NewErrorHandler(log.NewNopLogger()),
+		errorHandler: transport.NewLogErrorHandler(log.NewNopLogger()),
 	}
 	for _, option := range options {
 		option(h)
@@ -62,7 +62,7 @@ func HandlerAfter(after ...HandlerResponseFunc) HandlerOption {
 func HandlerErrorLogger(logger log.Logger) HandlerOption {
 	return func(h *Handler) {
 		if h.errorHandler == nil {
-			h.errorHandler = log.NewErrorHandler(logger)
+			h.errorHandler = transport.NewLogErrorHandler(logger)
 		}
 	}
 }
