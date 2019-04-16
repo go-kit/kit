@@ -39,7 +39,7 @@ func TestInvokeHappyPath(t *testing.T) {
 		makeTest01HelloEndpoint(svc),
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
-		HandlerErrorLogger(log.NewNopLogger()),
+		HandlerErrorHandler(log.NewErrorHandler(log.NewNopLogger())),
 		HandlerBefore(func(
 			ctx context.Context,
 			payload []byte,

@@ -16,7 +16,7 @@ type Handler struct {
 	after        []HandlerResponseFunc
 	errorEncoder ErrorEncoder
 	finalizer    []HandlerFinalizerFunc
-	logger       log.Logger
+	errorHandler ErrorHandler
 }
 
 // NewHandler constructs a new handler, which implements
@@ -31,8 +31,8 @@ func NewHandler(
 		e:            e,
 		dec:          dec,
 		enc:          enc,
-		logger:       log.NewNopLogger(),
 		errorEncoder: DefaultErrorEncoder,
+		errorHandler: log.NewErrorHandler(log.NewNopLogger()),
 	}
 	for _, option := range options {
 		option(h)
@@ -57,8 +57,19 @@ func HandlerAfter(after ...HandlerResponseFunc) HandlerOption {
 
 // HandlerErrorLogger is used to log non-terminal errors.
 // By default, no errors are logged.
+// Deprecated: Use HandlerErrorHandler instead.
 func HandlerErrorLogger(logger log.Logger) HandlerOption {
-	return func(h *Handler) { h.logger = logger }
+	return func(h *Handler) {
+		if h.errorHandler == nil {
+			h.errorHandler = log.NewErrorHandler(logger)
+		}
+	}
+}
+
+// HandlerErrorHandler is used to handle non-terminal errors.
+// By default, no errors are handled.
+func HandlerErrorHandler(errorHandler ErrorHandler) HandlerOption {
+	return func(h *Handler) { h.errorHandler = errorHandler }
 }
 
 // HandlerErrorEncoder is used to encode errors.
@@ -97,13 +108,13 @@ func (h *Handler) Invoke(
 
 	request, err := h.dec(ctx, payload)
 	if err != nil {
-		h.logger.Log("err", err)
+		h.errorHandler.Handle(err)
 		return h.errorEncoder(ctx, err)
 	}
 
 	response, err := h.e(ctx, request)
 	if err != nil {
-		h.logger.Log("err", err)
+		h.errorHandler.Handle(err)
 		return h.errorEncoder(ctx, err)
 	}
 
@@ -112,7 +123,7 @@ func (h *Handler) Invoke(
 	}
 
 	if resp, err = h.enc(ctx, response); err != nil {
-		h.logger.Log("err", err)
+		h.errorHandler.Handle(err)
 		return h.errorEncoder(ctx, err)
 	}
 
