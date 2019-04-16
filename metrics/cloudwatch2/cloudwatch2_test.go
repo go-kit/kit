@@ -1,6 +1,7 @@
 package cloudwatch2
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 
@@ -87,8 +88,11 @@ func (mcw *mockCloudWatch) PutMetricDataRequest(in *cloudwatch.PutMetricDataInpu
 		// going across the wire, you just create a dumb aws.Request with either
 		// aws.Request.Data defined (for succes) or with aws.Request.Error
 		// to simulate an Error.
-		Request: &aws.Request{Data: &cloudwatch.PutMetricDataOutput{}},
-		Input:   in,
+		Request: &aws.Request{
+			HTTPRequest: &http.Request{Method: "PUT"},
+			Data:        &cloudwatch.PutMetricDataOutput{},
+		},
+		Input: in,
 	}
 }
 

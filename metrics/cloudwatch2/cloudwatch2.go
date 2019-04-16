@@ -166,7 +166,7 @@ func (cw *CloudWatch) Send() error {
 				Namespace:  aws.String(cw.namespace),
 				MetricData: batch,
 			})
-			_, err := req.Send()
+			_, err := req.Send(context.TODO())
 			return err
 		})
 	}
