@@ -73,11 +73,7 @@ func SubscriberErrorEncoder(ee ErrorEncoder) SubscriberOption {
 // custom SubscriberErrorEncoder which has access to the context.
 // Deprecated: Use SubscriberErrorHandler instead.
 func SubscriberErrorLogger(logger log.Logger) SubscriberOption {
-	return func(s *Subscriber) {
-		if s.errorHandler == nil {
-			s.errorHandler = transport.NewLogErrorHandler(logger)
-		}
-	}
+	return func(s *Subscriber) { s.errorHandler = transport.NewLogErrorHandler(logger) }
 }
 
 // SubscriberErrorHandler is used to handle non-terminal errors. By default, no errors

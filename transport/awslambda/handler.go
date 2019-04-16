@@ -60,11 +60,7 @@ func HandlerAfter(after ...HandlerResponseFunc) HandlerOption {
 // By default, no errors are logged.
 // Deprecated: Use HandlerErrorHandler instead.
 func HandlerErrorLogger(logger log.Logger) HandlerOption {
-	return func(h *Handler) {
-		if h.errorHandler == nil {
-			h.errorHandler = transport.NewLogErrorHandler(logger)
-		}
-	}
+	return func(h *Handler) { h.errorHandler = transport.NewLogErrorHandler(logger) }
 }
 
 // HandlerErrorHandler is used to handle non-terminal errors.

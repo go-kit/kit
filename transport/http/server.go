@@ -73,11 +73,7 @@ func ServerErrorEncoder(ee ErrorEncoder) ServerOption {
 // the context.
 // Deprecated: Use ServerErrorHandler instead.
 func ServerErrorLogger(logger log.Logger) ServerOption {
-	return func(s *Server) {
-		if s.errorHandler == nil {
-			s.errorHandler = transport.NewLogErrorHandler(logger)
-		}
-	}
+	return func(s *Server) { s.errorHandler = transport.NewLogErrorHandler(logger) }
 }
 
 // ServerErrorHandler is used to handle non-terminal errors. By default, no errors
