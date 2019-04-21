@@ -1,10 +1,15 @@
 package instance
 
 import (
+	"context"
+	"fmt"
+	"io"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
 )
 
@@ -74,4 +79,32 @@ func TestRegistry(t *testing.T) {
 	close(c2)
 	// if deregister didn't work, broadcast would panic on closed channels
 	reg.broadcast(sd.Event{Instances: []string{"x", "y"}})
+}
+
+// This test is meant to be run with the race detector enabled: -race.
+// It ensures that every registered observer receives a copy
+// of sd.Event.Instances because observers can directly modify the field.
+// For example, endpointCache calls sort.Strings() on sd.Event.Instances.
+func TestDataRace(t *testing.T) {
+	instances := make([]string, 0)
+	// the number of iterations here maters because we need sort.Strings to
+	// perform a Swap in doPivot -> medianOfThree to cause a data race.
+	for i := 1; i < 1000; i++ {
+		instances = append(instances, fmt.Sprintf("%v", i))
+	}
+	e1 := sd.Event{Instances: instances}
+	cache := NewCache()
+	cache.Update(e1)
+	nullEndpoint := func(_ context.Context, _ interface{}) (interface{}, error) {
+		return nil, nil
+	}
+	nullFactory := func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		return nullEndpoint, nil, nil
+	}
+	logger := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {
+		return nil
+	}))
+
+	sd.NewEndpointer(cache, nullFactory, logger)
+	sd.NewEndpointer(cache, nullFactory, logger)
 }

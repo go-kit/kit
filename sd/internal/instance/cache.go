@@ -41,8 +41,10 @@ func (c *Cache) Update(event sd.Event) {
 // State returns the current state of discovery (instances or error) as sd.Event
 func (c *Cache) State() sd.Event {
 	c.mtx.RLock()
-	defer c.mtx.RUnlock()
-	return c.state
+	event := c.state
+	c.mtx.RUnlock()
+	eventCopy := copyEvent(event)
+	return eventCopy
 }
 
 // Stop implements Instancer. Since the cache is just a plain-old store of data,
@@ -54,8 +56,10 @@ func (c *Cache) Register(ch chan<- sd.Event) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	c.reg.register(ch)
+	event := c.state
+	eventCopy := copyEvent(event)
 	// always push the current state to new channels
-	ch <- c.state
+	ch <- eventCopy
 }
 
 // Deregister implements Instancer.
@@ -70,7 +74,8 @@ type registry map[chan<- sd.Event]struct{}
 
 func (r registry) broadcast(event sd.Event) {
 	for c := range r {
-		c <- event
+		eventCopy := copyEvent(event)
+		c <- eventCopy
 	}
 }
 
@@ -80,4 +85,18 @@ func (r registry) register(c chan<- sd.Event) {
 
 func (r registry) deregister(c chan<- sd.Event) {
 	delete(r, c)
+}
+
+// copyEvent does a deep copy on sd.Event
+func copyEvent(e sd.Event) sd.Event {
+	// observers all need their own copy of event
+	// because they can directly modify event.Instances
+	// for example, by calling sort.Strings
+	if e.Instances == nil {
+		return e
+	}
+	instances := make([]string, len(e.Instances))
+	copy(instances, e.Instances)
+	e.Instances = instances
+	return e
 }
