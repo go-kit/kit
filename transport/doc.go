@@ -1,2 +1,2 @@
-// Package transport contains bindings to concrete transports.
+// Package transport contains helpers applicable to all supported transports.
 package transport

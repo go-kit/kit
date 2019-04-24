@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/transport"
 )
 
 type key int
@@ -39,7 +40,7 @@ func TestInvokeHappyPath(t *testing.T) {
 		makeTest01HelloEndpoint(svc),
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
-		HandlerErrorLogger(log.NewNopLogger()),
+		HandlerErrorHandler(transport.NewLogErrorHandler(log.NewNopLogger())),
 		HandlerBefore(func(
 			ctx context.Context,
 			payload []byte,

@@ -18,6 +18,7 @@ import (
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/kit/tracing/zipkin"
+	"github.com/go-kit/kit/transport"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 
 	"github.com/go-kit/kit/examples/addsvc/pb"
@@ -44,7 +45,7 @@ func NewGRPCServer(endpoints addendpoint.Set, otTracer stdopentracing.Tracer, zi
 	zipkinServer := zipkin.GRPCServerTrace(zipkinTracer)
 
 	options := []grpctransport.ServerOption{
-		grpctransport.ServerErrorLogger(logger),
+		grpctransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 		zipkinServer,
 	}
 

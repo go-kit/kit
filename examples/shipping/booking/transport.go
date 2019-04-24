@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/transport"
 	kithttp "github.com/go-kit/kit/transport/http"
 
 	"github.com/go-kit/kit/examples/shipping/cargo"
@@ -19,7 +20,7 @@ import (
 // MakeHandler returns a handler for the booking service.
 func MakeHandler(bs Service, logger kitlog.Logger) http.Handler {
 	opts := []kithttp.ServerOption{
-		kithttp.ServerErrorLogger(logger),
+		kithttp.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 		kithttp.ServerErrorEncoder(encodeError),
 	}
 

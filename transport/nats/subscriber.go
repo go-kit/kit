@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/transport"
 
 	"github.com/nats-io/go-nats"
 )
@@ -19,7 +20,7 @@ type Subscriber struct {
 	after        []SubscriberResponseFunc
 	errorEncoder ErrorEncoder
 	finalizer    []SubscriberFinalizerFunc
-	logger       log.Logger
+	errorHandler transport.ErrorHandler
 }
 
 // NewSubscriber constructs a new subscriber, which provides nats.MsgHandler and wraps
@@ -35,7 +36,7 @@ func NewSubscriber(
 		dec:          dec,
 		enc:          enc,
 		errorEncoder: DefaultErrorEncoder,
-		logger:       log.NewNopLogger(),
+		errorHandler: transport.NewLogErrorHandler(log.NewNopLogger()),
 	}
 	for _, option := range options {
 		option(s)
@@ -70,8 +71,17 @@ func SubscriberErrorEncoder(ee ErrorEncoder) SubscriberOption {
 // are logged. This is intended as a diagnostic measure. Finer-grained control
 // of error handling, including logging in more detail, should be performed in a
 // custom SubscriberErrorEncoder which has access to the context.
+// Deprecated: Use SubscriberErrorHandler instead.
 func SubscriberErrorLogger(logger log.Logger) SubscriberOption {
-	return func(s *Subscriber) { s.logger = logger }
+	return func(s *Subscriber) { s.errorHandler = transport.NewLogErrorHandler(logger) }
+}
+
+// SubscriberErrorHandler is used to handle non-terminal errors. By default, non-terminal errors
+// are ignored. This is intended as a diagnostic measure. Finer-grained control
+// of error handling, including logging in more detail, should be performed in a
+// custom SubscriberErrorEncoder which has access to the context.
+func SubscriberErrorHandler(errorHandler transport.ErrorHandler) SubscriberOption {
+	return func(s *Subscriber) { s.errorHandler = errorHandler }
 }
 
 // SubscriberFinalizer is executed at the end of every request from a publisher through NATS.
@@ -100,7 +110,7 @@ func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 
 		request, err := s.dec(ctx, msg)
 		if err != nil {
-			s.logger.Log("err", err)
+			s.errorHandler.Handle(ctx, err)
 			if msg.Reply == "" {
 				return
 			}
@@ -110,7 +120,7 @@ func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 
 		response, err := s.e(ctx, request)
 		if err != nil {
-			s.logger.Log("err", err)
+			s.errorHandler.Handle(ctx, err)
 			if msg.Reply == "" {
 				return
 			}
@@ -127,7 +137,7 @@ func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
 		}
 
 		if err := s.enc(ctx, msg.Reply, nc, response); err != nil {
-			s.logger.Log("err", err)
+			s.errorHandler.Handle(ctx, err)
 			s.errorEncoder(ctx, err, msg.Reply, nc)
 			return
 		}
