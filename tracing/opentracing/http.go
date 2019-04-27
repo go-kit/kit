@@ -26,7 +26,7 @@ func ContextToHTTP(tracer opentracing.Tracer, logger log.Logger) kithttp.Request
 			host, portString, err := net.SplitHostPort(req.URL.Host)
 			if err == nil {
 				ext.PeerHostname.Set(span, host)
-				if port, err := strconv.Atoi(portString); err != nil {
+				if port, err := strconv.Atoi(portString); err == nil {
 					ext.PeerPort.Set(span, uint16(port))
 				}
 			} else {
