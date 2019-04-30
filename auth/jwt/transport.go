@@ -77,7 +77,7 @@ func ContextToGRPC() grpc.ClientRequestFunc {
 
 func extractTokenFromAuthHeader(val string) (token string, ok bool) {
 	authHeaderParts := strings.Split(val, " ")
-	if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != bearer {
+	if len(authHeaderParts) != 2 || !strings.EqualFold(authHeaderParts[0], bearer) {
 		return "", false
 	}
 
