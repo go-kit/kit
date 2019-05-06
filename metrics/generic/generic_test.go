@@ -20,7 +20,7 @@ func TestCounter(t *testing.T) {
 	if want, have := name, counter.Name; want != have {
 		t.Errorf("Name: want %q, have %q", want, have)
 	}
-	value := func() float64 { return counter.Value() }
+	value := counter.Value
 	if err := teststat.TestCounter(counter, value); err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestGauge(t *testing.T) {
 	if want, have := name, gauge.Name; want != have {
 		t.Errorf("Name: want %q, have %q", want, have)
 	}
-	value := func() float64 { return gauge.Value() }
+	value := gauge.Value
 	if err := teststat.TestGauge(gauge, value); err != nil {
 		t.Fatal(err)
 	}
