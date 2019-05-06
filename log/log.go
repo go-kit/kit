@@ -73,6 +73,31 @@ func WithPrefix(logger Logger, keyvals ...interface{}) Logger {
 	}
 }
 
+// Flusher is the interface for sending your logs to analytical systems so
+// you can analyze and aggregate them. Implementations may involve a buffer
+// cleared by interval or sending to any database directly
+// also they must be safe for concurrent use by multiple goroutines.
+type Flusher interface {
+	Flush(keyvals ...interface{}) error
+}
+
+// WithFlusher returns a new contextual logger with passed Flusher.
+//
+// The returned Logger replaces all value elements (odd indexes) containing a
+// Valuer with their generated value for each call to its Log method.
+func WithFlusher(logger Logger, flusher Flusher) Logger {
+	if flusher == nil {
+		return logger
+	}
+	l := newContext(logger)
+	return &context{
+		logger:    l.logger,
+		keyvals:   l.keyvals,
+		hasValuer: l.hasValuer,
+		flusher:   flusher,
+	}
+}
+
 // context is the Logger implementation returned by With and WithPrefix. It
 // wraps a Logger and holds keyvals that it includes in all log events. Its
 // Log method calls bindValues to generate values for each Valuer in the
@@ -96,6 +121,7 @@ type context struct {
 	logger    Logger
 	keyvals   []interface{}
 	hasValuer bool
+	flusher   Flusher
 }
 
 func newContext(logger Logger) *context {
@@ -121,7 +147,15 @@ func (l *context) Log(keyvals ...interface{}) error {
 		}
 		bindValues(kvs[:len(l.keyvals)])
 	}
-	return l.logger.Log(kvs...)
+	if err := l.logger.Log(kvs...); err != nil {
+		return err
+	}
+	if l.flusher != nil {
+		if err := l.flusher.Flush(kvs...); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // LoggerFunc is an adapter to allow use of ordinary functions as Loggers. If
