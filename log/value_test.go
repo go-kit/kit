@@ -39,7 +39,7 @@ func TestValueBinding(t *testing.T) {
 	if want, have := start.Add(time.Second), timestamp; want != have {
 		t.Errorf("output[1]: want %v, have %v", want, have)
 	}
-	if want, have := "value_test.go:31", fmt.Sprint(output[3]); want != have {
+	if want, have := "value_test.go:34", fmt.Sprint(output[3]); want != have {
 		t.Errorf("output[3]: want %s, have %s", want, have)
 	}
 
@@ -52,7 +52,7 @@ func TestValueBinding(t *testing.T) {
 	if want, have := start.Add(2*time.Second), timestamp; want != have {
 		t.Errorf("output[1]: want %v, have %v", want, have)
 	}
-	if want, have := "value_test.go:44", fmt.Sprint(output[3]); want != have {
+	if want, have := "value_test.go:47", fmt.Sprint(output[3]); want != have {
 		t.Errorf("output[3]: want %s, have %s", want, have)
 	}
 }
