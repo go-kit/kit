@@ -1,9 +1,12 @@
 package log_test
 
 import (
+	"bytes"
 	"encoding"
 	"fmt"
 	"reflect"
+	"regexp"
+	"runtime"
 	"testing"
 	"time"
 
@@ -146,5 +149,45 @@ func BenchmarkValueBindingCaller(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		lc.Log("k", "v")
+	}
+}
+
+func TestDefaultFullPathCaller(t *testing.T) {
+	var buf []byte
+	buffer := bytes.NewBuffer(buf)
+	logger := log.NewLogfmtLogger(buffer)
+	loggerName := "DefaultFullPathCaller"
+	lc := log.With(logger, loggerName, log.DefaultFullPathCaller)
+	err := lc.Log("DefaultFullPathCaller", "should see the file full path")
+	//t.Log(buffer.String())
+	if err != nil {
+		t.Errorf("error calling log.DefaultFullPathCaller. err: %v", err)
+		return
+	}
+	if runtime.GOOS != "widows" {
+		fullPathPattern := regexp.MustCompile(fmt.Sprintf(`%s=/.*:\d+`, loggerName))
+		if !fullPathPattern.Match(buffer.Bytes()) {
+			t.Errorf("output log text does not contain full path")
+		}
+	}
+}
+
+func TestDefaultTrimmedPrefixPathCaller(t *testing.T) {
+	var buf []byte
+	buffer := bytes.NewBuffer(buf)
+	logger := log.NewLogfmtLogger(buffer)
+	loggerName := "DefaultTrimmedPrefixPathCaller"
+	lc := log.With(logger, loggerName, log.DefaultTrimmedPrefixPathCaller("/"))
+	err := lc.Log("DefaultFullPathCaller", "should see the file full path")
+	//t.Log(buffer.String())
+	if err != nil {
+		t.Errorf("error calling log.DefaultFullPathCaller. err: %v", err)
+		return
+	}
+	if runtime.GOOS != "widows" {
+		fullPathPattern := regexp.MustCompile(fmt.Sprintf(`%s=.*:\d+`, loggerName))
+		if !fullPathPattern.Match(buffer.Bytes()) {
+			t.Errorf("output log text does not contain full path")
+		}
 	}
 }

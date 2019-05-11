@@ -92,30 +92,22 @@ func Caller(depth int) Valuer {
 	}
 }
 
-// Caller returns a Valuer that returns a file and line from a specified depth
+// FullPathCaller returns a Valuer that returns the full path of a file and line from a specified depth
 // in the callstack. Users will probably want to use DefaultFullPathCaller.
 func FullPathCaller(depth int) Valuer {
 	return func() interface{} {
 		_, file, line, _ := runtime.Caller(depth)
-		//idx := strings.LastIndexByte(file, '/')
-		// using idx+1 below handles both of following cases:
-		// idx == -1 because no "/" was found, or
-		// idx >= 0 and we want to start at the character after the found "/".
 		return file + ":" + strconv.Itoa(line)
 	}
 }
 
-// Caller returns a Valuer that returns a file and line from a specified depth
+// TrimPathPrefixCaller returns a Valuer that returns a file path(full path) with prefix trimmed and line from a specified depth
 // in the callstack. Users will probably want to use DefaultTrimmedPrefixPathCaller
 // eg:
 // logger = log.With(logger, "caller", log.DefaultTrimmedPrefixPathCaller("YOU-GOPATH/src/github.com/go-kit/"))
 func TrimPathPrefixCaller(depth int, prefix string) Valuer {
 	return func() interface{} {
 		_, file, line, _ := runtime.Caller(depth)
-		//idx := strings.LastIndexByte(file, '/')
-		// using idx+1 below handles both of following cases:
-		// idx == -1 because no "/" was found, or
-		// idx >= 0 and we want to start at the character after the found "/".
 		f := strings.TrimPrefix(file, prefix)
 		return f + ":" + strconv.Itoa(line)
 	}
@@ -137,7 +129,12 @@ var (
 	// method was invoked. It can only be used with log.With.
 	DefaultCaller = Caller(3)
 
-	DefaultFullPathCaller          = FullPathCaller(3)
+	// DefaultFullPathCaller is a Valuer that returns the full path of a file and line
+	// when the log method was invoked. It can only be used with log.With.
+	DefaultFullPathCaller = FullPathCaller(3)
+
+	// DefaultTrimmedPrefixPathCaller is a Valuer that returns a file path(full path) with prefix trimmed and line
+	// when the log method was invoked. It can only be used with log.With.
 	DefaultTrimmedPrefixPathCaller = func(prefix string) Valuer { return TrimPathPrefixCaller(3, prefix) }
 
 	_ = DefaultFullPathCaller          // fix: unused variable
