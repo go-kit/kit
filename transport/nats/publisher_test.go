@@ -186,6 +186,44 @@ func TestPublisherTimeout(t *testing.T) {
 	}
 }
 
+func TestPublisherCancellation(t *testing.T) {
+	var (
+		testdata = "testdata"
+		encode   = func(context.Context, *nats.Msg, interface{}) error { return nil }
+		decode   = func(_ context.Context, msg *nats.Msg) (interface{}, error) {
+			return TestResponse{string(msg.Data), ""}, nil
+		}
+	)
+
+	nc := newNatsConn(t)
+	defer nc.Close()
+
+	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
+		if err := nc.Publish(msg.Reply, []byte(testdata)); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Unsubscribe()
+
+	publisher := natstransport.NewPublisher(
+		nc,
+		"natstransport.test",
+		encode,
+		decode,
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err = publisher.Endpoint()(ctx, struct{}{})
+	if err != context.Canceled {
+		t.Errorf("want %s, have %s", context.Canceled, err)
+	}
+}
+
 func TestEncodeJSONRequest(t *testing.T) {
 	var data string
 
