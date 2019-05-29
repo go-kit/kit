@@ -73,7 +73,7 @@ func TestStats(t *testing.T) {
 }
 
 type mockCloudWatch struct {
-	cloudwatchiface.CloudWatchAPI
+	cloudwatchiface.ClientAPI
 	latestName string
 	latestData []cloudwatch.MetricDatum
 }

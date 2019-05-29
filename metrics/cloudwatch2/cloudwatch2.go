@@ -32,7 +32,7 @@ type CloudWatch struct {
 	mtx                   sync.RWMutex
 	sem                   chan struct{}
 	namespace             string
-	svc                   cloudwatchiface.CloudWatchAPI
+	svc                   cloudwatchiface.ClientAPI
 	counters              *lv.Space
 	logger                log.Logger
 	numConcurrentRequests int
@@ -66,7 +66,7 @@ func WithConcurrentRequests(n int) Option {
 // Namespace is applied to all created metrics and maps to the CloudWatch namespace.
 // Callers must ensure that regular calls to Send are performed, either
 // manually or with one of the helper methods.
-func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...Option) *CloudWatch {
+func New(namespace string, svc cloudwatchiface.ClientAPI, options ...Option) *CloudWatch {
 	cw := &CloudWatch{
 		namespace:             namespace,
 		svc:                   svc,
