@@ -7,7 +7,7 @@ import (
 	"time"
 
 	natstransport "github.com/go-kit/kit/transport/nats"
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 )
 
 func TestPublisher(t *testing.T) {

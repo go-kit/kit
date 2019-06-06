@@ -3,7 +3,7 @@ package nats
 import (
 	"context"
 
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 )
 
 // DecodeRequestFunc extracts a user-domain request object from a publisher

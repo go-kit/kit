@@ -3,7 +3,7 @@ package nats
 import (
 	"context"
 
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 )
 
 // RequestFunc may take information from a publisher request and put it into a
