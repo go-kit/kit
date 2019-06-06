@@ -1,4 +1,4 @@
-// +build integration
+// +build flaky_integration
 
 package etcdv3
 
