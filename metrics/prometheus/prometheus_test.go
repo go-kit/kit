@@ -14,10 +14,11 @@ import (
 
 	"github.com/go-kit/kit/metrics/teststat"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func TestCounter(t *testing.T) {
-	s := httptest.NewServer(stdprometheus.UninstrumentedHandler())
+	s := httptest.NewServer(promhttp.HandlerFor(stdprometheus.DefaultGatherer, promhttp.HandlerOpts{}))
 	defer s.Close()
 
 	scrape := func() string {
@@ -48,7 +49,7 @@ func TestCounter(t *testing.T) {
 }
 
 func TestGauge(t *testing.T) {
-	s := httptest.NewServer(stdprometheus.UninstrumentedHandler())
+	s := httptest.NewServer(promhttp.HandlerFor(stdprometheus.DefaultGatherer, promhttp.HandlerOpts{}))
 	defer s.Close()
 
 	scrape := func() string {
@@ -79,7 +80,7 @@ func TestGauge(t *testing.T) {
 }
 
 func TestSummary(t *testing.T) {
-	s := httptest.NewServer(stdprometheus.UninstrumentedHandler())
+	s := httptest.NewServer(promhttp.HandlerFor(stdprometheus.DefaultGatherer, promhttp.HandlerOpts{}))
 	defer s.Close()
 
 	scrape := func() string {
@@ -94,10 +95,11 @@ func TestSummary(t *testing.T) {
 	re99 := regexp.MustCompile(namespace + `_` + subsystem + `_` + name + `{a="a",b="b",quantile="0.99"} ([0-9\.]+)`)
 
 	summary := NewSummaryFrom(stdprometheus.SummaryOpts{
-		Namespace: namespace,
-		Subsystem: subsystem,
-		Name:      name,
-		Help:      "This is the help string for the summary.",
+		Namespace:  namespace,
+		Subsystem:  subsystem,
+		Name:       name,
+		Help:       "This is the help string for the summary.",
+		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 	}, []string{"a", "b"}).With("b", "b").With("a", "a")
 
 	quantiles := func() (float64, float64, float64, float64) {
@@ -123,7 +125,7 @@ func TestHistogram(t *testing.T) {
 	// limit. That is, the count monotonically increases over the buckets. This
 	// requires a different strategy to test.
 
-	s := httptest.NewServer(stdprometheus.UninstrumentedHandler())
+	s := httptest.NewServer(promhttp.HandlerFor(stdprometheus.DefaultGatherer, promhttp.HandlerOpts{}))
 	defer s.Close()
 
 	scrape := func() string {
@@ -163,7 +165,6 @@ func TestHistogram(t *testing.T) {
 
 	// Then, we use ExpectedObservationsLessThan to validate.
 	for _, line := range strings.Split(scrape(), "\n") {
-		t.Logf("### %s", line)
 		match := re.FindStringSubmatch(line)
 		if match == nil {
 			continue
