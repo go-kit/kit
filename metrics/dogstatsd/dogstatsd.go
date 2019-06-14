@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -73,7 +74,7 @@ func (d *Dogstatsd) NewCounter(name string, sampleRate float64) *Counter {
 	d.rates.Set(name, sampleRate)
 	return &Counter{
 		name: name,
-		obs:  d.counters.Observe,
+		obs:  sampleObservations(d.counters.Observe, sampleRate),
 	}
 }
 
@@ -95,7 +96,7 @@ func (d *Dogstatsd) NewTiming(name string, sampleRate float64) *Timing {
 	d.rates.Set(name, sampleRate)
 	return &Timing{
 		name: name,
-		obs:  d.timings.Observe,
+		obs:  sampleObservations(d.timings.Observe, sampleRate),
 	}
 }
 
@@ -105,7 +106,7 @@ func (d *Dogstatsd) NewHistogram(name string, sampleRate float64) *Histogram {
 	d.rates.Set(name, sampleRate)
 	return &Histogram{
 		name: name,
-		obs:  d.histograms.Observe,
+		obs:  sampleObservations(d.histograms.Observe, sampleRate),
 	}
 }
 
@@ -238,6 +239,19 @@ func (d *Dogstatsd) tagValues(labelValues []string) string {
 }
 
 type observeFunc func(name string, lvs lv.LabelValues, value float64)
+
+// sampleObservations returns a modified observeFunc that samples observations.
+func sampleObservations(obs observeFunc, sampleRate float64) observeFunc {
+	if sampleRate >= 1 {
+		return obs
+	}
+	return func(name string, lvs lv.LabelValues, value float64) {
+		if rand.Float64() > sampleRate {
+			return
+		}
+		obs(name, lvs, value)
+	}
+}
 
 // Counter is a DogStatsD counter. Observations are forwarded to a Dogstatsd
 // object, and aggregated (summed) per timeseries.
