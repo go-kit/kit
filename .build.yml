@@ -3,8 +3,8 @@ sources:
     - https://github.com/go-kit/kit
 tasks:
     - go_toolchain: |
-        wget -q https://dl.google.com/go/go1.12.linux-amd64.tar.gz
-        sudo tar -C /usr/local -xzf go1.12.linux-amd64.tar.gz
+        wget -q https://dl.google.com/go/go1.12.6.linux-amd64.tar.gz
+        sudo tar -C /usr/local -xzf go1.12.6.linux-amd64.tar.gz
         sudo ln -s /usr/local/go/bin/go /usr/bin/go
         go env
     - dependencies: |
