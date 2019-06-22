@@ -101,7 +101,7 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 ### Web frameworks
 
 - [Gorilla](http://www.gorillatoolkit.org)
-- [Gin](https://gin-gonic.github.io/gin/)
+- [Gin](https://gin-gonic.com/)
 - [Negroni](https://github.com/codegangsta/negroni)
 - [Goji](https://github.com/zenazn/goji)
 - [Martini](https://github.com/go-martini/martini)
