@@ -56,20 +56,20 @@ type fakeClient struct {
 	responses map[string]testResponse
 }
 
-func (c *fakeClient) GetEntries(prefix string) ([]string, error) {
+func (c *fakeClient) GetEntriesAndRevision(prefix string) ([]string, int64, error) {
 	response, ok := c.responses[prefix]
 	if !ok {
-		return nil, errors.New("key not exist")
+		return nil, 0, errors.New("key not exist")
 	}
 
 	entries := make([]string, len(response.Kvs))
 	for i, node := range response.Kvs {
 		entries[i] = string(node.Value)
 	}
-	return entries, nil
+	return entries, 0, nil
 }
 
-func (c *fakeClient) WatchPrefix(prefix string, ch chan struct{}) {
+func (c *fakeClient) WatchPrefixWithRevision(prefix string, revision int64, ch chan struct{}) {
 }
 
 func (c *fakeClient) LeaseID() int64 {

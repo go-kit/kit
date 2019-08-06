@@ -9,11 +9,12 @@ import (
 // Instancer yields instances stored in a certain etcd keyspace. Any kind of
 // change in that keyspace is watched and will update the Instancer's Instancers.
 type Instancer struct {
-	cache  *instance.Cache
-	client Client
-	prefix string
-	logger log.Logger
-	quitc  chan struct{}
+	cache         *instance.Cache
+	client        Client
+	prefix        string
+	firstRevision int64
+	logger        log.Logger
+	quitc         chan struct{}
 }
 
 // NewInstancer returns an etcd instancer. It will start watching the given
@@ -27,12 +28,13 @@ func NewInstancer(c Client, prefix string, logger log.Logger) (*Instancer, error
 		quitc:  make(chan struct{}),
 	}
 
-	instances, err := s.client.GetEntries(s.prefix)
+	instances, revision, err := s.client.GetEntriesAndRevision(s.prefix)
 	if err == nil {
 		logger.Log("prefix", s.prefix, "instances", len(instances))
 	} else {
 		logger.Log("prefix", s.prefix, "err", err)
 	}
+	s.firstRevision = revision
 	s.cache.Update(sd.Event{Instances: instances, Err: err})
 
 	go s.loop()
@@ -41,12 +43,12 @@ func NewInstancer(c Client, prefix string, logger log.Logger) (*Instancer, error
 
 func (s *Instancer) loop() {
 	ch := make(chan struct{})
-	go s.client.WatchPrefix(s.prefix, ch)
+	go s.client.WatchPrefixWithRevision(s.prefix, s.firstRevision+1, ch)
 
 	for {
 		select {
 		case <-ch:
-			instances, err := s.client.GetEntries(s.prefix)
+			instances, _, err := s.client.GetEntriesAndRevision(s.prefix)
 			if err != nil {
 				s.logger.Log("msg", "failed to retrieve entries", "err", err)
 				s.cache.Update(sd.Event{Err: err})

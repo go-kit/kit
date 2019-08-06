@@ -13,11 +13,11 @@ type testClient struct {
 	registerRes error // value returned when Register or Deregister is called
 }
 
-func (tc *testClient) GetEntries(prefix string) ([]string, error) {
-	return nil, nil
+func (tc *testClient) GetEntriesAndRevision(prefix string) ([]string, int64, error) {
+	return nil, 0, nil
 }
 
-func (tc *testClient) WatchPrefix(prefix string, ch chan struct{}) {
+func (tc *testClient) WatchPrefixWithRevision(prefix string, revision int64, ch chan struct{}) {
 }
 
 func (tc *testClient) Register(s Service) error {

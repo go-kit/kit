@@ -20,19 +20,19 @@ var (
 
 // Client is a wrapper around the etcd client.
 type Client interface {
-	// GetEntries queries the given prefix in etcd and returns a slice
-	// containing the values of all keys found, recursively, underneath that
+	// GetEntriesAndRevision queries the given prefix in etcd and returns a slice and revision
+	// slice containing the values of all keys found, recursively, underneath that
 	// prefix.
-	GetEntries(prefix string) ([]string, error)
+	GetEntriesAndRevision(prefix string) ([]string, int64, error)
 
-	// WatchPrefix watches the given prefix in etcd for changes. When a change
-	// is detected, it will signal on the passed channel. Clients are expected
-	// to call GetEntries to update themselves with the latest set of complete
-	// values. WatchPrefix will always send an initial sentinel value on the
-	// channel after establishing the watch, to ensure that clients always
-	// receive the latest set of values. WatchPrefix will block until the
+	// WatchPrefixWithRevision watches the given prefix in etcd for changes from revision.
+	// When a change is detected, it will signal on the passed channel.
+	// Clients are expected to call GetEntries to update themselves with the latest
+	// set of complete values. WatchPrefix will always send an initial sentinel value
+	// on the channel after establishing the watch, to ensure that clients always
+	// receive the latest set of values. WatchPrefixWithRevision will block until the
 	// context passed to the NewClient constructor is terminated.
-	WatchPrefix(prefix string, ch chan struct{})
+	WatchPrefixWithRevision(prefix string, revision int64, ch chan struct{})
 
 	// Register a service with etcd.
 	Register(s Service) error
@@ -124,11 +124,11 @@ func NewClient(ctx context.Context, machines []string, options ClientOptions) (C
 
 func (c *client) LeaseID() int64 { return int64(c.leaseID) }
 
-// GetEntries implements the etcd Client interface.
-func (c *client) GetEntries(key string) ([]string, error) {
+// GetEntriesAndRevision implements the etcd Client interface.
+func (c *client) GetEntriesAndRevision(key string) ([]string, int64, error) {
 	resp, err := c.kv.Get(c.ctx, key, clientv3.WithPrefix())
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	entries := make([]string, len(resp.Kvs))
@@ -136,15 +136,15 @@ func (c *client) GetEntries(key string) ([]string, error) {
 		entries[i] = string(kv.Value)
 	}
 
-	return entries, nil
+	return entries, resp.Header.Revision, nil
 }
 
-// WatchPrefix implements the etcd Client interface.
-func (c *client) WatchPrefix(prefix string, ch chan struct{}) {
+// WatchPrefixWithRevision implements the etcd Client interface.
+func (c *client) WatchPrefixWithRevision(prefix string, revision int64, ch chan struct{}) {
 	c.wctx, c.wcf = context.WithCancel(c.ctx)
 	c.watcher = clientv3.NewWatcher(c.cli)
 
-	wch := c.watcher.Watch(c.wctx, prefix, clientv3.WithPrefix(), clientv3.WithRev(0))
+	wch := c.watcher.Watch(c.wctx, prefix, clientv3.WithPrefix(), clientv3.WithRev(revision))
 	ch <- struct{}{}
 	for wr := range wch {
 		if wr.Canceled {
