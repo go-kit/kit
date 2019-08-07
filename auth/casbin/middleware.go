@@ -48,17 +48,23 @@ func NewEnforcer(
 	subject string, object interface{}, action string,
 ) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (
-			response interface{}, err error,
-		) {
+		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			casbinModel := ctx.Value(CasbinModelContextKey)
 			casbinPolicy := ctx.Value(CasbinPolicyContextKey)
+			enforcer, err := stdcasbin.NewEnforcer(casbinModel, casbinPolicy)
+			if err != nil {
+				return nil, err
+			}
 
-			enforcer := stdcasbin.NewEnforcer(casbinModel, casbinPolicy)
 			ctx = context.WithValue(ctx, CasbinEnforcerContextKey, enforcer)
-			if !enforcer.Enforce(subject, object, action) {
+			ok, err := enforcer.Enforce(subject, object, action)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
 				return nil, ErrUnauthorized
 			}
+
 			return next(ctx, request)
 		}
 	}
