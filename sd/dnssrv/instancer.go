@@ -87,6 +87,9 @@ func (in *Instancer) resolve(lookup Lookup) ([]string, error) {
 	}
 	instances := make([]string, len(addrs))
 	for i, addr := range addrs {
+		if addr.Port == 0 {
+			return nil, fmt.Errorf("resolver returned SRV record with port 0")
+		}
 		instances[i] = net.JoinHostPort(addr.Target, fmt.Sprint(addr.Port))
 	}
 	return instances, nil
