@@ -1,6 +1,7 @@
 package dnssrv
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -9,6 +10,11 @@ import (
 	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/kit/sd/internal/instance"
 )
+
+// ErrPortZero is returned by the resolve machinery
+// when a DNS resolver returns an SRV record with its
+// port set to zero.
+var ErrPortZero = errors.New("resolver returned SRV record with port 0")
 
 // Instancer yields instances from the named DNS SRV record. The name is
 // resolved on a fixed schedule. Priorities and weights are ignored.
@@ -88,7 +94,7 @@ func (in *Instancer) resolve(lookup Lookup) ([]string, error) {
 	instances := make([]string, len(addrs))
 	for i, addr := range addrs {
 		if addr.Port == 0 {
-			return nil, fmt.Errorf("resolver returned SRV record with port 0")
+			return nil, ErrPortZero
 		}
 		instances[i] = net.JoinHostPort(addr.Target, fmt.Sprint(addr.Port))
 	}

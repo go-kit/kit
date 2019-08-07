@@ -68,6 +68,33 @@ func TestRefresh(t *testing.T) {
 	}
 }
 
+func TestIssue892(t *testing.T) {
+	ticker := time.NewTicker(time.Second)
+	ticker.Stop()
+	tickc := make(chan time.Time)
+	ticker.C = tickc
+
+	records := []*net.SRV{
+		{Target: "1.0.0.1", Port: 80},
+		{Target: "1.0.0.2", Port: 0},
+		{Target: "1.0.0.3", Port: 80},
+	}
+
+	lookup := func(service, proto, name string) (string, []*net.SRV, error) {
+		return "cname", records, nil
+	}
+
+	instancer := NewInstancerDetailed("name", ticker, lookup, log.NewNopLogger())
+	defer instancer.Stop()
+
+	tickc <- time.Now()
+	time.Sleep(100 * time.Millisecond)
+
+	if want, have := ErrPortZero, instancer.cache.State().Err; want != have {
+		t.Fatalf("want %v, have %v", want, have)
+	}
+}
+
 type nopCloser struct{}
 
 func (nopCloser) Close() error { return nil }
