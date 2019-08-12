@@ -1,6 +1,7 @@
 package dnssrv
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -9,6 +10,11 @@ import (
 	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/kit/sd/internal/instance"
 )
+
+// ErrPortZero is returned by the resolve machinery
+// when a DNS resolver returns an SRV record with its
+// port set to zero.
+var ErrPortZero = errors.New("resolver returned SRV record with port 0")
 
 // Instancer yields instances from the named DNS SRV record. The name is
 // resolved on a fixed schedule. Priorities and weights are ignored.
@@ -57,47 +63,50 @@ func NewInstancerDetailed(
 }
 
 // Stop terminates the Instancer.
-func (p *Instancer) Stop() {
-	close(p.quit)
+func (in *Instancer) Stop() {
+	close(in.quit)
 }
 
-func (p *Instancer) loop(t *time.Ticker, lookup Lookup) {
+func (in *Instancer) loop(t *time.Ticker, lookup Lookup) {
 	defer t.Stop()
 	for {
 		select {
 		case <-t.C:
-			instances, err := p.resolve(lookup)
+			instances, err := in.resolve(lookup)
 			if err != nil {
-				p.logger.Log("name", p.name, "err", err)
-				p.cache.Update(sd.Event{Err: err})
+				in.logger.Log("name", in.name, "err", err)
+				in.cache.Update(sd.Event{Err: err})
 				continue // don't replace potentially-good with bad
 			}
-			p.cache.Update(sd.Event{Instances: instances})
+			in.cache.Update(sd.Event{Instances: instances})
 
-		case <-p.quit:
+		case <-in.quit:
 			return
 		}
 	}
 }
 
-func (p *Instancer) resolve(lookup Lookup) ([]string, error) {
-	_, addrs, err := lookup("", "", p.name)
+func (in *Instancer) resolve(lookup Lookup) ([]string, error) {
+	_, addrs, err := lookup("", "", in.name)
 	if err != nil {
 		return nil, err
 	}
 	instances := make([]string, len(addrs))
 	for i, addr := range addrs {
+		if addr.Port == 0 {
+			return nil, ErrPortZero
+		}
 		instances[i] = net.JoinHostPort(addr.Target, fmt.Sprint(addr.Port))
 	}
 	return instances, nil
 }
 
 // Register implements Instancer.
-func (s *Instancer) Register(ch chan<- sd.Event) {
-	s.cache.Register(ch)
+func (in *Instancer) Register(ch chan<- sd.Event) {
+	in.cache.Register(ch)
 }
 
 // Deregister implements Instancer.
-func (s *Instancer) Deregister(ch chan<- sd.Event) {
-	s.cache.Deregister(ch)
+func (in *Instancer) Deregister(ch chan<- sd.Event) {
+	in.cache.Deregister(ch)
 }
