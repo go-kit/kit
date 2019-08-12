@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	stdcasbin "github.com/casbin/casbin"
+	"github.com/casbin/casbin/model"
 	fileadapter "github.com/casbin/casbin/persist/file-adapter"
 )
 
 func TestStructBaseContext(t *testing.T) {
 	e := func(ctx context.Context, i interface{}) (interface{}, error) { return ctx, nil }
 
-	m := stdcasbin.NewModel()
+	m := model.NewModel()
 	m.AddDef("r", "r", "sub, obj, act")
 	m.AddDef("p", "p", "sub, obj, act")
 	m.AddDef("e", "e", "some(where (p.eft == allow))")

@@ -11,6 +11,8 @@ tasks:
         sudo ln -s /usr/local/go/bin/go /usr/bin/go
         go env
     - dependencies: |
+        mkdir -p $(go env GOPATH)/src/github.com/go-kit
+        mv kit $(go env GOPATH)/src/github.com/go-kit
         go get -t github.com/go-kit/kit/...
     - test: |
         go test -race -v github.com/go-kit/kit/...
