@@ -74,7 +74,6 @@ func TestProcess(t *testing.T) {
 				}
 			}
 		})
-
 	}
 
 	testcase := func(dir string) {
