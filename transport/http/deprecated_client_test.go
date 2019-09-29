@@ -14,10 +14,10 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
-func TestClientEndpoint_BeforeAfter(t *testing.T) {
+func TestHTTPClient(t *testing.T) {
 	var (
 		testbody = "testbody"
-		encode   = func(context.Context, string, string, interface{}) (*http.Request, error) { return nil, nil }
+		encode   = func(context.Context, *http.Request, interface{}) error { return nil }
 		decode   = func(_ context.Context, r *http.Response) (interface{}, error) {
 			buffer := make([]byte, len(testbody))
 			r.Body.Read(buffer)
@@ -42,16 +42,16 @@ func TestClientEndpoint_BeforeAfter(t *testing.T) {
 		w.Write([]byte(testbody))
 	}))
 
-	endpoint := httptransport.NewClientEndpoint(
+	client := httptransport.NewClient(
 		"GET",
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.ClientEndpointBefore(httptransport.SetRequestHeader(headerKey, headerVal)),
-		httptransport.ClientEndpointAfter(afterFunc),
+		httptransport.ClientBefore(httptransport.SetRequestHeader(headerKey, headerVal)),
+		httptransport.ClientAfter(afterFunc),
 	)
 
-	res, err := endpoint(context.Background(), struct{}{})
+	res, err := client.Endpoint()(context.Background(), struct{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,14 +92,14 @@ func TestClientEndpoint_BeforeAfter(t *testing.T) {
 	}
 }
 
-func TestClientEndpoint_BufferedStream(t *testing.T) {
+func TestHTTPClientBufferedStream(t *testing.T) {
 	// bodysize has a size big enought to make the resopnse.Body not an instant read
 	// so if the response is cancelled it wount be all readed and the test would fail
 	// The 6000 has not a particular meaning, it big enough to fulfill the usecase.
 	const bodysize = 6000
 	var (
 		testbody = string(make([]byte, bodysize))
-		encode   = func(context.Context, string, string, interface{}) (*http.Request, error) { return nil, nil }
+		encode   = func(context.Context, *http.Request, interface{}) error { return nil }
 		decode   = func(_ context.Context, r *http.Response) (interface{}, error) {
 			return testResponse{r.Body, ""}, nil
 		}
@@ -110,15 +110,15 @@ func TestClientEndpoint_BufferedStream(t *testing.T) {
 		w.Write([]byte(testbody))
 	}))
 
-	endpoint := httptransport.NewClientEndpoint(
+	client := httptransport.NewClient(
 		"GET",
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.ClientEndpointBufferedStream(true),
+		httptransport.BufferedStream(true),
 	)
 
-	res, err := endpoint(context.Background(), struct{}{})
+	res, err := client.Endpoint()(context.Background(), struct{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,13 +143,13 @@ func TestClientEndpoint_BufferedStream(t *testing.T) {
 	}
 }
 
-func TestClientEndpoint_Finalizer(t *testing.T) {
+func TestClientFinalizer(t *testing.T) {
 	var (
 		headerKey    = "X-Henlo-Lizer"
 		headerVal    = "Helllo you stinky lizard"
 		responseBody = "go eat a fly ugly\n"
 		done         = make(chan struct{})
-		encode       = func(context.Context, string, string, interface{}) (*http.Request, error) { return nil, nil }
+		encode       = func(context.Context, *http.Request, interface{}) error { return nil }
 		decode       = func(_ context.Context, r *http.Response) (interface{}, error) {
 			return testResponse{r.Body, ""}, nil
 		}
@@ -161,12 +161,12 @@ func TestClientEndpoint_Finalizer(t *testing.T) {
 	}))
 	defer server.Close()
 
-	endpoint := httptransport.NewClientEndpoint(
+	client := httptransport.NewClient(
 		"GET",
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.ClientEndpointFinalizer(func(ctx context.Context, err error) {
+		httptransport.ClientFinalizer(func(ctx context.Context, err error) {
 			responseHeader := ctx.Value(httptransport.ContextKeyResponseHeaders).(http.Header)
 			if want, have := headerVal, responseHeader.Get(headerKey); want != have {
 				t.Errorf("%s: want %q, have %q", headerKey, want, have)
@@ -181,7 +181,7 @@ func TestClientEndpoint_Finalizer(t *testing.T) {
 		}),
 	)
 
-	_, err := endpoint(context.Background(), struct{}{})
+	_, err := client.Endpoint()(context.Background(), struct{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +193,7 @@ func TestClientEndpoint_Finalizer(t *testing.T) {
 	}
 }
 
-func TestClientEndpoint_EncodeJSONClientRequest(t *testing.T) {
+func TestEncodeJSONRequest(t *testing.T) {
 	var header http.Header
 	var body string
 
@@ -214,12 +214,12 @@ func TestClientEndpoint_EncodeJSONClientRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	endpoint := httptransport.NewClientEndpoint(
+	client := httptransport.NewClient(
 		"POST",
 		serverURL,
-		httptransport.EncodeJSONClientRequest,
+		httptransport.EncodeJSONRequest,
 		func(context.Context, *http.Response) (interface{}, error) { return nil, nil },
-	)
+	).Endpoint()
 
 	for _, test := range []struct {
 		value interface{}
@@ -232,7 +232,7 @@ func TestClientEndpoint_EncodeJSONClientRequest(t *testing.T) {
 		{"test", "\"test\"\n"},
 		{enhancedRequest{Foo: "foo"}, "{\"foo\":\"foo\"}\n"},
 	} {
-		if _, err := endpoint(context.Background(), test.value); err != nil {
+		if _, err := client(context.Background(), test.value); err != nil {
 			t.Error(err)
 			continue
 		}
@@ -242,7 +242,7 @@ func TestClientEndpoint_EncodeJSONClientRequest(t *testing.T) {
 		}
 	}
 
-	if _, err := endpoint(context.Background(), enhancedRequest{Foo: "foo"}); err != nil {
+	if _, err := client(context.Background(), enhancedRequest{Foo: "foo"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -255,9 +255,9 @@ func TestClientEndpoint_EncodeJSONClientRequest(t *testing.T) {
 	}
 }
 
-func TestClientEndpoint_SetClient(t *testing.T) {
+func TestSetClient(t *testing.T) {
 	var (
-		encode = func(context.Context, string, string, interface{}) (*http.Request, error) { return nil, nil }
+		encode = func(context.Context, *http.Request, interface{}) error { return nil }
 		decode = func(_ context.Context, r *http.Response) (interface{}, error) {
 			t, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -275,44 +275,19 @@ func TestClientEndpoint_SetClient(t *testing.T) {
 		}, nil
 	})
 
-	endpoint := httptransport.NewClientEndpoint(
+	client := httptransport.NewClient(
 		"GET",
 		&url.URL{},
 		encode,
 		decode,
-		httptransport.ClientEndpointSetClient(testHttpClient),
-	)
+		httptransport.SetClient(testHttpClient),
+	).Endpoint()
 
-	resp, err := endpoint(context.Background(), nil)
+	resp, err := client(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if r, ok := resp.(string); !ok || r != "hello, world!" {
 		t.Fatal("Expected response to be 'hello, world!' string")
 	}
-}
-
-type testResponse struct {
-	Body   io.ReadCloser
-	String string
-}
-
-func mustParse(s string) *url.URL {
-	u, err := url.Parse(s)
-	if err != nil {
-		panic(err)
-	}
-	return u
-}
-
-type enhancedRequest struct {
-	Foo string `json:"foo"`
-}
-
-func (e enhancedRequest) Headers() http.Header { return http.Header{"X-Edward": []string{"Snowden"}} }
-
-type httpClientFunc func(req *http.Request) (*http.Response, error)
-
-func (f httpClientFunc) Do(req *http.Request) (*http.Response, error) {
-	return f(req)
 }
