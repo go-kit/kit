@@ -49,8 +49,8 @@ func main() {
 		thriftProtocol = fs.String("thrift-protocol", "binary", "binary, compact, json, simplejson")
 		thriftBuffer   = fs.Int("thrift-buffer", 0, "0 for unbuffered")
 		thriftFramed   = fs.Bool("thrift-framed", false, "true to enable framing")
-		zipkinV2URL    = fs.String("zipkin-url", "", "Enable Zipkin v2 tracing (zipkin-go) using a Reporter URL e.g. http://localhost:9411/api/v2/spans")
-		zipkinV1URL    = fs.String("zipkin-v1-url", "", "Enable Zipkin v1 tracing (zipkin-go-opentracing) using a collector URL e.g. http://localhost:9411/api/v1/spans")
+		zipkinURL      = fs.String("zipkin-url", "", "Enable Zipkin tracing via HTTP reporter URL e.g. http://localhost:9411/api/v2/spans")
+		zipkinBridge   = fs.Bool("zipkin-ot-bridge", false, "Use Zipkin OpenTracing bridge instead of native implementation")
 		lightstepToken = fs.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
 		appdashAddr    = fs.String("appdash-addr", "", "Enable Appdash tracing via an Appdash server host:port")
 	)
@@ -65,29 +65,36 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
+	var zipkinTracer *zipkin.Tracer
+	{
+		if *zipkinURL != "" {
+			var (
+				err         error
+				hostPort    = "localhost:80"
+				serviceName = "addsvc"
+				reporter    = zipkinhttp.NewReporter(*zipkinURL)
+			)
+			defer reporter.Close()
+			zEP, _ := zipkin.NewEndpoint(serviceName, hostPort)
+			zipkinTracer, err = zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(zEP))
+			if err != nil {
+				logger.Log("err", err)
+				os.Exit(1)
+			}
+			if !(*zipkinBridge) {
+				logger.Log("tracer", "Zipkin", "type", "Native", "URL", *zipkinURL)
+			}
+		}
+	}
+
 	// Determine which OpenTracing tracer to use. We'll pass the tracer to all the
 	// components that use it, as a dependency.
 	var tracer stdopentracing.Tracer
 	{
-		if *zipkinV1URL != "" && *zipkinV2URL == "" {
-			logger.Log("tracer", "Zipkin", "type", "OpenTracing", "URL", *zipkinV1URL)
-			collector, err := zipkinot.NewHTTPCollector(*zipkinV1URL)
-			if err != nil {
-				logger.Log("err", err)
-				os.Exit(1)
-			}
-			defer collector.Close()
-			var (
-				debug       = false
-				hostPort    = "localhost:80"
-				serviceName = "addsvc"
-			)
-			recorder := zipkinot.NewRecorder(collector, debug, hostPort, serviceName)
-			tracer, err = zipkinot.NewTracer(recorder)
-			if err != nil {
-				logger.Log("err", err)
-				os.Exit(1)
-			}
+		if *zipkinBridge && zipkinTracer != nil {
+			logger.Log("tracer", "Zipkin", "type", "OpenTracing", "URL", *zipkinURL)
+			tracer = zipkinot.Wrap(zipkinTracer)
+			zipkinTracer = nil // do not instrument with both native tracer and opentracing bridge
 		} else if *lightstepToken != "" {
 			logger.Log("tracer", "LightStep") // probably don't want to print out the token :)
 			tracer = lightstep.NewTracer(lightstep.Options{
@@ -99,29 +106,6 @@ func main() {
 			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
 		} else {
 			tracer = stdopentracing.GlobalTracer() // no-op
-		}
-	}
-
-	var zipkinTracer *zipkin.Tracer
-	{
-		var (
-			err           error
-			hostPort      = "localhost:80"
-			serviceName   = "addsvc"
-			useNoopTracer = (*zipkinV2URL == "")
-			reporter      = zipkinhttp.NewReporter(*zipkinV2URL)
-		)
-		defer reporter.Close()
-		zEP, _ := zipkin.NewEndpoint(serviceName, hostPort)
-		zipkinTracer, err = zipkin.NewTracer(
-			reporter, zipkin.WithLocalEndpoint(zEP), zipkin.WithNoopTracer(useNoopTracer),
-		)
-		if err != nil {
-			logger.Log("err", err)
-			os.Exit(1)
-		}
-		if !useNoopTracer {
-			logger.Log("tracer", "Zipkin", "type", "Native", "URL", *zipkinV2URL)
 		}
 	}
 

@@ -1,8 +1,9 @@
 package service
 
-import "context"
-
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 type FooService struct {
 }

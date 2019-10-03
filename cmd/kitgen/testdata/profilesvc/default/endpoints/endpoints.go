@@ -1,10 +1,11 @@
 package endpoints
 
-import "context"
+import (
+	"context"
 
-import "github.com/go-kit/kit/endpoint"
-
-import "github.com/go-kit/kit/cmd/kitgen/testdata/profilesvc/default/service"
+	"github.com/go-kit/kit/cmd/kitgen/testdata/profilesvc/default/service"
+	"github.com/go-kit/kit/endpoint"
+)
 
 type PostProfileRequest struct {
 	P service.Profile
