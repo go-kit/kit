@@ -73,6 +73,18 @@ func TestJSONLoggerNilErrorValue(t *testing.T) {
 	}
 }
 
+func TestJSONLoggerNoHTMLEscape(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	logger := log.NewJSONLogger(buf)
+	if err := logger.Log("k", "<&>"); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := `{"k":"<&>"}`+"\n", buf.String(); want != have {
+		t.Errorf("\nwant %#v\nhave%#v", want, have)
+	}
+}
+
 // aller implements json.Marshaler, encoding.TextMarshaler, and fmt.Stringer.
 type aller struct{}
 
