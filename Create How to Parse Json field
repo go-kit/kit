@@ -1,0 +1,24 @@
+{
+    "amountTransaction": {
+      "paymentAmount": {
+        "totalAmountCharged": "0.00",
+        "chargingMetaData": {
+          "taxAmount": "0",
+          "purchaseCategoryCode": "app_daily_oneTime",
+          "channel": "app",
+          "onBehalfOf": "content-partner-name"
+        },
+        "chargingInformation": {
+          "amount": "0",
+          "description": "content-name",
+          "currency": "NPR"
+        }
+      },
+      "endUserId": "977XXXXXXXXXX",
+      "serverReferenceCode": " 1531678515518817-108435",
+      "transactionOperationStatus": "Charged",
+      "clientCorrelator": "<SP ID>referenceCode",
+      "resourceURL": "https://<host>/payment/v1/transactions/amount/15316785155047",
+      "referenceCode": "1531708289"
+    }
+  }
