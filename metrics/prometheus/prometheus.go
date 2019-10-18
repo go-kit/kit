@@ -51,7 +51,7 @@ type Gauge struct {
 	lvs lv.LabelValues
 }
 
-// NewGaugeFrom construts and registers a Prometheus GaugeVec,
+// NewGaugeFrom constructs and registers a Prometheus GaugeVec,
 // and returns a usable Gauge object.
 func NewGaugeFrom(opts prometheus.GaugeOpts, labelNames []string) *Gauge {
 	gv := prometheus.NewGaugeVec(opts, labelNames)
