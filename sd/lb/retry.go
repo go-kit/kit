@@ -153,7 +153,7 @@ func RetryEndpoints(timeout time.Duration, endpoints []endpoint.Endpoint) endpoi
 
 			case err := <-errs:
 				final.RawErrors = append(final.RawErrors, err)
-				if len(endpoints) == i {
+				if len(endpoints)-1 == i {
 					final.Final = err
 					return nil, final
 				}
