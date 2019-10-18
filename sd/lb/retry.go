@@ -115,3 +115,50 @@ func RetryWithCallback(timeout time.Duration, b Balancer, cb Callback) endpoint.
 		}
 	}
 }
+
+// RetryEndpoints returns the endpoint by position in slice for the specified
+// service method. Requests that return errors will be retried until they succeed,
+// until the length of endpoints equal count of attempts, or until the timeout
+// is elapsed, whichever comes first.
+func RetryEndpoints(timeout time.Duration, endpoints []endpoint.Endpoint) endpoint.Endpoint {
+	if len(endpoints) == 0 {
+		panic("empty endpoints")
+	}
+
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		var (
+			newctx, cancel = context.WithTimeout(ctx, timeout)
+			responses      = make(chan interface{}, 1)
+			errs           = make(chan error, 1)
+			final          RetryError
+		)
+		defer cancel()
+
+		for i := 0; ; i++ {
+			go func() {
+				response, err := endpoints[i](newctx, request)
+				if err != nil {
+					errs <- err
+					return
+				}
+				responses <- response
+			}()
+
+			select {
+			case <-newctx.Done():
+				return nil, newctx.Err()
+
+			case response := <-responses:
+				return response, nil
+
+			case err := <-errs:
+				final.RawErrors = append(final.RawErrors, err)
+				if len(endpoints) == i {
+					final.Final = err
+					return nil, final
+				}
+				continue
+			}
+		}
+	}
+}
