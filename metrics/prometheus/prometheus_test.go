@@ -23,6 +23,7 @@ func TestCounter(t *testing.T) {
 
 	scrape := func() string {
 		resp, _ := http.Get(s.URL)
+		defer resp.Body.Close()
 		buf, _ := ioutil.ReadAll(resp.Body)
 		return string(buf)
 	}
@@ -54,6 +55,7 @@ func TestGauge(t *testing.T) {
 
 	scrape := func() string {
 		resp, _ := http.Get(s.URL)
+		defer resp.Body.Close()
 		buf, _ := ioutil.ReadAll(resp.Body)
 		return string(buf)
 	}
@@ -85,6 +87,7 @@ func TestSummary(t *testing.T) {
 
 	scrape := func() string {
 		resp, _ := http.Get(s.URL)
+		defer resp.Body.Close()
 		buf, _ := ioutil.ReadAll(resp.Body)
 		return string(buf)
 	}
@@ -130,6 +133,7 @@ func TestHistogram(t *testing.T) {
 
 	scrape := func() string {
 		resp, _ := http.Get(s.URL)
+		defer resp.Body.Close()
 		buf, _ := ioutil.ReadAll(resp.Body)
 		return string(buf)
 	}
