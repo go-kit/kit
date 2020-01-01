@@ -35,6 +35,8 @@ func New(svc addservice.Service, logger log.Logger, duration metrics.Histogram, 
 	var sumEndpoint endpoint.Endpoint
 	{
 		sumEndpoint = MakeSumEndpoint(svc)
+		// Sum is limited to 1 request per second with burst of 1 request.
+		// Note, rate is defined as a time interval between requests.
 		sumEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 1))(sumEndpoint)
 		sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(sumEndpoint)
 		sumEndpoint = opentracing.TraceServer(otTracer, "Sum")(sumEndpoint)
@@ -47,7 +49,9 @@ func New(svc addservice.Service, logger log.Logger, duration metrics.Histogram, 
 	var concatEndpoint endpoint.Endpoint
 	{
 		concatEndpoint = MakeConcatEndpoint(svc)
-		concatEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 100))(concatEndpoint)
+		// Concat is limited to 1 request per second with burst of 100 requests.
+		// Note, rate is defined as a number of requests per second.
+		concatEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Limit(1), 100))(concatEndpoint)
 		concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(concatEndpoint)
 		concatEndpoint = opentracing.TraceServer(otTracer, "Concat")(concatEndpoint)
 		if zipkinTracer != nil {
