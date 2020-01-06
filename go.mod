@@ -14,8 +14,6 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/clbanning/x2j v0.0.0-20191024224557-825249438eec // indirect
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
-	github.com/coreos/go-semver v0.3.0 // indirect
-	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
@@ -25,9 +23,6 @@ require (
 	github.com/go-stack/stack v1.8.0
 	github.com/golang/protobuf v1.3.2
 	github.com/gorilla/mux v1.7.3
-	github.com/gorilla/websocket v1.4.1 // indirect
-	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.12.1 // indirect
 	github.com/hashicorp/consul/api v1.3.0
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/hudl/fargo v1.3.0
@@ -53,7 +48,6 @@ require (
 	github.com/sony/gobreaker v0.4.1
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/streadway/handy v0.0.0-20190108123426-d5acb3125c2a
-	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 	go.opencensus.io v0.22.2
 	go.uber.org/zap v1.13.0
