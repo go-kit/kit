@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	stdcasbin "github.com/casbin/casbin"
-	"github.com/casbin/casbin/model"
-	fileadapter "github.com/casbin/casbin/persist/file-adapter"
+	stdcasbin "github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v2/model"
+	fileadapter "github.com/casbin/casbin/v2/persist/file-adapter"
 )
 
 func TestStructBaseContext(t *testing.T) {
