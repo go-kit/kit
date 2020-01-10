@@ -62,6 +62,30 @@ func TestTraceServerNoContextSpan(t *testing.T) {
 	}
 }
 
+func TestTraceServerEndpointName(t *testing.T) {
+	tracer := mocktracer.New()
+
+	// Initialize the ctx with a nameless Span.
+	contextSpan := tracer.StartSpan("").(*mocktracer.MockSpan)
+	ctx := opentracing.ContextWithSpan(context.Background(), contextSpan)
+
+	tracedEndpoint := kitot.TraceServer(tracer, "")(endpoint.Nop)
+	if _, err := tracedEndpoint(context.WithValue(ctx, endpoint.ContextKeyEndpointName, "testOp"), struct{}{}); err != nil {
+		t.Fatal(err)
+	}
+
+	finishedSpans := tracer.FinishedSpans()
+	if want, have := 1, len(finishedSpans); want != have {
+		t.Fatalf("Want %v span(s), found %v", want, have)
+	}
+
+	// Test that the op name is updated
+	endpointSpan := finishedSpans[0]
+	if want, have := "testOp", endpointSpan.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+}
+
 func TestTraceClient(t *testing.T) {
 	tracer := mocktracer.New()
 
@@ -101,6 +125,31 @@ func TestTraceClientNoContextSpan(t *testing.T) {
 	// Empty/background context.
 	tracedEndpoint := kitot.TraceClient(tracer, "testOp")(endpoint.Nop)
 	if _, err := tracedEndpoint(context.Background(), struct{}{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// tracedEndpoint created a new Span.
+	finishedSpans := tracer.FinishedSpans()
+	if want, have := 1, len(finishedSpans); want != have {
+		t.Fatalf("Want %v span(s), found %v", want, have)
+	}
+
+	endpointSpan := finishedSpans[0]
+	if want, have := "testOp", endpointSpan.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+}
+
+func TestTraceClientEndpointName(t *testing.T) {
+	tracer := mocktracer.New()
+
+	// Initialize the ctx with a parent Span.
+	parentSpan := tracer.StartSpan("parent").(*mocktracer.MockSpan)
+	defer parentSpan.Finish()
+	ctx := opentracing.ContextWithSpan(context.Background(), parentSpan)
+
+	tracedEndpoint := kitot.TraceClient(tracer, "")(endpoint.Nop)
+	if _, err := tracedEndpoint(context.WithValue(ctx, endpoint.ContextKeyEndpointName, "testOp"), struct{}{}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -17,6 +17,14 @@ import (
 func TraceServer(tracer opentracing.Tracer, operationName string) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
+			// Use endpoint name from the context if there is no operation name specified
+			if operationName == "" {
+				endpointName, ok := ctx.Value(endpoint.ContextKeyEndpointName).(string)
+				if ok && endpointName != "" {
+					operationName = endpointName
+				}
+			}
+
 			serverSpan := opentracing.SpanFromContext(ctx)
 			if serverSpan == nil {
 				// All we can do is create a new root span.
@@ -37,6 +45,14 @@ func TraceServer(tracer opentracing.Tracer, operationName string) endpoint.Middl
 func TraceClient(tracer opentracing.Tracer, operationName string) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
+			// Use endpoint name from the context if there is no operation name specified
+			if operationName == "" {
+				endpointName, ok := ctx.Value(endpoint.ContextKeyEndpointName).(string)
+				if ok && endpointName != "" {
+					operationName = endpointName
+				}
+			}
+
 			var clientSpan opentracing.Span
 			if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
 				clientSpan = tracer.StartSpan(
