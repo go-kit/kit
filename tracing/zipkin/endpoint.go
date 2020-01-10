@@ -18,7 +18,7 @@ func TraceEndpoint(tracer *zipkin.Tracer, name string) endpoint.Middleware {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			// Use endpoint name from the context if there is no operation name specified
 			if name == "" {
-				endpointName, ok := ctx.Value(endpoint.ContextKeyEndpointName).(string)
+				endpointName, ok := endpoint.EndpointName(ctx)
 				if ok && endpointName != "" {
 					name = endpointName
 				}

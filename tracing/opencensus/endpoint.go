@@ -33,7 +33,7 @@ func TraceEndpoint(name string, options ...EndpointOption) endpoint.Middleware {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// Use endpoint name from the context if there is no operation name specified
 			if name == TraceEndpointDefaultName {
-				endpointName, ok := ctx.Value(endpoint.ContextKeyEndpointName).(string)
+				endpointName, ok := endpoint.EndpointName(ctx)
 				if ok && endpointName != "" {
 					name = endpointName
 				}

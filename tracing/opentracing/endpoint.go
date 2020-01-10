@@ -19,7 +19,7 @@ func TraceServer(tracer opentracing.Tracer, operationName string) endpoint.Middl
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			// Use endpoint name from the context if there is no operation name specified
 			if operationName == "" {
-				endpointName, ok := ctx.Value(endpoint.ContextKeyEndpointName).(string)
+				endpointName, ok := endpoint.EndpointName(ctx)
 				if ok && endpointName != "" {
 					operationName = endpointName
 				}

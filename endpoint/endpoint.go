@@ -51,6 +51,14 @@ func EndpointNameMiddleware(name string) Middleware {
 	}
 }
 
+// EndpointName fetches the endpoint name from the context (if any).
+// If an endpoint name is not found or it isn't string, the second return argument is false.
+func EndpointName(ctx context.Context) (string, bool) {
+	name, ok := ctx.Value(ContextKeyEndpointName).(string)
+
+	return name, ok
+}
+
 type contextKey int
 
 const (

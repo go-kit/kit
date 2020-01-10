@@ -13,7 +13,7 @@ func TestEndpointNameMiddleware(t *testing.T) {
 	var name string
 
 	ep := func(ctx context.Context, request interface{}) (interface{}, error) {
-		name = ctx.Value(endpoint.ContextKeyEndpointName).(string)
+		name, _ = endpoint.EndpointName(ctx)
 
 		return nil, nil
 	}
