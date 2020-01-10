@@ -29,3 +29,20 @@ func TestTraceEndpoint(t *testing.T) {
 		t.Fatalf("incorrect span name, wanted %s, got %s", want, have)
 	}
 }
+
+func TestTraceEndpointName(t *testing.T) {
+	rec := recorder.NewReporter()
+	tr, _ := zipkin.NewTracer(rec)
+	mw := zipkinkit.TraceEndpoint(tr, "")
+	mw(endpoint.Nop)(context.WithValue(context.Background(), endpoint.ContextKeyEndpointName, spanName), nil)
+
+	spans := rec.Flush()
+
+	if want, have := 1, len(spans); want != have {
+		t.Fatalf("incorrect number of spans, wanted %d, got %d", want, have)
+	}
+
+	if want, have := spanName, spans[0].Name; want != have {
+		t.Fatalf("incorrect span name, wanted %s, got %s", want, have)
+	}
+}

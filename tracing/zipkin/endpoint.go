@@ -16,6 +16,14 @@ import (
 func TraceEndpoint(tracer *zipkin.Tracer, name string) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
+			// Use endpoint name from the context if there is no operation name specified
+			if name == "" {
+				endpointName, ok := ctx.Value(endpoint.ContextKeyEndpointName).(string)
+				if ok && endpointName != "" {
+					name = endpointName
+				}
+			}
+
 			var sc model.SpanContext
 			if parentSpan := zipkin.SpanFromContext(ctx); parentSpan != nil {
 				sc = parentSpan.Context()
