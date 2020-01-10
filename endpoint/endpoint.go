@@ -38,3 +38,22 @@ func Chain(outer Middleware, others ...Middleware) Middleware {
 type Failer interface {
 	Failed() error
 }
+
+// EndpointNameMiddleware populates the context with a common name for the endpoint.
+// It can be used in subsequent endpoints in the chain to identify the operation.
+func EndpointNameMiddleware(name string) Middleware {
+	return func(next Endpoint) Endpoint {
+		return func(ctx context.Context, req interface{}) (interface{}, error) {
+			ctx = context.WithValue(ctx, ContextKeyEndpointName, name)
+
+			return next(ctx, req)
+		}
+	}
+}
+
+type contextKey int
+
+const (
+	// ContextKeyEndpointName is populated in the context by EndpointNameMiddleware.
+	ContextKeyEndpointName contextKey = iota
+)
