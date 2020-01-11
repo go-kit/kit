@@ -1,6 +1,10 @@
 package opencensus
 
-import "go.opencensus.io/trace"
+import (
+	"context"
+
+	"go.opencensus.io/trace"
+)
 
 // EndpointOptions holds the options for tracing an endpoint
 type EndpointOptions struct {
@@ -11,6 +15,11 @@ type EndpointOptions struct {
 	// Attributes holds the default attributes which will be set on span
 	// creation by our Endpoint middleware.
 	Attributes []trace.Attribute
+
+	// GetSpanName holds the function to use for generating the span name
+	// from the information found in the incoming Request.
+	// Defaults to the name that the middleware was initialized with.
+	GetSpanName func(ctx context.Context) string
 }
 
 // EndpointOption allows for functional options to our OpenCensus endpoint
