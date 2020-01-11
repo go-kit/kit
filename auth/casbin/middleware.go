@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	stdcasbin "github.com/casbin/casbin"
+	stdcasbin "github.com/casbin/casbin/v2"
 	"github.com/go-kit/kit/endpoint"
 )
 
