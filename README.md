@@ -9,6 +9,12 @@ business value.
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
 - Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](https://gophersinvite.herokuapp.com/))
 
+## Sponsors
+
+- [OrderMyGear](https://www.ordermygear.com)
+
+Click on Sponsor, above, for more information on sponsorship.
+
 ## Motivation
 
 Go has emerged as the language of the server, but it remains underrepresented
@@ -50,21 +56,9 @@ Thank you, [contributors](https://github.com/go-kit/kit/graphs/contributors)!
 
 ## Dependency management
 
-Go kit is a library, designed to be imported into a binary package. Vendoring
-is currently the best way for binary package authors to ensure reliable,
-reproducible builds. Therefore, we strongly recommend our users use vendoring
-for all of their dependencies, including Go kit. To avoid compatibility and
-availability issues, Go kit doesn't vendor its own dependencies, and
-doesn't recommend use of third-party import proxies.
-
-There are several tools which make vendoring easier, including
- [dep](https://github.com/golang/dep),
- [gb](http://getgb.io),
- [glide](https://github.com/Masterminds/glide),
- [gvt](https://github.com/FiloSottile/gvt), and
- [govendor](https://github.com/kardianos/govendor).
-In addition, Go kit uses a variety of continuous integration providers
- to find and fix compatibility problems as soon as they occur.
+Go kit is [modules](https://github.com/golang/go/wiki/Modules) aware, and we
+encourage users to use the standard modules tooling. But Go kit is at major
+version 0, so it should be compatible with non-modules environments.
 
 ## Related projects
 
@@ -115,6 +109,3 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 - [Dapper, a Large-Scale Distributed Systems Tracing Infrastructure](http://research.google.com/pubs/pub36356.html) — Google
 - [Your Server as a Function](http://monkey.org/~marius/funsrv.pdf) (PDF) — Twitter
 
----
-
-Development supported by [DigitalOcean](https://digitalocean.com).
