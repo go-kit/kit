@@ -23,7 +23,7 @@ func TestHTTPClientTrace(t *testing.T) {
 	var (
 		err     error
 		rec     = &recordingExporter{}
-		rURL, _ = url.Parse("http://test.com/dummy/path")
+		rURL, _ = url.Parse("https://httpbin.org/get")
 	)
 
 	trace.RegisterExporter(rec)
@@ -72,7 +72,7 @@ func TestHTTPClientTrace(t *testing.T) {
 			t.Errorf("incorrect span name, want %s, have %s", want, have)
 		}
 
-		if want, have := "GET /dummy/path", span.Name; want != have && tr.name == "" {
+		if want, have := "GET /get", span.Name; want != have && tr.name == "" {
 			t.Errorf("incorrect span name, want %s, have %s", want, have)
 		}
 

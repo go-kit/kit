@@ -33,7 +33,7 @@ func TestHTTPClientTracePropagatesParentSpan(t *testing.T) {
 
 	tr, _ := zipkin.NewTracer(rec)
 
-	rURL, _ := url.Parse("http://test.com")
+	rURL, _ := url.Parse("https://httpbin.org/get")
 
 	clientTracer := zipkinkit.HTTPClientTrace(tr)
 	ep := kithttp.NewClient(
