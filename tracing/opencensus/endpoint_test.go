@@ -82,10 +82,16 @@ func TestTraceEndpoint(t *testing.T) {
 	mw(passEndpoint)(ctx, failedResponse{err: err4})
 
 	// span6
-	opts = opencensus.EndpointOptions{GetSpanName: func(ctx context.Context) string {
-		return span6
-	}}
-	mw = opencensus.TraceEndpoint("", opencensus.WithEndpointConfig(opts))
+	span6Attrs := []trace.Attribute{
+		trace.StringAttribute("string", "value"),
+		trace.Int64Attribute("int64", 42),
+	}
+	mw = opencensus.TraceEndpoint(
+		"",
+		opencensus.WithSpanDetails(func(ctx context.Context, name string) (string, []trace.Attribute) {
+			return span6, span6Attrs
+		}),
+	)
 	mw(endpoint.Nop)(ctx, nil)
 
 	// check span count
@@ -168,5 +174,9 @@ func TestTraceEndpoint(t *testing.T) {
 	span = spans[5]
 	if want, have := span6, span.Name; want != have {
 		t.Errorf("incorrect span name, wanted %q, got %q", want, have)
+	}
+
+	if want, have := 2, len(span.Attributes); want != have {
+		t.Fatalf("incorrect attribute count, wanted %d, got %d", want, have)
 	}
 }

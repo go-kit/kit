@@ -31,13 +31,24 @@ func TraceEndpoint(name string, options ...EndpointOption) endpoint.Middleware {
 
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			if name == TraceEndpointDefaultName && cfg.GetSpanName != nil {
-				name = cfg.GetSpanName(ctx)
+			var attributes []trace.Attribute
+
+			if cfg.GetSpanDetails != nil {
+				var newName string
+
+				newName, attributes = cfg.GetSpanDetails(ctx, name)
+
+				if newName != "" {
+					name = newName
+				}
 			}
 
 			ctx, span := trace.StartSpan(ctx, name)
 			if len(cfg.Attributes) > 0 {
 				span.AddAttributes(cfg.Attributes...)
+			}
+			if len(attributes) > 0 {
+				span.AddAttributes(attributes...)
 			}
 			defer span.End()
 
