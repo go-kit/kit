@@ -16,12 +16,15 @@ type EndpointOptions struct {
 	// creation by our Endpoint middleware.
 	Attributes []trace.Attribute
 
-	// GetSpanDetails holds the function to use for generating the span name
+	// GetName holds the function used for generating the span name
 	// based on the current name and from the information found in the incoming Request.
-	// It can also return additional attributes for the span.
 	//
-	// A returned empty name defaults to the name that the middleware was initialized with.
-	GetSpanDetails func(ctx context.Context, name string) (string, []trace.Attribute)
+	// If the returned name is empty, the existing name for the endpoint is kept.
+	GetName func(ctx context.Context, name string) string
+
+	// GetAttributes holds the function used for extracting additional attributes
+	// from the information found in the incoming Request.
+	GetAttributes func(ctx context.Context) []trace.Attribute
 }
 
 // EndpointOption allows for functional options to our OpenCensus endpoint
@@ -52,9 +55,16 @@ func WithIgnoreBusinessError(val bool) EndpointOption {
 	}
 }
 
-// WithSpanDetails extracts details from the request context (like span name and additional attributes).
-func WithSpanDetails(fn func(ctx context.Context, name string) (string, []trace.Attribute)) EndpointOption {
+// WithSpanName extracts additional attributes from the request context.
+func WithSpanName(fn func(ctx context.Context, name string) string) EndpointOption {
 	return func(o *EndpointOptions) {
-		o.GetSpanDetails = fn
+		o.GetName = fn
+	}
+}
+
+// WithSpanAttributes extracts additional attributes from the request context.
+func WithSpanAttributes(fn func(ctx context.Context) []trace.Attribute) EndpointOption {
+	return func(o *EndpointOptions) {
+		o.GetAttributes = fn
 	}
 }

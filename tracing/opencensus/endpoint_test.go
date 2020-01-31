@@ -88,8 +88,11 @@ func TestTraceEndpoint(t *testing.T) {
 	}
 	mw = opencensus.TraceEndpoint(
 		"",
-		opencensus.WithSpanDetails(func(ctx context.Context, name string) (string, []trace.Attribute) {
-			return span6, span6Attrs
+		opencensus.WithSpanName(func(ctx context.Context, name string) string {
+			return span6
+		}),
+		opencensus.WithSpanAttributes(func(ctx context.Context) []trace.Attribute {
+			return span6Attrs
 		}),
 	)
 	mw(endpoint.Nop)(ctx, nil)
