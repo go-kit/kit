@@ -415,6 +415,38 @@ func TestNoOpRequestDecoder(t *testing.T) {
 	}
 }
 
+func TestErrorEncoderMultipleWriteHeader(t *testing.T) {
+	handler := httptransport.NewServer(
+		endpoint.Nop,
+		httptransport.NopRequestDecoder,
+		func(_ context.Context, w http.ResponseWriter, _ interface{}) error {
+			w.WriteHeader(http.StatusOK)
+			return errors.New("dang")
+		},
+	)
+	w, r := httptest.NewRecorder(), httptest.NewRequest("", "/", nil)
+	handler.ServeHTTP(w, r)
+	if expect, got := http.StatusInternalServerError, w.Code; expect != got {
+		t.Errorf("StatusCode expect: %d, got: %d", expect, got)
+	}
+}
+
+func TestWriteHeaderWithoutWrite(t *testing.T) {
+	handler := httptransport.NewServer(
+		endpoint.Nop,
+		httptransport.NopRequestDecoder,
+		func(_ context.Context, w http.ResponseWriter, _ interface{}) error {
+			w.WriteHeader(http.StatusNotModified)
+			return nil
+		},
+	)
+	w, r := httptest.NewRecorder(), httptest.NewRequest("", "/", nil)
+	handler.ServeHTTP(w, r)
+	if expect, got := http.StatusNotModified, w.Code; expect != got {
+		t.Errorf("StatusCode expect: %d, got: %d", expect, got)
+	}
+}
+
 func testServer(t *testing.T) (step func(), resp <-chan *http.Response) {
 	var (
 		stepch   = make(chan bool)

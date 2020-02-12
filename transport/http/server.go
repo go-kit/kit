@@ -129,9 +129,18 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx = f(ctx, w)
 	}
 
-	if err := s.enc(ctx, w, response); err != nil {
+	ww := &waitingHeaderWriter{ResponseWriter: w}
+	defer func() {
+		if ww.calledWriteHeader {
+			w.WriteHeader(ww.code)
+		}
+		if ww.calledWrite {
+			w.Write(ww.p)
+		}
+	}()
+	if err := s.enc(ctx, ww, response); err != nil {
 		s.errorHandler.Handle(ctx, err)
-		s.errorEncoder(ctx, err, w)
+		s.errorEncoder(ctx, err, ww)
 		return
 	}
 }
@@ -240,5 +249,24 @@ func (w *interceptingWriter) WriteHeader(code int) {
 func (w *interceptingWriter) Write(p []byte) (int, error) {
 	n, err := w.ResponseWriter.Write(p)
 	w.written += int64(n)
+	return n, err
+}
+
+type waitingHeaderWriter struct {
+	http.ResponseWriter
+	code              int
+	p                 []byte
+	calledWrite       bool
+	calledWriteHeader bool
+}
+
+func (w *waitingHeaderWriter) WriteHeader(code int) {
+	w.calledWriteHeader = true
+	w.code = code
+}
+
+func (w *waitingHeaderWriter) Write(p []byte) (n int, err error) {
+	w.calledWrite = true
+	w.p = p
 	return n, err
 }
