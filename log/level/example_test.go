@@ -10,13 +10,13 @@ import (
 
 func Example_basic() {
 	logger := log.NewLogfmtLogger(os.Stdout)
-	level.Debug(logger).Log("msg", "this message is at thte debug level")
+	level.Debug(logger).Log("msg", "this message is at the debug level")
 	level.Info(logger).Log("msg", "this message is at the info level")
 	level.Warn(logger).Log("msg", "this message is at the warn level")
 	level.Error(logger).Log("msg", "this message is at the error level")
 
 	// Output:
-	// level=debug msg="this message is at thte debug level"
+	// level=debug msg="this message is at the debug level"
 	// level=info msg="this message is at the info level"
 	// level=warn msg="this message is at the warn level"
 	// level=error msg="this message is at the error level"
