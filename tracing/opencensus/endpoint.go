@@ -44,9 +44,8 @@ func TraceEndpoint(name string, options ...EndpointOption) endpoint.Middleware {
 			defer span.End()
 
 			if cfg.GetAttributes != nil {
-				attributes := cfg.GetAttributes(ctx)
-				if len(attributes) > 0 {
-					span.AddAttributes(attributes...)
+				if attrs := cfg.GetAttributes(ctx); len(attrs) > 0 {
+					span.AddAttributes(attrs...)
 				}
 			}
 
