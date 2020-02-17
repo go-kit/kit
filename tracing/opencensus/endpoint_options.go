@@ -22,8 +22,7 @@ type EndpointOptions struct {
 	// If the function is nil, or the returned name is empty, the existing name for the endpoint is used.
 	GetName func(ctx context.Context, name string) string
 
-	// GetAttributes is an optional function that attaches additional attributes to the span
-	// based on the information found in the context.
+	// GetAttributes is an optional function that can extract trace attributes from the context and add them to the span.
 	GetAttributes func(ctx context.Context) []trace.Attribute
 }
 
