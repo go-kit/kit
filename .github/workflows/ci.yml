@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: ['1.13']
+        go: ['1.13', '1.14.0-rc1']
     env:
       GOFLAGS: -mod=readonly
       GOPROXY: https://proxy.golang.org
@@ -47,8 +47,9 @@ jobs:
 
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2-beta
         with:
+          stable: 'false'
           go-version: ${{ matrix.go }}
 
       - name: Checkout code
