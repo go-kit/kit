@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - github-actions
   pull_request:
 
 jobs:
