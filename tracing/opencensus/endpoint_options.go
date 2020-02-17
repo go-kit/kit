@@ -16,14 +16,14 @@ type EndpointOptions struct {
 	// creation by our Endpoint middleware.
 	Attributes []trace.Attribute
 
-	// GetName holds the function used for generating the span name
-	// based on the current name and from the information found in the incoming Request.
+	// GetName is an optional function that can set the span name based on the existing name
+	// for the endpoint and information in the context.
 	//
-	// If the returned name is empty, the existing name for the endpoint is kept.
+	// If the function is nil, or the returned name is empty, the existing name for the endpoint is used.
 	GetName func(ctx context.Context, name string) string
 
-	// GetAttributes holds the function used for extracting additional attributes
-	// from the information found in the incoming Request.
+	// GetAttributes is an optional function that attaches additional attributes to the span
+	// based on the information found in the context.
 	GetAttributes func(ctx context.Context) []trace.Attribute
 }
 
