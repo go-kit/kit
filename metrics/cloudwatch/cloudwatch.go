@@ -20,6 +20,7 @@ import (
 
 const (
 	maxConcurrentRequests = 20
+	maxValuesInABatch     = 150
 )
 
 type Percentiles []struct {
@@ -174,13 +175,34 @@ func (cw *CloudWatch) Send() error {
 	})
 
 	cw.gauges.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		value := last(values)
-		datums = append(datums, &cloudwatch.MetricDatum{
+		datum := &cloudwatch.MetricDatum{
 			MetricName: aws.String(name),
 			Dimensions: makeDimensions(lvs...),
-			Value:      aws.Float64(value),
 			Timestamp:  aws.Time(now),
-		})
+		}
+
+		if l := len(values); l > 1 {
+			// CloudWatch Put Metrics API (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html)
+			// expects batch of unique values including the array of corresponding counts
+			valuesCounter := make(map[float64]int)
+			for _, v := range values {
+				valuesCounter[v]++
+			}
+
+			for value, count := range valuesCounter {
+				if len(datum.Values) == maxValuesInABatch {
+					break
+				}
+				datum.Values = append(datum.Values, aws.Float64(value))
+				datum.Counts = append(datum.Counts, aws.Float64(float64(count)))
+			}
+		} else if l == 1 {
+			datum.Value = aws.Float64(values[0])
+		} else {
+			return true
+		}
+
+		datums = append(datums, datum)
 		return true
 	})
 
