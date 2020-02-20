@@ -181,25 +181,23 @@ func (cw *CloudWatch) Send() error {
 			Timestamp:  aws.Time(now),
 		}
 
-		if l := len(values); l > 1 {
-			// CloudWatch Put Metrics API (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html)
-			// expects batch of unique values including the array of corresponding counts
-			valuesCounter := make(map[float64]int)
-			for _, v := range values {
-				valuesCounter[v]++
-			}
-
-			for value, count := range valuesCounter {
-				if len(datum.Values) == maxValuesInABatch {
-					break
-				}
-				datum.Values = append(datum.Values, aws.Float64(value))
-				datum.Counts = append(datum.Counts, aws.Float64(float64(count)))
-			}
-		} else if l == 1 {
-			datum.Value = aws.Float64(values[0])
-		} else {
+		if len(values) == 0 {
 			return true
+		}
+
+		// CloudWatch Put Metrics API (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html)
+		// expects batch of unique values including the array of corresponding counts
+		valuesCounter := make(map[float64]int)
+		for _, v := range values {
+			valuesCounter[v]++
+		}
+
+		for value, count := range valuesCounter {
+			if len(datum.Values) == maxValuesInABatch {
+				break
+			}
+			datum.Values = append(datum.Values, aws.Float64(value))
+			datum.Counts = append(datum.Counts, aws.Float64(float64(count)))
 		}
 
 		datums = append(datums, datum)
