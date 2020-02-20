@@ -17,7 +17,7 @@ func TestCounter(t *testing.T) {
 
 func TestGauge(t *testing.T) {
 	gauge := NewGauge("expvar_gauge").With("label values", "not supported").(*Gauge)
-	value := func() float64 { f, _ := strconv.ParseFloat(gauge.f.String(), 64); return f }
+	value := func() []float64 { f, _ := strconv.ParseFloat(gauge.f.String(), 64); return []float64{f} }
 	if err := teststat.TestGauge(gauge, value); err != nil {
 		t.Fatal(err)
 	}

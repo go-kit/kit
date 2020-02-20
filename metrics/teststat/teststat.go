@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"reflect"
 	"strings"
 
 	"github.com/go-kit/kit/metrics"
@@ -38,24 +39,24 @@ func FillCounter(counter metrics.Counter) float64 {
 
 // TestGauge puts some values through the gauge, and then calls the value func
 // to check that the gauge has the correct final value.
-func TestGauge(gauge metrics.Gauge, value func() float64) error {
+func TestGauge(gauge metrics.Gauge, value func() []float64) error {
 	a := rand.Perm(100)
 	n := rand.Intn(len(a))
 
-	var want float64
+	var want []float64
 	for i := 0; i < n; i++ {
 		f := float64(a[i])
 		gauge.Set(f)
-		want = f
+		want = append(want, f)
 	}
 
 	for i := 0; i < n; i++ {
 		f := float64(a[i])
 		gauge.Add(f)
-		want += f
+		want[len(want)-1] += f
 	}
 
-	if have := value(); want != have {
+	if have := value(); reflect.DeepEqual(want, have) {
 		return fmt.Errorf("want %f, have %f", want, have)
 	}
 

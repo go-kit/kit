@@ -68,10 +68,10 @@ func TestGauge(t *testing.T) {
 		Help:      "This is a different help string.",
 	}, []string{"foo"}).With("foo", "bar")
 
-	value := func() float64 {
+	value := func() []float64 {
 		matches := re.FindStringSubmatch(scrape())
 		f, _ := strconv.ParseFloat(matches[1], 64)
-		return f
+		return []float64{f}
 	}
 
 	if err := teststat.TestGauge(gauge, value); err != nil {
