@@ -45,7 +45,7 @@ func TestGauge(t *testing.T) {
 	if want, have := name, gauge.Name; want != have {
 		t.Errorf("Name: want %q, have %q", want, have)
 	}
-	value := gauge.Value
+	value := func() []float64 { return []float64{gauge.Value()} }
 	if err := teststat.TestGauge(gauge, value); err != nil {
 		t.Fatal(err)
 	}

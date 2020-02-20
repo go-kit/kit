@@ -34,12 +34,12 @@ func TestGauge(t *testing.T) {
 	in := New(map[string]string{"foo": "alpha"}, influxdb.BatchPointsConfig{}, log.NewNopLogger())
 	re := regexp.MustCompile(`influx_gauge,foo=alpha value=([0-9\.]+) [0-9]+`)
 	gauge := in.NewGauge("influx_gauge")
-	value := func() float64 {
+	value := func() []float64 {
 		client := &bufWriter{}
 		in.WriteTo(client)
 		match := re.FindStringSubmatch(client.buf.String())
 		f, _ := strconv.ParseFloat(match[1], 64)
-		return f
+		return []float64{f}
 	}
 	if err := teststat.TestGauge(gauge, value); err != nil {
 		t.Fatal(err)

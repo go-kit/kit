@@ -18,13 +18,13 @@ import (
 type mockCloudWatch struct {
 	cloudwatchiface.CloudWatchAPI
 	mtx                sync.RWMutex
-	valuesReceived     map[string]float64
+	valuesReceived     map[string][]float64
 	dimensionsReceived map[string][]*cloudwatch.Dimension
 }
 
 func newMockCloudWatch() *mockCloudWatch {
 	return &mockCloudWatch{
-		valuesReceived:     map[string]float64{},
+		valuesReceived:     map[string][]float64{},
 		dimensionsReceived: map[string][]*cloudwatch.Dimension{},
 	}
 }
@@ -33,7 +33,13 @@ func (mcw *mockCloudWatch) PutMetricData(input *cloudwatch.PutMetricDataInput) (
 	mcw.mtx.Lock()
 	defer mcw.mtx.Unlock()
 	for _, datum := range input.MetricData {
-		mcw.valuesReceived[*datum.MetricName] = *datum.Value
+		if len(datum.Values) > 0 {
+			for _, v := range datum.Values {
+				mcw.valuesReceived[*datum.MetricName] = append(mcw.valuesReceived[*datum.MetricName], *v)
+			}
+		} else {
+			mcw.valuesReceived[*datum.MetricName] = append(mcw.valuesReceived[*datum.MetricName], *datum.Value)
+		}
 		mcw.dimensionsReceived[*datum.MetricName] = datum.Dimensions
 	}
 	return nil, nil
@@ -76,13 +82,15 @@ func TestCounter(t *testing.T) {
 	cw := New(namespace, svc, WithLogger(log.NewNopLogger()))
 	counter := cw.NewCounter(name).With(label, value)
 	valuef := func() float64 {
-		err := cw.Send()
-		if err != nil {
+		if err := cw.Send(); err != nil {
 			t.Fatal(err)
 		}
 		svc.mtx.RLock()
 		defer svc.mtx.RUnlock()
-		return svc.valuesReceived[name]
+		value := svc.valuesReceived[name][len(svc.valuesReceived[name])-1]
+		delete(svc.valuesReceived, name)
+
+		return value
 	}
 	if err := teststat.TestCounter(counter, valuef); err != nil {
 		t.Fatal(err)
@@ -123,7 +131,13 @@ func TestCounterLowSendConcurrency(t *testing.T) {
 	}
 
 	for i, name := range names {
-		if svc.valuesReceived[name] != wants[i] {
+		if l := len(svc.valuesReceived[name]); l == 0 && wants[i] == 0 {
+			continue
+		} else if l != 1 {
+			t.Fatalf("one value expected, got %d", l)
+		}
+
+		if svc.valuesReceived[name][0] != wants[i] {
 			t.Fatalf("want %f, have %f", wants[i], svc.valuesReceived[name])
 		}
 		if err := svc.testDimensions(name, labels[i], values[i]); err != nil {
@@ -138,15 +152,17 @@ func TestGauge(t *testing.T) {
 	svc := newMockCloudWatch()
 	cw := New(namespace, svc, WithLogger(log.NewNopLogger()))
 	gauge := cw.NewGauge(name).With(label, value)
-	valuef := func() float64 {
-		err := cw.Send()
-		if err != nil {
+	valuef := func() []float64 {
+		if err := cw.Send(); err != nil {
 			t.Fatal(err)
 		}
 		svc.mtx.RLock()
+		res := svc.valuesReceived[name]
+		delete(svc.valuesReceived, name)
 		defer svc.mtx.RUnlock()
-		return svc.valuesReceived[name]
+		return res
 	}
+
 	if err := teststat.TestGauge(gauge, valuef); err != nil {
 		t.Fatal(err)
 	}
@@ -170,12 +186,28 @@ func TestHistogram(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		svc.mtx.RLock()
 		defer svc.mtx.RUnlock()
-		p50 = svc.valuesReceived[n50]
-		p90 = svc.valuesReceived[n90]
-		p95 = svc.valuesReceived[n95]
-		p99 = svc.valuesReceived[n99]
+		if len(svc.valuesReceived[n50]) > 0 {
+			p50 = svc.valuesReceived[n50][0]
+			delete(svc.valuesReceived, n50)
+		}
+
+		if len(svc.valuesReceived[n90]) > 0 {
+			p90 = svc.valuesReceived[n90][0]
+			delete(svc.valuesReceived, n90)
+		}
+
+		if len(svc.valuesReceived[n95]) > 0 {
+			p95 = svc.valuesReceived[n95][0]
+			delete(svc.valuesReceived, n95)
+		}
+
+		if len(svc.valuesReceived[n99]) > 0 {
+			p99 = svc.valuesReceived[n99][0]
+			delete(svc.valuesReceived, n99)
+		}
 		return
 	}
 	if err := teststat.TestHistogram(histogram, quantiles, 0.01); err != nil {
@@ -207,8 +239,14 @@ func TestHistogram(t *testing.T) {
 		}
 		svc.mtx.RLock()
 		defer svc.mtx.RUnlock()
-		p50 = svc.valuesReceived[n50]
-		p90 = svc.valuesReceived[n90]
+		if len(svc.valuesReceived[n50]) > 0 {
+			p50 = svc.valuesReceived[n50][0]
+			delete(svc.valuesReceived, n50)
+		}
+		if len(svc.valuesReceived[n90]) > 0 {
+			p90 = svc.valuesReceived[n90][0]
+			delete(svc.valuesReceived, n90)
+		}
 
 		// our teststat.TestHistogram wants us to give p95 and p99,
 		// but with custom percentiles we don't have those.
