@@ -12,13 +12,20 @@ import (
 
 type logrusLogger struct {
 	logrus.FieldLogger
+	logrus.Level
 }
 
 var errMissingValue = errors.New("(MISSING)")
 
 // NewLogrusLogger returns a go-kit log.Logger that sends log events to a Logrus logger.
 func NewLogrusLogger(logger logrus.FieldLogger) log.Logger {
-	return &logrusLogger{logger}
+	return &logrusLogger{logger, logrus.InfoLevel}
+}
+
+// NewLogrusLoggerWithLevel returns a go-kit log.Logger that sends log events to a Logrus logger, which
+// will be logged with provided error level
+func NewLogrusLoggerWithLevel(logger logrus.FieldLogger, level logrus.Level) log.Logger {
+	return &logrusLogger{logger, level}
 }
 
 func (l logrusLogger) Log(keyvals ...interface{}) error {
@@ -30,6 +37,19 @@ func (l logrusLogger) Log(keyvals ...interface{}) error {
 			fields[fmt.Sprint(keyvals[i])] = errMissingValue
 		}
 	}
-	l.WithFields(fields).Info()
+
+	switch l.Level {
+	case logrus.InfoLevel:
+		l.WithFields(fields).Info()
+	case logrus.ErrorLevel:
+		l.WithFields(fields).Error()
+	case logrus.DebugLevel:
+		l.WithFields(fields).Debug()
+	case logrus.WarnLevel:
+		l.WithFields(fields).Warn()
+	default:
+		l.WithFields(fields).Print()
+	}
+
 	return nil
 }
