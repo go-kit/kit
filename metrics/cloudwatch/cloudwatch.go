@@ -255,7 +255,7 @@ func (cw *CloudWatch) Send() error {
 	}
 	var firstErr error
 	for i := 0; i < cap(errors); i++ {
-		if err := <-errors; err != nil && firstErr != nil {
+		if err := <-errors; err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
