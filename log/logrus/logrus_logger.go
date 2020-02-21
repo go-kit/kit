@@ -14,18 +14,30 @@ type logrusLogger struct {
 	logrus.FieldLogger
 	logrus.Level
 }
+type option func(*logrusLogger)
 
 var errMissingValue = errors.New("(MISSING)")
 
 // NewLogrusLogger returns a go-kit log.Logger that sends log events to a Logrus logger.
-func NewLogrusLogger(logger logrus.FieldLogger) log.Logger {
-	return &logrusLogger{logger, logrus.InfoLevel}
+func NewLogrusLogger(logger logrus.FieldLogger, options ...option) log.Logger {
+	l := &logrusLogger{
+		FieldLogger: logger,
+		Level:       logrus.InfoLevel,
+	}
+
+	for _, optFunc := range options {
+		optFunc(l)
+	}
+
+	return l
 }
 
-// NewLogrusLoggerWithLevel returns a go-kit log.Logger that sends log events to a Logrus logger, which
-// will be logged with provided error level
-func NewLogrusLoggerWithLevel(logger logrus.FieldLogger, level logrus.Level) log.Logger {
-	return &logrusLogger{logger, level}
+// WithLevel allows to set specific log level
+// to log messages with
+func WithLevel(level logrus.Level) option {
+	return func(c *logrusLogger) {
+		c.Level = level
+	}
 }
 
 func (l logrusLogger) Log(keyvals ...interface{}) error {
