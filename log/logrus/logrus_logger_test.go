@@ -16,7 +16,7 @@ func TestLogrusLogger(t *testing.T) {
 	logrusLogger := logrus.New()
 	logrusLogger.Out = buf
 	logrusLogger.Formatter = &logrus.TextFormatter{TimestampFormat: "02-01-2006 15:04:05", FullTimestamp: true}
-	logger := log.NewLogrusLogger(logrusLogger)
+	logger := log.NewLogger(logrusLogger)
 
 	if err := logger.Log("hello", "world"); err != nil {
 		t.Fatal(err)
