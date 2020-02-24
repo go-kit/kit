@@ -20,6 +20,7 @@ const (
 	span3 = "SPAN-3"
 	span4 = "SPAN-4"
 	span5 = "SPAN-5"
+	span6 = "SPAN-6"
 )
 
 var (
@@ -76,13 +77,29 @@ func TestTraceEndpoint(t *testing.T) {
 	mw = opencensus.TraceEndpoint(span4)
 	mw(passEndpoint)(ctx, failedResponse{err: err3})
 
-	// span4
+	// span5
 	mw = opencensus.TraceEndpoint(span5, opencensus.WithIgnoreBusinessError(true))
 	mw(passEndpoint)(ctx, failedResponse{err: err4})
 
+	// span6
+	span6Attrs := []trace.Attribute{
+		trace.StringAttribute("string", "value"),
+		trace.Int64Attribute("int64", 42),
+	}
+	mw = opencensus.TraceEndpoint(
+		"",
+		opencensus.WithSpanName(func(ctx context.Context, name string) string {
+			return span6
+		}),
+		opencensus.WithSpanAttributes(func(ctx context.Context) []trace.Attribute {
+			return span6Attrs
+		}),
+	)
+	mw(endpoint.Nop)(ctx, nil)
+
 	// check span count
 	spans := e.Flush()
-	if want, have := 5, len(spans); want != have {
+	if want, have := 6, len(spans); want != have {
 		t.Fatalf("incorrected number of spans, wanted %d, got %d", want, have)
 	}
 
@@ -156,4 +173,13 @@ func TestTraceEndpoint(t *testing.T) {
 		t.Fatalf("incorrect attribute count, wanted %d, got %d", want, have)
 	}
 
+	// test span 6
+	span = spans[5]
+	if want, have := span6, span.Name; want != have {
+		t.Errorf("incorrect span name, wanted %q, got %q", want, have)
+	}
+
+	if want, have := 2, len(span.Attributes); want != have {
+		t.Fatalf("incorrect attribute count, wanted %d, got %d", want, have)
+	}
 }
