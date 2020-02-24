@@ -15,6 +15,10 @@ import (
 	"github.com/go-kit/kit/metrics/teststat"
 )
 
+const metricNameToGenerateError = "metric_name_used_to_throw_an_error"
+
+var errTest = errors.New("test error")
+
 type mockCloudWatch struct {
 	cloudwatchiface.CloudWatchAPI
 	mtx                sync.RWMutex
@@ -33,6 +37,10 @@ func (mcw *mockCloudWatch) PutMetricData(input *cloudwatch.PutMetricDataInput) (
 	mcw.mtx.Lock()
 	defer mcw.mtx.Unlock()
 	for _, datum := range input.MetricData {
+		if *datum.MetricName == metricNameToGenerateError {
+			return nil, errTest
+		}
+
 		if len(datum.Values) > 0 {
 			for _, v := range datum.Values {
 				mcw.valuesReceived[*datum.MetricName] = append(mcw.valuesReceived[*datum.MetricName], *v)
@@ -125,8 +133,7 @@ func TestCounterLowSendConcurrency(t *testing.T) {
 		wants = append(wants, teststat.FillCounter(counters[name]))
 	}
 
-	err := cw.Send()
-	if err != nil {
+	if err := cw.Send(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -278,5 +285,15 @@ func TestHistogram(t *testing.T) {
 	}
 	if err := svc.testDimensions(n99, label, value); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestErrorLog(t *testing.T) {
+	namespace := "abc"
+	svc := newMockCloudWatch()
+	cw := New(namespace, svc, WithLogger(log.NewNopLogger()))
+	cw.NewGauge(metricNameToGenerateError).Set(123)
+	if err := cw.Send(); err != errTest {
+		t.Fatal("Expected error, but didn't get one")
 	}
 }
