@@ -33,8 +33,7 @@ func NewLogger(logger logrus.FieldLogger, options ...Option) log.Logger {
 	return l
 }
 
-// WithLevel configures a logrus logger to set specific log
-// level to log messages with
+// WithLevel configures a logrus logger to log at level for all events.
 func WithLevel(level logrus.Level) Option {
 	return func(c *Logger) {
 		c.Level = level
@@ -60,6 +59,8 @@ func (l Logger) Log(keyvals ...interface{}) error {
 		l.WithFields(fields).Debug()
 	case logrus.WarnLevel:
 		l.WithFields(fields).Warn()
+	case logrus.TraceLevel:
+		l.WithFields(fields).Trace()
 	default:
 		l.WithFields(fields).Print()
 	}
