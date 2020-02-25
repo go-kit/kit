@@ -64,7 +64,6 @@ jobs:
 
       - name: Upload coverage
         uses: codecov/codecov-action@v1
-        if: always()
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: coverage.coverprofile
