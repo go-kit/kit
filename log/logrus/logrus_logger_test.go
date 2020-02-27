@@ -6,7 +6,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"time"
 
 	log "github.com/go-kit/kit/log/logrus"
 	"github.com/sirupsen/logrus"
@@ -102,7 +101,7 @@ func TestWithLevel(t *testing.T) {
 		logger := log.NewLogger(logrusLogger, log.WithLevel(tt.level))
 
 		t.Run(tt.name, func(t *testing.T) {
-			if err := logger.Log(time.Now().String(), "amazing", "tests"); err != nil {
+			if err := logger.Log(); err != nil {
 				t.Fatal(err)
 			}
 
