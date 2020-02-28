@@ -12,10 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: ['1.13', '1.14.0-rc1']
+        go: ['1.13', '1.14']
     env:
       GOFLAGS: -mod=readonly
-      GOPROXY: https://proxy.golang.org
 
     services:
       etcd:
