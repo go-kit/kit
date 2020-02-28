@@ -15,7 +15,6 @@ jobs:
         go: ['1.13', '1.14']
     env:
       GOFLAGS: -mod=readonly
-      GOPROXY: https://proxy.golang.org
 
     services:
       etcd:
