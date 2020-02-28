@@ -1,19 +1,23 @@
 version: '2'
 services:
   etcd:
-    image: quay.io/coreos/etcd
+    image: quay.io/coreos/etcd:v3.4.3
     ports:
       - "2379:2379"
-    command: /usr/local/bin/etcd -advertise-client-urls http://0.0.0.0:2379,http://0.0.0.0:4001 -listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
+    environment:
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://0.0.0.0:2379
+
   consul:
-    image: progrium/consul
+    image: consul:1.7
     ports:
       - "8500:8500"
-    command: -server -bootstrap
+
   zk:
-    image: zookeeper
+    image: zookeeper:3.5
     ports:
       - "2181:2181"
+
   eureka:
     image: springcloud/eureka
     environment:

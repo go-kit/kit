@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: ['1.13', '1.14.0-rc1']
+    env:
+      GOFLAGS: -mod=readonly
+      GOPROXY: https://proxy.golang.org
+
+    services:
+      etcd:
+        image: quay.io/coreos/etcd:v3.4.3
+        ports:
+          - 2379
+        env:
+          ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+          ETCD_ADVERTISE_CLIENT_URLS: http://0.0.0.0:2379
+        options: --health-cmd "ETCDCTL_API=3 etcdctl --endpoints http://localhost:2379 endpoint health" --health-interval 10s --health-timeout 5s --health-retries 5
+
+      consul:
+        image: consul:1.7
+        ports:
+          - 8500
+
+      zk:
+        image: zookeeper:3.5
+        ports:
+          - 2181
+
+      eureka:
+        image: springcloud/eureka
+        ports:
+          - 8761
+        env:
+          eureka.server.responseCacheUpdateIntervalMs: 1000
+
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2-beta
+        with:
+          stable: 'false'
+          go-version: ${{ matrix.go }}
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        env:
+          ETCD_ADDR: http://localhost:${{ job.services.etcd.ports[2379] }}
+          CONSUL_ADDR: localhost:${{ job.services.consul.ports[8500] }}
+          ZK_ADDR: localhost:${{ job.services.zk.ports[2181] }}
+          EUREKA_ADDR: http://localhost:${{ job.services.eureka.ports[8761] }}/eureka
+        run: go test -v -race -coverprofile=coverage.coverprofile -covermode=atomic -tags integration ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: coverage.coverprofile
