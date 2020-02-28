@@ -1,0 +1,54 @@
+run:
+    skip-dirs:
+        - (^|/)pb($|/)
+        - (^|/)thrift($|/)
+
+    timeout: 2m
+
+linters-settings:
+    golint:
+        min-confidence: 0.1
+    goimports:
+        local-prefixes: github.com/go-kit/kit
+
+linters:
+    enable-all: true
+    disable:
+        - dupl
+        - funlen
+        - wsl
+        - gomnd
+
+        # TODO: fixme
+        - unused
+        - staticcheck
+        - gosimple
+        - bodyclose
+        - goconst
+        - godox
+        - misspell
+        - unparam
+        - unconvert
+        - structcheck
+        - gosec
+        - golint
+        - errcheck
+        - gocritic
+        - goimports
+        - gofmt
+        - ineffassign
+        - prealloc
+        - deadcode
+        - gochecknoinits
+        - scopelint
+        - lll
+        - gocyclo
+        - whitespace
+        - gochecknoglobals
+        - interfacer
+        - stylecheck
+        - gocognit
+        - varcheck
+
+service:
+    golangci-lint-version: 1.23.x
