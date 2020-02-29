@@ -67,8 +67,10 @@ different starting assumptions.
 
 - [devimteam/microgen](https://github.com/devimteam/microgen)
 - [GrantZheng/kit](https://github.com/GrantZheng/kit)
-- [kujtimiihoxha/kit](https://github.com/kujtimiihoxha/kit)
+- [kujtimiihoxha/kit](https://github.com/kujtimiihoxha/kit) (unmaintained)
 - [nytimes/marvin](https://github.com/nytimes/marvin)
+- [sagikazarmark/mga](https://github.com/sagikazarmark/mga)
+- [sagikazarmark/protoc-gen-kit](https://github.com/sagikazarmark/protoc-gen-kit)
 - [tuneinc/truss](https://github.com/tuneinc/truss)
 
 ## Related projects
