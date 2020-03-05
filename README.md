@@ -66,6 +66,19 @@ Go kit is [modules](https://github.com/golang/go/wiki/Modules) aware, and we
 encourage users to use the standard modules tooling. But Go kit is at major
 version 0, so it should be compatible with non-modules environments.
 
+## Code generators
+
+There are several third-party tools that can generate Go kit code based on
+different starting assumptions.
+
+- [devimteam/microgen](https://github.com/devimteam/microgen)
+- [GrantZheng/kit](https://github.com/GrantZheng/kit)
+- [kujtimiihoxha/kit](https://github.com/kujtimiihoxha/kit) (unmaintained)
+- [nytimes/marvin](https://github.com/nytimes/marvin)
+- [sagikazarmark/mga](https://github.com/sagikazarmark/mga)
+- [sagikazarmark/protoc-gen-kit](https://github.com/sagikazarmark/protoc-gen-kit)
+- [tuneinc/truss](https://github.com/tuneinc/truss)
+
 ## Related projects
 
 Projects with a ★ have had particular influence on Go kit's design (or vice-versa).
@@ -114,4 +127,3 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 - [Architecting for the Cloud](https://slideshare.net/stonse/architecting-for-the-cloud-using-netflixoss-codemash-workshop-29852233) — Netflix
 - [Dapper, a Large-Scale Distributed Systems Tracing Infrastructure](http://research.google.com/pubs/pub36356.html) — Google
 - [Your Server as a Function](http://monkey.org/~marius/funsrv.pdf) (PDF) — Twitter
-
