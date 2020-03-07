@@ -24,9 +24,14 @@ func body(in string) io.Reader {
 	return strings.NewReader(in)
 }
 
-func expectErrorCode(t *testing.T, want int, body []byte) {
+func unmarshalResponse(body []byte) (jsonrpc.Response, error) {
 	var r jsonrpc.Response
 	err := json.Unmarshal(body, &r)
+	return r, err
+}
+
+func expectErrorCode(t *testing.T, want int, body []byte) {
+	r, err := unmarshalResponse(body)
 	if err != nil {
 		t.Fatalf("Cant' decode response. err=%s, body=%s", err, body)
 	}
@@ -35,6 +40,30 @@ func expectErrorCode(t *testing.T, want int, body []byte) {
 	}
 	if have := r.Error.Code; want != have {
 		t.Fatalf("Unexpected error code. Want %d, have %d: %s", want, have, body)
+	}
+}
+
+func expectValidRequestID(t *testing.T, want int, body []byte) {
+	r, err := unmarshalResponse(body)
+	if err != nil {
+		t.Fatalf("Cant' decode response. err=%s, body=%s", err, body)
+	}
+	have, err := r.ID.Int()
+	if err != nil {
+		t.Fatalf("Cant' get requestID in response. err=%s, body=%s", err, body)
+	}
+	if want != have {
+		t.Fatalf("Unexpected request ID. Want %d, have %d: %s", want, have, body)
+	}
+}
+
+func expectNilRequestID(t *testing.T, body []byte) {
+	r, err := unmarshalResponse(body)
+	if err != nil {
+		t.Fatalf("Cant' decode response. err=%s, body=%s", err, body)
+	}
+	if nil != r.ID {
+		t.Fatalf("Unexpected request ID. Want nil, have %v", r.ID)
 	}
 }
 
@@ -92,6 +121,7 @@ func TestServerBadEndpoint(t *testing.T) {
 	}
 	buf, _ := ioutil.ReadAll(resp.Body)
 	expectErrorCode(t, jsonrpc.InternalError, buf)
+	expectValidRequestID(t, 1, buf)
 }
 
 func TestServerBadEncode(t *testing.T) {
@@ -111,6 +141,7 @@ func TestServerBadEncode(t *testing.T) {
 	}
 	buf, _ := ioutil.ReadAll(resp.Body)
 	expectErrorCode(t, jsonrpc.InternalError, buf)
+	expectValidRequestID(t, 1, buf)
 }
 
 func TestServerErrorEncoder(t *testing.T) {
@@ -162,6 +193,7 @@ func TestCanRejectInvalidJSON(t *testing.T) {
 	}
 	buf, _ := ioutil.ReadAll(resp.Body)
 	expectErrorCode(t, jsonrpc.ParseError, buf)
+	expectNilRequestID(t, buf)
 }
 
 func TestServerUnregisteredMethod(t *testing.T) {
