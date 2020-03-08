@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	amqptransport "github.com/go-kit/kit/transport/amqp"
 	"github.com/streadway/amqp"
+
+	amqptransport "github.com/go-kit/kit/transport/amqp"
 )
 
 var (
@@ -55,7 +56,7 @@ func TestBadDecode(t *testing.T) {
 		f: nullFunc,
 		c: make(chan amqp.Publishing, 1),
 		deliveries: []amqp.Delivery{
-			amqp.Delivery{
+			{
 				CorrelationId: cid,
 			},
 		},
@@ -157,7 +158,7 @@ func TestSuccessfulPublisher(t *testing.T) {
 		f: nullFunc,
 		c: reqChan,
 		deliveries: []amqp.Delivery{
-			amqp.Delivery{
+			{
 				CorrelationId: cid,
 				Body:          b,
 			},

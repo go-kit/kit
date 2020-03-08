@@ -29,4 +29,3 @@ type EncodeResponseFunc func(context.Context, string, *nats.Conn, interface{}) e
 // endpoints. One straightforward DecodeResponseFunc could be something that
 // JSON decodes from the response payload to the concrete response type.
 type DecodeResponseFunc func(context.Context, *nats.Msg) (response interface{}, err error)
-

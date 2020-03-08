@@ -189,7 +189,7 @@ func (c *client) CreateParentNodes(path string) error {
 	if path[0] != '/' {
 		return zk.ErrInvalidPath
 	}
-	payload := []byte("")
+	var payload []byte
 	pathString := ""
 	pathNodes := strings.Split(path, "/")
 	for i := 1; i < len(pathNodes); i++ {

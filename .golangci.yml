@@ -15,9 +15,16 @@ linters:
     disable-all: true
     enable:
         - govet
-        #- golint
-        #- gofmt
-        #- staticcheck
+        - golint
+        - gofmt
+        - staticcheck
+
+issues:
+    exclude-rules:
+        - path: _test\.go
+          text: "should not use basic type string as key in context.WithValue"
+          linters:
+              - golint
 
 service:
     golangci-lint-version: 1.23.x

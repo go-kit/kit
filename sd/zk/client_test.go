@@ -18,7 +18,7 @@ func TestNewClient(t *testing.T) {
 		payload        = [][]byte{[]byte("Payload"), []byte("Test")}
 	)
 
-	c, err := NewClient(
+	_, err := NewClient(
 		[]string{"FailThisInvalidHost!!!"},
 		log.NewNopLogger(),
 	)
@@ -36,7 +36,7 @@ func TestNewClient(t *testing.T) {
 		}
 	}
 
-	c, err = NewClient(
+	c, err := NewClient(
 		[]string{"localhost"},
 		log.NewNopLogger(),
 		ACL(acl),
@@ -115,7 +115,7 @@ func TestCreateParentNodes(t *testing.T) {
 		t.Error("expected failed new Instancer")
 	}
 
-	s, err = NewInstancer(c, "invalidpath", log.NewNopLogger())
+	_, err = NewInstancer(c, "invalidpath", log.NewNopLogger())
 	if err != stdzk.ErrInvalidPath {
 		t.Errorf("unexpected error: %v", err)
 	}

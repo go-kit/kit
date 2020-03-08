@@ -152,12 +152,17 @@ func TestSubscriberErrorEncoder(t *testing.T) {
 }
 
 func TestSubscriberHappySubject(t *testing.T) {
-	step, response := testSubscriber(t)
+	step, response, errs := testSubscriber(t)
+	err := <-errs
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	step()
 	r := <-response
 
 	var resp TestResponse
-	err := json.Unmarshal(r.Data, &resp)
+	err = json.Unmarshal(r.Data, &resp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,17 +215,23 @@ func TestMultipleSubscriberBefore(t *testing.T) {
 	}
 	defer sub.Unsubscribe()
 
+	errs := make(chan error, 1)
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		_, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
-		if err != nil {
-			t.Fatal(err)
-		}
+		errs <- err
 	}()
 
 	select {
 	case <-done:
+
+	case err := <-errs:
+		if err != nil {
+			t.Fatal(err)
+		}
+
 	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for finalizer")
 	}
@@ -271,17 +282,23 @@ func TestMultipleSubscriberAfter(t *testing.T) {
 	}
 	defer sub.Unsubscribe()
 
+	errs := make(chan error, 1)
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		_, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
-		if err != nil {
-			t.Fatal(err)
-		}
+		errs <- err
 	}()
 
 	select {
 	case <-done:
+
+	case err := <-errs:
+		if err != nil {
+			t.Fatal(err)
+		}
+
 	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for finalizer")
 	}
@@ -322,17 +339,23 @@ func TestSubscriberFinalizerFunc(t *testing.T) {
 	}
 	defer sub.Unsubscribe()
 
+	errs := make(chan error, 1)
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		_, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
-		if err != nil {
-			t.Fatal(err)
-		}
+		errs <- err
 	}()
 
 	select {
 	case <-done:
+
+	case err := <-errs:
+		if err != nil {
+			t.Fatal(err)
+		}
+
 	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for finalizer")
 	}
@@ -472,7 +495,7 @@ func TestNoOpRequestDecoder(t *testing.T) {
 	}
 }
 
-func testSubscriber(t *testing.T) (step func(), resp <-chan *nats.Msg) {
+func testSubscriber(t *testing.T) (step func(), resp <-chan *nats.Msg, err <-chan error) {
 	var (
 		stepch   = make(chan bool)
 		endpoint = func(context.Context, interface{}) (interface{}, error) {
@@ -480,6 +503,7 @@ func testSubscriber(t *testing.T) (step func(), resp <-chan *nats.Msg) {
 			return struct{}{}, nil
 		}
 		response = make(chan *nats.Msg)
+		errs     = make(chan error)
 		handler  = natstransport.NewSubscriber(
 			endpoint,
 			func(context.Context, *nats.Msg) (interface{}, error) { return struct{}{}, nil },
@@ -495,19 +519,23 @@ func testSubscriber(t *testing.T) (step func(), resp <-chan *nats.Msg) {
 
 		sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
 		if err != nil {
-			t.Fatal(err)
+			errs <- err
+			return
 		}
 		defer sub.Unsubscribe()
 
 		r, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
 		if err != nil {
-			t.Fatal(err)
+			errs <- err
+			return
 		}
 
 		response <- r
+
+		close(errs)
 	}()
 
-	return func() { stepch <- true }, response
+	return func() { stepch <- true }, response, errs
 }
 
 func testRequest(t *testing.T, nc *nats.Conn, handler *natstransport.Subscriber) TestResponse {

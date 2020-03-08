@@ -134,7 +134,7 @@ func TestInvokeFailDecode(t *testing.T) {
 		encodeResponse,
 		HandlerErrorEncoder(func(
 			ctx context.Context,
-			err error,
+			_ error,
 		) ([]byte, error) {
 			apigwResp := events.APIGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
@@ -184,7 +184,7 @@ func TestInvokeFailEndpoint(t *testing.T) {
 		}),
 		HandlerErrorEncoder(func(
 			ctx context.Context,
-			err error,
+			_ error,
 		) ([]byte, error) {
 			apigwResp := events.APIGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
@@ -241,7 +241,7 @@ func TestInvokeFailEncode(t *testing.T) {
 		}),
 		HandlerErrorEncoder(func(
 			ctx context.Context,
-			err error,
+			_ error,
 		) ([]byte, error) {
 			// convert error into proper APIGateway response.
 			apigwResp := events.APIGatewayProxyResponse{}

@@ -48,9 +48,9 @@ type CloudWatch struct {
 
 type option func(*CloudWatch)
 
-func (s *CloudWatch) apply(opt option) {
+func (cw *CloudWatch) apply(opt option) {
 	if opt != nil {
-		opt(s)
+		opt(cw)
 	}
 }
 

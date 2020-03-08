@@ -136,7 +136,7 @@ func TestJWTParser(t *testing.T) {
 	// Test for malformed token error response
 	parser = NewParser(keys, method, StandardClaimsFactory)(e)
 	ctx = context.WithValue(context.Background(), JWTTokenContextKey, malformedKey)
-	ctx1, err = parser(ctx, struct{}{})
+	_, err = parser(ctx, struct{}{})
 	if want, have := ErrTokenMalformed, err; want != have {
 		t.Fatalf("Expected %+v, got %+v", want, have)
 	}
@@ -149,7 +149,7 @@ func TestJWTParser(t *testing.T) {
 		t.Fatalf("Unable to Sign Token: %+v", err)
 	}
 	ctx = context.WithValue(context.Background(), JWTTokenContextKey, token)
-	ctx1, err = parser(ctx, struct{}{})
+	_, err = parser(ctx, struct{}{})
 	if want, have := ErrTokenExpired, err; want != have {
 		t.Fatalf("Expected %+v, got %+v", want, have)
 	}
@@ -162,7 +162,7 @@ func TestJWTParser(t *testing.T) {
 		t.Fatalf("Unable to Sign Token: %+v", err)
 	}
 	ctx = context.WithValue(context.Background(), JWTTokenContextKey, token)
-	ctx1, err = parser(ctx, struct{}{})
+	_, err = parser(ctx, struct{}{})
 	if want, have := ErrTokenNotActive, err; want != have {
 		t.Fatalf("Expected %+v, got %+v", want, have)
 	}

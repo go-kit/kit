@@ -182,7 +182,7 @@ func (h *Histogram) LabelValues() []string {
 func (h *Histogram) Print(w io.Writer) {
 	h.h.RLock()
 	defer h.h.RUnlock()
-	fmt.Fprintf(w, h.h.String())
+	fmt.Fprint(w, h.h.String())
 }
 
 // safeHistogram exists as gohistogram.Histogram is not goroutine-safe.

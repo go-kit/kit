@@ -53,11 +53,11 @@ func TestStdLibAdapterExtraction(t *testing.T) {
 	logger := NewLogfmtLogger(buf)
 	writer := NewStdlibAdapter(logger)
 	for input, want := range map[string]string{
-		"hello":                                            "msg=hello\n",
-		"2009/01/23: hello":                                "ts=2009/01/23 msg=hello\n",
-		"2009/01/23 01:23:23: hello":                       "ts=\"2009/01/23 01:23:23\" msg=hello\n",
-		"01:23:23: hello":                                  "ts=01:23:23 msg=hello\n",
-		"2009/01/23 01:23:23.123123: hello":                "ts=\"2009/01/23 01:23:23.123123\" msg=hello\n",
+		"hello":                             "msg=hello\n",
+		"2009/01/23: hello":                 "ts=2009/01/23 msg=hello\n",
+		"2009/01/23 01:23:23: hello":        "ts=\"2009/01/23 01:23:23\" msg=hello\n",
+		"01:23:23: hello":                   "ts=01:23:23 msg=hello\n",
+		"2009/01/23 01:23:23.123123: hello": "ts=\"2009/01/23 01:23:23.123123\" msg=hello\n",
 		"2009/01/23 01:23:23.123123 /a/b/c/d.go:23: hello": "ts=\"2009/01/23 01:23:23.123123\" caller=/a/b/c/d.go:23 msg=hello\n",
 		"01:23:23.123123 /a/b/c/d.go:23: hello":            "ts=01:23:23.123123 caller=/a/b/c/d.go:23 msg=hello\n",
 		"2009/01/23 01:23:23 /a/b/c/d.go:23: hello":        "ts=\"2009/01/23 01:23:23\" caller=/a/b/c/d.go:23 msg=hello\n",

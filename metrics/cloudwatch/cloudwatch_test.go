@@ -77,7 +77,7 @@ LabelValues:
 				}
 			}
 		}
-		return fmt.Errorf("could not find dimension with name %s and value %s", name, value)
+		return fmt.Errorf("could not find dimension with name %s and value %s", name, value) // nolint: staticcheck
 	}
 
 	return nil
