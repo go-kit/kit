@@ -62,7 +62,7 @@ jobs:
         run: go test -v -race -coverprofile=coverage.coverprofile -covermode=atomic -tags integration ./...
 
       - name: Run linter
-        run: make lint
+        uses: actions-contrib/golangci-lint@v1
 
       - name: Upload coverage
         uses: codecov/codecov-action@v1

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+if [ $(command -v golangci-lint) ]
+then
+    golangci-lint run
+    exit $?
+fi
+
+if [ ! -x ./golangci-lint ]
+then
+    curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $PWD
+fi
+
+./golangci-lint run
