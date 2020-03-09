@@ -11,8 +11,8 @@ import (
 )
 
 type Logger struct {
-	logrus.FieldLogger
-	logrus.Level
+	field logrus.FieldLogger
+	level logrus.Level
 }
 
 type Option func(*Logger)
@@ -22,8 +22,8 @@ var errMissingValue = errors.New("(MISSING)")
 // NewLogger returns a go-kit log.Logger that sends log events to a Logrus logger.
 func NewLogger(logger logrus.FieldLogger, options ...Option) log.Logger {
 	l := &Logger{
-		FieldLogger: logger,
-		Level:       logrus.InfoLevel,
+		field: logger,
+		level: logrus.InfoLevel,
 	}
 
 	for _, optFunc := range options {
@@ -36,7 +36,7 @@ func NewLogger(logger logrus.FieldLogger, options ...Option) log.Logger {
 // WithLevel configures a logrus logger to log at level for all events.
 func WithLevel(level logrus.Level) Option {
 	return func(c *Logger) {
-		c.Level = level
+		c.level = level
 	}
 }
 
@@ -50,19 +50,19 @@ func (l Logger) Log(keyvals ...interface{}) error {
 		}
 	}
 
-	switch l.Level {
+	switch l.level {
 	case logrus.InfoLevel:
-		l.WithFields(fields).Info()
+		l.field.WithFields(fields).Info()
 	case logrus.ErrorLevel:
-		l.WithFields(fields).Error()
+		l.field.WithFields(fields).Error()
 	case logrus.DebugLevel:
-		l.WithFields(fields).Debug()
+		l.field.WithFields(fields).Debug()
 	case logrus.WarnLevel:
-		l.WithFields(fields).Warn()
+		l.field.WithFields(fields).Warn()
 	case logrus.TraceLevel:
-		l.WithFields(fields).Trace()
+		l.field.WithFields(fields).Trace()
 	default:
-		l.WithFields(fields).Print()
+		l.field.WithFields(fields).Print()
 	}
 
 	return nil
