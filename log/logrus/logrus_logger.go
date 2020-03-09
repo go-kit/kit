@@ -19,7 +19,7 @@ type Option func(*Logger)
 
 var errMissingValue = errors.New("(MISSING)")
 
-// NewLogger returns a go-kit log.Logger that sends log events to a Logrus logger.
+// NewLogger returns a Go kit log.Logger that sends log events to a logrus.Logger.
 func NewLogger(logger logrus.FieldLogger, options ...Option) log.Logger {
 	l := &Logger{
 		field: logger,
