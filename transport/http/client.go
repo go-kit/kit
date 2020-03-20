@@ -21,9 +21,7 @@ type HTTPClient interface {
 // Client wraps a URL and provides a method that implements endpoint.Endpoint.
 type Client struct {
 	client         HTTPClient
-	method         string
-	tgt            *url.URL
-	enc            EncodeRequestFunc
+	req            CreateRequestFunc
 	dec            DecodeResponseFunc
 	before         []RequestFunc
 	after          []ClientResponseFunc
@@ -32,22 +30,18 @@ type Client struct {
 }
 
 // NewClient constructs a usable Client for a single remote method.
-func NewClient(
-	method string,
-	tgt *url.URL,
-	enc EncodeRequestFunc,
-	dec DecodeResponseFunc,
-	options ...ClientOption,
-) *Client {
+func NewClient(method string, tgt *url.URL, enc EncodeRequestFunc, dec DecodeResponseFunc, options ...ClientOption) *Client {
+	return NewExplicitClient(makeCreateRequestFunc(method, tgt, enc), dec, options...)
+}
+
+// NewExplicitClient is like NewClient but uses a CreateRequestFunc instead of a
+// method, target URL, and EncodeRequestFunc, which allows for more control over
+// the outgoing HTTP request.
+func NewExplicitClient(req CreateRequestFunc, dec DecodeResponseFunc, options ...ClientOption) *Client {
 	c := &Client{
-		client:         http.DefaultClient,
-		method:         method,
-		tgt:            tgt,
-		enc:            enc,
-		dec:            dec,
-		before:         []RequestFunc{},
-		after:          []ClientResponseFunc{},
-		bufferedStream: false,
+		client: http.DefaultClient,
+		req:    req,
+		dec:    dec,
 	}
 	for _, option := range options {
 		option(c)
@@ -64,33 +58,35 @@ func SetClient(client HTTPClient) ClientOption {
 	return func(c *Client) { c.client = client }
 }
 
-// ClientBefore sets the RequestFuncs that are applied to the outgoing HTTP
+// ClientBefore adds one or more RequestFuncs to be applied to the outgoing HTTP
 // request before it's invoked.
 func ClientBefore(before ...RequestFunc) ClientOption {
 	return func(c *Client) { c.before = append(c.before, before...) }
 }
 
-// ClientAfter sets the ClientResponseFuncs applied to the incoming HTTP
-// request prior to it being decoded. This is useful for obtaining anything off
-// of the response and adding onto the context prior to decoding.
+// ClientAfter adds one or more ClientResponseFuncs, which are applied to the
+// incoming HTTP response prior to it being decoded. This is useful for
+// obtaining anything off of the response and adding it into the context prior
+// to decoding.
 func ClientAfter(after ...ClientResponseFunc) ClientOption {
 	return func(c *Client) { c.after = append(c.after, after...) }
 }
 
-// ClientFinalizer is executed at the end of every HTTP request.
-// By default, no finalizer is registered.
+// ClientFinalizer adds one or more ClientFinalizerFuncs to be executed at the
+// end of every HTTP request. Finalizers are executed in the order in which they
+// were added. By default, no finalizer is registered.
 func ClientFinalizer(f ...ClientFinalizerFunc) ClientOption {
 	return func(s *Client) { s.finalizer = append(s.finalizer, f...) }
 }
 
-// BufferedStream sets whether the Response.Body is left open, allowing it
+// BufferedStream sets whether the HTTP response body is left open, allowing it
 // to be read from later. Useful for transporting a file as a buffered stream.
-// That body has to be Closed to propery end the request.
+// That body has to be drained and closed to properly end the request.
 func BufferedStream(buffered bool) ClientOption {
 	return func(c *Client) { c.bufferedStream = buffered }
 }
 
-// Endpoint returns a usable endpoint that invokes the remote endpoint.
+// Endpoint returns a usable Go kit endpoint that calls the remote HTTP endpoint.
 func (c Client) Endpoint() endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		ctx, cancel := context.WithCancel(ctx)
@@ -111,13 +107,8 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			}()
 		}
 
-		req, err := http.NewRequest(c.method, c.tgt.String(), nil)
+		req, err := c.req(ctx, request)
 		if err != nil {
-			cancel()
-			return nil, err
-		}
-
-		if err = c.enc(ctx, req, request); err != nil {
 			cancel()
 			return nil, err
 		}
@@ -127,14 +118,14 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		}
 
 		resp, err = c.client.Do(req.WithContext(ctx))
-
 		if err != nil {
 			cancel()
 			return nil, err
 		}
 
-		// If we expect a buffered stream, we don't cancel the context when the endpoint returns.
-		// Instead, we should call the cancel func when closing the response body.
+		// If the caller asked for a buffered stream, we don't cancel the
+		// context when the endpoint returns. Instead, we should call the
+		// cancel func when closing the response body.
 		if c.bufferedStream {
 			resp.Body = bodyWithCancel{ReadCloser: resp.Body, cancel: cancel}
 		} else {
@@ -206,4 +197,23 @@ func EncodeXMLRequest(c context.Context, r *http.Request, request interface{}) e
 	var b bytes.Buffer
 	r.Body = ioutil.NopCloser(&b)
 	return xml.NewEncoder(&b).Encode(request)
+}
+
+//
+//
+//
+
+func makeCreateRequestFunc(method string, target *url.URL, enc EncodeRequestFunc) CreateRequestFunc {
+	return func(ctx context.Context, request interface{}) (*http.Request, error) {
+		req, err := http.NewRequest(method, target.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+
+		if err = enc(ctx, req, request); err != nil {
+			return nil, err
+		}
+
+		return req, nil
+	}
 }
