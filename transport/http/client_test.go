@@ -3,11 +3,13 @@ package http_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -294,6 +296,36 @@ func TestSetClient(t *testing.T) {
 	}
 	if r, ok := resp.(string); !ok || r != "hello, world!" {
 		t.Fatal("Expected response to be 'hello, world!' string")
+	}
+}
+
+func TestNewExplicitClient(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "%d", r.ContentLength)
+	}))
+	defer srv.Close()
+
+	req := func(ctx context.Context, request interface{}) (*http.Request, error) {
+		req, _ := http.NewRequest("POST", srv.URL, strings.NewReader(request.(string)))
+		return req, nil
+	}
+
+	dec := func(_ context.Context, resp *http.Response) (response interface{}, err error) {
+		buf, err := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(buf), err
+	}
+
+	client := httptransport.NewExplicitClient(req, dec)
+
+	request := "hello world"
+	response, err := client.Endpoint()(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want, have := "11", response.(string); want != have {
+		t.Fatalf("want %q, have %q", want, have)
 	}
 }
 
