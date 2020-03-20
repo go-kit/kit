@@ -30,42 +30,18 @@ type Client struct {
 }
 
 // NewClient constructs a usable Client for a single remote method.
-func NewClient(
-	method string,
-	tgt *url.URL,
-	enc EncodeRequestFunc,
-	dec DecodeResponseFunc,
-	options ...ClientOption,
-) *Client {
-	c := &Client{
-		client:         http.DefaultClient,
-		req:            makeCreateRequestFunc(method, tgt, enc),
-		dec:            dec,
-		before:         []RequestFunc{},
-		after:          []ClientResponseFunc{},
-		bufferedStream: false,
-	}
-	for _, option := range options {
-		option(c)
-	}
-	return c
+func NewClient(method string, tgt *url.URL, enc EncodeRequestFunc, dec DecodeResponseFunc, options ...ClientOption) *Client {
+	return NewExplicitClient(makeCreateRequestFunc(method, tgt, enc), dec, options...)
 }
 
 // NewExplicitClient is like NewClient but uses a CreateRequestFunc instead of a
 // method, target URL, and EncodeRequestFunc, which allows for more control over
 // the outgoing HTTP request.
-func NewExplicitClient(
-	req CreateRequestFunc,
-	dec DecodeResponseFunc,
-	options ...ClientOption,
-) *Client {
+func NewExplicitClient(req CreateRequestFunc, dec DecodeResponseFunc, options ...ClientOption) *Client {
 	c := &Client{
-		client:         http.DefaultClient,
-		req:            req,
-		dec:            dec,
-		before:         []RequestFunc{},
-		after:          []ClientResponseFunc{},
-		bufferedStream: false,
+		client: http.DefaultClient,
+		req:    req,
+		dec:    dec,
 	}
 	for _, option := range options {
 		option(c)
