@@ -11,7 +11,9 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
-const requestIDKey = "request-id"
+type requestIDKeyType struct{}
+
+var requestIDKey requestIDKeyType
 
 // Server wraps an endpoint and implements http.Handler.
 type Server struct {
@@ -183,8 +185,8 @@ func DefaultErrorEncoder(ctx context.Context, err error, w http.ResponseWriter) 
 	w.WriteHeader(http.StatusOK)
 
 	var requestID *RequestID
-	if ctx.Value(requestIDKey) != nil {
-		requestID = ctx.Value(requestIDKey).(*RequestID)
+	if v := ctx.Value(requestIDKey); v != nil {
+		requestID = v.(*RequestID)
 	}
 	_ = json.NewEncoder(w).Encode(Response{
 		ID:      requestID,
