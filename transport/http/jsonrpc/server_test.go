@@ -24,17 +24,51 @@ func body(in string) io.Reader {
 	return strings.NewReader(in)
 }
 
+func unmarshalResponse(body []byte) (resp jsonrpc.Response, err error) {
+	err = json.Unmarshal(body, &resp)
+	return
+}
+
 func expectErrorCode(t *testing.T, want int, body []byte) {
-	var r jsonrpc.Response
-	err := json.Unmarshal(body, &r)
+	t.Helper()
+
+	r, err := unmarshalResponse(body)
 	if err != nil {
-		t.Fatalf("Cant' decode response. err=%s, body=%s", err, body)
+		t.Fatalf("Can't decode response: %v (%s)", err, body)
 	}
 	if r.Error == nil {
 		t.Fatalf("Expected error on response. Got none: %s", body)
 	}
 	if have := r.Error.Code; want != have {
 		t.Fatalf("Unexpected error code. Want %d, have %d: %s", want, have, body)
+	}
+}
+
+func expectValidRequestID(t *testing.T, want int, body []byte) {
+	t.Helper()
+
+	r, err := unmarshalResponse(body)
+	if err != nil {
+		t.Fatalf("Can't decode response: %v (%s)", err, body)
+	}
+	have, err := r.ID.Int()
+	if err != nil {
+		t.Fatalf("Can't get requestID in response. err=%s, body=%s", err, body)
+	}
+	if want != have {
+		t.Fatalf("Request ID: want %d, have %d (%s)", want, have, body)
+	}
+}
+
+func expectNilRequestID(t *testing.T, body []byte) {
+	t.Helper()
+
+	r, err := unmarshalResponse(body)
+	if err != nil {
+		t.Fatalf("Can't decode response: %v (%s)", err, body)
+	}
+	if r.ID != nil {
+		t.Fatalf("Request ID: want nil, have %v", r.ID)
 	}
 }
 
@@ -92,6 +126,7 @@ func TestServerBadEndpoint(t *testing.T) {
 	}
 	buf, _ := ioutil.ReadAll(resp.Body)
 	expectErrorCode(t, jsonrpc.InternalError, buf)
+	expectValidRequestID(t, 1, buf)
 }
 
 func TestServerBadEncode(t *testing.T) {
@@ -111,6 +146,7 @@ func TestServerBadEncode(t *testing.T) {
 	}
 	buf, _ := ioutil.ReadAll(resp.Body)
 	expectErrorCode(t, jsonrpc.InternalError, buf)
+	expectValidRequestID(t, 1, buf)
 }
 
 func TestServerErrorEncoder(t *testing.T) {
@@ -162,6 +198,7 @@ func TestCanRejectInvalidJSON(t *testing.T) {
 	}
 	buf, _ := ioutil.ReadAll(resp.Body)
 	expectErrorCode(t, jsonrpc.ParseError, buf)
+	expectNilRequestID(t, buf)
 }
 
 func TestServerUnregisteredMethod(t *testing.T) {
@@ -186,10 +223,9 @@ func TestServerHappyPath(t *testing.T) {
 	if want, have := http.StatusOK, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d (%s)", want, have, buf)
 	}
-	var r jsonrpc.Response
-	err := json.Unmarshal(buf, &r)
+	r, err := unmarshalResponse(buf)
 	if err != nil {
-		t.Fatalf("Cant' decode response. err=%s, body=%s", err, buf)
+		t.Fatalf("Can't decode response. err=%s, body=%s", err, buf)
 	}
 	if r.JSONRPC != jsonrpc.Version {
 		t.Fatalf("JSONRPC Version: want=%s, got=%s", jsonrpc.Version, r.JSONRPC)
