@@ -81,3 +81,21 @@ func TestSyncWriterFd(t *testing.T) {
 		t.Error("NewSyncWriter does not pass through Fd method")
 	}
 }
+
+func TestSyncLoggerPanic(t *testing.T) {
+	var logger log.Logger
+	logger = log.LoggerFunc(func(...interface{}) error { panic("!") })
+	logger = log.NewSyncLogger(logger)
+
+	f := func() {
+		defer func() {
+			if x := recover(); x != nil {
+				t.Log(x)
+			}
+		}()
+		logger.Log("hello", "world")
+	}
+
+	f()
+	f() // without defer Unlock, this one can deadlock
+}
