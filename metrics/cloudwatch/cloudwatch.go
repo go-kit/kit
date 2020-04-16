@@ -175,14 +175,14 @@ func (cw *CloudWatch) Send() error {
 	})
 
 	cw.gauges.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
+		if len(values) == 0 {
+			return true
+		}
+
 		datum := &cloudwatch.MetricDatum{
 			MetricName: aws.String(name),
 			Dimensions: makeDimensions(lvs...),
 			Timestamp:  aws.Time(now),
-		}
-
-		if len(values) == 0 {
-			return true
 		}
 
 		// CloudWatch Put Metrics API (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html)

@@ -164,9 +164,9 @@ func TestGauge(t *testing.T) {
 			t.Fatal(err)
 		}
 		svc.mtx.RLock()
+		defer svc.mtx.RUnlock()
 		res := svc.valuesReceived[name]
 		delete(svc.valuesReceived, name)
-		defer svc.mtx.RUnlock()
 		return res
 	}
 
