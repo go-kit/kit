@@ -17,8 +17,6 @@ business value.
 
 ## Sponsors
 
-- [OrderMyGear](https://www.ordermygear.com)
-
 Click on Sponsor, above, for more information on sponsorship.
 
 ## Motivation
