@@ -29,6 +29,10 @@ func FillCounter(counter metrics.Counter) float64 {
 	a := rand.Perm(100)
 	n := rand.Intn(len(a))
 
+	if n == 0 {
+		n = 1
+	}
+
 	var want float64
 	for i := 0; i < n; i++ {
 		f := float64(a[i])
