@@ -371,7 +371,9 @@ func (lb *Librato) Send() error {
 		return true
 	})
 
-	batches = append(batches, datums)
+	if datums.Size() > 0 {
+		batches = append(batches, datums)
+	}
 
 	var errors = make(chan error, len(batches))
 	for _, batch := range batches {
