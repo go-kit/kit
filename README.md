@@ -84,7 +84,7 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 ### Service frameworks
 
 - [gizmo](https://github.com/nytimes/gizmo), a microservice toolkit from The New York Times ★
-- [go-micro](https://github.com/myodc/go-micro), a microservices client/server library ★
+- [go-micro](https://github.com/micro/go-micro), a distributed systems development framework ★
 - [gotalk](https://github.com/rsms/gotalk), async peer communication protocol &amp; library
 - [Kite](https://github.com/koding/kite), a micro-service framework
 - [gocircuit](https://github.com/gocircuit/circuit), dynamic cloud orchestration
