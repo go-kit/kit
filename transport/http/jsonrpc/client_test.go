@@ -133,6 +133,9 @@ func TestClientHappyPath(t *testing.T) {
 	if id, _ := requestAtServer.ID.Int(); id != wantID {
 		t.Fatalf("Request ID at server: want=%d, got=%d", wantID, id)
 	}
+	if requestAtServer.JSONRPC != jsonrpc.Version {
+		t.Fatalf("JSON-RPC version at server: want=%s, got=%s", jsonrpc.Version, requestAtServer.JSONRPC)
+	}
 
 	var paramsAtServer addRequest
 	err = json.Unmarshal(requestAtServer.Params, &paramsAtServer)

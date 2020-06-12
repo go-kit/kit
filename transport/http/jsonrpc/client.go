@@ -164,7 +164,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			return nil, err
 		}
 		rpcReq := clientRequest{
-			JSONRPC: "",
+			JSONRPC: Version,
 			Method:  c.method,
 			Params:  params,
 			ID:      c.requestID.Generate(),
