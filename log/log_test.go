@@ -56,6 +56,55 @@ func TestContextMissingValue(t *testing.T) {
 	}
 }
 
+func TestWithPrefixAndSuffix(t *testing.T) {
+	t.Parallel()
+	var output []interface{}
+	logger := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {
+		output = keyvals
+		return nil
+	}))
+
+	lc := log.WithPrefix(logger, "a", "first")
+	lc = log.WithSuffix(lc, "z", "last")
+	if err := lc.Log("msg", "message"); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := 6, len(output); want != have {
+		t.Errorf("want len(output) == %v, have %v", want, have)
+	}
+	want := []string{"a", "first", "msg", "message", "z", "last"}
+	for i := 0; i < 6; i++ {
+		if want, have := want[i], output[i]; want != have {
+			t.Errorf("want output[%d] == %#v, have %#v", i, want, have)
+		}
+	}
+
+	lc = log.With(logger, "b", "second")
+	lc = log.WithPrefix(lc, "a", "first")
+	lc = log.With(lc, "c", "third")
+	lc = log.WithSuffix(lc, "z", "last")
+	lc = log.WithSuffix(lc, "aa", "sequel")
+	if err := lc.Log("msg", "message"); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := 12, len(output); want != have {
+		t.Errorf("want len(output) == %v, have %v", want, have)
+	}
+	want = []string{
+		"a", "first",
+		"b", "second",
+		"c", "third",
+		"msg", "message",
+		"z", "last",
+		"aa", "sequel",
+	}
+	for i := 0; i < 12; i++ {
+		if want, have := want[i], output[i]; want != have {
+			t.Errorf("want output[%d] == %#v, have %#v", i, want, have)
+		}
+	}
+}
+
 // Test that context.Log has a consistent function stack depth when binding
 // Valuers, regardless of how many times With has been called.
 func TestContextStackDepth(t *testing.T) {
@@ -145,6 +194,43 @@ func TestWithConcurrent(t *testing.T) {
 	}
 }
 
+func TestLogCopiesValuers(t *testing.T) {
+	t.Parallel()
+	var output []interface{}
+	logger := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {
+		output = keyvals
+		return nil
+	}))
+
+	valuerCallCount := 0
+	counterValuer := log.Valuer(func() interface{} {
+		valuerCallCount++
+		return valuerCallCount
+	})
+	lc := log.WithPrefix(logger, "a", counterValuer)
+	lc = log.WithSuffix(lc, "z", counterValuer)
+
+	if err := lc.Log(); err != nil {
+		t.Fatal(err)
+	}
+	want := []interface{}{"a", 1, "z", 2}
+	for i := 0; i < 4; i++ {
+		if want, have := want[i], output[i]; want != have {
+			t.Errorf("want output[%d] == %#v, have %#v", i, want, have)
+		}
+	}
+
+	if err := lc.Log(); err != nil {
+		t.Fatal(err)
+	}
+	want = []interface{}{"a", 3, "z", 4}
+	for i := 0; i < 4; i++ {
+		if want, have := want[i], output[i]; want != have {
+			t.Errorf("want output[%d] == %#v, have %#v", i, want, have)
+		}
+	}
+}
+
 func BenchmarkDiscard(b *testing.B) {
 	logger := log.NewNopLogger()
 	b.ReportAllocs()
@@ -182,6 +268,78 @@ func BenchmarkTenWith(b *testing.B) {
 	lc := log.With(logger, "k", "v")
 	for i := 1; i < 10; i++ {
 		lc = log.With(lc, "k", "v")
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		lc.Log("k", "v")
+	}
+}
+
+func BenchmarkOneWithPrefix(b *testing.B) {
+	logger := log.NewNopLogger()
+	lc := log.WithPrefix(logger, "a", "first")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		lc.Log("k", "v")
+	}
+}
+
+func BenchmarkTenWithPrefix(b *testing.B) {
+	logger := log.NewNopLogger()
+	lc := log.WithPrefix(logger, "a", "first")
+	for i := 1; i < 10; i++ {
+		lc = log.WithPrefix(lc, "a", "first")
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		lc.Log("k", "v")
+	}
+}
+
+func BenchmarkOneWithSuffix(b *testing.B) {
+	logger := log.NewNopLogger()
+	lc := log.WithSuffix(logger, "z", "last")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		lc.Log("k", "v")
+	}
+}
+
+func BenchmarkTenWithSuffix(b *testing.B) {
+	logger := log.NewNopLogger()
+	lc := log.WithSuffix(logger, "z", "last")
+	for i := 1; i < 10; i++ {
+		lc = log.WithSuffix(lc, "z", "last")
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		lc.Log("k", "v")
+	}
+}
+
+func BenchmarkOneWithPrefixSuffix(b *testing.B) {
+	logger := log.NewNopLogger()
+	lc := log.WithSuffix(logger, "a", "first")
+	lc = log.WithSuffix(lc, "z", "last")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		lc.Log("k", "v")
+	}
+}
+
+func BenchmarkTenWithPrefixSuffix(b *testing.B) {
+	logger := log.NewNopLogger()
+	lc := log.WithPrefix(logger, "a", "first")
+	lc = log.WithSuffix(lc, "z", "last")
+	for i := 1; i < 10; i++ {
+		lc = log.WithPrefix(lc, "a", "first")
+		lc = log.WithSuffix(lc, "z", "last")
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
