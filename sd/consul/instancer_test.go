@@ -202,3 +202,61 @@ func TestInstancerWithEOF(t *testing.T) {
 		t.Error("failed, to receive call in time")
 	}
 }
+
+type badIndexTestClient struct {
+	client *testClient
+	called chan struct{}
+}
+
+func newBadIndexTestClient(client *testClient, called chan struct{}) Client {
+	return &badIndexTestClient{client: client, called: called}
+}
+
+func (c *badIndexTestClient) Register(r *consul.AgentServiceRegistration) error {
+	return c.client.Register(r)
+}
+
+func (c *badIndexTestClient) Deregister(r *consul.AgentServiceRegistration) error {
+	return c.client.Deregister(r)
+}
+
+func (c *badIndexTestClient) Service(service, tag string, passingOnly bool, queryOpts *consul.QueryOptions) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
+	switch {
+	case queryOpts.WaitIndex == 0:
+		queryOpts.WaitIndex = 100
+	case queryOpts.WaitIndex == 100:
+		queryOpts.WaitIndex = 99
+	default:
+	}
+	c.called <- struct{}{}
+	return c.client.Service(service, tag, passingOnly, queryOpts)
+}
+
+func TestInstancerWithInvalidIndex(t *testing.T) {
+	var (
+		called = make(chan struct{}, 1)
+		logger = log.NewNopLogger()
+		client = newBadIndexTestClient(newTestClient(consulState), called)
+	)
+
+	s := NewInstancer(client, logger, "search", []string{"api"}, true)
+	defer s.Stop()
+
+	select {
+	case <-called:
+	case <-time.Tick(time.Millisecond * 500):
+		t.Error("failed, to receive call")
+	}
+
+	state := s.cache.State()
+	if want, have := 2, len(state.Instances); want != have {
+		t.Errorf("want %d, have %d", want, have)
+	}
+
+	// loop should continue
+	select {
+	case <-called:
+	case <-time.Tick(time.Millisecond * 500):
+		t.Error("failed, to receive call in time")
+	}
+}
