@@ -90,7 +90,7 @@ func (c *testClient) Service(service, tag string, _ bool, opts *stdconsul.QueryO
 		results = append(results, entry)
 	}
 
-	return results, &stdconsul.QueryMeta{}, nil
+	return results, &stdconsul.QueryMeta{LastIndex: opts.WaitIndex}, nil
 }
 
 func (c *testClient) Register(r *stdconsul.AgentServiceRegistration) error {
