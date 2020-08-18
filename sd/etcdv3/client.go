@@ -110,6 +110,7 @@ func NewClient(ctx context.Context, machines []string, options ClientOptions) (C
 		TLS:               tlscfg,
 		Username:          options.Username,
 		Password:          options.Password,
+		DialOptions: []grpc.DialOption{grpc.WithBlock()},
 	})
 	if err != nil {
 		return nil, err
