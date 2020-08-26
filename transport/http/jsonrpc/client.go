@@ -196,15 +196,15 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			defer resp.Body.Close()
 		}
 
+		for _, f := range c.after {
+			ctx = f(ctx, resp)
+		}
+
 		// Decode the body into an object
 		var rpcRes Response
 		err = json.NewDecoder(resp.Body).Decode(&rpcRes)
 		if err != nil {
 			return nil, err
-		}
-
-		for _, f := range c.after {
-			ctx = f(ctx, resp)
 		}
 
 		return c.dec(ctx, rpcRes)
