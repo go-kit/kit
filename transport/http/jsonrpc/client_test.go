@@ -18,23 +18,107 @@ type TestResponse struct {
 	String string
 }
 
-func TestCanCallBeforeFunc(t *testing.T) {
-	called := false
-	u, _ := url.Parse("http://senseye.io/jsonrpc")
-	sut := jsonrpc.NewClient(
-		u,
-		"add",
-		jsonrpc.ClientBefore(func(ctx context.Context, req *http.Request) context.Context {
-			called = true
-			return ctx
-		}),
-	)
+type testServerResponseOptions struct {
+	Body   string
+	Status int
+}
 
-	sut.Endpoint()(context.TODO(), "foo")
+func httptestServer(t *testing.T) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
 
-	if !called {
-		t.Fatal("Expected client before func to be called. Wasn't.")
+		var testReq jsonrpc.Request
+		if err := json.NewDecoder(r.Body).Decode(&testReq); err != nil {
+			t.Fatal(err)
+		}
+
+		var options testServerResponseOptions
+		if err := json.Unmarshal(testReq.Params, &options); err != nil {
+			t.Fatal(err)
+		}
+
+		if options.Status == 0 {
+			options.Status = http.StatusOK
+		}
+
+		w.WriteHeader(options.Status)
+		w.Write([]byte(options.Body))
+	}))
+}
+
+func TestBeforeAfterFuncs(t *testing.T) {
+	t.Parallel()
+
+	var tests = []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{
+			name: "empty body",
+			body: "",
+		},
+		{
+			name:   "empty body 500",
+			body:   "",
+			status: 500,
+		},
+
+		{
+			name: "empty json body",
+			body: "{}",
+		},
+		{
+			name: "error",
+			body: `{"jsonrpc":"2.0","error":{"code":32603,"message":"Bad thing happened."}}`,
+		},
 	}
+
+	server := httptestServer(t)
+	defer server.Close()
+
+	testUrl, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			beforeCalled := false
+			afterCalled := false
+			finalizerCalled := false
+
+			sut := jsonrpc.NewClient(
+				testUrl,
+				"dummy",
+				jsonrpc.ClientBefore(func(ctx context.Context, req *http.Request) context.Context {
+					beforeCalled = true
+					return ctx
+				}),
+				jsonrpc.ClientAfter(func(ctx context.Context, resp *http.Response) context.Context {
+					afterCalled = true
+					return ctx
+				}),
+				jsonrpc.ClientFinalizer(func(ctx context.Context, err error) {
+					finalizerCalled = true
+				}),
+			)
+
+			sut.Endpoint()(context.TODO(), testServerResponseOptions{Body: tt.body, Status: tt.status})
+			if !beforeCalled {
+				t.Fatal("Expected client before func to be called. Wasn't.")
+			}
+			if !afterCalled {
+				t.Fatal("Expected client after func to be called. Wasn't.")
+			}
+			if !finalizerCalled {
+				t.Fatal("Expected client finalizer func to be called. Wasn't.")
+			}
+
+		})
+
+	}
+
 }
 
 type staticIDGenerator int
@@ -42,6 +126,8 @@ type staticIDGenerator int
 func (g staticIDGenerator) Generate() interface{} { return g }
 
 func TestClientHappyPath(t *testing.T) {
+	t.Parallel()
+
 	var (
 		afterCalledKey    = "AC"
 		beforeHeaderKey   = "BF"
@@ -92,6 +178,7 @@ func TestClientHappyPath(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(testbody))
 	}))
+	defer server.Close()
 
 	sut := jsonrpc.NewClient(
 		mustParse(server.URL),
@@ -153,6 +240,8 @@ func TestClientHappyPath(t *testing.T) {
 }
 
 func TestCanUseDefaults(t *testing.T) {
+	t.Parallel()
+
 	var (
 		testbody    = `{"jsonrpc":"2.0", "result":"boogaloo"}`
 		requestBody []byte
@@ -168,6 +257,7 @@ func TestCanUseDefaults(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(testbody))
 	}))
+	defer server.Close()
 
 	sut := jsonrpc.NewClient(
 		mustParse(server.URL),
@@ -210,6 +300,8 @@ func TestCanUseDefaults(t *testing.T) {
 }
 
 func TestClientCanHandleJSONRPCError(t *testing.T) {
+	t.Parallel()
+
 	var testbody = `{
 		"jsonrpc": "2.0",
 		"error": {
@@ -221,6 +313,7 @@ func TestClientCanHandleJSONRPCError(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(testbody))
 	}))
+	defer server.Close()
 
 	sut := jsonrpc.NewClient(mustParse(server.URL), "add")
 
@@ -255,6 +348,8 @@ func TestClientCanHandleJSONRPCError(t *testing.T) {
 }
 
 func TestDefaultAutoIncrementer(t *testing.T) {
+	t.Parallel()
+
 	sut := jsonrpc.NewAutoIncrementID(0)
 	var want uint64
 	for ; want < 100; want++ {
