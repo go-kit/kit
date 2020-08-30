@@ -8,6 +8,7 @@ import (
 
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/pkg/transport"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -73,8 +74,14 @@ type ClientOptions struct {
 	CACert        string
 	DialTimeout   time.Duration
 	DialKeepAlive time.Duration
-	Username      string
-	Password      string
+
+	// DialOptions is a list of dial options for the gRPC client (e.g., for interceptors).
+	// For example, pass grpc.WithBlock() to block until the underlying connection is up.
+	// Without this, Dial returns immediately and connecting the server happens in background.
+	DialOptions []grpc.DialOption
+
+	Username string
+	Password string
 }
 
 // NewClient returns Client with a connection to the named machines. It will
@@ -107,6 +114,7 @@ func NewClient(ctx context.Context, machines []string, options ClientOptions) (C
 		Endpoints:         machines,
 		DialTimeout:       options.DialTimeout,
 		DialKeepAliveTime: options.DialKeepAlive,
+		DialOptions:       options.DialOptions,
 		TLS:               tlscfg,
 		Username:          options.Username,
 		Password:          options.Password,
