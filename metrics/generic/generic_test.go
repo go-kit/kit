@@ -5,6 +5,12 @@ package generic_test
 // generic to use its Histogram in the Quantiles helper function.
 
 import (
+	"go/ast"
+	"go/importer"
+	"go/parser"
+	"go/token"
+	"go/types"
+	"io/ioutil"
 	"math"
 	"math/rand"
 	"sync"
@@ -105,5 +111,74 @@ func TestSimpleHistogram(t *testing.T) {
 	)
 	if math.Abs(want-have)/want > tolerance {
 		t.Errorf("want %f, have %f", want, have)
+	}
+}
+
+// Naive atomic alignment test.
+// The problem is related to the use of `atomic.*` and not directly to a structure.
+// But currently works for Counter and Gauge.
+// To have a more solid test, this test should be removed and the other tests should be run on a 32-bit arch.
+func TestAtomicAlignment(t *testing.T) {
+	content, err := ioutil.ReadFile("./generic.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fset := token.NewFileSet()
+
+	file, err := parser.ParseFile(fset, "generic.go", content, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	conf := types.Config{Importer: importer.ForCompiler(fset, "source", nil)}
+
+	pkg, err := conf.Check(".", fset, []*ast.File{file}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// uses ARM as reference for 32-bit arch
+	sizes := types.SizesFor("gc", "arm")
+
+	names := []string{"Counter", "Gauge"}
+
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			checkAtomicAlignment(t, sizes, pkg.Scope().Lookup(name), pkg)
+		})
+	}
+}
+
+func checkAtomicAlignment(t *testing.T, sizes types.Sizes, obj types.Object, pkg *types.Package) {
+	t.Helper()
+
+	st := obj.Type().Underlying().(*types.Struct)
+
+	posToCheck := make(map[int]types.Type)
+
+	var vars []*types.Var
+	for i := 0; i < st.NumFields(); i++ {
+		field := st.Field(i)
+
+		if v, ok := field.Type().(*types.Basic); ok {
+			switch v.Kind() {
+			case types.Uint64, types.Float64, types.Int64:
+				posToCheck[i] = v
+			}
+		}
+
+		vars = append(vars, types.NewVar(field.Pos(), pkg, field.Name(), field.Type()))
+	}
+
+	offsets := sizes.Offsetsof(vars)
+	for i, offset := range offsets {
+		if _, ok := posToCheck[i]; !ok {
+			continue
+		}
+
+		if offset%8 != 0 {
+			t.Errorf("misalignment detected in %s for the type %s, offset %d", obj.Name(), posToCheck[i], offset)
+		}
 	}
 }
