@@ -9,6 +9,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/kit/sd/lb"
+	"google.golang.org/grpc"
 )
 
 func Example() {
@@ -44,6 +45,9 @@ func Example() {
 
 		// If DialKeepAlive is 0, it defaults to 3s
 		DialKeepAlive: time.Second * 3,
+
+		// If passing `grpc.WithBlock`, dial connection will block until success.
+		DialOptions: []grpc.DialOption{grpc.WithBlock()},
 	}
 
 	// Build the client.
