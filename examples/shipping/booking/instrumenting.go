@@ -30,7 +30,7 @@ func (s *instrumentingService) BookNewCargo(origin, destination location.UNLocod
 		s.requestLatency.With("method", "book").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return s.Service.BookNewCargo(origin, destination, deadline)
+	return s.BookNewCargo(origin, destination, deadline)
 }
 
 func (s *instrumentingService) LoadCargo(id cargo.TrackingID) (c Cargo, err error) {
@@ -39,7 +39,7 @@ func (s *instrumentingService) LoadCargo(id cargo.TrackingID) (c Cargo, err erro
 		s.requestLatency.With("method", "load").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return s.Service.LoadCargo(id)
+	return s.LoadCargo(id)
 }
 
 func (s *instrumentingService) RequestPossibleRoutesForCargo(id cargo.TrackingID) []cargo.Itinerary {
@@ -48,7 +48,7 @@ func (s *instrumentingService) RequestPossibleRoutesForCargo(id cargo.TrackingID
 		s.requestLatency.With("method", "request_routes").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return s.Service.RequestPossibleRoutesForCargo(id)
+	return s.RequestPossibleRoutesForCargo(id)
 }
 
 func (s *instrumentingService) AssignCargoToRoute(id cargo.TrackingID, itinerary cargo.Itinerary) (err error) {
@@ -57,7 +57,7 @@ func (s *instrumentingService) AssignCargoToRoute(id cargo.TrackingID, itinerary
 		s.requestLatency.With("method", "assign_to_route").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return s.Service.AssignCargoToRoute(id, itinerary)
+	return s.AssignCargoToRoute(id, itinerary)
 }
 
 func (s *instrumentingService) ChangeDestination(id cargo.TrackingID, l location.UNLocode) (err error) {
@@ -66,7 +66,7 @@ func (s *instrumentingService) ChangeDestination(id cargo.TrackingID, l location
 		s.requestLatency.With("method", "change_destination").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return s.Service.ChangeDestination(id, l)
+	return s.ChangeDestination(id, l)
 }
 
 func (s *instrumentingService) Cargos() []Cargo {
@@ -75,7 +75,7 @@ func (s *instrumentingService) Cargos() []Cargo {
 		s.requestLatency.With("method", "list_cargos").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return s.Service.Cargos()
+	return s.Cargos()
 }
 
 func (s *instrumentingService) Locations() []Location {
@@ -84,5 +84,5 @@ func (s *instrumentingService) Locations() []Location {
 		s.requestLatency.With("method", "list_locations").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return s.Service.Locations()
+	return s.Locations()
 }
