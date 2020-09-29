@@ -30,7 +30,7 @@ func (s *loggingService) BookNewCargo(origin location.UNLocode, destination loca
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.BookNewCargo(origin, destination, deadline)
+	return s.BookNewCargo(origin, destination, deadline)
 }
 
 func (s *loggingService) LoadCargo(id cargo.TrackingID) (c Cargo, err error) {
@@ -42,7 +42,7 @@ func (s *loggingService) LoadCargo(id cargo.TrackingID) (c Cargo, err error) {
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.LoadCargo(id)
+	return s.LoadCargo(id)
 }
 
 func (s *loggingService) RequestPossibleRoutesForCargo(id cargo.TrackingID) []cargo.Itinerary {
@@ -53,7 +53,7 @@ func (s *loggingService) RequestPossibleRoutesForCargo(id cargo.TrackingID) []ca
 			"took", time.Since(begin),
 		)
 	}(time.Now())
-	return s.Service.RequestPossibleRoutesForCargo(id)
+	return s.RequestPossibleRoutesForCargo(id)
 }
 
 func (s *loggingService) AssignCargoToRoute(id cargo.TrackingID, itinerary cargo.Itinerary) (err error) {
@@ -65,7 +65,7 @@ func (s *loggingService) AssignCargoToRoute(id cargo.TrackingID, itinerary cargo
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.AssignCargoToRoute(id, itinerary)
+	return s.AssignCargoToRoute(id, itinerary)
 }
 
 func (s *loggingService) ChangeDestination(id cargo.TrackingID, l location.UNLocode) (err error) {
@@ -78,7 +78,7 @@ func (s *loggingService) ChangeDestination(id cargo.TrackingID, l location.UNLoc
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.ChangeDestination(id, l)
+	return s.ChangeDestination(id, l)
 }
 
 func (s *loggingService) Cargos() []Cargo {
@@ -88,7 +88,7 @@ func (s *loggingService) Cargos() []Cargo {
 			"took", time.Since(begin),
 		)
 	}(time.Now())
-	return s.Service.Cargos()
+	return s.Cargos()
 }
 
 func (s *loggingService) Locations() []Location {
@@ -98,5 +98,5 @@ func (s *loggingService) Locations() []Location {
 			"took", time.Since(begin),
 		)
 	}(time.Now())
-	return s.Service.Locations()
+	return s.Locations()
 }
