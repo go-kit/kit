@@ -66,23 +66,26 @@ func NewRegistrar(client Client, service Service, logger log.Logger) *Registrar 
 
 // Register implements the sd.Registrar interface. Call it when you want your
 // service to be registered in etcd, typically at startup.
-func (r *Registrar) Register() {
+func (r *Registrar) Register() error {
 	if err := r.client.Register(r.service); err != nil {
 		r.logger.Log("err", err)
-		return
+		return err
 	}
 	if r.service.TTL != nil {
 		r.logger.Log("action", "register", "lease", r.client.LeaseID())
 	} else {
 		r.logger.Log("action", "register")
 	}
+
+	return nil
 }
 
 // Deregister implements the sd.Registrar interface. Call it when you want your
 // service to be deregistered from etcd, typically just prior to shutdown.
-func (r *Registrar) Deregister() {
+func (r *Registrar) Deregister() error{
 	if err := r.client.Deregister(r.service); err != nil {
 		r.logger.Log("err", err)
+		return err
 	} else {
 		r.logger.Log("action", "deregister")
 	}
@@ -93,4 +96,6 @@ func (r *Registrar) Deregister() {
 		close(r.quit)
 		r.quit = nil
 	}
+
+	return nil
 }
