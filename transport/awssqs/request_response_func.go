@@ -2,6 +2,7 @@ package awssqs
 
 import (
 	"context"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
@@ -23,7 +24,7 @@ type PublisherRequestFunc func(context.Context, *sqs.SendMessageInput) context.C
 // consumers, after invoking the endpoint but prior to publishing a reply.
 // use cases eg. : Pipe information from request message to response MessageInput,
 // delete msg from queue or update leftMsgs slice
-type ConsumerResponseFunc func(context.Context, *sqs.Message, *sqs.SendMessageInput, *[]*sqs.Message) context.Context
+type ConsumerResponseFunc func(context.Context, *sqs.Message, *sqs.SendMessageInput, *[]*sqs.Message, *sync.Mutex) context.Context
 
 // PublisherResponseFunc may take information from an sqs.SendMessageOutput and
 // fetch response using the Client. SQS is not req-reply out-of-the-box. Responses need to be fetched.

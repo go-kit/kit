@@ -3,6 +3,7 @@ package awssqs
 import (
 	"context"
 	"encoding/json"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -22,6 +23,7 @@ type Consumer struct {
 	queueURL              string
 	visibilityTimeout     int64
 	visibilityTimeoutFunc VisibilityTimeoutFunc
+	leftMsgsMux           *sync.Mutex
 	before                []ConsumerRequestFunc
 	after                 []ConsumerResponseFunc
 	errorEncoder          ErrorEncoder
@@ -48,6 +50,7 @@ func NewConsumer(
 		queueURL:              queueURL,
 		visibilityTimeout:     int64(30),
 		visibilityTimeoutFunc: DoNotExtendVisibilityTimeout,
+		leftMsgsMux:           &sync.Mutex{},
 		errorEncoder:          DefaultErrorEncoder,
 		errorHandler:          transport.NewLogErrorHandler(log.NewNopLogger()),
 	}
@@ -140,7 +143,7 @@ func (c Consumer) HandleMessages(ctx context.Context, msgs []*sqs.Message) error
 
 	visibilityTimeoutCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go c.visibilityTimeoutFunc(visibilityTimeoutCtx, c.sqsClient, c.queueURL, c.visibilityTimeout, &leftMsgs)
+	go c.visibilityTimeoutFunc(visibilityTimeoutCtx, c.sqsClient, c.queueURL, c.visibilityTimeout, &leftMsgs, c.leftMsgsMux)
 
 	if len(c.finalizer) > 0 {
 		defer func() {
@@ -180,7 +183,7 @@ func (c Consumer) HandleSingleMessage(ctx context.Context, msg *sqs.Message, lef
 
 	responseMsg := sqs.SendMessageInput{}
 	for _, f := range c.after {
-		ctx = f(ctx, msg, &responseMsg, leftMsgs)
+		ctx = f(ctx, msg, &responseMsg, leftMsgs, c.leftMsgsMux)
 	}
 
 	if !c.wantRep(ctx, msg) {
@@ -217,7 +220,7 @@ type ConsumerFinalizerFunc func(ctx context.Context, msg *[]*sqs.Message)
 // this can be used to provide custom visibility timeout extension such as doubling it everytime
 // it gets close to being reached.
 // VisibilityTimeoutFunc will need to check that the provided context is not done and return once it is.
-type VisibilityTimeoutFunc func(context.Context, Client, string, int64, *[]*sqs.Message) error
+type VisibilityTimeoutFunc func(context.Context, Client, string, int64, *[]*sqs.Message, *sync.Mutex) error
 
 // WantReplyFunc encapsulates logic to check whether message awaits response or not
 // for example check for a given message attribute value.
@@ -229,7 +232,7 @@ func DefaultErrorEncoder(context.Context, error, *sqs.Message, Client) {
 
 // DoNotExtendVisibilityTimeout is the default value for the consumer's visibilityTimeoutFunc.
 // It returns no error and does nothing
-func DoNotExtendVisibilityTimeout(context.Context, Client, string, int64, *[]*sqs.Message) error {
+func DoNotExtendVisibilityTimeout(context.Context, Client, string, int64, *[]*sqs.Message, *sync.Mutex) error {
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -444,7 +445,9 @@ func TestConsumerAfter(t *testing.T) {
 		testReqDecoderfunc,
 		awssqs.EncodeJSONResponse,
 		queueURL,
-		awssqs.ConsumerAfter(func(ctx context.Context, msg *sqs.Message, resp *sqs.SendMessageInput, leftMsgs *[]*sqs.Message) context.Context {
+		awssqs.ConsumerAfter(func(ctx context.Context, msg *sqs.Message, resp *sqs.SendMessageInput, leftMsgs *[]*sqs.Message, mux *sync.Mutex) context.Context {
+			mux.Lock()
+			defer mux.Unlock()
 			if correlationIDAttribute, exists := msg.MessageAttributes["correlationID"]; exists {
 				if resp.MessageAttributes == nil {
 					resp.MessageAttributes = make(map[string]*sqs.MessageAttributeValue)
