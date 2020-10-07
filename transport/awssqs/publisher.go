@@ -13,9 +13,9 @@ import (
 // Publisher wraps an sqs client and queue, and provides a method that
 // implements endpoint.Endpoint.
 type Publisher struct {
-	sqsClient        SQSClient
-	queueURL         *string
-	responseQueueURL *string
+	sqsClient        Client
+	queueURL         string
+	responseQueueURL string
 	enc              EncodeRequestFunc
 	dec              DecodeResponseFunc
 	before           []PublisherRequestFunc
@@ -25,9 +25,9 @@ type Publisher struct {
 
 // NewPublisher constructs a usable Publisher for a single remote method.
 func NewPublisher(
-	sqsClient SQSClient,
-	queueURL *string,
-	responseQueueURL *string,
+	sqsClient Client,
+	queueURL string,
+	responseQueueURL string,
 	enc EncodeRequestFunc,
 	dec DecodeResponseFunc,
 	options ...PublisherOption,
@@ -73,14 +73,13 @@ func (p Publisher) Endpoint() endpoint.Endpoint {
 		ctx, cancel := context.WithTimeout(ctx, p.timeout)
 		defer cancel()
 		msgInput := sqs.SendMessageInput{
-			QueueUrl: p.queueURL,
+			QueueUrl: &p.queueURL,
 		}
 		if err := p.enc(ctx, &msgInput, request); err != nil {
 			return nil, err
 		}
 
 		for _, f := range p.before {
-			// Affect only msgInput
 			ctx = f(ctx, &msgInput)
 		}
 
@@ -91,7 +90,7 @@ func (p Publisher) Endpoint() endpoint.Endpoint {
 
 		var responseMsg *sqs.Message
 		for _, f := range p.after {
-			ctx, responseMsg, err = f(ctx, output)
+			ctx, responseMsg, err = f(ctx, p.sqsClient, output)
 			if err != nil {
 				return nil, err
 			}
@@ -107,9 +106,8 @@ func (p Publisher) Endpoint() endpoint.Endpoint {
 }
 
 // EncodeJSONRequest is an EncodeRequestFunc that serializes the request as a
-// JSON object to the MessageBody of the Msg.
-// Depending on your needs (if you don't need to add MessageAttributes or GroupID),
-// this can be enough.
+// JSON object and loads it as the MessageBody of the sqs.SendMessageInput.
+// This can be enough for most JSON over SQS communications.
 func EncodeJSONRequest(_ context.Context, msg *sqs.SendMessageInput, request interface{}) error {
 	b, err := json.Marshal(request)
 	if err != nil {
@@ -122,7 +120,7 @@ func EncodeJSONRequest(_ context.Context, msg *sqs.SendMessageInput, request int
 }
 
 // NoResponseDecode is a DecodeResponseFunc that can be used when no response is needed.
-// It returns nil value and nil error
+// It returns nil value and nil error.
 func NoResponseDecode(_ context.Context, _ *sqs.Message) (interface{}, error) {
 	return nil, nil
 }

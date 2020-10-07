@@ -7,17 +7,17 @@ import (
 )
 
 // DecodeRequestFunc extracts a user-domain request object from
-// an sqs message object. It is designed to be used in sqs Subscribers.
+// an sqs message object. It is designed to be used in Consumers.
 type DecodeRequestFunc func(context.Context, *sqs.Message) (request interface{}, err error)
 
 // EncodeRequestFunc encodes the passed payload object into
-// an sqs message object. It is designed to be used in sqs Publishers.
+// an sqs message object. It is designed to be used in Publishers.
 type EncodeRequestFunc func(context.Context, *sqs.SendMessageInput, interface{}) error
 
 // EncodeResponseFunc encodes the passed response object to
-// an sqs message object. It is designed to be used in sqs Subscribers.
+// an sqs message object. It is designed to be used in Consumers.
 type EncodeResponseFunc func(context.Context, *sqs.SendMessageInput, interface{}) error
 
 // DecodeResponseFunc extracts a user-domain response object from
-// an sqs message object. It is designed to be used in sqs Publishers.
+// an sqs message object. It is designed to be used in Publishers.
 type DecodeResponseFunc func(context.Context, *sqs.Message) (response interface{}, err error)

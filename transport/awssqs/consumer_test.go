@@ -19,7 +19,7 @@ var (
 	errTypeAssertion = errors.New("type assertion error")
 )
 
-func (mock *mockSQSClient) ReceiveMessageWithContext(ctx context.Context, input *sqs.ReceiveMessageInput, opts ...request.Option) (*sqs.ReceiveMessageOutput, error) {
+func (mock *mockClient) ReceiveMessageWithContext(ctx context.Context, input *sqs.ReceiveMessageInput, opts ...request.Option) (*sqs.ReceiveMessageOutput, error) {
 	// Add logic to allow context errors
 	for {
 		select {
@@ -34,8 +34,7 @@ func (mock *mockSQSClient) ReceiveMessageWithContext(ctx context.Context, input 
 // TestConsumerBadDecode checks if decoder errors are handled properly.
 func TestConsumerBadDecode(t *testing.T) {
 	queueURL := "someURL"
-	dlQueueURL := "somedlURL"
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
@@ -49,7 +48,7 @@ func TestConsumerBadDecode(t *testing.T) {
 			},
 		}
 	}()
-	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.SQSClient) {
+	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.Client) {
 		publishError := sqsError{
 			Err:   err.Error(),
 			MsgID: *req.MessageId,
@@ -64,9 +63,9 @@ func TestConsumerBadDecode(t *testing.T) {
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, *sqs.Message) (interface{}, error) { return nil, errors.New("err!") },
 		func(context.Context, *sqs.SendMessageInput, interface{}) error { return nil },
-		func(context.Context, *sqs.Message) bool { return true },
-		&queueURL, &dlQueueURL, int64(5),
+		queueURL,
 		errEncoder,
+		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
 	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
@@ -91,8 +90,7 @@ func TestConsumerBadDecode(t *testing.T) {
 // TestConsumerBadEndpoint checks if endpoint errors are handled properly.
 func TestConsumerBadEndpoint(t *testing.T) {
 	queueURL := "someURL"
-	dlQueueURL := "somedlURL"
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
@@ -106,7 +104,7 @@ func TestConsumerBadEndpoint(t *testing.T) {
 			},
 		}
 	}()
-	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.SQSClient) {
+	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.Client) {
 		publishError := sqsError{
 			Err:   err.Error(),
 			MsgID: *req.MessageId,
@@ -121,9 +119,9 @@ func TestConsumerBadEndpoint(t *testing.T) {
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errors.New("err!") },
 		func(context.Context, *sqs.Message) (interface{}, error) { return nil, nil },
 		func(context.Context, *sqs.SendMessageInput, interface{}) error { return nil },
-		func(context.Context, *sqs.Message) bool { return true },
-		&queueURL, &dlQueueURL, int64(5),
+		queueURL,
 		errEncoder,
+		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
 	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
@@ -148,8 +146,7 @@ func TestConsumerBadEndpoint(t *testing.T) {
 // TestConsumerBadEncoder checks if encoder errors are handled properly.
 func TestConsumerBadEncoder(t *testing.T) {
 	queueURL := "someURL"
-	dlQueueURL := "somedlURL"
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
@@ -163,7 +160,7 @@ func TestConsumerBadEncoder(t *testing.T) {
 			},
 		}
 	}()
-	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.SQSClient) {
+	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.Client) {
 		publishError := sqsError{
 			Err:   err.Error(),
 			MsgID: *req.MessageId,
@@ -178,9 +175,9 @@ func TestConsumerBadEncoder(t *testing.T) {
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, *sqs.Message) (interface{}, error) { return nil, nil },
 		func(context.Context, *sqs.SendMessageInput, interface{}) error { return errors.New("err!") },
-		func(context.Context, *sqs.Message) bool { return true },
-		&queueURL, &dlQueueURL, int64(5),
+		queueURL,
 		errEncoder,
+		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
 	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
@@ -212,8 +209,7 @@ func TestConsumerSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	queueURL := "someURL"
-	dlQueueURL := "somedlURL"
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
@@ -231,10 +227,8 @@ func TestConsumerSuccess(t *testing.T) {
 		testEndpoint,
 		testReqDecoderfunc,
 		awssqs.EncodeJSONResponse,
-		// wants response
-		func(context.Context, *sqs.Message) bool { return true },
-		// queue, dlqueue, vibilityTimeout
-		&queueURL, &dlQueueURL, int64(5),
+		queueURL,
+		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
 	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
@@ -261,7 +255,7 @@ func TestConsumerSuccess(t *testing.T) {
 }
 
 // TestConsumerSuccessNoReply checks if consumer processes correctly message
-// without sending response
+// without sending response.
 func TestConsumerSuccessNoReply(t *testing.T) {
 	obj := testReq{
 		Squadron: 436,
@@ -271,8 +265,7 @@ func TestConsumerSuccessNoReply(t *testing.T) {
 		t.Fatal(err)
 	}
 	queueURL := "someURL"
-	dlQueueURL := "somedlURL"
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
@@ -290,10 +283,7 @@ func TestConsumerSuccessNoReply(t *testing.T) {
 		testEndpoint,
 		testReqDecoderfunc,
 		awssqs.EncodeJSONResponse,
-		// wants response
-		func(context.Context, *sqs.Message) bool { return false },
-		// queue, dlqueue, vibilityTimeout
-		&queueURL, &dlQueueURL, int64(5),
+		queueURL,
 	)
 
 	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
@@ -326,8 +316,7 @@ func TestConsumerBeforeFilterMessages(t *testing.T) {
 	}
 	b3, _ := json.Marshal(obj3)
 	queueURL := "someURL"
-	dlQueueURL := "somedlURL"
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
@@ -369,10 +358,7 @@ func TestConsumerBeforeFilterMessages(t *testing.T) {
 		testEndpoint,
 		testReqDecoderfunc,
 		awssqs.EncodeJSONResponse,
-		// wants response
-		func(context.Context, *sqs.Message) bool { return true },
-		// queue, dlqueue, vibilityTimeout
-		&queueURL, &dlQueueURL, int64(5),
+		queueURL,
 		awssqs.ConsumerBefore(func(ctx context.Context, msgs *[]*sqs.Message) context.Context {
 			// delete a message that is not destined to the consumer
 			msgsCopy := *msgs
@@ -384,6 +370,7 @@ func TestConsumerBeforeFilterMessages(t *testing.T) {
 			*msgs = msgsCopy
 			return ctx
 		}),
+		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 	ctx := context.Background()
 	consumer.Consume(ctx, &sqs.ReceiveMessageInput{})
@@ -420,15 +407,14 @@ func TestConsumerBeforeFilterMessages(t *testing.T) {
 }
 
 // TestConsumerAfter checks if consumer after is called as expected.
-// Here after is used to transfer some info from received message in response
+// Here after is used to transfer some info from received message in response.
 func TestConsumerAfter(t *testing.T) {
 	obj1 := testReq{
 		Squadron: 436,
 	}
 	b1, _ := json.Marshal(obj1)
 	queueURL := "someURL"
-	dlQueueURL := "somedlURL"
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
@@ -457,10 +443,7 @@ func TestConsumerAfter(t *testing.T) {
 		testEndpoint,
 		testReqDecoderfunc,
 		awssqs.EncodeJSONResponse,
-		// wants response
-		func(context.Context, *sqs.Message) bool { return true },
-		// queue, dlqueue, vibilityTimeout
-		&queueURL, &dlQueueURL, int64(5),
+		queueURL,
 		awssqs.ConsumerAfter(func(ctx context.Context, msg *sqs.Message, resp *sqs.SendMessageInput, leftMsgs *[]*sqs.Message) context.Context {
 			if correlationIDAttribute, exists := msg.MessageAttributes["correlationID"]; exists {
 				if resp.MessageAttributes == nil {
@@ -473,6 +456,7 @@ func TestConsumerAfter(t *testing.T) {
 			}
 			return ctx
 		}),
+		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 	ctx := context.Background()
 	consumer.Consume(ctx, &sqs.ReceiveMessageInput{})

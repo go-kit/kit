@@ -31,15 +31,15 @@ var names = map[int]string{
 	437: "husky",
 }
 
-// mockSQSClient is a mock of *sqs.SQS.
-type mockSQSClient struct {
+// mockClient is a mock of *sqs.SQS.
+type mockClient struct {
 	err              error
 	sendOutputChan   chan *sqs.SendMessageOutput
 	receiveOuputChan chan *sqs.ReceiveMessageOutput
 	sendMsgID        string
 }
 
-func (mock *mockSQSClient) SendMessageWithContext(ctx context.Context, input *sqs.SendMessageInput, opts ...request.Option) (*sqs.SendMessageOutput, error) {
+func (mock *mockClient) SendMessageWithContext(ctx context.Context, input *sqs.SendMessageInput, opts ...request.Option) (*sqs.SendMessageOutput, error) {
 	if input != nil && input.MessageBody != nil && *input.MessageBody != "" {
 		go func() {
 			mock.receiveOuputChan <- &sqs.ReceiveMessageOutput{
@@ -54,7 +54,7 @@ func (mock *mockSQSClient) SendMessageWithContext(ctx context.Context, input *sq
 		}()
 		return &sqs.SendMessageOutput{MessageId: aws.String(mock.sendMsgID)}, nil
 	}
-	// Add logic to allow context errors
+	// Add logic to allow context errors.
 	for {
 		select {
 		case d := <-mock.sendOutputChan:
@@ -65,7 +65,7 @@ func (mock *mockSQSClient) SendMessageWithContext(ctx context.Context, input *sq
 	}
 }
 
-func (mock *mockSQSClient) ChangeMessageVisibilityWithContext(ctx aws.Context, input *sqs.ChangeMessageVisibilityInput, opts ...request.Option) (*sqs.ChangeMessageVisibilityOutput, error) {
+func (mock *mockClient) ChangeMessageVisibilityWithContext(ctx aws.Context, input *sqs.ChangeMessageVisibilityInput, opts ...request.Option) (*sqs.ChangeMessageVisibilityOutput, error) {
 	return nil, nil
 }
 
@@ -73,13 +73,13 @@ func (mock *mockSQSClient) ChangeMessageVisibilityWithContext(ctx aws.Context, i
 func TestBadEncode(t *testing.T) {
 	queueURL := "someURL"
 	responseQueueURL := "someOtherURL"
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan: make(chan *sqs.SendMessageOutput),
 	}
 	pub := awssqs.NewPublisher(
 		mock,
-		&queueURL,
-		&responseQueueURL,
+		queueURL,
+		responseQueueURL,
 		func(context.Context, *sqs.SendMessageInput, interface{}) error { return errors.New("err!") },
 		func(context.Context, *sqs.Message) (response interface{}, err error) { return struct{}{}, nil },
 	)
@@ -107,7 +107,7 @@ func TestBadEncode(t *testing.T) {
 
 // TestBadDecode tests if decode errors are handled properly.
 func TestBadDecode(t *testing.T) {
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan: make(chan *sqs.SendMessageOutput),
 	}
 	go func() {
@@ -120,14 +120,14 @@ func TestBadDecode(t *testing.T) {
 	responseQueueURL := "someOtherURL"
 	pub := awssqs.NewPublisher(
 		mock,
-		&queueURL,
-		&responseQueueURL,
+		queueURL,
+		responseQueueURL,
 		func(context.Context, *sqs.SendMessageInput, interface{}) error { return nil },
 		func(context.Context, *sqs.Message) (response interface{}, err error) {
 			return struct{}{}, errors.New("err!")
 		},
-		awssqs.PublisherAfter(func(ctx context.Context, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
-			// Set the actual response for the request
+		awssqs.PublisherAfter(func(ctx context.Context, client awssqs.Client, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
+			// Set the actual response for the request.
 			return ctx, &sqs.Message{Body: aws.String("someMsgContent")}, nil
 		}),
 	)
@@ -158,15 +158,15 @@ func TestBadDecode(t *testing.T) {
 // TestPublisherTimeout ensures that the publisher timeout mechanism works.
 func TestPublisherTimeout(t *testing.T) {
 	sendOutputChan := make(chan *sqs.SendMessageOutput)
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan: sendOutputChan,
 	}
 	queueURL := "someURL"
 	responseQueueURL := "someOtherURL"
 	pub := awssqs.NewPublisher(
 		mock,
-		&queueURL,
-		&responseQueueURL,
+		queueURL,
+		responseQueueURL,
 		func(context.Context, *sqs.SendMessageInput, interface{}) error { return nil },
 		func(context.Context, *sqs.Message) (response interface{}, err error) {
 			return struct{}{}, nil
@@ -199,6 +199,7 @@ func TestPublisherTimeout(t *testing.T) {
 	}
 }
 
+// TestSuccessfulPublisher ensures that the publisher mechanisms work.
 func TestSuccessfulPublisher(t *testing.T) {
 	mockReq := testReq{437}
 	mockRes := testRes{
@@ -209,7 +210,7 @@ func TestSuccessfulPublisher(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan: make(chan *sqs.SendMessageOutput),
 		sendMsgID:      "someMsgID",
 	}
@@ -223,18 +224,17 @@ func TestSuccessfulPublisher(t *testing.T) {
 	responseQueueURL := "someOtherURL"
 	pub := awssqs.NewPublisher(
 		mock,
-		&queueURL,
-		&responseQueueURL,
+		queueURL,
+		responseQueueURL,
 		awssqs.EncodeJSONRequest,
 		func(_ context.Context, msg *sqs.Message) (interface{}, error) {
 			response := testRes{}
 			err := json.Unmarshal([]byte(*msg.Body), &response)
 			return response, err
 		},
-		awssqs.PublisherAfter(func(ctx context.Context, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
-			// Sets the actual response for the request
+		awssqs.PublisherAfter(func(ctx context.Context, client awssqs.Client, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
+			// Sets the actual response for the request.
 			if *msg.MessageId == "someMsgID" {
-				// Here should contain logic to consume msgs and check if response was provided
 				return ctx, &sqs.Message{Body: aws.String(string(b))}, nil
 			}
 			return nil, nil, fmt.Errorf("Did not receive expected SendMessageOutput")
@@ -276,8 +276,9 @@ func TestSuccessfulPublisher(t *testing.T) {
 	}
 }
 
+// TestSuccessfulPublisherNoResponse ensures that the publisher response mechanism works.
 func TestSuccessfulPublisherNoResponse(t *testing.T) {
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 		sendMsgID:        "someMsgID",
@@ -287,8 +288,8 @@ func TestSuccessfulPublisherNoResponse(t *testing.T) {
 	responseQueueURL := "someOtherURL"
 	pub := awssqs.NewPublisher(
 		mock,
-		&queueURL,
-		&responseQueueURL,
+		queueURL,
+		responseQueueURL,
 		awssqs.EncodeJSONRequest,
 		awssqs.NoResponseDecode,
 	)
@@ -314,8 +315,10 @@ func TestSuccessfulPublisherNoResponse(t *testing.T) {
 	}
 }
 
+// TestPublisherWithBefore adds a PublisherBefore function that adds a message attribute.
+// This test ensures that the the before functions work as expected.
 func TestPublisherWithBefore(t *testing.T) {
-	mock := &mockSQSClient{
+	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 		sendMsgID:        "someMsgID",
@@ -325,8 +328,8 @@ func TestPublisherWithBefore(t *testing.T) {
 	responseQueueURL := "someOtherURL"
 	pub := awssqs.NewPublisher(
 		mock,
-		&queueURL,
-		&responseQueueURL,
+		queueURL,
+		responseQueueURL,
 		awssqs.EncodeJSONRequest,
 		awssqs.NoResponseDecode,
 		awssqs.PublisherBefore(func(c context.Context, s *sqs.SendMessageInput) context.Context {
