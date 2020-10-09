@@ -38,7 +38,10 @@ func TestHTTPClientTrace(t *testing.T) {
 	}
 
 	for _, tr := range traces {
-		clientTracer := ockit.HTTPClientTrace(ockit.WithName(tr.name))
+		clientTracer := ockit.HTTPClientTrace(
+			ockit.WithName(tr.name),
+			ockit.WithSampler(trace.AlwaysSample()),
+		)
 		ep := kithttp.NewClient(
 			"GET",
 			rURL,
@@ -117,6 +120,7 @@ func TestHTTPServerTrace(t *testing.T) {
 			func(context.Context, http.ResponseWriter, interface{}) error { return errors.New("dummy") },
 			ockit.HTTPServerTrace(
 				ockit.WithName(tr.name),
+				ockit.WithSampler(trace.AlwaysSample()),
 				ockit.WithHTTPPropagation(tr.propagation),
 			),
 		)
@@ -134,6 +138,9 @@ func TestHTTPServerTrace(t *testing.T) {
 		if tr.useParent {
 			client = http.Client{
 				Transport: &ochttp.Transport{
+					StartOptions: trace.StartOptions{
+						Sampler: trace.AlwaysSample(),
+					},
 					Propagation: tr.propagation,
 				},
 			}
