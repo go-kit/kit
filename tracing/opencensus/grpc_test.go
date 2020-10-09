@@ -51,7 +51,10 @@ func TestGRPCClientTrace(t *testing.T) {
 	}
 
 	for _, tr := range traces {
-		clientTracer := ockit.GRPCClientTrace(ockit.WithName(tr.name))
+		clientTracer := ockit.GRPCClientTrace(
+			ockit.WithName(tr.name),
+			ockit.WithSampler(trace.AlwaysSample()),
+		)
 
 		ep := grpctransport.NewClient(
 			cc,
@@ -136,7 +139,10 @@ func TestGRPCServerTrace(t *testing.T) {
 			func(context.Context, interface{}) (interface{}, error) {
 				return nil, tr.err
 			},
-			ockit.GRPCServerTrace(ockit.WithName(tr.name)),
+			ockit.GRPCServerTrace(
+				ockit.WithName(tr.name),
+				ockit.WithSampler(trace.AlwaysSample()),
+			),
 		)
 
 		if tr.useParent {
