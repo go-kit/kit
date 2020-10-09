@@ -235,6 +235,42 @@ func TestServerHappyPath(t *testing.T) {
 	}
 }
 
+func TestMultipleServerBeforeCodec(t *testing.T) {
+	var done = make(chan struct{})
+	ecm := jsonrpc.EndpointCodecMap{
+		"add": jsonrpc.EndpointCodec{
+			Endpoint: endpoint.Nop,
+			Decode:   nopDecoder,
+			Encode:   nopEncoder,
+		},
+	}
+	handler := jsonrpc.NewServer(
+		ecm,
+		jsonrpc.ServerBeforeCodec(func(ctx context.Context, r *http.Request, req jsonrpc.Request) context.Context {
+			ctx = context.WithValue(ctx, "one", 1)
+
+			return ctx
+		}),
+		jsonrpc.ServerBeforeCodec(func(ctx context.Context, r *http.Request, req jsonrpc.Request) context.Context {
+			if _, ok := ctx.Value("one").(int); !ok {
+				t.Error("Value was not set properly when multiple ServerBeforeCodecs are used")
+			}
+
+			close(done)
+			return ctx
+		}),
+	)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	http.Post(server.URL, "application/json", addBody()) // nolint
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for finalizer")
+	}
+}
+
 func TestMultipleServerBefore(t *testing.T) {
 	var done = make(chan struct{})
 	ecm := jsonrpc.EndpointCodecMap{

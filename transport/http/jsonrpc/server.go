@@ -19,6 +19,7 @@ var requestIDKey requestIDKeyType
 type Server struct {
 	ecm          EndpointCodecMap
 	before       []httptransport.RequestFunc
+	beforeCodec  []RequestFunc
 	after        []httptransport.ServerResponseFunc
 	errorEncoder httptransport.ErrorEncoder
 	finalizer    httptransport.ServerFinalizerFunc
@@ -48,6 +49,14 @@ type ServerOption func(*Server)
 // request is decoded.
 func ServerBefore(before ...httptransport.RequestFunc) ServerOption {
 	return func(s *Server) { s.before = append(s.before, before...) }
+}
+
+// ServerBeforeCodec functions are executed after the JSON request body has been
+// decoded, but before the method's decoder is called. This provides an opportunity
+// for middleware to inspect the contents of the rpc request before being passed
+// to the codec.
+func ServerBeforeCodec(beforeCodec ...RequestFunc) ServerOption {
+	return func(s *Server) { s.beforeCodec = append(s.beforeCodec, beforeCodec...) }
 }
 
 // ServerAfter functions are executed on the HTTP response writer after the
@@ -110,6 +119,11 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx = context.WithValue(ctx, requestIDKey, req.ID)
+	ctx = context.WithValue(ctx, ContextKeyRequestMethod, req.Method)
+
+	for _, f := range s.beforeCodec {
+		ctx = f(ctx, r, req)
+	}
 
 	// Get the endpoint and codecs from the map using the method
 	// defined in the JSON  object
