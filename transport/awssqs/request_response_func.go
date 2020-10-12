@@ -30,4 +30,4 @@ type ConsumerResponseFunc func(context.Context, *sqs.Message, *sqs.SendMessageIn
 // fetch response using the Client. SQS is not req-reply out-of-the-box. Responses need to be fetched.
 // PublisherResponseFunc are only executed in publishers, after a request has been made,
 // but prior to its response being decoded. So this is the perfect place to fetch actual response.
-type PublisherResponseFunc func(context.Context, Client, *sqs.SendMessageOutput) (context.Context, *sqs.Message, error)
+type PublisherResponseFunc func(context.Context, Client, string, *sqs.SendMessageOutput) (context.Context, *sqs.Message, error)

@@ -90,7 +90,7 @@ func (p Publisher) Endpoint() endpoint.Endpoint {
 
 		var responseMsg *sqs.Message
 		for _, f := range p.after {
-			ctx, responseMsg, err = f(ctx, p.sqsClient, output)
+			ctx, responseMsg, err = f(ctx, p.sqsClient, p.responseQueueURL, output)
 			if err != nil {
 				return nil, err
 			}
