@@ -32,6 +32,67 @@ func (mock *mockClient) ReceiveMessageWithContext(ctx context.Context, input *sq
 	}
 }
 
+func (mock *mockClient) DeleteMessageWithContext(ctx context.Context, input *sqs.DeleteMessageInput, opts ...request.Option) (*sqs.DeleteMessageOutput, error) {
+	return nil, mock.deleteError
+}
+
+// TestConsumerDeleteBefore checks if deleteMessage is set properly using consumer options.
+func TestConsumerDeleteBefore(t *testing.T) {
+	queueURL := "someURL"
+	mock := &mockClient{
+		sendOutputChan:   make(chan *sqs.SendMessageOutput),
+		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
+		deleteError:      fmt.Errorf("delete err!"),
+	}
+	go func() {
+		mock.receiveOuputChan <- &sqs.ReceiveMessageOutput{
+			Messages: []*sqs.Message{
+				{
+					Body:      aws.String("MessageBody"),
+					MessageId: aws.String("fakeMsgID"),
+				},
+			},
+		}
+	}()
+	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.Client) {
+		publishError := sqsError{
+			Err:   err.Error(),
+			MsgID: *req.MessageId,
+		}
+		payload, _ := json.Marshal(publishError)
+
+		sqsClient.SendMessageWithContext(ctx, &sqs.SendMessageInput{
+			MessageBody: aws.String(string(payload)),
+		})
+	})
+	consumer := awssqs.NewConsumer(mock,
+		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
+		func(context.Context, *sqs.Message) (interface{}, error) { return nil, errors.New("decode err!") },
+		func(context.Context, *sqs.SendMessageInput, interface{}) error { return nil },
+		queueURL,
+		errEncoder,
+		awssqs.ConsumerDeleteMessage(awssqs.BeforeHandle),
+	)
+
+	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
+
+	var receiveOutput *sqs.ReceiveMessageOutput
+	select {
+	case receiveOutput = <-mock.receiveOuputChan:
+		break
+
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("Timed out waiting for publishing")
+	}
+	res, err := decodeConsumerError(receiveOutput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want, have := "delete err!", res.Err; want != have {
+		t.Errorf("want %s, have %s", want, have)
+	}
+}
+
 // TestConsumerBadDecode checks if decoder errors are handled properly.
 func TestConsumerBadDecode(t *testing.T) {
 	queueURL := "someURL"

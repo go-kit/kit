@@ -37,6 +37,7 @@ type mockClient struct {
 	sendOutputChan   chan *sqs.SendMessageOutput
 	receiveOuputChan chan *sqs.ReceiveMessageOutput
 	sendMsgID        string
+	deleteError      error
 }
 
 func (mock *mockClient) SendMessageWithContext(ctx context.Context, input *sqs.SendMessageInput, opts ...request.Option) (*sqs.SendMessageOutput, error) {

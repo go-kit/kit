@@ -13,6 +13,19 @@ import (
 	"github.com/go-kit/kit/transport"
 )
 
+// Delete is a type to indicate when the consumed message should be deleted
+type Delete int
+
+const (
+	// BeforeHandle deletes the message before starting to handle it.
+	BeforeHandle Delete = iota
+	// AfterHandle deletes the message once it has been fully processed.
+	// This is the consumer's default value.
+	AfterHandle
+	// Never does not delete the message.
+	Never
+)
+
 // Consumer wraps an endpoint and provides a handler for sqs messages.
 type Consumer struct {
 	sqsClient             Client
@@ -29,6 +42,7 @@ type Consumer struct {
 	errorEncoder          ErrorEncoder
 	finalizer             []ConsumerFinalizerFunc
 	errorHandler          transport.ErrorHandler
+	deleteMessage         Delete
 }
 
 // NewConsumer constructs a new Consumer, which provides a Consume method
@@ -53,6 +67,7 @@ func NewConsumer(
 		leftMsgsMux:           &sync.Mutex{},
 		errorEncoder:          DefaultErrorEncoder,
 		errorHandler:          transport.NewLogErrorHandler(log.NewNopLogger()),
+		deleteMessage:         AfterHandle,
 	}
 	for _, option := range options {
 		option(s)
@@ -117,6 +132,12 @@ func ConsumerFinalizer(f ...ConsumerFinalizerFunc) ConsumerOption {
 	return func(c *Consumer) { c.finalizer = f }
 }
 
+// ConsumerDeleteMessage overrides the default value for the consumer's
+// deleteMessage field to indicate when the consumed messages should be deleted.
+func ConsumerDeleteMessage(delete Delete) ConsumerOption {
+	return func(c *Consumer) { c.deleteMessage = delete }
+}
+
 // Consume calls ReceiveMessageWithContext and handles messages having an
 // sqs.ReceiveMessageInput as parameter allows each user to have his own receive configuration.
 // That said, this method overrides the queueURL for the provided ReceiveMessageInput to ensure
@@ -158,8 +179,30 @@ func (c Consumer) HandleMessages(ctx context.Context, msgs []*sqs.Message) error
 	}
 
 	for _, msg := range msgs {
+		if c.deleteMessage == BeforeHandle {
+			if _, err := c.sqsClient.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
+				QueueUrl:      &c.queueURL,
+				ReceiptHandle: msg.ReceiptHandle,
+			}); err != nil {
+				c.errorHandler.Handle(ctx, err)
+				c.errorEncoder(ctx, err, msg, c.sqsClient)
+				return err
+			}
+		}
+
 		if err := c.HandleSingleMessage(ctx, msg, &leftMsgs); err != nil {
 			return err
+		}
+
+		if c.deleteMessage == AfterHandle {
+			if _, err := c.sqsClient.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
+				QueueUrl:      &c.queueURL,
+				ReceiptHandle: msg.ReceiptHandle,
+			}); err != nil {
+				c.errorHandler.Handle(ctx, err)
+				c.errorEncoder(ctx, err, msg, c.sqsClient)
+				return err
+			}
 		}
 	}
 	return nil
@@ -258,4 +301,5 @@ type Client interface {
 	SendMessageWithContext(ctx context.Context, input *sqs.SendMessageInput, opts ...request.Option) (*sqs.SendMessageOutput, error)
 	ReceiveMessageWithContext(ctx context.Context, input *sqs.ReceiveMessageInput, opts ...request.Option) (*sqs.ReceiveMessageOutput, error)
 	ChangeMessageVisibilityWithContext(ctx aws.Context, input *sqs.ChangeMessageVisibilityInput, opts ...request.Option) (*sqs.ChangeMessageVisibilityOutput, error)
+	DeleteMessageWithContext(ctx context.Context, input *sqs.DeleteMessageInput, opts ...request.Option) (*sqs.DeleteMessageOutput, error)
 }
