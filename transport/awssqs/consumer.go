@@ -148,11 +148,11 @@ func (c Consumer) Consume(ctx context.Context, receiveMsgInput *sqs.ReceiveMessa
 	if err != nil {
 		return err
 	}
-	return c.HandleMessages(ctx, out.Messages)
+	return c.handleMessages(ctx, out.Messages)
 }
 
-// HandleMessages handles the consumed messages.
-func (c Consumer) HandleMessages(ctx context.Context, msgs []*sqs.Message) error {
+// handleMessages handles the consumed messages.
+func (c Consumer) handleMessages(ctx context.Context, msgs []*sqs.Message) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -190,7 +190,7 @@ func (c Consumer) HandleMessages(ctx context.Context, msgs []*sqs.Message) error
 			}
 		}
 
-		if err := c.HandleSingleMessage(ctx, msg, &leftMsgs); err != nil {
+		if err := c.handleSingleMessage(ctx, msg, &leftMsgs); err != nil {
 			return err
 		}
 
@@ -208,8 +208,8 @@ func (c Consumer) HandleMessages(ctx context.Context, msgs []*sqs.Message) error
 	return nil
 }
 
-// HandleSingleMessage handles a single sqs message.
-func (c Consumer) HandleSingleMessage(ctx context.Context, msg *sqs.Message, leftMsgs *[]*sqs.Message) error {
+// handleSingleMessage handles a single sqs message.
+func (c Consumer) handleSingleMessage(ctx context.Context, msg *sqs.Message, leftMsgs *[]*sqs.Message) error {
 	req, err := c.dec(ctx, msg)
 	if err != nil {
 		c.errorHandler.Handle(ctx, err)
