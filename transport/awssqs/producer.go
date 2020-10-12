@@ -11,29 +11,29 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// Publisher wraps an sqs client and queue, and provides a method that
+// Producer wraps an sqs client and queue, and provides a method that
 // implements endpoint.Endpoint.
-type Publisher struct {
+type Producer struct {
 	sqsClient        sqsiface.SQSAPI
 	queueURL         string
 	responseQueueURL string
 	enc              EncodeRequestFunc
 	dec              DecodeResponseFunc
-	before           []PublisherRequestFunc
-	after            []PublisherResponseFunc
+	before           []ProducerRequestFunc
+	after            []ProducerResponseFunc
 	timeout          time.Duration
 }
 
-// NewPublisher constructs a usable Publisher for a single remote method.
-func NewPublisher(
+// NewProducer constructs a usable Producer for a single remote method.
+func NewProducer(
 	sqsClient sqsiface.SQSAPI,
 	queueURL string,
 	responseQueueURL string,
 	enc EncodeRequestFunc,
 	dec DecodeResponseFunc,
-	options ...PublisherOption,
-) *Publisher {
-	p := &Publisher{
+	options ...ProducerOption,
+) *Producer {
+	p := &Producer{
 		sqsClient:        sqsClient,
 		queueURL:         queueURL,
 		responseQueueURL: responseQueueURL,
@@ -47,29 +47,29 @@ func NewPublisher(
 	return p
 }
 
-// PublisherOption sets an optional parameter for clients.
-type PublisherOption func(*Publisher)
+// ProducerOption sets an optional parameter for clients.
+type ProducerOption func(*Producer)
 
-// PublisherBefore sets the RequestFuncs that are applied to the outgoing sqs
+// ProducerBefore sets the RequestFuncs that are applied to the outgoing sqs
 // request before it's invoked.
-func PublisherBefore(before ...PublisherRequestFunc) PublisherOption {
-	return func(p *Publisher) { p.before = append(p.before, before...) }
+func ProducerBefore(before ...ProducerRequestFunc) ProducerOption {
+	return func(p *Producer) { p.before = append(p.before, before...) }
 }
 
-// PublisherAfter sets the ClientResponseFuncs applied to the incoming sqs
+// ProducerAfter sets the ClientResponseFuncs applied to the incoming sqs
 // request prior to it being decoded. This is useful for obtaining anything off
 // of the response and adding onto the context prior to decoding.
-func PublisherAfter(after ...PublisherResponseFunc) PublisherOption {
-	return func(p *Publisher) { p.after = append(p.after, after...) }
+func ProducerAfter(after ...ProducerResponseFunc) ProducerOption {
+	return func(p *Producer) { p.after = append(p.after, after...) }
 }
 
-// PublisherTimeout sets the available timeout for an sqs request.
-func PublisherTimeout(timeout time.Duration) PublisherOption {
-	return func(p *Publisher) { p.timeout = timeout }
+// ProducerTimeout sets the available timeout for an sqs request.
+func ProducerTimeout(timeout time.Duration) ProducerOption {
+	return func(p *Producer) { p.timeout = timeout }
 }
 
 // Endpoint returns a usable endpoint that invokes the remote endpoint.
-func (p Publisher) Endpoint() endpoint.Endpoint {
+func (p Producer) Endpoint() endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		ctx, cancel := context.WithTimeout(ctx, p.timeout)
 		defer cancel()

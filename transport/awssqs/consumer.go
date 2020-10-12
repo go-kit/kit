@@ -78,7 +78,7 @@ func NewConsumer(
 // ConsumerOption sets an optional parameter for consumers.
 type ConsumerOption func(*Consumer)
 
-// ConsumerBefore functions are executed on the publisher request object before the
+// ConsumerBefore functions are executed on the producer request object before the
 // request is decoded.
 func ConsumerBefore(before ...ConsumerRequestFunc) ConsumerOption {
 	return func(c *Consumer) { c.before = append(c.before, before...) }
@@ -254,7 +254,7 @@ func (c Consumer) handleSingleMessage(ctx context.Context, msg *sqs.Message, lef
 type ErrorEncoder func(ctx context.Context, err error, req *sqs.Message, sqsClient sqsiface.SQSAPI)
 
 // ConsumerFinalizerFunc can be used to perform work at the end of a request
-// from a publisher, after the response has been written to the publisher. The
+// from a producer, after the response has been written to the producer. The
 // principal intended use is for request logging.
 // Can also be used to delete messages once fully proccessed.
 type ConsumerFinalizerFunc func(ctx context.Context, msg *[]*sqs.Message)

@@ -79,7 +79,7 @@ func TestBadEncode(t *testing.T) {
 	mock := &mockClient{
 		sendOutputChan: make(chan *sqs.SendMessageOutput),
 	}
-	pub := awssqs.NewPublisher(
+	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
 		responseQueueURL,
@@ -121,7 +121,7 @@ func TestBadDecode(t *testing.T) {
 
 	queueURL := "someURL"
 	responseQueueURL := "someOtherURL"
-	pub := awssqs.NewPublisher(
+	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
 		responseQueueURL,
@@ -129,7 +129,7 @@ func TestBadDecode(t *testing.T) {
 		func(context.Context, *sqs.Message) (response interface{}, err error) {
 			return struct{}{}, errors.New("err!")
 		},
-		awssqs.PublisherAfter(func(ctx context.Context, _ sqsiface.SQSAPI, responseQueueURL string, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
+		awssqs.ProducerAfter(func(ctx context.Context, _ sqsiface.SQSAPI, responseQueueURL string, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
 			// Set the actual response for the request.
 			return ctx, &sqs.Message{Body: aws.String("someMsgContent")}, nil
 		}),
@@ -158,15 +158,15 @@ func TestBadDecode(t *testing.T) {
 	}
 }
 
-// TestPublisherTimeout ensures that the publisher timeout mechanism works.
-func TestPublisherTimeout(t *testing.T) {
+// TestProducerTimeout ensures that the producer timeout mechanism works.
+func TestProducerTimeout(t *testing.T) {
 	sendOutputChan := make(chan *sqs.SendMessageOutput)
 	mock := &mockClient{
 		sendOutputChan: sendOutputChan,
 	}
 	queueURL := "someURL"
 	responseQueueURL := "someOtherURL"
-	pub := awssqs.NewPublisher(
+	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
 		responseQueueURL,
@@ -174,7 +174,7 @@ func TestPublisherTimeout(t *testing.T) {
 		func(context.Context, *sqs.Message) (response interface{}, err error) {
 			return struct{}{}, nil
 		},
-		awssqs.PublisherTimeout(50*time.Millisecond),
+		awssqs.ProducerTimeout(50*time.Millisecond),
 	)
 
 	var err error
@@ -202,8 +202,8 @@ func TestPublisherTimeout(t *testing.T) {
 	}
 }
 
-// TestSuccessfulPublisher ensures that the publisher mechanisms work.
-func TestSuccessfulPublisher(t *testing.T) {
+// TestSuccessfulProducer ensures that the producer mechanisms work.
+func TestSuccessfulProducer(t *testing.T) {
 	mockReq := testReq{437}
 	mockRes := testRes{
 		Squadron: mockReq.Squadron,
@@ -225,7 +225,7 @@ func TestSuccessfulPublisher(t *testing.T) {
 
 	queueURL := "someURL"
 	responseQueueURL := "someOtherURL"
-	pub := awssqs.NewPublisher(
+	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
 		responseQueueURL,
@@ -235,7 +235,7 @@ func TestSuccessfulPublisher(t *testing.T) {
 			err := json.Unmarshal([]byte(*msg.Body), &response)
 			return response, err
 		},
-		awssqs.PublisherAfter(func(ctx context.Context, _ sqsiface.SQSAPI, responseQueueURL string, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
+		awssqs.ProducerAfter(func(ctx context.Context, _ sqsiface.SQSAPI, responseQueueURL string, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
 			// Sets the actual response for the request.
 			if *msg.MessageId == "someMsgID" {
 				return ctx, &sqs.Message{Body: aws.String(string(b))}, nil
@@ -279,8 +279,8 @@ func TestSuccessfulPublisher(t *testing.T) {
 	}
 }
 
-// TestSuccessfulPublisherNoResponse ensures that the publisher response mechanism works.
-func TestSuccessfulPublisherNoResponse(t *testing.T) {
+// TestSuccessfulProducerNoResponse ensures that the producer response mechanism works.
+func TestSuccessfulProducerNoResponse(t *testing.T) {
 	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
@@ -289,7 +289,7 @@ func TestSuccessfulPublisherNoResponse(t *testing.T) {
 
 	queueURL := "someURL"
 	responseQueueURL := "someOtherURL"
-	pub := awssqs.NewPublisher(
+	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
 		responseQueueURL,
@@ -318,9 +318,9 @@ func TestSuccessfulPublisherNoResponse(t *testing.T) {
 	}
 }
 
-// TestPublisherWithBefore adds a PublisherBefore function that adds a message attribute.
+// TestProducerWithBefore adds a ProducerBefore function that adds a message attribute.
 // This test ensures that the the before functions work as expected.
-func TestPublisherWithBefore(t *testing.T) {
+func TestProducerWithBefore(t *testing.T) {
 	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
@@ -329,13 +329,13 @@ func TestPublisherWithBefore(t *testing.T) {
 
 	queueURL := "someURL"
 	responseQueueURL := "someOtherURL"
-	pub := awssqs.NewPublisher(
+	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
 		responseQueueURL,
 		awssqs.EncodeJSONRequest,
 		awssqs.NoResponseDecode,
-		awssqs.PublisherBefore(func(c context.Context, s *sqs.SendMessageInput, _ string) context.Context {
+		awssqs.ProducerBefore(func(c context.Context, s *sqs.SendMessageInput, _ string) context.Context {
 			if s.MessageAttributes == nil {
 				s.MessageAttributes = make(map[string]*sqs.MessageAttributeValue)
 			}
