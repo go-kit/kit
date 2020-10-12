@@ -17,7 +17,7 @@ type ConsumerRequestFunc func(context.Context, *[]*sqs.Message) context.Context
 // request context, or add some informations to SendMessageInput. In Publishers,
 // RequestFuncs are executed prior to publishing the message but after encoding.
 // use cases eg. in Publisher : enforce some message attributes to SendMessageInput
-type PublisherRequestFunc func(context.Context, *sqs.SendMessageInput) context.Context
+type PublisherRequestFunc func(context.Context, *sqs.SendMessageInput, string) context.Context
 
 // ConsumerResponseFunc may take information from a request context and use it to
 // manipulate a Publisher. ConsumerResponseFunc are only executed in

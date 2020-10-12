@@ -332,7 +332,7 @@ func TestPublisherWithBefore(t *testing.T) {
 		responseQueueURL,
 		awssqs.EncodeJSONRequest,
 		awssqs.NoResponseDecode,
-		awssqs.PublisherBefore(func(c context.Context, s *sqs.SendMessageInput) context.Context {
+		awssqs.PublisherBefore(func(c context.Context, s *sqs.SendMessageInput, _ string) context.Context {
 			if s.MessageAttributes == nil {
 				s.MessageAttributes = make(map[string]*sqs.MessageAttributeValue)
 			}

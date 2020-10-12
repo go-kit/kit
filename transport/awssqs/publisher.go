@@ -80,7 +80,7 @@ func (p Publisher) Endpoint() endpoint.Endpoint {
 		}
 
 		for _, f := range p.before {
-			ctx = f(ctx, &msgInput)
+			ctx = f(ctx, &msgInput, p.responseQueueURL)
 		}
 
 		output, err := p.sqsClient.SendMessageWithContext(ctx, &msgInput)
