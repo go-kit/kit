@@ -13,7 +13,7 @@ import (
 	"github.com/go-kit/kit/transport"
 )
 
-// Delete is a type to indicate when the consumed message should be deleted
+// Delete is a type to indicate when the consumed message should be deleted.
 type Delete int
 
 const (
@@ -26,7 +26,7 @@ const (
 	Never
 )
 
-// Consumer wraps an endpoint and provides a handler for sqs messages.
+// Consumer wraps an endpoint and provides a handler for SQS messages.
 type Consumer struct {
 	sqsClient             sqsiface.SQSAPI
 	e                     endpoint.Endpoint
@@ -208,7 +208,7 @@ func (c Consumer) handleMessages(ctx context.Context, msgs []*sqs.Message) error
 	return nil
 }
 
-// handleSingleMessage handles a single sqs message.
+// handleSingleMessage handles a single SQS message.
 func (c Consumer) handleSingleMessage(ctx context.Context, msg *sqs.Message, leftMsgs *[]*sqs.Message) error {
 	req, err := c.dec(ctx, msg)
 	if err != nil {
@@ -274,7 +274,7 @@ func DefaultErrorEncoder(context.Context, error, *sqs.Message, sqsiface.SQSAPI) 
 }
 
 // DoNotExtendVisibilityTimeout is the default value for the consumer's visibilityTimeoutFunc.
-// It returns no error and does nothing
+// It returns no error and does nothing.
 func DoNotExtendVisibilityTimeout(context.Context, sqsiface.SQSAPI, string, int64, *[]*sqs.Message, *sync.Mutex) error {
 	return nil
 }

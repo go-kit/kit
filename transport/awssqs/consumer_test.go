@@ -358,13 +358,13 @@ func TestConsumerSuccessNoReply(t *testing.T) {
 		return
 
 	case <-time.After(200 * time.Millisecond):
-		// As expected, we did not receive any response from consumer
+		// As expected, we did not receive any response from consumer.
 		return
 	}
 }
 
 // TestConsumerBeforeFilterMessages checks if consumer before is called as expected.
-// Here before is used to filter messages before processing
+// Here before is used to filter messages before processing.
 func TestConsumerBeforeFilterMessages(t *testing.T) {
 	obj1 := testReq{
 		Squadron: 436,
@@ -423,7 +423,7 @@ func TestConsumerBeforeFilterMessages(t *testing.T) {
 		awssqs.EncodeJSONResponse,
 		queueURL,
 		awssqs.ConsumerBefore(func(ctx context.Context, msgs *[]*sqs.Message) context.Context {
-			// delete a message that is not destined to the consumer
+			// Filter a message that is not destined to the consumer.
 			msgsCopy := *msgs
 			for index, msg := range *msgs {
 				if recipient, exists := msg.MessageAttributes["recipient"]; !exists || *recipient.StringValue != "me" {
@@ -457,14 +457,14 @@ func TestConsumerBeforeFilterMessages(t *testing.T) {
 	if have := res; want != have {
 		t.Errorf("want %v, have %v", want, have)
 	}
-	// Try fetching responses again
+	// Try fetching responses again.
 	select {
 	case receiveOutput = <-mock.receiveOuputChan:
 		t.Errorf("received second output when only one was expected, have %v", receiveOutput)
 		return
 
 	case <-time.After(200 * time.Millisecond):
-		// As expected, we did not receive a second response from consumer
+		// As expected, we did not receive a second response from consumer.
 		return
 	}
 }

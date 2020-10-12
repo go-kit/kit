@@ -11,7 +11,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// Producer wraps an sqs client and queue, and provides a method that
+// Producer wraps an SQS client and queue, and provides a method that
 // implements endpoint.Endpoint.
 type Producer struct {
 	sqsClient        sqsiface.SQSAPI
@@ -50,20 +50,20 @@ func NewProducer(
 // ProducerOption sets an optional parameter for clients.
 type ProducerOption func(*Producer)
 
-// ProducerBefore sets the RequestFuncs that are applied to the outgoing sqs
+// ProducerBefore sets the RequestFuncs that are applied to the outgoing SQS
 // request before it's invoked.
 func ProducerBefore(before ...ProducerRequestFunc) ProducerOption {
 	return func(p *Producer) { p.before = append(p.before, before...) }
 }
 
-// ProducerAfter sets the ClientResponseFuncs applied to the incoming sqs
-// request prior to it being decoded. This is useful for obtaining anything off
-// of the response and adding onto the context prior to decoding.
+// ProducerAfter sets the ClientResponseFuncs applied to the incoming SQS
+// request prior to it being decoded. This is useful for obtaining the response
+// and adding any information onto the context prior to decoding.
 func ProducerAfter(after ...ProducerResponseFunc) ProducerOption {
 	return func(p *Producer) { p.after = append(p.after, after...) }
 }
 
-// ProducerTimeout sets the available timeout for an sqs request.
+// ProducerTimeout sets the available timeout for an SQS request.
 func ProducerTimeout(timeout time.Duration) ProducerOption {
 	return func(p *Producer) { p.timeout = timeout }
 }

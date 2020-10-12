@@ -17,14 +17,14 @@ type ConsumerRequestFunc func(context.Context, *[]*sqs.Message) context.Context
 // ProducerRequestFunc may take information from a producer request and put it into a
 // request context, or add some informations to SendMessageInput. In Producers,
 // RequestFuncs are executed prior to publishing the message but after encoding.
-// use cases eg. in Producer : enforce some message attributes to SendMessageInput
+// use cases eg. in Producer : enforce some message attributes to SendMessageInput.
 type ProducerRequestFunc func(context.Context, *sqs.SendMessageInput, string) context.Context
 
 // ConsumerResponseFunc may take information from a request context and use it to
 // manipulate a Producer. ConsumerResponseFunc are only executed in
 // consumers, after invoking the endpoint but prior to publishing a reply.
 // use cases eg. : Pipe information from request message to response MessageInput,
-// delete msg from queue or update leftMsgs slice
+// delete msg from queue or update leftMsgs slice.
 type ConsumerResponseFunc func(context.Context, *sqs.Message, *sqs.SendMessageInput, *[]*sqs.Message, *sync.Mutex) context.Context
 
 // ProducerResponseFunc may take information from an sqs.SendMessageOutput and
