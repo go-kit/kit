@@ -7,13 +7,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/go-kit/kit/endpoint"
 )
 
 // Publisher wraps an sqs client and queue, and provides a method that
 // implements endpoint.Endpoint.
 type Publisher struct {
-	sqsClient        Client
+	sqsClient        sqsiface.SQSAPI
 	queueURL         string
 	responseQueueURL string
 	enc              EncodeRequestFunc
@@ -25,7 +26,7 @@ type Publisher struct {
 
 // NewPublisher constructs a usable Publisher for a single remote method.
 func NewPublisher(
-	sqsClient Client,
+	sqsClient sqsiface.SQSAPI,
 	queueURL string,
 	responseQueueURL string,
 	enc EncodeRequestFunc,

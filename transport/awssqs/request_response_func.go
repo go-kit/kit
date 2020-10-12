@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 )
 
 // ConsumerRequestFunc may take information from a consumer request result and
@@ -30,4 +31,4 @@ type ConsumerResponseFunc func(context.Context, *sqs.Message, *sqs.SendMessageIn
 // fetch response using the Client. SQS is not req-reply out-of-the-box. Responses need to be fetched.
 // PublisherResponseFunc are only executed in publishers, after a request has been made,
 // but prior to its response being decoded. So this is the perfect place to fetch actual response.
-type PublisherResponseFunc func(context.Context, Client, string, *sqs.SendMessageOutput) (context.Context, *sqs.Message, error)
+type PublisherResponseFunc func(context.Context, sqsiface.SQSAPI, string, *sqs.SendMessageOutput) (context.Context, *sqs.Message, error)

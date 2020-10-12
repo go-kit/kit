@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/transport"
@@ -28,7 +28,7 @@ const (
 
 // Consumer wraps an endpoint and provides a handler for sqs messages.
 type Consumer struct {
-	sqsClient             Client
+	sqsClient             sqsiface.SQSAPI
 	e                     endpoint.Endpoint
 	dec                   DecodeRequestFunc
 	enc                   EncodeResponseFunc
@@ -48,7 +48,7 @@ type Consumer struct {
 // NewConsumer constructs a new Consumer, which provides a Consume method
 // and message handlers that wrap the provided endpoint.
 func NewConsumer(
-	sqsClient Client,
+	sqsClient sqsiface.SQSAPI,
 	e endpoint.Endpoint,
 	dec DecodeRequestFunc,
 	enc EncodeResponseFunc,
@@ -251,7 +251,7 @@ func (c Consumer) HandleSingleMessage(ctx context.Context, msg *sqs.Message, lef
 // Users are encouraged to use custom ErrorEncoders to encode errors to
 // their replies, and will likely want to pass and check for their own error
 // types.
-type ErrorEncoder func(ctx context.Context, err error, req *sqs.Message, sqsClient Client)
+type ErrorEncoder func(ctx context.Context, err error, req *sqs.Message, sqsClient sqsiface.SQSAPI)
 
 // ConsumerFinalizerFunc can be used to perform work at the end of a request
 // from a publisher, after the response has been written to the publisher. The
@@ -263,19 +263,19 @@ type ConsumerFinalizerFunc func(ctx context.Context, msg *[]*sqs.Message)
 // this can be used to provide custom visibility timeout extension such as doubling it everytime
 // it gets close to being reached.
 // VisibilityTimeoutFunc will need to check that the provided context is not done and return once it is.
-type VisibilityTimeoutFunc func(context.Context, Client, string, int64, *[]*sqs.Message, *sync.Mutex) error
+type VisibilityTimeoutFunc func(context.Context, sqsiface.SQSAPI, string, int64, *[]*sqs.Message, *sync.Mutex) error
 
 // WantReplyFunc encapsulates logic to check whether message awaits response or not
 // for example check for a given message attribute value.
 type WantReplyFunc func(context.Context, *sqs.Message) bool
 
 // DefaultErrorEncoder simply ignores the message. It does not reply.
-func DefaultErrorEncoder(context.Context, error, *sqs.Message, Client) {
+func DefaultErrorEncoder(context.Context, error, *sqs.Message, sqsiface.SQSAPI) {
 }
 
 // DoNotExtendVisibilityTimeout is the default value for the consumer's visibilityTimeoutFunc.
 // It returns no error and does nothing
-func DoNotExtendVisibilityTimeout(context.Context, Client, string, int64, *[]*sqs.Message, *sync.Mutex) error {
+func DoNotExtendVisibilityTimeout(context.Context, sqsiface.SQSAPI, string, int64, *[]*sqs.Message, *sync.Mutex) error {
 	return nil
 }
 
@@ -293,13 +293,4 @@ func EncodeJSONResponse(_ context.Context, input *sqs.SendMessageInput, response
 	}
 	input.MessageBody = aws.String(string(payload))
 	return nil
-}
-
-// Client is consumer contract for the Producer and Consumer.
-// It models methods of the AWS *sqs.SQS type.
-type Client interface {
-	SendMessageWithContext(ctx context.Context, input *sqs.SendMessageInput, opts ...request.Option) (*sqs.SendMessageOutput, error)
-	ReceiveMessageWithContext(ctx context.Context, input *sqs.ReceiveMessageInput, opts ...request.Option) (*sqs.ReceiveMessageOutput, error)
-	ChangeMessageVisibilityWithContext(ctx aws.Context, input *sqs.ChangeMessageVisibilityInput, opts ...request.Option) (*sqs.ChangeMessageVisibilityOutput, error)
-	DeleteMessageWithContext(ctx context.Context, input *sqs.DeleteMessageInput, opts ...request.Option) (*sqs.DeleteMessageOutput, error)
 }

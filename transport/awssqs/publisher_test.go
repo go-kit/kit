@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/go-kit/kit/transport/awssqs"
 )
 
@@ -33,6 +34,7 @@ var names = map[int]string{
 
 // mockClient is a mock of *sqs.SQS.
 type mockClient struct {
+	sqsiface.SQSAPI
 	err              error
 	sendOutputChan   chan *sqs.SendMessageOutput
 	receiveOuputChan chan *sqs.ReceiveMessageOutput
@@ -127,7 +129,7 @@ func TestBadDecode(t *testing.T) {
 		func(context.Context, *sqs.Message) (response interface{}, err error) {
 			return struct{}{}, errors.New("err!")
 		},
-		awssqs.PublisherAfter(func(ctx context.Context, client awssqs.Client, responseQueueURL string, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
+		awssqs.PublisherAfter(func(ctx context.Context, _ sqsiface.SQSAPI, responseQueueURL string, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
 			// Set the actual response for the request.
 			return ctx, &sqs.Message{Body: aws.String("someMsgContent")}, nil
 		}),
@@ -233,7 +235,7 @@ func TestSuccessfulPublisher(t *testing.T) {
 			err := json.Unmarshal([]byte(*msg.Body), &response)
 			return response, err
 		},
-		awssqs.PublisherAfter(func(ctx context.Context, client awssqs.Client, responseQueueURL string, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
+		awssqs.PublisherAfter(func(ctx context.Context, _ sqsiface.SQSAPI, responseQueueURL string, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
 			// Sets the actual response for the request.
 			if *msg.MessageId == "someMsgID" {
 				return ctx, &sqs.Message{Body: aws.String(string(b))}, nil

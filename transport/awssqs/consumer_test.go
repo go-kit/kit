@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/go-kit/kit/transport/awssqs"
 	"github.com/pborman/uuid"
 )
@@ -54,7 +55,7 @@ func TestConsumerDeleteBefore(t *testing.T) {
 			},
 		}
 	}()
-	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.Client) {
+	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient sqsiface.SQSAPI) {
 		publishError := sqsError{
 			Err:   err.Error(),
 			MsgID: *req.MessageId,
@@ -110,7 +111,7 @@ func TestConsumerBadDecode(t *testing.T) {
 			},
 		}
 	}()
-	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.Client) {
+	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient sqsiface.SQSAPI) {
 		publishError := sqsError{
 			Err:   err.Error(),
 			MsgID: *req.MessageId,
@@ -166,7 +167,7 @@ func TestConsumerBadEndpoint(t *testing.T) {
 			},
 		}
 	}()
-	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.Client) {
+	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient sqsiface.SQSAPI) {
 		publishError := sqsError{
 			Err:   err.Error(),
 			MsgID: *req.MessageId,
@@ -222,7 +223,7 @@ func TestConsumerBadEncoder(t *testing.T) {
 			},
 		}
 	}()
-	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient awssqs.Client) {
+	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient sqsiface.SQSAPI) {
 		publishError := sqsError{
 			Err:   err.Error(),
 			MsgID: *req.MessageId,
