@@ -263,7 +263,7 @@ type ConsumerFinalizerFunc func(ctx context.Context, msg *[]*sqs.Message)
 // this can be used to provide custom visibility timeout extension such as doubling it everytime
 // it gets close to being reached.
 // VisibilityTimeoutFunc will need to check that the provided context is not done and return once it is.
-type VisibilityTimeoutFunc func(context.Context, sqsiface.SQSAPI, string, int64, *[]*sqs.Message, *sync.Mutex) error
+type VisibilityTimeoutFunc func(ctx context.Context, client sqsiface.SQSAPI, queueURL string, visibilityTimeout int64, leftMsgs *[]*sqs.Message, leftMsgsMux *sync.Mutex) error
 
 // WantReplyFunc encapsulates logic to check whether message awaits response or not
 // for example check for a given message attribute value.
