@@ -75,14 +75,12 @@ func (mock *mockClient) ChangeMessageVisibilityWithContext(ctx aws.Context, inpu
 // TestBadEncode tests if encode errors are handled properly.
 func TestBadEncode(t *testing.T) {
 	queueURL := "someURL"
-	responseQueueURL := "someOtherURL"
 	mock := &mockClient{
 		sendOutputChan: make(chan *sqs.SendMessageOutput),
 	}
 	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
-		responseQueueURL,
 		func(context.Context, *sqs.SendMessageInput, interface{}) error { return errors.New("err!") },
 		func(context.Context, *sqs.Message) (response interface{}, err error) { return struct{}{}, nil },
 	)
@@ -120,16 +118,14 @@ func TestBadDecode(t *testing.T) {
 	}()
 
 	queueURL := "someURL"
-	responseQueueURL := "someOtherURL"
 	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
-		responseQueueURL,
 		func(context.Context, *sqs.SendMessageInput, interface{}) error { return nil },
 		func(context.Context, *sqs.Message) (response interface{}, err error) {
 			return struct{}{}, errors.New("err!")
 		},
-		awssqs.ProducerAfter(func(ctx context.Context, _ sqsiface.SQSAPI, responseQueueURL string, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
+		awssqs.ProducerAfter(func(ctx context.Context, _ sqsiface.SQSAPI, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
 			// Set the actual response for the request.
 			return ctx, &sqs.Message{Body: aws.String("someMsgContent")}, nil
 		}),
@@ -165,11 +161,9 @@ func TestProducerTimeout(t *testing.T) {
 		sendOutputChan: sendOutputChan,
 	}
 	queueURL := "someURL"
-	responseQueueURL := "someOtherURL"
 	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
-		responseQueueURL,
 		func(context.Context, *sqs.SendMessageInput, interface{}) error { return nil },
 		func(context.Context, *sqs.Message) (response interface{}, err error) {
 			return struct{}{}, nil
@@ -224,18 +218,16 @@ func TestSuccessfulProducer(t *testing.T) {
 	}()
 
 	queueURL := "someURL"
-	responseQueueURL := "someOtherURL"
 	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
-		responseQueueURL,
 		awssqs.EncodeJSONRequest,
 		func(_ context.Context, msg *sqs.Message) (interface{}, error) {
 			response := testRes{}
 			err := json.Unmarshal([]byte(*msg.Body), &response)
 			return response, err
 		},
-		awssqs.ProducerAfter(func(ctx context.Context, _ sqsiface.SQSAPI, responseQueueURL string, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
+		awssqs.ProducerAfter(func(ctx context.Context, _ sqsiface.SQSAPI, msg *sqs.SendMessageOutput) (context.Context, *sqs.Message, error) {
 			// Sets the actual response for the request.
 			if *msg.MessageId == "someMsgID" {
 				return ctx, &sqs.Message{Body: aws.String(string(b))}, nil
@@ -288,11 +280,9 @@ func TestSuccessfulProducerNoResponse(t *testing.T) {
 	}
 
 	queueURL := "someURL"
-	responseQueueURL := "someOtherURL"
 	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
-		responseQueueURL,
 		awssqs.EncodeJSONRequest,
 		awssqs.NoResponseDecode,
 	)
@@ -318,8 +308,10 @@ func TestSuccessfulProducerNoResponse(t *testing.T) {
 	}
 }
 
-// TestProducerWithBefore adds a ProducerBefore function that adds a message attribute.
-// This test ensures that the the before functions work as expected.
+// TestProducerWithBefore adds a ProducerBefore function that adds responseQueueURL to context,
+// and another on that adds it as a message attribute to outgoing message.
+// This test ensures that setting multiple before functions work as expected
+// and that SetProducerResponseQueueURL works as expected.
 func TestProducerWithBefore(t *testing.T) {
 	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
@@ -332,10 +324,11 @@ func TestProducerWithBefore(t *testing.T) {
 	pub := awssqs.NewProducer(
 		mock,
 		queueURL,
-		responseQueueURL,
 		awssqs.EncodeJSONRequest,
 		awssqs.NoResponseDecode,
-		awssqs.ProducerBefore(func(c context.Context, s *sqs.SendMessageInput, _ string) context.Context {
+		awssqs.ProducerBefore(awssqs.SetProducerResponseQueueURL(responseQueueURL)),
+		awssqs.ProducerBefore(func(c context.Context, s *sqs.SendMessageInput) context.Context {
+			responseQueueURL := c.Value(awssqs.ContextKeyResponseQueueURL).(string)
 			if s.MessageAttributes == nil {
 				s.MessageAttributes = make(map[string]*sqs.MessageAttributeValue)
 			}

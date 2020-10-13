@@ -18,7 +18,7 @@ type ConsumerRequestFunc func(context.Context, *[]*sqs.Message) context.Context
 // request context, or add some informations to SendMessageInput. In Producers,
 // RequestFuncs are executed prior to publishing the message but after encoding.
 // use cases eg. in Producer : enforce some message attributes to SendMessageInput.
-type ProducerRequestFunc func(context.Context, *sqs.SendMessageInput, string) context.Context
+type ProducerRequestFunc func(ctx context.Context, input *sqs.SendMessageInput) context.Context
 
 // ConsumerResponseFunc may take information from a request context and use it to
 // manipulate a Producer. ConsumerResponseFunc are only executed in
@@ -31,4 +31,4 @@ type ConsumerResponseFunc func(context.Context, *sqs.Message, *sqs.SendMessageIn
 // fetch response using the Client. SQS is not req-reply out-of-the-box. Responses need to be fetched.
 // ProducerResponseFunc are only executed in producers, after a request has been made,
 // but prior to its response being decoded. So this is the perfect place to fetch actual response.
-type ProducerResponseFunc func(context.Context, sqsiface.SQSAPI, string, *sqs.SendMessageOutput) (context.Context, *sqs.Message, error)
+type ProducerResponseFunc func(context.Context, sqsiface.SQSAPI, *sqs.SendMessageOutput) (context.Context, *sqs.Message, error)

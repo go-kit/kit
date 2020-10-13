@@ -11,35 +11,40 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
+type contextKey int
+
+const (
+	// ContextKeyResponseQueueURL is the context key that allows fetching
+	// the response queue URL from context
+	ContextKeyResponseQueueURL contextKey = iota
+)
+
 // Producer wraps an SQS client and queue, and provides a method that
 // implements endpoint.Endpoint.
 type Producer struct {
-	sqsClient        sqsiface.SQSAPI
-	queueURL         string
-	responseQueueURL string
-	enc              EncodeRequestFunc
-	dec              DecodeResponseFunc
-	before           []ProducerRequestFunc
-	after            []ProducerResponseFunc
-	timeout          time.Duration
+	sqsClient sqsiface.SQSAPI
+	queueURL  string
+	enc       EncodeRequestFunc
+	dec       DecodeResponseFunc
+	before    []ProducerRequestFunc
+	after     []ProducerResponseFunc
+	timeout   time.Duration
 }
 
 // NewProducer constructs a usable Producer for a single remote method.
 func NewProducer(
 	sqsClient sqsiface.SQSAPI,
 	queueURL string,
-	responseQueueURL string,
 	enc EncodeRequestFunc,
 	dec DecodeResponseFunc,
 	options ...ProducerOption,
 ) *Producer {
 	p := &Producer{
-		sqsClient:        sqsClient,
-		queueURL:         queueURL,
-		responseQueueURL: responseQueueURL,
-		enc:              enc,
-		dec:              dec,
-		timeout:          20 * time.Second,
+		sqsClient: sqsClient,
+		queueURL:  queueURL,
+		enc:       enc,
+		dec:       dec,
+		timeout:   20 * time.Second,
 	}
 	for _, option := range options {
 		option(p)
@@ -68,6 +73,13 @@ func ProducerTimeout(timeout time.Duration) ProducerOption {
 	return func(p *Producer) { p.timeout = timeout }
 }
 
+// SetProducerResponseQueueURL sets this as before or after function
+func SetProducerResponseQueueURL(url string) ProducerRequestFunc {
+	return func(ctx context.Context, _ *sqs.SendMessageInput) context.Context {
+		return context.WithValue(ctx, ContextKeyResponseQueueURL, url)
+	}
+}
+
 // Endpoint returns a usable endpoint that invokes the remote endpoint.
 func (p Producer) Endpoint() endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -81,7 +93,7 @@ func (p Producer) Endpoint() endpoint.Endpoint {
 		}
 
 		for _, f := range p.before {
-			ctx = f(ctx, &msgInput, p.responseQueueURL)
+			ctx = f(ctx, &msgInput)
 		}
 
 		output, err := p.sqsClient.SendMessageWithContext(ctx, &msgInput)
@@ -91,7 +103,7 @@ func (p Producer) Endpoint() endpoint.Endpoint {
 
 		var responseMsg *sqs.Message
 		for _, f := range p.after {
-			ctx, responseMsg, err = f(ctx, p.sqsClient, p.responseQueueURL, output)
+			ctx, responseMsg, err = f(ctx, p.sqsClient, output)
 			if err != nil {
 				return nil, err
 			}
