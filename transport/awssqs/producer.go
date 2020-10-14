@@ -15,7 +15,7 @@ type contextKey int
 
 const (
 	// ContextKeyResponseQueueURL is the context key that allows fetching
-	// the response queue URL from context
+	// and setting the response queue URL from and into context.
 	ContextKeyResponseQueueURL contextKey = iota
 )
 
@@ -73,7 +73,8 @@ func ProducerTimeout(timeout time.Duration) ProducerOption {
 	return func(p *Producer) { p.timeout = timeout }
 }
 
-// SetProducerResponseQueueURL sets this as before or after function
+// SetProducerResponseQueueURL can be used as a before function to add
+// provided url as responseQueueURL in context.
 func SetProducerResponseQueueURL(url string) ProducerRequestFunc {
 	return func(ctx context.Context, _ *sqs.SendMessageInput) context.Context {
 		return context.WithValue(ctx, ContextKeyResponseQueueURL, url)

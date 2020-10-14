@@ -21,7 +21,7 @@ var (
 )
 
 func (mock *mockClient) ReceiveMessageWithContext(ctx context.Context, input *sqs.ReceiveMessageInput, opts ...request.Option) (*sqs.ReceiveMessageOutput, error) {
-	// Add logic to allow context errors
+	// Add logic to allow context errors.
 	for {
 		select {
 		case d := <-mock.receiveOuputChan:
@@ -342,7 +342,7 @@ func TestConsumerBeforeAddValueToContext(t *testing.T) {
 		key string
 	}
 	consumer := awssqs.NewConsumer(mock,
-		// endpoint.
+		// endpoint
 		func(ctx context.Context, request interface{}) (interface{}, error) {
 			return ctx.Value(ctxKey{"recipient"}).(string), nil
 		},
