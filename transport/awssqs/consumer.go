@@ -3,7 +3,6 @@ package awssqs
 import (
 	"context"
 	"encoding/json"
-	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -194,12 +193,6 @@ type ErrorEncoder func(ctx context.Context, err error, req *sqs.Message, sqsClie
 // principal intended use is for request logging.
 // Can also be used to delete messages once fully proccessed.
 type ConsumerFinalizerFunc func(ctx context.Context, msg *sqs.Message)
-
-// VisibilityTimeoutFunc encapsulates logic to extend messages visibility timeout.
-// this can be used to provide custom visibility timeout extension such as doubling it everytime
-// it gets close to being reached.
-// VisibilityTimeoutFunc will need to check that the provided context is not done and return once it is.
-type VisibilityTimeoutFunc func(ctx context.Context, client sqsiface.SQSAPI, queueURL string, visibilityTimeout int64, leftMsgs *[]*sqs.Message, leftMsgsMux *sync.Mutex) error
 
 // WantReplyFunc encapsulates logic to check whether message awaits response or not
 // for example check for a given message attribute value.
