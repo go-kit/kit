@@ -2,7 +2,6 @@ package awssqs
 
 import (
 	"context"
-	"sync"
 
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
@@ -11,8 +10,8 @@ import (
 // ConsumerRequestFunc may take information from a consumer request result and
 // put it into a request context. In Consumers, RequestFuncs are executed prior
 // to invoking the endpoint.
-// use cases eg. in Consumer : extract message into context, or filter received messages.
-type ConsumerRequestFunc func(context.Context, *[]*sqs.Message) context.Context
+// use cases eg. in Consumer : extract message information into context.
+type ConsumerRequestFunc func(ctx context.Context, cancel context.CancelFunc, req *sqs.Message) context.Context
 
 // ProducerRequestFunc may take information from a producer request and put it into a
 // request context, or add some informations to SendMessageInput. In Producers,
@@ -25,7 +24,7 @@ type ProducerRequestFunc func(ctx context.Context, input *sqs.SendMessageInput) 
 // consumers, after invoking the endpoint but prior to publishing a reply.
 // use cases eg. : Pipe information from request message to response MessageInput,
 // delete msg from queue or update leftMsgs slice.
-type ConsumerResponseFunc func(context.Context, *sqs.Message, *sqs.SendMessageInput, *[]*sqs.Message, *sync.Mutex) context.Context
+type ConsumerResponseFunc func(ctx context.Context, cancel context.CancelFunc, req *sqs.Message, resp *sqs.SendMessageInput) context.Context
 
 // ProducerResponseFunc may take information from an sqs.SendMessageOutput and
 // fetch response using the Client. SQS is not req-reply out-of-the-box. Responses need to be fetched.

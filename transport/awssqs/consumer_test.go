@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sync"
 	"testing"
 	"time"
 
@@ -45,16 +44,6 @@ func TestConsumerDeleteBefore(t *testing.T) {
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 		deleteError:      fmt.Errorf("delete err!"),
 	}
-	go func() {
-		mock.receiveOuputChan <- &sqs.ReceiveMessageOutput{
-			Messages: []*sqs.Message{
-				{
-					Body:      aws.String("MessageBody"),
-					MessageId: aws.String("fakeMsgID"),
-				},
-			},
-		}
-	}()
 	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient sqsiface.SQSAPI) {
 		publishError := sqsError{
 			Err:   err.Error(),
@@ -68,14 +57,17 @@ func TestConsumerDeleteBefore(t *testing.T) {
 	})
 	consumer := awssqs.NewConsumer(mock,
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
-		func(context.Context, *sqs.Message) (interface{}, error) { return nil, errors.New("decode err!") },
+		func(context.Context, *sqs.Message) (interface{}, error) { return nil, nil },
 		func(context.Context, *sqs.SendMessageInput, interface{}) error { return nil },
 		queueURL,
 		errEncoder,
-		awssqs.ConsumerDeleteMessage(awssqs.BeforeHandle),
+		awssqs.ConsumerDeleteMessageBefore(),
 	)
 
-	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
+	consumer.ServeMessage(context.Background(), &sqs.Message{
+		Body:      aws.String("MessageBody"),
+		MessageId: aws.String("fakeMsgID"),
+	})
 
 	var receiveOutput *sqs.ReceiveMessageOutput
 	select {
@@ -101,16 +93,6 @@ func TestConsumerBadDecode(t *testing.T) {
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
-	go func() {
-		mock.receiveOuputChan <- &sqs.ReceiveMessageOutput{
-			Messages: []*sqs.Message{
-				{
-					Body:      aws.String("MessageBody"),
-					MessageId: aws.String("fakeMsgID"),
-				},
-			},
-		}
-	}()
 	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient sqsiface.SQSAPI) {
 		publishError := sqsError{
 			Err:   err.Error(),
@@ -131,7 +113,10 @@ func TestConsumerBadDecode(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
-	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
+	consumer.ServeMessage(context.Background(), &sqs.Message{
+		Body:      aws.String("MessageBody"),
+		MessageId: aws.String("fakeMsgID"),
+	})
 
 	var receiveOutput *sqs.ReceiveMessageOutput
 	select {
@@ -157,16 +142,6 @@ func TestConsumerBadEndpoint(t *testing.T) {
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
-	go func() {
-		mock.receiveOuputChan <- &sqs.ReceiveMessageOutput{
-			Messages: []*sqs.Message{
-				{
-					Body:      aws.String("MessageBody"),
-					MessageId: aws.String("fakeMsgID"),
-				},
-			},
-		}
-	}()
 	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient sqsiface.SQSAPI) {
 		publishError := sqsError{
 			Err:   err.Error(),
@@ -187,7 +162,10 @@ func TestConsumerBadEndpoint(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
-	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
+	consumer.ServeMessage(context.Background(), &sqs.Message{
+		Body:      aws.String("MessageBody"),
+		MessageId: aws.String("fakeMsgID"),
+	})
 
 	var receiveOutput *sqs.ReceiveMessageOutput
 	select {
@@ -213,16 +191,6 @@ func TestConsumerBadEncoder(t *testing.T) {
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
-	go func() {
-		mock.receiveOuputChan <- &sqs.ReceiveMessageOutput{
-			Messages: []*sqs.Message{
-				{
-					Body:      aws.String("MessageBody"),
-					MessageId: aws.String("fakeMsgID"),
-				},
-			},
-		}
-	}()
 	errEncoder := awssqs.ConsumerErrorEncoder(func(ctx context.Context, err error, req *sqs.Message, sqsClient sqsiface.SQSAPI) {
 		publishError := sqsError{
 			Err:   err.Error(),
@@ -243,7 +211,10 @@ func TestConsumerBadEncoder(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
-	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
+	consumer.ServeMessage(context.Background(), &sqs.Message{
+		Body:      aws.String("MessageBody"),
+		MessageId: aws.String("fakeMsgID"),
+	})
 
 	var receiveOutput *sqs.ReceiveMessageOutput
 	select {
@@ -276,16 +247,6 @@ func TestConsumerSuccess(t *testing.T) {
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
-	go func() {
-		mock.receiveOuputChan <- &sqs.ReceiveMessageOutput{
-			Messages: []*sqs.Message{
-				{
-					Body:      aws.String(string(b)),
-					MessageId: aws.String("fakeMsgID"),
-				},
-			},
-		}
-	}()
 	consumer := awssqs.NewConsumer(mock,
 		testEndpoint,
 		testReqDecoderfunc,
@@ -294,7 +255,10 @@ func TestConsumerSuccess(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
-	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
+	consumer.ServeMessage(context.Background(), &sqs.Message{
+		Body:      aws.String(string(b)),
+		MessageId: aws.String("fakeMsgID"),
+	})
 
 	var receiveOutput *sqs.ReceiveMessageOutput
 	select {
@@ -332,16 +296,6 @@ func TestConsumerSuccessNoReply(t *testing.T) {
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
-	go func() {
-		mock.receiveOuputChan <- &sqs.ReceiveMessageOutput{
-			Messages: []*sqs.Message{
-				{
-					Body:      aws.String(string(b)),
-					MessageId: aws.String("fakeMsgID"),
-				},
-			},
-		}
-	}()
 	consumer := awssqs.NewConsumer(mock,
 		testEndpoint,
 		testReqDecoderfunc,
@@ -349,7 +303,10 @@ func TestConsumerSuccessNoReply(t *testing.T) {
 		queueURL,
 	)
 
-	consumer.Consume(context.Background(), &sqs.ReceiveMessageInput{})
+	consumer.ServeMessage(context.Background(), &sqs.Message{
+		Body:      aws.String(string(b)),
+		MessageId: aws.String("fakeMsgID"),
+	})
 
 	var receiveOutput *sqs.ReceiveMessageOutput
 	select {
@@ -364,79 +321,55 @@ func TestConsumerSuccessNoReply(t *testing.T) {
 }
 
 // TestConsumerBeforeFilterMessages checks if consumer before is called as expected.
-// Here before is used to filter messages before processing.
-func TestConsumerBeforeFilterMessages(t *testing.T) {
-	obj1 := testReq{
-		Squadron: 436,
-	}
-	b1, _ := json.Marshal(obj1)
-	obj2 := testReq{
-		Squadron: 4,
-	}
-	b2, _ := json.Marshal(obj2)
-	obj3 := testReq{
-		Squadron: 1,
-	}
-	b3, _ := json.Marshal(obj3)
+// Here before is used to add a value in context.
+func TestConsumerBeforeAddValueToContext(t *testing.T) {
 	queueURL := "someURL"
 	mock := &mockClient{
 		sendOutputChan:   make(chan *sqs.SendMessageOutput),
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
-	expectedMsgs := []*sqs.Message{
-		{
-			Body:      aws.String(string(b1)),
-			MessageId: aws.String("fakeMsgID1"),
-			MessageAttributes: map[string]*sqs.MessageAttributeValue{
-				"recipient": {
-					DataType:    aws.String("String"),
-					StringValue: aws.String("me"),
-				},
+	msg := &sqs.Message{
+		Body:      aws.String("someBody"),
+		MessageId: aws.String("fakeMsgID1"),
+		MessageAttributes: map[string]*sqs.MessageAttributeValue{
+			"recipient": {
+				DataType:    aws.String("String"),
+				StringValue: aws.String("me"),
 			},
-		},
-		{
-			Body:      aws.String(string(b2)),
-			MessageId: aws.String("fakeMsgID2"),
-			MessageAttributes: map[string]*sqs.MessageAttributeValue{
-				"recipient": {
-					DataType:    aws.String("String"),
-					StringValue: aws.String("not me"),
-				},
-			},
-		},
-		{
-			Body:      aws.String(string(b3)),
-			MessageId: aws.String("fakeMsgID3"),
 		},
 	}
-	go func() {
-		mock.receiveOuputChan <- &sqs.ReceiveMessageOutput{
-			Messages: expectedMsgs,
-		}
-	}()
 	type ctxKey struct {
 		key string
 	}
 	consumer := awssqs.NewConsumer(mock,
-		testEndpoint,
-		testReqDecoderfunc,
-		awssqs.EncodeJSONResponse,
+		// endpoint.
+		func(ctx context.Context, request interface{}) (interface{}, error) {
+			return ctx.Value(ctxKey{"recipient"}).(string), nil
+		},
+		// request decoder
+		func(_ context.Context, msg *sqs.Message) (interface{}, error) {
+			return *msg.Body, nil
+		},
+		// response encoder
+		func(_ context.Context, input *sqs.SendMessageInput, response interface{}) error {
+			input.MessageBody = aws.String(fmt.Sprintf("%v", response))
+			return nil
+		},
 		queueURL,
-		awssqs.ConsumerBefore(func(ctx context.Context, msgs *[]*sqs.Message) context.Context {
+		awssqs.ConsumerBefore(func(ctx context.Context, cancel context.CancelFunc, msg *sqs.Message) context.Context {
 			// Filter a message that is not destined to the consumer.
-			msgsCopy := *msgs
-			for index, msg := range *msgs {
-				if recipient, exists := msg.MessageAttributes["recipient"]; !exists || *recipient.StringValue != "me" {
-					msgsCopy = append(msgsCopy[:index], msgsCopy[index:]...)
-				}
+			if recipient, exists := msg.MessageAttributes["recipient"]; exists {
+				ctx = context.WithValue(ctx, ctxKey{"recipient"}, *recipient.StringValue)
 			}
-			*msgs = msgsCopy
 			return ctx
 		}),
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 	ctx := context.Background()
-	consumer.Consume(ctx, &sqs.ReceiveMessageInput{})
+	err := consumer.ServeMessage(ctx, msg)
+	if err != nil {
+		t.Errorf("got err %s", err)
+	}
 
 	var receiveOutput *sqs.ReceiveMessageOutput
 	select {
@@ -446,14 +379,11 @@ func TestConsumerBeforeFilterMessages(t *testing.T) {
 	case <-time.After(200 * time.Millisecond):
 		t.Fatal("Timed out waiting for publishing")
 	}
-	res, err := decodeResponse(receiveOutput)
-	if err != nil {
-		t.Fatal(err)
+	if len(receiveOutput.Messages) != 1 {
+		t.Errorf("Error : received %d messages instead of 1", len(receiveOutput.Messages))
 	}
-	want := testRes{
-		Squadron: 436,
-		Name:     "tusker",
-	}
+	res := *receiveOutput.Messages[0].Body
+	want := "me"
 	if have := res; want != have {
 		t.Errorf("want %v, have %v", want, have)
 	}
@@ -482,23 +412,16 @@ func TestConsumerAfter(t *testing.T) {
 		receiveOuputChan: make(chan *sqs.ReceiveMessageOutput),
 	}
 	correlationID := uuid.NewRandom().String()
-	expectedMsgs := []*sqs.Message{
-		{
-			Body:      aws.String(string(b1)),
-			MessageId: aws.String("fakeMsgID1"),
-			MessageAttributes: map[string]*sqs.MessageAttributeValue{
-				"correlationID": {
-					DataType:    aws.String("String"),
-					StringValue: &correlationID,
-				},
+	msg := &sqs.Message{
+		Body:      aws.String(string(b1)),
+		MessageId: aws.String("fakeMsgID1"),
+		MessageAttributes: map[string]*sqs.MessageAttributeValue{
+			"correlationID": {
+				DataType:    aws.String("String"),
+				StringValue: &correlationID,
 			},
 		},
 	}
-	go func() {
-		mock.receiveOuputChan <- &sqs.ReceiveMessageOutput{
-			Messages: expectedMsgs,
-		}
-	}()
 	type ctxKey struct {
 		key string
 	}
@@ -507,9 +430,7 @@ func TestConsumerAfter(t *testing.T) {
 		testReqDecoderfunc,
 		awssqs.EncodeJSONResponse,
 		queueURL,
-		awssqs.ConsumerAfter(func(ctx context.Context, msg *sqs.Message, resp *sqs.SendMessageInput, leftMsgs *[]*sqs.Message, mux *sync.Mutex) context.Context {
-			mux.Lock()
-			defer mux.Unlock()
+		awssqs.ConsumerAfter(func(ctx context.Context, cancel context.CancelFunc, msg *sqs.Message, resp *sqs.SendMessageInput) context.Context {
 			if correlationIDAttribute, exists := msg.MessageAttributes["correlationID"]; exists {
 				if resp.MessageAttributes == nil {
 					resp.MessageAttributes = make(map[string]*sqs.MessageAttributeValue)
@@ -524,7 +445,7 @@ func TestConsumerAfter(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 	ctx := context.Background()
-	consumer.Consume(ctx, &sqs.ReceiveMessageInput{})
+	consumer.ServeMessage(ctx, msg)
 
 	var receiveOutput *sqs.ReceiveMessageOutput
 	select {

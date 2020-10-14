@@ -13,36 +13,19 @@ import (
 	"github.com/go-kit/kit/transport"
 )
 
-// Delete is a type to indicate when the consumed message should be deleted.
-type Delete int
-
-const (
-	// BeforeHandle deletes the message before starting to handle it.
-	BeforeHandle Delete = iota
-	// AfterHandle deletes the message once it has been fully processed.
-	// This is the consumer's default value.
-	AfterHandle
-	// Never does not delete the message.
-	Never
-)
-
 // Consumer wraps an endpoint and provides a handler for SQS messages.
 type Consumer struct {
-	sqsClient             sqsiface.SQSAPI
-	e                     endpoint.Endpoint
-	dec                   DecodeRequestFunc
-	enc                   EncodeResponseFunc
-	wantRep               WantReplyFunc
-	queueURL              string
-	visibilityTimeout     int64
-	visibilityTimeoutFunc VisibilityTimeoutFunc
-	leftMsgsMux           *sync.Mutex
-	before                []ConsumerRequestFunc
-	after                 []ConsumerResponseFunc
-	errorEncoder          ErrorEncoder
-	finalizer             []ConsumerFinalizerFunc
-	errorHandler          transport.ErrorHandler
-	deleteMessage         Delete
+	sqsClient    sqsiface.SQSAPI
+	e            endpoint.Endpoint
+	dec          DecodeRequestFunc
+	enc          EncodeResponseFunc
+	wantRep      WantReplyFunc
+	queueURL     string
+	before       []ConsumerRequestFunc
+	after        []ConsumerResponseFunc
+	errorEncoder ErrorEncoder
+	finalizer    []ConsumerFinalizerFunc
+	errorHandler transport.ErrorHandler
 }
 
 // NewConsumer constructs a new Consumer, which provides a Consume method
@@ -56,18 +39,14 @@ func NewConsumer(
 	options ...ConsumerOption,
 ) *Consumer {
 	s := &Consumer{
-		sqsClient:             sqsClient,
-		e:                     e,
-		dec:                   dec,
-		enc:                   enc,
-		wantRep:               DoNotRespond,
-		queueURL:              queueURL,
-		visibilityTimeout:     int64(30),
-		visibilityTimeoutFunc: DoNotExtendVisibilityTimeout,
-		leftMsgsMux:           &sync.Mutex{},
-		errorEncoder:          DefaultErrorEncoder,
-		errorHandler:          transport.NewLogErrorHandler(log.NewNopLogger()),
-		deleteMessage:         AfterHandle,
+		sqsClient:    sqsClient,
+		e:            e,
+		dec:          dec,
+		enc:          enc,
+		wantRep:      DoNotRespond,
+		queueURL:     queueURL,
+		errorEncoder: DefaultErrorEncoder,
+		errorHandler: transport.NewLogErrorHandler(log.NewNopLogger()),
 	}
 	for _, option := range options {
 		option(s)
@@ -98,20 +77,6 @@ func ConsumerErrorEncoder(ee ErrorEncoder) ConsumerOption {
 	return func(c *Consumer) { c.errorEncoder = ee }
 }
 
-// ConsumerVisbilityTimeOutFunc is used to extend the visibility timeout
-// for messages while the consumer processes them.
-// VisibilityTimeoutFunc will need to check that the provided context is not done.
-// By default, visibility timeout are not extended.
-func ConsumerVisbilityTimeOutFunc(vtFunc VisibilityTimeoutFunc) ConsumerOption {
-	return func(c *Consumer) { c.visibilityTimeoutFunc = vtFunc }
-}
-
-// ConsumerVisibilityTimeout overrides the default value for the consumer's
-// visibilityTimeout field.
-func ConsumerVisibilityTimeout(visibilityTimeout int64) ConsumerOption {
-	return func(c *Consumer) { c.visibilityTimeout = visibilityTimeout }
-}
-
 // ConsumerWantReplyFunc overrides the default value for the consumer's
 // wantRep field.
 func ConsumerWantReplyFunc(replyFunc WantReplyFunc) ConsumerOption {
@@ -132,84 +97,55 @@ func ConsumerFinalizer(f ...ConsumerFinalizerFunc) ConsumerOption {
 	return func(c *Consumer) { c.finalizer = f }
 }
 
-// ConsumerDeleteMessage overrides the default value for the consumer's
-// deleteMessage field to indicate when the consumed messages should be deleted.
-func ConsumerDeleteMessage(delete Delete) ConsumerOption {
-	return func(c *Consumer) { c.deleteMessage = delete }
-}
-
-// Consume calls ReceiveMessageWithContext and handles messages having an
-// sqs.ReceiveMessageInput as parameter allows each user to have his own receive configuration.
-// That said, this method overrides the queueURL for the provided ReceiveMessageInput to ensure
-// the messages are retrieved from the consumer's configured queue.
-func (c Consumer) Consume(ctx context.Context, receiveMsgInput *sqs.ReceiveMessageInput) error {
-	receiveMsgInput.QueueUrl = &c.queueURL
-	out, err := c.sqsClient.ReceiveMessageWithContext(ctx, receiveMsgInput)
-	if err != nil {
-		return err
+// ConsumerDeleteMessageBefore returns a ConsumerOption that appends a function
+// that delete the message from queue to the list of consumer's before functions.
+func ConsumerDeleteMessageBefore() ConsumerOption {
+	return func(c *Consumer) {
+		deleteBefore := func(ctx context.Context, cancel context.CancelFunc, msg *sqs.Message) context.Context {
+			if err := deleteMessage(ctx, c.sqsClient, c.queueURL, msg); err != nil {
+				c.errorHandler.Handle(ctx, err)
+				c.errorEncoder(ctx, err, msg, c.sqsClient)
+				cancel()
+			}
+			return ctx
+		}
+		c.before = append(c.before, deleteBefore)
 	}
-	return c.handleMessages(ctx, out.Messages)
 }
 
-// handleMessages handles the consumed messages.
-func (c Consumer) handleMessages(ctx context.Context, msgs []*sqs.Message) error {
+// ConsumerDeleteMessageAfter returns a ConsumerOption that appends a function
+// that delete a message from queue to the list of consumer's after functions.
+func ConsumerDeleteMessageAfter() ConsumerOption {
+	return func(c *Consumer) {
+		deleteAfter := func(ctx context.Context, cancel context.CancelFunc, msg *sqs.Message, _ *sqs.SendMessageInput) context.Context {
+			if err := deleteMessage(ctx, c.sqsClient, c.queueURL, msg); err != nil {
+				c.errorHandler.Handle(ctx, err)
+				c.errorEncoder(ctx, err, msg, c.sqsClient)
+				cancel()
+			}
+			return ctx
+		}
+		c.after = append(c.after, deleteAfter)
+	}
+}
+
+// ServeMessage serves an SQS message.
+func (c Consumer) ServeMessage(ctx context.Context, msg *sqs.Message) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	// Copy received messages slice in leftMsgs slice
-	// leftMsgs will be used by the consumer's visibilityTimeoutFunc to extend the
-	// visibility timeout for the messages that have not been processed yet.
-	leftMsgs := []*sqs.Message{}
-	leftMsgs = append(leftMsgs, msgs...)
-
-	visibilityTimeoutCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	go c.visibilityTimeoutFunc(visibilityTimeoutCtx, c.sqsClient, c.queueURL, c.visibilityTimeout, &leftMsgs, c.leftMsgsMux)
 
 	if len(c.finalizer) > 0 {
 		defer func() {
 			for _, f := range c.finalizer {
-				f(ctx, &msgs)
+				f(ctx, msg)
 			}
 		}()
 	}
 
 	for _, f := range c.before {
-		ctx = f(ctx, &msgs)
+		ctx = f(ctx, cancel, msg)
 	}
 
-	for _, msg := range msgs {
-		if c.deleteMessage == BeforeHandle {
-			if _, err := c.sqsClient.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
-				QueueUrl:      &c.queueURL,
-				ReceiptHandle: msg.ReceiptHandle,
-			}); err != nil {
-				c.errorHandler.Handle(ctx, err)
-				c.errorEncoder(ctx, err, msg, c.sqsClient)
-				return err
-			}
-		}
-
-		if err := c.handleSingleMessage(ctx, msg, &leftMsgs); err != nil {
-			return err
-		}
-
-		if c.deleteMessage == AfterHandle {
-			if _, err := c.sqsClient.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
-				QueueUrl:      &c.queueURL,
-				ReceiptHandle: msg.ReceiptHandle,
-			}); err != nil {
-				c.errorHandler.Handle(ctx, err)
-				c.errorEncoder(ctx, err, msg, c.sqsClient)
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// handleSingleMessage handles a single SQS message.
-func (c Consumer) handleSingleMessage(ctx context.Context, msg *sqs.Message, leftMsgs *[]*sqs.Message) error {
 	req, err := c.dec(ctx, msg)
 	if err != nil {
 		c.errorHandler.Handle(ctx, err)
@@ -226,7 +162,7 @@ func (c Consumer) handleSingleMessage(ctx context.Context, msg *sqs.Message, lef
 
 	responseMsg := sqs.SendMessageInput{}
 	for _, f := range c.after {
-		ctx = f(ctx, msg, &responseMsg, leftMsgs, c.leftMsgsMux)
+		ctx = f(ctx, cancel, msg, &responseMsg)
 	}
 
 	if !c.wantRep(ctx, msg) {
@@ -257,7 +193,7 @@ type ErrorEncoder func(ctx context.Context, err error, req *sqs.Message, sqsClie
 // from a producer, after the response has been written to the producer. The
 // principal intended use is for request logging.
 // Can also be used to delete messages once fully proccessed.
-type ConsumerFinalizerFunc func(ctx context.Context, msg *[]*sqs.Message)
+type ConsumerFinalizerFunc func(ctx context.Context, msg *sqs.Message)
 
 // VisibilityTimeoutFunc encapsulates logic to extend messages visibility timeout.
 // this can be used to provide custom visibility timeout extension such as doubling it everytime
@@ -273,10 +209,12 @@ type WantReplyFunc func(context.Context, *sqs.Message) bool
 func DefaultErrorEncoder(context.Context, error, *sqs.Message, sqsiface.SQSAPI) {
 }
 
-// DoNotExtendVisibilityTimeout is the default value for the consumer's visibilityTimeoutFunc.
-// It returns no error and does nothing.
-func DoNotExtendVisibilityTimeout(context.Context, sqsiface.SQSAPI, string, int64, *[]*sqs.Message, *sync.Mutex) error {
-	return nil
+func deleteMessage(ctx context.Context, sqsClient sqsiface.SQSAPI, queueURL string, msg *sqs.Message) error {
+	_, err := sqsClient.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
+		QueueUrl:      &queueURL,
+		ReceiptHandle: msg.ReceiptHandle,
+	})
+	return err
 }
 
 // DoNotRespond is a WantReplyFunc and is the default value for consumer's wantRep field.
