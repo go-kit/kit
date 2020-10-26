@@ -64,7 +64,7 @@ func TestConsumerDeleteBefore(t *testing.T) {
 		awssqs.ConsumerDeleteMessageBefore(),
 	)
 
-	consumer.ServeMessage(context.Background(), &sqs.Message{
+	consumer.ServeMessage(context.Background())(&sqs.Message{
 		Body:      aws.String("MessageBody"),
 		MessageId: aws.String("fakeMsgID"),
 	})
@@ -113,7 +113,7 @@ func TestConsumerBadDecode(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
-	consumer.ServeMessage(context.Background(), &sqs.Message{
+	consumer.ServeMessage(context.Background())(&sqs.Message{
 		Body:      aws.String("MessageBody"),
 		MessageId: aws.String("fakeMsgID"),
 	})
@@ -162,7 +162,7 @@ func TestConsumerBadEndpoint(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
-	consumer.ServeMessage(context.Background(), &sqs.Message{
+	consumer.ServeMessage(context.Background())(&sqs.Message{
 		Body:      aws.String("MessageBody"),
 		MessageId: aws.String("fakeMsgID"),
 	})
@@ -211,7 +211,7 @@ func TestConsumerBadEncoder(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
-	consumer.ServeMessage(context.Background(), &sqs.Message{
+	consumer.ServeMessage(context.Background())(&sqs.Message{
 		Body:      aws.String("MessageBody"),
 		MessageId: aws.String("fakeMsgID"),
 	})
@@ -255,7 +255,7 @@ func TestConsumerSuccess(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 
-	consumer.ServeMessage(context.Background(), &sqs.Message{
+	consumer.ServeMessage(context.Background())(&sqs.Message{
 		Body:      aws.String(string(b)),
 		MessageId: aws.String("fakeMsgID"),
 	})
@@ -303,7 +303,7 @@ func TestConsumerSuccessNoReply(t *testing.T) {
 		queueURL,
 	)
 
-	consumer.ServeMessage(context.Background(), &sqs.Message{
+	consumer.ServeMessage(context.Background())(&sqs.Message{
 		Body:      aws.String(string(b)),
 		MessageId: aws.String("fakeMsgID"),
 	})
@@ -366,7 +366,7 @@ func TestConsumerBeforeAddValueToContext(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 	ctx := context.Background()
-	err := consumer.ServeMessage(ctx, msg)
+	err := consumer.ServeMessage(ctx)(msg)
 	if err != nil {
 		t.Errorf("got err %s", err)
 	}
@@ -445,7 +445,7 @@ func TestConsumerAfter(t *testing.T) {
 		awssqs.ConsumerWantReplyFunc(func(context.Context, *sqs.Message) bool { return true }),
 	)
 	ctx := context.Background()
-	consumer.ServeMessage(ctx, msg)
+	consumer.ServeMessage(ctx)(msg)
 
 	var receiveOutput *sqs.ReceiveMessageOutput
 	select {

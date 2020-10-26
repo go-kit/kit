@@ -129,57 +129,59 @@ func ConsumerDeleteMessageAfter() ConsumerOption {
 }
 
 // ServeMessage serves an SQS message.
-func (c Consumer) ServeMessage(ctx context.Context, msg *sqs.Message) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+func (c Consumer) ServeMessage(ctx context.Context) func(msg *sqs.Message) error {
+	return func(msg *sqs.Message) error {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
-	if len(c.finalizer) > 0 {
-		defer func() {
-			for _, f := range c.finalizer {
-				f(ctx, msg)
-			}
-		}()
-	}
+		if len(c.finalizer) > 0 {
+			defer func() {
+				for _, f := range c.finalizer {
+					f(ctx, msg)
+				}
+			}()
+		}
 
-	for _, f := range c.before {
-		ctx = f(ctx, cancel, msg)
-	}
+		for _, f := range c.before {
+			ctx = f(ctx, cancel, msg)
+		}
 
-	req, err := c.dec(ctx, msg)
-	if err != nil {
-		c.errorHandler.Handle(ctx, err)
-		c.errorEncoder(ctx, err, msg, c.sqsClient)
-		return err
-	}
+		req, err := c.dec(ctx, msg)
+		if err != nil {
+			c.errorHandler.Handle(ctx, err)
+			c.errorEncoder(ctx, err, msg, c.sqsClient)
+			return err
+		}
 
-	response, err := c.e(ctx, req)
-	if err != nil {
-		c.errorHandler.Handle(ctx, err)
-		c.errorEncoder(ctx, err, msg, c.sqsClient)
-		return err
-	}
+		response, err := c.e(ctx, req)
+		if err != nil {
+			c.errorHandler.Handle(ctx, err)
+			c.errorEncoder(ctx, err, msg, c.sqsClient)
+			return err
+		}
 
-	responseMsg := sqs.SendMessageInput{}
-	for _, f := range c.after {
-		ctx = f(ctx, cancel, msg, &responseMsg)
-	}
+		responseMsg := sqs.SendMessageInput{}
+		for _, f := range c.after {
+			ctx = f(ctx, cancel, msg, &responseMsg)
+		}
 
-	if !c.wantRep(ctx, msg) {
+		if !c.wantRep(ctx, msg) {
+			return nil
+		}
+
+		if err := c.enc(ctx, &responseMsg, response); err != nil {
+			c.errorHandler.Handle(ctx, err)
+			c.errorEncoder(ctx, err, msg, c.sqsClient)
+			return err
+		}
+
+		if _, err := c.sqsClient.SendMessageWithContext(ctx, &responseMsg); err != nil {
+			c.errorHandler.Handle(ctx, err)
+			c.errorEncoder(ctx, err, msg, c.sqsClient)
+			return err
+		}
 		return nil
 	}
-
-	if err := c.enc(ctx, &responseMsg, response); err != nil {
-		c.errorHandler.Handle(ctx, err)
-		c.errorEncoder(ctx, err, msg, c.sqsClient)
-		return err
-	}
-
-	if _, err := c.sqsClient.SendMessageWithContext(ctx, &responseMsg); err != nil {
-		c.errorHandler.Handle(ctx, err)
-		c.errorEncoder(ctx, err, msg, c.sqsClient)
-		return err
-	}
-	return nil
 }
 
 // ErrorEncoder is responsible for encoding an error to the consumer's reply.
