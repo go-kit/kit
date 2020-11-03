@@ -1,6 +1,10 @@
 package jsonrpc
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+)
 
 // Request defines a JSON RPC request from the spec
 // http://www.jsonrpc.org/specification#request_object
@@ -25,6 +29,11 @@ type RequestID struct {
 	stringValue string
 	stringError error
 }
+
+// RequestFunc may take information from decoded json body and place in
+// request context. In Servers, RequestFuncs are executed after json is parsed
+// but prior to invoking the codec
+type RequestFunc func(context.Context, *http.Request, Request) context.Context
 
 // UnmarshalJSON satisfies json.Unmarshaler
 func (id *RequestID) UnmarshalJSON(b []byte) error {
@@ -78,4 +87,10 @@ const (
 
 	// ContentType defines the content type to be served.
 	ContentType string = "application/json; charset=utf-8"
+)
+
+type contextKey int
+
+const (
+	ContextKeyRequestMethod contextKey = iota
 )

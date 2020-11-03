@@ -159,6 +159,8 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			}()
 		}
 
+		ctx = context.WithValue(ctx, ContextKeyRequestMethod, c.method)
+
 		var params json.RawMessage
 		if params, err = c.enc(ctx, request); err != nil {
 			return nil, err
@@ -207,7 +209,12 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			return nil, err
 		}
 
-		return c.dec(ctx, rpcRes)
+		response, err := c.dec(ctx, rpcRes)
+		if err != nil {
+			return nil, err
+		}
+
+		return response, nil
 	}
 }
 
