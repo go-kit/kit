@@ -113,6 +113,7 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 
 - [Gorilla](http://www.gorillatoolkit.org)
 - [Gin](https://gin-gonic.com/)
+- [Echo](https://echo.labstack.com/)
 - [Negroni](https://github.com/codegangsta/negroni)
 - [Goji](https://github.com/zenazn/goji)
 - [Martini](https://github.com/go-martini/martini)
