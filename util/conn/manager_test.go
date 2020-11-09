@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -12,7 +13,8 @@ import (
 )
 
 type mockLogger struct {
-	exists bool
+	exists   bool
+	existsMu sync.Mutex
 }
 
 func (m *mockLogger) Log(args ...interface{}) error {
@@ -20,6 +22,8 @@ func (m *mockLogger) Log(args ...interface{}) error {
 		val, ok := args[0].(string)
 		if ok {
 			if val == "exit from loop" {
+				m.existsMu.Lock()
+				defer m.existsMu.Unlock()
 				m.exists = true
 			}
 		}
