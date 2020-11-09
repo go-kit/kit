@@ -25,7 +25,7 @@ type AfterFunc func(time.Duration) <-chan time.Time
 // the connection is invalidated, and a new connection is established.
 // Connection failures are retried after an exponential backoff.
 type Manager struct {
-	d       Dialer
+	dialer  Dialer
 	network string
 	address string
 	after   AfterFunc
@@ -41,7 +41,7 @@ type Manager struct {
 // receive them. For normal use, prefer NewDefaultManager.
 func NewManager(ctx context.Context, d Dialer, network, address string, after AfterFunc, logger log.Logger) *Manager {
 	m := &Manager{
-		d:       d,
+		dialer:  d,
 		network: network,
 		address: address,
 		after:   after,
@@ -66,7 +66,7 @@ func NewDefaultManager(ctx context.Context, network, address string, logger log.
 }
 
 func (m *Manager) dial(network string, address string) net.Conn {
-	conn, err := m.d(m.ctx, network, address)
+	conn, err := m.dialer(m.ctx, network, address)
 	if err != nil {
 		m.logger.Log("err", err)
 		conn = nil // just to be sure

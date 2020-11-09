@@ -32,7 +32,7 @@ func TestManager(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := uint64(3), atomic.LoadUint64(&dialconn.wr); want != have {
-		t.Errorf("want %d, have %d", want, have)
+		t.Errorf("want %dialer, have %dialer", want, have)
 	}
 
 	// Put an error to kill the conn.
@@ -41,7 +41,7 @@ func TestManager(t *testing.T) {
 	// First takes should fail.
 	for i := 0; i < 10; i++ {
 		if conn = mgr.Take(); conn != nil {
-			t.Fatalf("iteration %d: want nil conn, got real conn", i)
+			t.Fatalf("iteration %dialer: want nil conn, got real conn", i)
 		}
 	}
 
@@ -61,7 +61,7 @@ func TestManager(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := uint64(5), atomic.LoadUint64(&dialconn.wr); want != have {
-		t.Errorf("want %d, have %d", want, have)
+		t.Errorf("want %dialer, have %dialer", want, have)
 	}
 
 	// Dial starts failing.
