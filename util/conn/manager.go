@@ -113,8 +113,11 @@ func (m *Manager) loop() {
 	for {
 		select {
 		case <-m.ctx.Done():
+			_ = m.logger.Log("exit from loop")
 			err := conn.Close()
-			m.logger.Log("connection close err", err)
+			if err != nil {
+				_ = m.logger.Log("connection close err", err)
+			}
 			conn = nil
 			return
 		case <-reconnectc:

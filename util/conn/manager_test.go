@@ -11,6 +11,28 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+type mockLogger struct {
+	exists bool
+}
+
+func (m *mockLogger) Log(args ...interface{}) error {
+	if len(args) == 1 {
+		val, ok := args[0].(string)
+		if ok {
+			if val == "exit from loop" {
+				m.exists = true
+			}
+		}
+	}
+	return nil
+}
+
+func (m *mockLogger) CloseMessageExists() bool {
+	// wait message
+	<-time.After(time.Second * 1)
+	return m.exists
+}
+
 func TestManager(t *testing.T) {
 	var (
 		tickc    = make(chan time.Time)
@@ -90,6 +112,29 @@ func TestManager(t *testing.T) {
 	}) {
 		t.Fatal("eventually got a good conn, despite failing dialer")
 	}
+}
+
+func TestShoutDown(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	logger := &mockLogger{}
+	var (
+		tickc    = make(chan time.Time)
+		after    = func(time.Duration) <-chan time.Time { return tickc }
+		dialconn = &mockConn{}
+		dialerr  = error(nil)
+		dialer   = func(context.Context, string, string) (net.Conn, error) { return dialconn, dialerr }
+		mgr      = NewManager(ctx, dialer, "netw", "addr", after, logger)
+	)
+	conn := mgr.Take()
+	if conn == nil {
+		t.Fatal("nil conn")
+	}
+	cancel()
+
+	if !logger.CloseMessageExists() {
+		t.Errorf("Loop wasn't shutted down when context done")
+	}
+
 }
 
 func TestIssue292(t *testing.T) {
