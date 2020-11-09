@@ -34,6 +34,8 @@ func (m *mockLogger) Log(args ...interface{}) error {
 func (m *mockLogger) CloseMessageExists() bool {
 	// wait message
 	<-time.After(time.Second * 1)
+	m.existsMu.Lock()
+	defer m.existsMu.Unlock()
 	return m.exists
 }
 
