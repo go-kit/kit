@@ -1,6 +1,7 @@
 package conn
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 	"net"
@@ -11,7 +12,7 @@ import (
 
 // Dialer imitates net.Dial. Dialer is assumed to yield connections that are
 // safe for use by multiple concurrent goroutines.
-type Dialer func(network, address string) (net.Conn, error)
+type Dialer func(ctx context.Context, network, address string) (net.Conn, error)
 
 // AfterFunc imitates time.After.
 type AfterFunc func(time.Duration) <-chan time.Time
@@ -24,30 +25,30 @@ type AfterFunc func(time.Duration) <-chan time.Time
 // the connection is invalidated, and a new connection is established.
 // Connection failures are retried after an exponential backoff.
 type Manager struct {
-	dialer  Dialer
+	d       Dialer
 	network string
 	address string
 	after   AfterFunc
 	logger  log.Logger
-
-	takec chan net.Conn
-	putc  chan error
+	ctx     context.Context
+	takec   chan net.Conn
+	putc    chan error
 }
 
 // NewManager returns a connection manager using the passed Dialer, network, and
 // address. The AfterFunc is used to control exponential backoff and retries.
 // The logger is used to log errors; pass a log.NopLogger if you don't care to
 // receive them. For normal use, prefer NewDefaultManager.
-func NewManager(d Dialer, network, address string, after AfterFunc, logger log.Logger) *Manager {
+func NewManager(ctx context.Context, d Dialer, network, address string, after AfterFunc, logger log.Logger) *Manager {
 	m := &Manager{
-		dialer:  d,
+		d:       d,
 		network: network,
 		address: address,
 		after:   after,
 		logger:  logger,
-
-		takec: make(chan net.Conn),
-		putc:  make(chan error),
+		ctx:     ctx,
+		takec:   make(chan net.Conn),
+		putc:    make(chan error),
 	}
 	go m.loop()
 	return m
@@ -55,8 +56,22 @@ func NewManager(d Dialer, network, address string, after AfterFunc, logger log.L
 
 // NewDefaultManager is a helper constructor, suitable for most normal use in
 // real (non-test) code. It uses the real net.Dial and time.After functions.
-func NewDefaultManager(network, address string, logger log.Logger) *Manager {
-	return NewManager(net.Dial, network, address, time.After, logger)
+func NewDefaultManager(ctx context.Context, network, address string, logger log.Logger) *Manager {
+	return NewManager(ctx, func(ctx context.Context, network, address string) (net.Conn, error) {
+		ctx, cancel := context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+		var dialer net.Dialer
+		return dialer.DialContext(ctx, network, address)
+	}, network, address, time.After, logger)
+}
+
+func (m *Manager) dial(network string, address string) net.Conn {
+	conn, err := m.d(m.ctx, network, address)
+	if err != nil {
+		m.logger.Log("err", err)
+		conn = nil // just to be sure
+	}
+	return conn
 }
 
 // Take yields the current connection. It may be nil.
@@ -84,7 +99,7 @@ func (m *Manager) Write(b []byte) (int, error) {
 
 func (m *Manager) loop() {
 	var (
-		conn       = dial(m.dialer, m.network, m.address, m.logger) // may block slightly
+		conn       = m.dial(m.network, m.address) // may block slightly
 		connc      = make(chan net.Conn, 1)
 		reconnectc <-chan time.Time // initially nil
 		backoff    = time.Second
@@ -97,9 +112,14 @@ func (m *Manager) loop() {
 
 	for {
 		select {
+		case <-m.ctx.Done():
+			err := conn.Close()
+			m.logger.Log("connection close err", err)
+			conn = nil
+			return
 		case <-reconnectc:
 			reconnectc = nil // one-shot
-			go func() { connc <- dial(m.dialer, m.network, m.address, m.logger) }()
+			go func() { connc <- m.dial(m.network, m.address) }()
 
 		case conn = <-connc:
 			if conn == nil {
@@ -123,15 +143,6 @@ func (m *Manager) loop() {
 			}
 		}
 	}
-}
-
-func dial(d Dialer, network, address string, logger log.Logger) net.Conn {
-	conn, err := d(network, address)
-	if err != nil {
-		logger.Log("err", err)
-		conn = nil // just to be sure
-	}
-	return conn
 }
 
 // Exponential takes a duration and returns another one that is twice as long, +/- 50%. It is

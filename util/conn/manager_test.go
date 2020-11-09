@@ -1,6 +1,7 @@
 package conn
 
 import (
+	"context"
 	"errors"
 	"net"
 	"sync/atomic"
@@ -16,8 +17,8 @@ func TestManager(t *testing.T) {
 		after    = func(time.Duration) <-chan time.Time { return tickc }
 		dialconn = &mockConn{}
 		dialerr  = error(nil)
-		dialer   = func(string, string) (net.Conn, error) { return dialconn, dialerr }
-		mgr      = NewManager(dialer, "netw", "addr", after, log.NewNopLogger())
+		dialer   = func(context.Context, string, string) (net.Conn, error) { return dialconn, dialerr }
+		mgr      = NewManager(context.Background(), dialer, "netw", "addr", after, log.NewNopLogger())
 	)
 
 	// First conn should be fine.
@@ -102,8 +103,8 @@ func TestIssue292(t *testing.T) {
 		after    = func(time.Duration) <-chan time.Time { return tickc }
 		dialconn = net.Conn(nil)
 		dialerr  = errors.New("fail")
-		dialer   = func(string, string) (net.Conn, error) { return dialconn, dialerr }
-		mgr      = NewManager(dialer, "netw", "addr", after, log.NewNopLogger())
+		dialer   = func(context.Context, string, string) (net.Conn, error) { return dialconn, dialerr }
+		mgr      = NewManager(context.Background(), dialer, "netw", "addr", after, log.NewNopLogger())
 	)
 
 	if conn := mgr.Take(); conn != nil {
