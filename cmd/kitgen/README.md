@@ -1,4 +1,9 @@
+**DEPRECATED**
+
+kitgen is no longer maintained.
+
 # kitgen
+
 kitgen is an experimental code generation utility that helps with some of the
 boilerplate code required to implement the "onion" pattern `go-kit` utilizes.
 
