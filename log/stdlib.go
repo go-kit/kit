@@ -60,7 +60,7 @@ func MessageKey(key string) StdlibAdapterOption {
 //		logger := log.New(w, "some prefix", log.LstdFlags)
 //
 // To correctly extract stdlib logger fields, you should set the same prefix
-// by Prefix stdlib adapter option. Also you can set joinPrefixToMsg  if you need
+// by Prefix stdlib adapter option. Also you can set joinPrefixToMsg if you need
 // to join the prefix to extracted message fields. For example, you can need it
 // when using log.Lmsgprefix flag.
 func Prefix(prefix string, joinPrefixToMsg bool) StdlibAdapterOption {
