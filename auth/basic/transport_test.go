@@ -108,11 +108,6 @@ func TestContextToGRPC(t *testing.T) {
 	md := metadata.MD{}
 	reqFunc(ctx, &md)
 
-	_, ok := md["authorization"]
-	if ok {
-		t.Error("authorization key should not exist in metadata")
-	}
-
 	// Correct Token is passed in the context
 	ctx = context.WithValue(context.Background(), BasicTokenContextKey, basicAuthToken)
 	md = metadata.MD{}

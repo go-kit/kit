@@ -20,11 +20,6 @@ const (
 	BasicTokenContextKey contextKey = "BasicToken"
 )
 
-const (
-	basic       string = "basic"
-	basicFormat string = "Basic %s"
-)
-
 // HTTPToContext moves a basic token from request header to context. Particularly
 // useful for servers.
 func HTTPToContext() http.RequestFunc {
@@ -73,11 +68,8 @@ func GRPCToContext() grpc.ServerRequestFunc {
 // useful for clients.
 func ContextToGRPC() grpc.ClientRequestFunc {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
-		token, ok := ctx.Value(BasicTokenContextKey).(string)
-		if ok {
-			// capital "Key" is illegal in HTTP/2.
-			(*md)["authorization"] = []string{generateAuthHeaderFromToken(token)}
-		}
+		token, _ := ctx.Value(BasicTokenContextKey).(string)
+		(*md)["authorization"] = []string{generateAuthHeaderFromToken(token)}
 
 		return ctx
 	}
@@ -85,7 +77,7 @@ func ContextToGRPC() grpc.ClientRequestFunc {
 
 func extractTokenFromAuthHeader(val string) (token string, ok bool) {
 	authHeaderParts := strings.Split(val, " ")
-	if len(authHeaderParts) != 2 || !strings.EqualFold(authHeaderParts[0], basic) {
+	if len(authHeaderParts) != 2 || !strings.EqualFold(authHeaderParts[0], "basic") {
 		return "", false
 	}
 
@@ -93,5 +85,5 @@ func extractTokenFromAuthHeader(val string) (token string, ok bool) {
 }
 
 func generateAuthHeaderFromToken(token string) string {
-	return fmt.Sprintf(basicFormat, token)
+	return fmt.Sprintf("Basic %s", token)
 }
