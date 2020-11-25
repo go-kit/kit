@@ -25,9 +25,10 @@ require (
 	github.com/gorilla/mux v1.7.3
 	github.com/hashicorp/consul/api v1.3.0
 	github.com/hashicorp/go-version v1.2.0 // indirect
+	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/hudl/fargo v1.3.0
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
-	github.com/lightstep/lightstep-tracer-go v0.18.1
+	github.com/lightstep/lightstep-tracer-go v0.22.0
 	github.com/nats-io/nats-server/v2 v2.1.2
 	github.com/nats-io/nats.go v1.9.1
 	github.com/oklog/oklog v0.3.2
@@ -49,7 +50,7 @@ require (
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/streadway/handy v0.0.0-20190108123426-d5acb3125c2a
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
-	go.opencensus.io v0.22.2
+	go.opencensus.io v0.22.3
 	go.uber.org/zap v1.13.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
