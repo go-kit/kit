@@ -52,17 +52,12 @@ func MessageKey(key string) StdlibAdapterOption {
 	return func(a *StdlibAdapter) { a.messageKey = key }
 }
 
-// Prefix sets value of the prefix for the actual log message. By default,
-// there's no prefix.
+// Prefix configures the adapter to parse a prefix from stdlib log events. If
+// you provide a non-empty prefix to the stdlib logger, then your should provide
+// that same prefix to the adapter via this option.
 //
-// When you create a stdlib Logger, you can define a log prefix like this:
-//
-//		logger := log.New(w, "some prefix", log.LstdFlags)
-//
-// To correctly extract stdlib logger fields, you should set the same prefix
-// by Prefix stdlib adapter option. Also you can set joinPrefixToMsg if you need
-// to join the prefix to extracted message fields. For example, you can need it
-// when using log.Lmsgprefix flag.
+// By default, the prefix isn't included in the msg key. Set joinPrefixToMsg to
+// true if you want to include the parsed prefix in the msg.
 func Prefix(prefix string, joinPrefixToMsg bool) StdlibAdapterOption {
 	return func(a *StdlibAdapter) { a.prefix = prefix; a.joinPrefixToMsg = joinPrefixToMsg }
 }
