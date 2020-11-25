@@ -72,6 +72,56 @@ func TestStdLibAdapterExtraction(t *testing.T) {
 	}
 }
 
+func TestStdLibAdapterPrefixedExtraction(t *testing.T) {
+	buf := &bytes.Buffer{}
+	logger := NewLogfmtLogger(buf)
+	writer := NewStdlibAdapter(logger, Prefix("some prefix ", false))
+	for input, want := range map[string]string{
+		"some prefix hello":                                            "msg=hello\n",
+		"some prefix 2009/01/23: hello":                                "ts=2009/01/23 msg=hello\n",
+		"some prefix 2009/01/23 01:23:23: hello":                       "ts=\"2009/01/23 01:23:23\" msg=hello\n",
+		"some prefix 01:23:23: hello":                                  "ts=01:23:23 msg=hello\n",
+		"some prefix 2009/01/23 01:23:23.123123: hello":                "ts=\"2009/01/23 01:23:23.123123\" msg=hello\n",
+		"some prefix 2009/01/23 01:23:23.123123 /a/b/c/d.go:23: hello": "ts=\"2009/01/23 01:23:23.123123\" caller=/a/b/c/d.go:23 msg=hello\n",
+		"some prefix 01:23:23.123123 /a/b/c/d.go:23: hello":            "ts=01:23:23.123123 caller=/a/b/c/d.go:23 msg=hello\n",
+		"some prefix 2009/01/23 01:23:23 /a/b/c/d.go:23: hello":        "ts=\"2009/01/23 01:23:23\" caller=/a/b/c/d.go:23 msg=hello\n",
+		"some prefix 2009/01/23 /a/b/c/d.go:23: hello":                 "ts=2009/01/23 caller=/a/b/c/d.go:23 msg=hello\n",
+		"some prefix /a/b/c/d.go:23: hello":                            "caller=/a/b/c/d.go:23 msg=hello\n",
+		"/a/b/c/d.go:23: some prefix hello":                            "caller=/a/b/c/d.go:23 msg=hello\n",
+	} {
+		buf.Reset()
+		fmt.Fprint(writer, input)
+		if have := buf.String(); want != have {
+			t.Errorf("%q: want %#v, have %#v", input, want, have)
+		}
+	}
+}
+
+func TestStdLibAdapterPrefixedExtractionWithJoinToMessage(t *testing.T) {
+	buf := &bytes.Buffer{}
+	logger := NewLogfmtLogger(buf)
+	writer := NewStdlibAdapter(logger, Prefix("some prefix ", true))
+	for input, want := range map[string]string{
+		"some prefix hello":                                            "msg=\"some prefix hello\"\n",
+		"some prefix 2009/01/23: hello":                                "ts=2009/01/23 msg=\"some prefix hello\"\n",
+		"some prefix 2009/01/23 01:23:23: hello":                       "ts=\"2009/01/23 01:23:23\" msg=\"some prefix hello\"\n",
+		"some prefix 01:23:23: hello":                                  "ts=01:23:23 msg=\"some prefix hello\"\n",
+		"some prefix 2009/01/23 01:23:23.123123: hello":                "ts=\"2009/01/23 01:23:23.123123\" msg=\"some prefix hello\"\n",
+		"some prefix 2009/01/23 01:23:23.123123 /a/b/c/d.go:23: hello": "ts=\"2009/01/23 01:23:23.123123\" caller=/a/b/c/d.go:23 msg=\"some prefix hello\"\n",
+		"some prefix 01:23:23.123123 /a/b/c/d.go:23: hello":            "ts=01:23:23.123123 caller=/a/b/c/d.go:23 msg=\"some prefix hello\"\n",
+		"some prefix 2009/01/23 01:23:23 /a/b/c/d.go:23: hello":        "ts=\"2009/01/23 01:23:23\" caller=/a/b/c/d.go:23 msg=\"some prefix hello\"\n",
+		"some prefix 2009/01/23 /a/b/c/d.go:23: hello":                 "ts=2009/01/23 caller=/a/b/c/d.go:23 msg=\"some prefix hello\"\n",
+		"some prefix /a/b/c/d.go:23: hello":                            "caller=/a/b/c/d.go:23 msg=\"some prefix hello\"\n",
+		"/a/b/c/d.go:23: some prefix hello":                            "caller=/a/b/c/d.go:23 msg=\"some prefix hello\"\n",
+	} {
+		buf.Reset()
+		fmt.Fprint(writer, input)
+		if have := buf.String(); want != have {
+			t.Errorf("%q: want %#v, have %#v", input, want, have)
+		}
+	}
+}
+
 func TestStdlibAdapterSubexps(t *testing.T) {
 	for input, wantMap := range map[string]map[string]string{
 		"hello world": {
