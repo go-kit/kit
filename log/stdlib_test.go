@@ -130,6 +130,12 @@ func TestStdlibAdapterSubexps(t *testing.T) {
 			"file": "",
 			"msg":  "hello world",
 		},
+		"hello\nworld": {
+			"date": "",
+			"time": "",
+			"file": "",
+			"msg":  "hello\nworld",
+		},
 		"2009/01/23: hello world": {
 			"date": "2009/01/23",
 			"time": "",
