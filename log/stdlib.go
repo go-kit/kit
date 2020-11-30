@@ -131,7 +131,7 @@ const (
 	logRegexpDate = `(?P<date>[0-9]{4}/[0-9]{2}/[0-9]{2})?[ ]?`
 	logRegexpTime = `(?P<time>[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?)?[ ]?`
 	logRegexpFile = `(?P<file>.+?:[0-9]+)?`
-	logRegexpMsg  = `(: )?(?P<msg>.*)`
+	logRegexpMsg  = `(: )?(?P<msg>(?s:.*))`
 )
 
 var (
@@ -145,7 +145,7 @@ func subexps(line []byte) map[string]string {
 	}
 	result := map[string]string{}
 	for i, name := range logRegexp.SubexpNames() {
-		result[name] = string(m[i])
+		result[name] = strings.TrimRight(string(m[i]), "\n")
 	}
 	return result
 }
