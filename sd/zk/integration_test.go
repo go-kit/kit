@@ -179,23 +179,27 @@ func TestGetEntriesPayloadOnServer(t *testing.T) {
 	if len(host) == 0 {
 		t.Skip("ZK_ADDR not set; skipping integration test")
 	}
+
 	c, err := NewClient(host, logger)
 	if err != nil {
 		t.Fatalf("Connect returned error: %v", err)
 	}
+
 	_, eventc, err := c.GetEntries(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	logger := newTestLogger(t)
+
 	instance3 := Service{
 		Path:   path,
 		Name:   "instance3",
 		Data:   []byte("just some payload"),
-		Logger: newTestLogger(t),
+		Logger: log.With(logger, "component", "service"),
 	}
 
-	registrar := NewRegistrar(c, instance3, logger)
+	registrar := NewRegistrar(c, instance3, log.With(logger, "component", "registrar"))
 	registrar.Register()
 
 	select {
@@ -203,7 +207,7 @@ func TestGetEntriesPayloadOnServer(t *testing.T) {
 		if want, have := stdzk.EventNodeChildrenChanged.String(), event.Type.String(); want != have {
 			t.Errorf("want %s, have %s", want, have)
 		}
-	case <-time.After(1000 * time.Millisecond):
+	case <-time.After(10 * time.Second):
 		t.Errorf("expected incoming watch event, timeout occurred")
 	}
 
