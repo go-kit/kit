@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	stdzk "github.com/samuel/go-zookeeper/zk"
 )
 
@@ -188,12 +189,15 @@ func TestGetEntriesPayloadOnServer(t *testing.T) {
 	}
 
 	instance3 := Service{
-		Path: path,
-		Name: "instance3",
-		Data: []byte("just some payload"),
+		Path:   path,
+		Name:   "instance3",
+		Data:   []byte("just some payload"),
+		Logger: newTestLogger(t),
 	}
+
 	registrar := NewRegistrar(c, instance3, logger)
 	registrar.Register()
+
 	select {
 	case event := <-eventc:
 		if want, have := stdzk.EventNodeChildrenChanged.String(), event.Type.String(); want != have {
@@ -218,4 +222,22 @@ func TestGetEntriesPayloadOnServer(t *testing.T) {
 		t.Errorf("expected incoming watch event, timeout occurred")
 	}
 
+}
+
+type testLogger struct {
+	t *testing.T
+}
+
+func newTestLogger(t *testing.T) *testLogger {
+	return &testLogger{
+		t: t,
+	}
+}
+
+func (t *testLogger) Log(keyvals ...interface{}) error {
+	buffer := &bytes.Buffer{}
+	logger := log.NewLogfmtLogger(buffer)
+	err := logger.Log(keyvals...)
+	t.t.Log(buffer.String())
+	return err
 }
