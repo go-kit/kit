@@ -176,6 +176,8 @@ func TestGetEntriesOnServer(t *testing.T) {
 }
 
 func TestGetEntriesPayloadOnServer(t *testing.T) {
+	t.Skip("FLAKY")
+
 	if len(host) == 0 {
 		t.Skip("ZK_ADDR not set; skipping integration test")
 	}
