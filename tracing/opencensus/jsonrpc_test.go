@@ -23,6 +23,8 @@ import (
 )
 
 func TestJSONRPCClientTrace(t *testing.T) {
+	t.Skip("FLAKY")
+
 	var (
 		err          error
 		rec          = &recordingExporter{}
