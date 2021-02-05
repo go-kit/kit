@@ -193,10 +193,9 @@ func TestGetEntriesPayloadOnServer(t *testing.T) {
 	logger := newTestLogger(t)
 
 	instance3 := Service{
-		Path:   path,
-		Name:   "instance3",
-		Data:   []byte("just some payload"),
-		Logger: log.With(logger, "component", "service"),
+		Path: path,
+		Name: "instance3",
+		Data: []byte("just some payload"),
 	}
 
 	registrar := NewRegistrar(c, instance3, log.With(logger, "component", "registrar"))
