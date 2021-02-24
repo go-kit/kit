@@ -11,7 +11,7 @@
 systems and application architecture so you can focus on delivering
 business value.
 
-- Website: [gokit.io](https://gokit.io)
+- Website: [gokit.io](https://go-kit.github.io/)
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
 - Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](https://gophersinvite.herokuapp.com/))
 
