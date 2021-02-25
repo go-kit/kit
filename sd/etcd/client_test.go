@@ -1,11 +1,11 @@
 package etcd
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
 	"time"
-	"context"
 
 	etcd "go.etcd.io/etcd/client"
 )
@@ -135,7 +135,7 @@ func (fw *fakeWatcher) Next(context.Context) (*etcd.Response, error) {
 			return nil, nil
 		case <-fw.err:
 			return nil, errors.New("error from underlying etcd watcher")
-		default:
+
 		}
 	}
 }
