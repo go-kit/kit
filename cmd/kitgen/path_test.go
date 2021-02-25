@@ -40,7 +40,7 @@ func TestImportPathSadpath(t *testing.T) {
 			if actual != "" {
 				t.Errorf("Expected empty path, got %q", actual)
 			}
-			if strings.Index(err.Error(), expected) == -1 {
+			if !strings.Contains(err.Error(), expected) {
 				t.Errorf("Expected %q to include %q", err, expected)
 			}
 		})
