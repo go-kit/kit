@@ -76,7 +76,7 @@ func TestGRPCToContext(t *testing.T) {
 	}
 
 	// Invalid Authorization header is passed
-	md["authorization"] = []string{fmt.Sprintf("%s", signedKey)}
+	md["authorization"] = []string{signedKey}
 	ctx = reqFunc(context.Background(), md)
 	token = ctx.Value(JWTContextKey)
 	if token != nil {
