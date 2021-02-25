@@ -58,8 +58,7 @@ func TestSwapLoggerConcurrency(t *testing.T) {
 }
 
 func TestSyncLoggerConcurrency(t *testing.T) {
-	var w io.Writer
-	w = &bytes.Buffer{}
+	var w io.Writer = &bytes.Buffer{}
 	logger := log.NewLogfmtLogger(w)
 	logger = log.NewSyncLogger(logger)
 	testConcurrency(t, logger, 10000)
