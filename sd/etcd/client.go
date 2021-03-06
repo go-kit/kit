@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	etcd "go.etcd.io/etcd/client"
+	etcd "go.etcd.io/etcd/client/v2"
 )
 
 var (
