@@ -7,7 +7,7 @@ through [JSON Web Tokens](https://jwt.io/).
 
 NewParser takes a key function and an expected signing method and returns an
 `endpoint.Middleware`. The middleware will parse a token passed into the
-context via the `jwt.JWTTokenContextKey`. If the token is valid, any claims
+context via the `jwt.JWTContextKey`. If the token is valid, any claims
 will be added to the context via the `jwt.JWTClaimsContextKey`.
 
 ```go
@@ -30,7 +30,7 @@ func main() {
 
 NewSigner takes a JWT key ID header, the signing key, signing method, and a
 claims object. It returns an `endpoint.Middleware`. The middleware will build
-the token string and add it to the context via the `jwt.JWTTokenContextKey`.
+the token string and add it to the context via the `jwt.JWTContextKey`.
 
 ```go
 import (
