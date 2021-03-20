@@ -11,8 +11,8 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        go: ['1.14', '1.15']
+      matrix:  # Support latest and one minor back
+        go: ['1.15', '1.16']
     env:
       GOFLAGS: -mod=readonly
 
