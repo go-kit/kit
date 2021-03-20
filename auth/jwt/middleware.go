@@ -14,7 +14,12 @@ type contextKey string
 const (
 	// JWTContextKey holds the key used to store a JWT in the
 	// context.
-	JWTContextKey contextKey = "JWT"
+	JWTContextKey contextKey = "JWTToken"
+
+	// JWTTokenContextKey is an alias for JWTContextKey.
+	//
+	// Deprecated: exists for historical compatibility only, prefer JWTContextKey.
+	JWTTokenContextKey contextKey = JWTContextKey
 
 	// JWTClaimsContextKey holds the key used to store the JWT Claims in the
 	// context.
