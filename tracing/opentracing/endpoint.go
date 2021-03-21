@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/opentracing/opentracing-go"
-	otext "github.com/opentracing/opentracing-go/ext"
+	"github.com/opentracing/opentracing-go/ext"
 
 	"github.com/go-kit/kit/endpoint"
 )
@@ -14,9 +14,21 @@ import (
 //
 // If `ctx` already has a Span, it is re-used and the operation name is
 // overwritten. If `ctx` does not yet have a Span, one is created here.
-func TraceServer(tracer opentracing.Tracer, operationName string) endpoint.Middleware {
+func TraceServer(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
+	cfg := &EndpointOptions{}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
+			if cfg.GetOperationName != nil {
+				if newOperationName := cfg.GetOperationName(ctx, operationName); newOperationName != "" {
+					operationName = newOperationName
+				}
+			}
+
 			serverSpan := opentracing.SpanFromContext(ctx)
 			if serverSpan == nil {
 				// All we can do is create a new root span.
@@ -25,18 +37,42 @@ func TraceServer(tracer opentracing.Tracer, operationName string) endpoint.Middl
 				serverSpan.SetOperationName(operationName)
 			}
 			defer serverSpan.Finish()
-			otext.SpanKindRPCServer.Set(serverSpan)
+			ext.SpanKindRPCServer.Set(serverSpan)
 			ctx = opentracing.ContextWithSpan(ctx, serverSpan)
-			return next(ctx, request)
+
+			applyTags(serverSpan, cfg.Tags)
+			if cfg.GetTags != nil {
+				extraTags := cfg.GetTags(ctx)
+				applyTags(serverSpan, extraTags)
+			}
+
+			response, err := next(ctx, request)
+			if err := identifyError(response, err, cfg.IgnoreBusinessError); err != nil {
+				ext.LogError(serverSpan, err)
+			}
+
+			return response, err
 		}
 	}
 }
 
 // TraceClient returns a Middleware that wraps the `next` Endpoint in an
 // OpenTracing Span called `operationName`.
-func TraceClient(tracer opentracing.Tracer, operationName string) endpoint.Middleware {
+func TraceClient(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
+	cfg := &EndpointOptions{}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
+			if cfg.GetOperationName != nil {
+				if newOperationName := cfg.GetOperationName(ctx, operationName); newOperationName != "" {
+					operationName = newOperationName
+				}
+			}
+
 			var clientSpan opentracing.Span
 			if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
 				clientSpan = tracer.StartSpan(
@@ -47,9 +83,41 @@ func TraceClient(tracer opentracing.Tracer, operationName string) endpoint.Middl
 				clientSpan = tracer.StartSpan(operationName)
 			}
 			defer clientSpan.Finish()
-			otext.SpanKindRPCClient.Set(clientSpan)
+			ext.SpanKindRPCClient.Set(clientSpan)
 			ctx = opentracing.ContextWithSpan(ctx, clientSpan)
-			return next(ctx, request)
+
+			applyTags(clientSpan, cfg.Tags)
+			if cfg.GetTags != nil {
+				extraTags := cfg.GetTags(ctx)
+				applyTags(clientSpan, extraTags)
+			}
+
+			response, err := next(ctx, request)
+			if err := identifyError(response, err, cfg.IgnoreBusinessError); err != nil {
+				ext.LogError(clientSpan, err)
+			}
+
+			return response, err
 		}
 	}
+}
+
+func applyTags(span opentracing.Span, tags opentracing.Tags) {
+	for key, value := range tags {
+		span.SetTag(key, value)
+	}
+}
+
+func identifyError(response interface{}, err error, ignoreBusinessError bool) error {
+	if err != nil {
+		return err
+	}
+
+	if !ignoreBusinessError {
+		if res, ok := response.(endpoint.Failer); ok {
+			return res.Failed()
+		}
+	}
+
+	return nil
 }
