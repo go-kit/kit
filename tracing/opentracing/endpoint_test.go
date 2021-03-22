@@ -2,6 +2,9 @@ package opentracing_test
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"github.com/opentracing/opentracing-go/ext"
 	"testing"
 
 	"github.com/opentracing/opentracing-go"
@@ -10,6 +13,33 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	kitot "github.com/go-kit/kit/tracing/opentracing"
 )
+
+const (
+	span1 = "SPAN-1"
+	span2 = "SPAN-2"
+	span3 = "SPAN-3"
+	span4 = "SPAN-4"
+	span5 = "SPAN-5"
+	span6 = "SPAN-6"
+	span7 = "SPAN-7"
+)
+
+var (
+	err1 = errors.New("some error")
+	err2 = errors.New("some business error")
+	err3 = errors.New("other business error")
+)
+
+// compile time assertion
+var _ endpoint.Failer = failedResponse{}
+
+type failedResponse struct {
+	err error
+}
+
+func (r failedResponse) Failed() error {
+	return r.err
+}
 
 func TestTraceServer(t *testing.T) {
 	tracer := mocktracer.New()
@@ -58,6 +88,167 @@ func TestTraceServerNoContextSpan(t *testing.T) {
 
 	endpointSpan := finishedSpans[0]
 	if want, have := "testOp", endpointSpan.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+}
+
+func TestTraceServerWithOptions(t *testing.T) {
+	tracer := mocktracer.New()
+
+	// span 1 without options
+	mw := kitot.TraceServer(tracer, span1)
+	tracedEndpoint := mw(endpoint.Nop)
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 2 with options
+	mw = kitot.TraceServer(
+		tracer,
+		span2,
+		kitot.WithOptions(kitot.EndpointOptions{}),
+	)
+	tracedEndpoint = mw(func(context.Context, interface{}) (interface{}, error) {
+		return nil, err1
+	})
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 3 with disabled IgnoreBusinessError option
+	mw = kitot.TraceServer(
+		tracer,
+		span3,
+		kitot.WithIgnoreBusinessError(false),
+	)
+	tracedEndpoint = mw(func(context.Context, interface{}) (interface{}, error) {
+		return failedResponse{
+			err: err2,
+		}, nil
+	})
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 4 with enabled IgnoreBusinessError option
+	mw = kitot.TraceServer(tracer, span4, kitot.WithIgnoreBusinessError(true))
+	tracedEndpoint = mw(func(context.Context, interface{}) (interface{}, error) {
+		return failedResponse{
+			err: err3,
+		}, nil
+	})
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 5 with OperationName option
+	mw = kitot.TraceServer(
+		tracer,
+		span5,
+		kitot.WithOperationName(func(ctx context.Context, name string) string {
+			return fmt.Sprintf("%s-%s", "new", name)
+		}),
+	)
+	tracedEndpoint = mw(endpoint.Nop)
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 6 with Tags options
+	mw = kitot.TraceServer(
+		tracer,
+		span6,
+		kitot.WithTags(map[string]interface{}{
+			"tag1": "tag1",
+		}),
+	)
+	tracedEndpoint = mw(endpoint.Nop)
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 7 with ExtraTags options
+	mw = kitot.TraceServer(
+		tracer,
+		span7,
+		kitot.WithTags(map[string]interface{}{
+			"tag1": "tag1",
+		}),
+		kitot.WithExtraTags(func(ctx context.Context) opentracing.Tags {
+			return map[string]interface{}{
+				"tag2": "tag2",
+			}
+		}),
+	)
+	tracedEndpoint = mw(endpoint.Nop)
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	finishedSpans := tracer.FinishedSpans()
+	if want, have := 7, len(finishedSpans); want != have {
+		t.Fatalf("Want %v span(s), found %v", want, have)
+	}
+
+	// test span 1
+	span := finishedSpans[0]
+
+	if want, have := span1, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	// test span 2
+	span = finishedSpans[1]
+
+	if want, have := span2, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := true, span.Tag("error"); want != have {
+		t.Fatalf("Want %v, have %v", want, have)
+	}
+
+	// test span 3
+	span = finishedSpans[2]
+
+	if want, have := span3, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := true, span.Tag("error"); want != have {
+		t.Fatalf("Want %v, have %v", want, have)
+	}
+
+	// test span 4
+	span = finishedSpans[3]
+
+	if want, have := span4, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := (interface{})(nil), span.Tag("error"); want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	// test span 5
+	span = finishedSpans[4]
+
+	if want, have := fmt.Sprintf("%s-%s", "new", span5), span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	// test span 6
+	span = finishedSpans[5]
+
+	if want, have := span6, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := map[string]interface{}{
+		"span.kind": ext.SpanKindRPCServerEnum,
+		"tag1":      "tag1",
+	}, span.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	// test span 7
+	span = finishedSpans[6]
+
+	if want, have := span7, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := map[string]interface{}{
+		"span.kind": ext.SpanKindRPCServerEnum,
+		"tag1":      "tag1",
+		"tag2":      "tag2",
+	}, span.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
 		t.Fatalf("Want %q, have %q", want, have)
 	}
 }
@@ -112,6 +303,167 @@ func TestTraceClientNoContextSpan(t *testing.T) {
 
 	endpointSpan := finishedSpans[0]
 	if want, have := "testOp", endpointSpan.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+}
+
+func TestTraceClientWithOptions(t *testing.T) {
+	tracer := mocktracer.New()
+
+	// span 1 without options
+	mw := kitot.TraceClient(tracer, span1)
+	tracedEndpoint := mw(endpoint.Nop)
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 2 with options
+	mw = kitot.TraceClient(
+		tracer,
+		span2,
+		kitot.WithOptions(kitot.EndpointOptions{}),
+	)
+	tracedEndpoint = mw(func(context.Context, interface{}) (interface{}, error) {
+		return nil, err1
+	})
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 3 with disabled IgnoreBusinessError option
+	mw = kitot.TraceClient(
+		tracer,
+		span3,
+		kitot.WithIgnoreBusinessError(false),
+	)
+	tracedEndpoint = mw(func(context.Context, interface{}) (interface{}, error) {
+		return failedResponse{
+			err: err2,
+		}, nil
+	})
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 4 with enabled IgnoreBusinessError option
+	mw = kitot.TraceClient(tracer, span4, kitot.WithIgnoreBusinessError(true))
+	tracedEndpoint = mw(func(context.Context, interface{}) (interface{}, error) {
+		return failedResponse{
+			err: err3,
+		}, nil
+	})
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 5 with OperationName option
+	mw = kitot.TraceClient(
+		tracer,
+		span5,
+		kitot.WithOperationName(func(ctx context.Context, name string) string {
+			return fmt.Sprintf("%s-%s", "new", name)
+		}),
+	)
+	tracedEndpoint = mw(endpoint.Nop)
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 6 with Tags options
+	mw = kitot.TraceClient(
+		tracer,
+		span6,
+		kitot.WithTags(map[string]interface{}{
+			"tag1": "tag1",
+		}),
+	)
+	tracedEndpoint = mw(endpoint.Nop)
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	// span 7 with ExtraTags options
+	mw = kitot.TraceClient(
+		tracer,
+		span7,
+		kitot.WithTags(map[string]interface{}{
+			"tag1": "tag1",
+		}),
+		kitot.WithExtraTags(func(ctx context.Context) opentracing.Tags {
+			return map[string]interface{}{
+				"tag2": "tag2",
+			}
+		}),
+	)
+	tracedEndpoint = mw(endpoint.Nop)
+	_, _ = tracedEndpoint(context.Background(), struct{}{})
+
+	finishedSpans := tracer.FinishedSpans()
+	if want, have := 7, len(finishedSpans); want != have {
+		t.Fatalf("Want %v span(s), found %v", want, have)
+	}
+
+	// test span 1
+	span := finishedSpans[0]
+
+	if want, have := span1, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	// test span 2
+	span = finishedSpans[1]
+
+	if want, have := span2, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := true, span.Tag("error"); want != have {
+		t.Fatalf("Want %v, have %v", want, have)
+	}
+
+	// test span 3
+	span = finishedSpans[2]
+
+	if want, have := span3, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := true, span.Tag("error"); want != have {
+		t.Fatalf("Want %v, have %v", want, have)
+	}
+
+	// test span 4
+	span = finishedSpans[3]
+
+	if want, have := span4, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := (interface{})(nil), span.Tag("error"); want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	// test span 5
+	span = finishedSpans[4]
+
+	if want, have := fmt.Sprintf("%s-%s", "new", span5), span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	// test span 6
+	span = finishedSpans[5]
+
+	if want, have := span6, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := map[string]interface{}{
+		"span.kind": ext.SpanKindRPCClientEnum,
+		"tag1":      "tag1",
+	}, span.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	// test span 7
+	span = finishedSpans[6]
+
+	if want, have := span7, span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := map[string]interface{}{
+		"span.kind": ext.SpanKindRPCClientEnum,
+		"tag1":      "tag1",
+		"tag2":      "tag2",
+	}, span.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
 		t.Fatalf("Want %q, have %q", want, have)
 	}
 }
