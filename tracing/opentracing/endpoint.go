@@ -31,7 +31,7 @@ func TraceEndpoint(tracer opentracing.Tracer, operationName string, opts ...Endp
 				}
 			}
 
-			span := opentracing.SpanFromContext(ctx)
+			var span opentracing.Span
 			if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
 				span = tracer.StartSpan(
 					operationName,
