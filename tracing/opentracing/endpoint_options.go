@@ -44,23 +44,29 @@ func WithIgnoreBusinessError(ignoreBusinessError bool) EndpointOption {
 	}
 }
 
-// WithOperationName allows to set function that can set the span operation name based on the existing one
+// WithOperationNameFunc allows to set function that can set the span operation name based on the existing one
 // for the endpoint and information in the context.
-func WithOperationName(getOperationName func(ctx context.Context, name string) string) EndpointOption {
+func WithOperationNameFunc(getOperationName func(ctx context.Context, name string) string) EndpointOption {
 	return func(o *EndpointOptions) {
 		o.GetOperationName = getOperationName
 	}
 }
 
-// WithTags sets the default tags for the spans created by the Endpoint tracer.
+// WithTags adds default tags for the spans created by the Endpoint tracer.
 func WithTags(tags opentracing.Tags) EndpointOption {
 	return func(o *EndpointOptions) {
-		o.Tags = tags
+		if o.Tags == nil {
+			o.Tags = make(opentracing.Tags)
+		}
+
+		for key, value := range tags {
+			o.Tags[key] = value
+		}
 	}
 }
 
-// WithExtraTags extracts additional tags from the context.
-func WithExtraTags(getTags func(ctx context.Context) opentracing.Tags) EndpointOption {
+// WithTagsFunc set the func to extracts additional tags from the context.
+func WithTagsFunc(getTags func(ctx context.Context) opentracing.Tags) EndpointOption {
 	return func(o *EndpointOptions) {
 		o.GetTags = getTags
 	}

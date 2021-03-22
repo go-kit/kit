@@ -133,11 +133,11 @@ func TestTraceServerWithOptions(t *testing.T) {
 	})
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
-	// span 5 with OperationName option
+	// span 5 with OperationNameFunc option
 	mw = kitot.TraceServer(
 		tracer,
 		span5,
-		kitot.WithOperationName(func(ctx context.Context, name string) string {
+		kitot.WithOperationNameFunc(func(ctx context.Context, name string) string {
 			return fmt.Sprintf("%s-%s", "new", name)
 		}),
 	)
@@ -150,21 +150,29 @@ func TestTraceServerWithOptions(t *testing.T) {
 		span6,
 		kitot.WithTags(map[string]interface{}{
 			"tag1": "tag1",
+			"tag2": "tag2",
+		}),
+		kitot.WithTags(map[string]interface{}{
+			"tag3": "tag3",
 		}),
 	)
 	tracedEndpoint = mw(endpoint.Nop)
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
-	// span 7 with ExtraTags options
+	// span 7 with TagsFunc options
 	mw = kitot.TraceServer(
 		tracer,
 		span7,
 		kitot.WithTags(map[string]interface{}{
 			"tag1": "tag1",
+			"tag2": "tag2",
 		}),
-		kitot.WithExtraTags(func(ctx context.Context) opentracing.Tags {
+		kitot.WithTags(map[string]interface{}{
+			"tag3": "tag3",
+		}),
+		kitot.WithTagsFunc(func(ctx context.Context) opentracing.Tags {
 			return map[string]interface{}{
-				"tag2": "tag2",
+				"tag4": "tag4",
 			}
 		}),
 	)
@@ -233,6 +241,8 @@ func TestTraceServerWithOptions(t *testing.T) {
 	if want, have := map[string]interface{}{
 		"span.kind": ext.SpanKindRPCServerEnum,
 		"tag1":      "tag1",
+		"tag2":      "tag2",
+		"tag3":      "tag3",
 	}, span.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
 		t.Fatalf("Want %q, have %q", want, have)
 	}
@@ -248,6 +258,8 @@ func TestTraceServerWithOptions(t *testing.T) {
 		"span.kind": ext.SpanKindRPCServerEnum,
 		"tag1":      "tag1",
 		"tag2":      "tag2",
+		"tag3":      "tag3",
+		"tag4":      "tag4",
 	}, span.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
 		t.Fatalf("Want %q, have %q", want, have)
 	}
@@ -348,11 +360,11 @@ func TestTraceClientWithOptions(t *testing.T) {
 	})
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
-	// span 5 with OperationName option
+	// span 5 with OperationNameFunc option
 	mw = kitot.TraceClient(
 		tracer,
 		span5,
-		kitot.WithOperationName(func(ctx context.Context, name string) string {
+		kitot.WithOperationNameFunc(func(ctx context.Context, name string) string {
 			return fmt.Sprintf("%s-%s", "new", name)
 		}),
 	)
@@ -365,21 +377,29 @@ func TestTraceClientWithOptions(t *testing.T) {
 		span6,
 		kitot.WithTags(map[string]interface{}{
 			"tag1": "tag1",
+			"tag2": "tag2",
+		}),
+		kitot.WithTags(map[string]interface{}{
+			"tag3": "tag3",
 		}),
 	)
 	tracedEndpoint = mw(endpoint.Nop)
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
-	// span 7 with ExtraTags options
+	// span 7 with TagsFunc options
 	mw = kitot.TraceClient(
 		tracer,
 		span7,
 		kitot.WithTags(map[string]interface{}{
 			"tag1": "tag1",
+			"tag2": "tag2",
 		}),
-		kitot.WithExtraTags(func(ctx context.Context) opentracing.Tags {
+		kitot.WithTags(map[string]interface{}{
+			"tag3": "tag3",
+		}),
+		kitot.WithTagsFunc(func(ctx context.Context) opentracing.Tags {
 			return map[string]interface{}{
-				"tag2": "tag2",
+				"tag4": "tag4",
 			}
 		}),
 	)
@@ -448,6 +468,8 @@ func TestTraceClientWithOptions(t *testing.T) {
 	if want, have := map[string]interface{}{
 		"span.kind": ext.SpanKindRPCClientEnum,
 		"tag1":      "tag1",
+		"tag2":      "tag2",
+		"tag3":      "tag3",
 	}, span.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
 		t.Fatalf("Want %q, have %q", want, have)
 	}
@@ -463,6 +485,8 @@ func TestTraceClientWithOptions(t *testing.T) {
 		"span.kind": ext.SpanKindRPCClientEnum,
 		"tag1":      "tag1",
 		"tag2":      "tag2",
+		"tag3":      "tag3",
+		"tag4":      "tag4",
 	}, span.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
 		t.Fatalf("Want %q, have %q", want, have)
 	}
