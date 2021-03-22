@@ -21,17 +21,15 @@ type EndpointOptions struct {
 	// creation by our Endpoint middleware.
 	Tags opentracing.Tags
 
-	// GetTags is an optional function that can extract trace tags
+	// GetTags is an optional function that can extract tags
 	// from the context and add them to the span.
 	GetTags func(ctx context.Context) opentracing.Tags
 }
 
-// EndpointOption allows for functional options to Opentracing endpoint
-// tracing middleware.
+// EndpointOption allows for functional options to endpoint tracing middleware.
 type EndpointOption func(*EndpointOptions)
 
-// WithOptions sets all configuration options at once by use of the
-// EndpointOptions struct.
+// WithOptions sets all configuration options at once by use of the EndpointOptions struct.
 func WithOptions(options EndpointOptions) EndpointOption {
 	return func(o *EndpointOptions) {
 		*o = options
@@ -61,7 +59,7 @@ func WithTags(tags opentracing.Tags) EndpointOption {
 	}
 }
 
-// WithExtraTags extracts additional attributes from the context.
+// WithExtraTags extracts additional tags from the context.
 func WithExtraTags(getTags func(ctx context.Context) opentracing.Tags) EndpointOption {
 	return func(o *EndpointOptions) {
 		o.GetTags = getTags
