@@ -9,13 +9,15 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-// TraceServer returns a Middleware that wraps the `next` Endpoint in an
+// TraceEndpoint returns a Middleware that wraps the `next` Endpoint in an
 // OpenTracing Span called `operationName`.
 //
-// If `ctx` already has a Span, it is re-used and the operation name is
-// overwritten. If `ctx` does not yet have a Span, one is created here.
-func TraceServer(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
-	cfg := &EndpointOptions{}
+// If `ctx` already has a Span, child span is created from it.
+// If `ctx` doesn't yet have a Span, the new one is created.
+func TraceEndpoint(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
+	cfg := &EndpointOptions{
+		Tags: make(opentracing.Tags),
+	}
 
 	for _, opt := range opts {
 		opt(cfg)
@@ -29,26 +31,27 @@ func TraceServer(tracer opentracing.Tracer, operationName string, opts ...Endpoi
 				}
 			}
 
-			serverSpan := opentracing.SpanFromContext(ctx)
-			if serverSpan == nil {
-				// All we can do is create a new root span.
-				serverSpan = tracer.StartSpan(operationName)
+			span := opentracing.SpanFromContext(ctx)
+			if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
+				span = tracer.StartSpan(
+					operationName,
+					opentracing.ChildOf(parentSpan.Context()),
+				)
 			} else {
-				serverSpan.SetOperationName(operationName)
+				span = tracer.StartSpan(operationName)
 			}
-			defer serverSpan.Finish()
-			ext.SpanKindRPCServer.Set(serverSpan)
-			ctx = opentracing.ContextWithSpan(ctx, serverSpan)
+			defer span.Finish()
+			ctx = opentracing.ContextWithSpan(ctx, span)
 
-			applyTags(serverSpan, cfg.Tags)
+			applyTags(span, cfg.Tags)
 			if cfg.GetTags != nil {
 				extraTags := cfg.GetTags(ctx)
-				applyTags(serverSpan, extraTags)
+				applyTags(span, extraTags)
 			}
 
 			response, err := next(ctx, request)
 			if err := identifyError(response, err, cfg.IgnoreBusinessError); err != nil {
-				ext.LogError(serverSpan, err)
+				ext.LogError(span, err)
 			}
 
 			return response, err
@@ -56,50 +59,24 @@ func TraceServer(tracer opentracing.Tracer, operationName string, opts ...Endpoi
 	}
 }
 
+// TraceServer returns a Middleware that wraps the `next` Endpoint in an
+// OpenTracing Span called `operationName` with server span.kind tag..
+func TraceServer(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
+	opts = append(opts, WithTags(map[string]interface{}{
+		ext.SpanKindRPCServer.Key: ext.SpanKindRPCServer.Value,
+	}))
+
+	return TraceEndpoint(tracer, operationName, opts...)
+}
+
 // TraceClient returns a Middleware that wraps the `next` Endpoint in an
-// OpenTracing Span called `operationName`.
+// OpenTracing Span called `operationName` with client span.kind tag.
 func TraceClient(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
-	cfg := &EndpointOptions{}
+	opts = append(opts, WithTags(map[string]interface{}{
+		ext.SpanKindRPCServer.Key: ext.SpanKindRPCClient.Value,
+	}))
 
-	for _, opt := range opts {
-		opt(cfg)
-	}
-
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (interface{}, error) {
-			if cfg.GetOperationName != nil {
-				if newOperationName := cfg.GetOperationName(ctx, operationName); newOperationName != "" {
-					operationName = newOperationName
-				}
-			}
-
-			var clientSpan opentracing.Span
-			if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
-				clientSpan = tracer.StartSpan(
-					operationName,
-					opentracing.ChildOf(parentSpan.Context()),
-				)
-			} else {
-				clientSpan = tracer.StartSpan(operationName)
-			}
-			defer clientSpan.Finish()
-			ext.SpanKindRPCClient.Set(clientSpan)
-			ctx = opentracing.ContextWithSpan(ctx, clientSpan)
-
-			applyTags(clientSpan, cfg.Tags)
-			if cfg.GetTags != nil {
-				extraTags := cfg.GetTags(ctx)
-				applyTags(clientSpan, extraTags)
-			}
-
-			response, err := next(ctx, request)
-			if err := identifyError(response, err, cfg.IgnoreBusinessError); err != nil {
-				ext.LogError(clientSpan, err)
-			}
-
-			return response, err
-		}
-	}
+	return TraceEndpoint(tracer, operationName, opts...)
 }
 
 func applyTags(span opentracing.Span, tags opentracing.Tags) {
