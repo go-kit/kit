@@ -41,13 +41,14 @@ func TraceEndpoint(tracer opentracing.Tracer, operationName string, opts ...Endp
 				span = tracer.StartSpan(operationName)
 			}
 			defer span.Finish()
-			ctx = opentracing.ContextWithSpan(ctx, span)
 
 			applyTags(span, cfg.Tags)
 			if cfg.GetTags != nil {
 				extraTags := cfg.GetTags(ctx)
 				applyTags(span, extraTags)
 			}
+
+			ctx = opentracing.ContextWithSpan(ctx, span)
 
 			response, err := next(ctx, request)
 			if err := identifyError(response, err, cfg.IgnoreBusinessError); err != nil {
