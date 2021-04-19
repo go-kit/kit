@@ -2,11 +2,14 @@ package opentracing
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
+	otext "github.com/opentracing/opentracing-go/ext"
+	otlog "github.com/opentracing/opentracing-go/log"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/sd/lb"
 )
 
 // TraceEndpoint returns a Middleware that wraps the `next` Endpoint in an
@@ -24,7 +27,7 @@ func TraceEndpoint(tracer opentracing.Tracer, operationName string, opts ...Endp
 	}
 
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (interface{}, error) {
+		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			if cfg.GetOperationName != nil {
 				if newOperationName := cfg.GetOperationName(ctx, operationName); newOperationName != "" {
 					operationName = newOperationName
@@ -50,12 +53,46 @@ func TraceEndpoint(tracer opentracing.Tracer, operationName string, opts ...Endp
 
 			ctx = opentracing.ContextWithSpan(ctx, span)
 
-			response, err := next(ctx, request)
-			if err := identifyError(response, err, cfg.IgnoreBusinessError); err != nil {
-				ext.LogError(span, err)
-			}
+			defer func() {
+				if err != nil {
+					if lbErr, ok := err.(lb.RetryError); ok {
+						// handle errors originating from lb.Retry
+						fields := make([]otlog.Field, 0, len(lbErr.RawErrors))
+						for idx, rawErr := range lbErr.RawErrors {
+							fields = append(fields, otlog.String(
+								"gokit.retry.error."+strconv.Itoa(idx+1), rawErr.Error(),
+							))
+						}
 
-			return response, err
+						otext.LogError(span, lbErr, fields...)
+
+						return
+					}
+
+					// generic error
+					otext.LogError(span, err)
+
+					return
+				}
+
+				// test for business error
+				if res, ok := response.(endpoint.Failer); ok && res.Failed() != nil {
+					span.LogFields(
+						otlog.String("gokit.business.error", res.Failed().Error()),
+					)
+
+					if cfg.IgnoreBusinessError {
+						return
+					}
+
+					// treating business error as real error in span.
+					otext.LogError(span, res.Failed())
+
+					return
+				}
+			}()
+
+			return next(ctx, request)
 		}
 	}
 }
@@ -64,7 +101,7 @@ func TraceEndpoint(tracer opentracing.Tracer, operationName string, opts ...Endp
 // OpenTracing Span called `operationName` with server span.kind tag..
 func TraceServer(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
 	opts = append(opts, WithTags(map[string]interface{}{
-		ext.SpanKindRPCServer.Key: ext.SpanKindRPCServer.Value,
+		otext.SpanKindRPCServer.Key: otext.SpanKindRPCServer.Value,
 	}))
 
 	return TraceEndpoint(tracer, operationName, opts...)
@@ -74,7 +111,7 @@ func TraceServer(tracer opentracing.Tracer, operationName string, opts ...Endpoi
 // OpenTracing Span called `operationName` with client span.kind tag.
 func TraceClient(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
 	opts = append(opts, WithTags(map[string]interface{}{
-		ext.SpanKindRPCServer.Key: ext.SpanKindRPCClient.Value,
+		otext.SpanKindRPCClient.Key: otext.SpanKindRPCClient.Value,
 	}))
 
 	return TraceEndpoint(tracer, operationName, opts...)
@@ -84,18 +121,4 @@ func applyTags(span opentracing.Span, tags opentracing.Tags) {
 	for key, value := range tags {
 		span.SetTag(key, value)
 	}
-}
-
-func identifyError(response interface{}, err error, ignoreBusinessError bool) error {
-	if err != nil {
-		return err
-	}
-
-	if !ignoreBusinessError {
-		if res, ok := response.(endpoint.Failer); ok {
-			return res.Failed()
-		}
-	}
-
-	return nil
 }
