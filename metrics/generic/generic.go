@@ -32,11 +32,8 @@ func NewCounter(name string) *Counter {
 
 // With implements Counter.
 func (c *Counter) With(labelValues ...string) metrics.Counter {
-	return &Counter{
-		Name: c.Name,
-		bits: atomic.LoadUint64(&c.bits),
-		lvs:  c.lvs.With(labelValues...),
-	}
+	c.lvs = c.lvs.With(labelValues...)
+	return c
 }
 
 // Add implements Counter.
