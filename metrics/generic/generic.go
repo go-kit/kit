@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"reflect"
 	"sync"
 	"sync/atomic"
 
@@ -18,57 +19,57 @@ import (
 
 // Counter is an in-memory implementation of a Counter.
 type Counter struct {
-	bits uint64 // bits has to be the first word in order to be 64-aligned on 32-bit
-	Name string
-	lvs  lv.LabelValues
+	Name  string
+	lvs   lv.LabelValues
+	space *lv.Space
 }
 
 // NewCounter returns a new, usable Counter.
 func NewCounter(name string) *Counter {
 	return &Counter{
-		Name: name,
+		Name:  name,
+		lvs:   lv.LabelValues{},
+		space: lv.NewSpace(),
 	}
 }
 
 // With implements Counter.
 func (c *Counter) With(labelValues ...string) metrics.Counter {
-	c.lvs = c.lvs.With(labelValues...)
-	return c
+	return &Counter{
+		Name:  c.Name,
+		space: c.space,
+		lvs:   c.lvs.With(labelValues...),
+	}
 }
 
 // Add implements Counter.
 func (c *Counter) Add(delta float64) {
-	for {
-		var (
-			old  = atomic.LoadUint64(&c.bits)
-			newf = math.Float64frombits(old) + delta
-			new  = math.Float64bits(newf)
-		)
-		if atomic.CompareAndSwapUint64(&c.bits, old, new) {
-			break
-		}
-	}
+	c.space.Add(c.Name, c.lvs, delta)
+}
+
+func last(a []float64) float64 {
+	return a[len(a)-1]
 }
 
 // Value returns the current value of the counter.
 func (c *Counter) Value() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&c.bits))
+	var value float64
+	c.space.Walk(func(name string, lvs lv.LabelValues, obs []float64) bool {
+		if reflect.DeepEqual(lvs, c.lvs) {
+			value = last(obs)
+			return false
+		}
+		return true
+	})
+	return value
 }
 
 // ValueReset returns the current value of the counter, and resets it to zero.
 // This is useful for metrics backends whose counter aggregations expect deltas,
 // like Graphite.
 func (c *Counter) ValueReset() float64 {
-	for {
-		var (
-			old  = atomic.LoadUint64(&c.bits)
-			newf = 0.0
-			new  = math.Float64bits(newf)
-		)
-		if atomic.CompareAndSwapUint64(&c.bits, old, new) {
-			return math.Float64frombits(old)
-		}
-	}
+	defer c.space.Reset()
+	return c.Value()
 }
 
 // LabelValues returns the set of label values attached to the counter.

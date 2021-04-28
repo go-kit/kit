@@ -34,13 +34,20 @@ func TestCounter(t *testing.T) {
 }
 
 func TestIssue525(t *testing.T) {
-	counter := generic.NewCounter("issue525_counter")
-	sameCounter := counter.With("label", "counter").(*generic.Counter)
-	if want, have := counter, sameCounter; want != have {
-		t.Errorf("Instance: want %p, have %p", want, have)
-	}
-	if want, have := []string{"label", "counter"}, sameCounter.LabelValues(); !reflect.DeepEqual(want, have) {
+	counterWithoutLabels := generic.NewCounter("issue525_counter")
+	counterWithLabels := counterWithoutLabels.With("label", "counter").(*generic.Counter)
+	if want, have := []string{"label", "counter"}, counterWithLabels.LabelValues(); !reflect.DeepEqual(want, have) {
 		t.Errorf("Label values mismatch: want %+v, have %+v", want, have)
+	}
+
+	counterWithoutLabels.Add(1)
+	counterWithLabels.Add(1)
+	counterWithLabels.Add(1)
+	if want, have := float64(1), counterWithoutLabels.Value(); want != have {
+		t.Errorf("Wrong counter value: want %f, have %f", want, have)
+	}
+	if want, have := float64(2), counterWithLabels.Value(); want != have {
+		t.Errorf("Wrong counter value: want %f, have %f", want, have)
 	}
 }
 
