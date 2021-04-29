@@ -39,15 +39,16 @@ import (
 // To regularly report metrics to an io.Writer, use the WriteLoop helper method.
 // To send to a DogStatsD server, use the SendLoop helper method.
 type Dogstatsd struct {
-	mtx        sync.RWMutex
-	prefix     string
-	rates      *ratemap.RateMap
-	counters   *lv.Space
-	gauges     map[string]*gaugeNode
-	timings    *lv.Space
-	histograms *lv.Space
-	logger     log.Logger
-	lvs        lv.LabelValues
+	mtx           sync.RWMutex
+	prefix        string
+	rates         *ratemap.RateMap
+	counters      *lv.Space
+	gauges        map[string]*gaugeNode
+	distributions *lv.Space
+	timings       *lv.Space
+	histograms    *lv.Space
+	logger        log.Logger
+	lvs           lv.LabelValues
 }
 
 // New returns a Dogstatsd object that may be used to create metrics. Prefix is
@@ -58,14 +59,15 @@ func New(prefix string, logger log.Logger, lvs ...string) *Dogstatsd {
 		panic("odd number of LabelValues; programmer error!")
 	}
 	return &Dogstatsd{
-		prefix:     prefix,
-		rates:      ratemap.New(),
-		counters:   lv.NewSpace(),
-		gauges:     map[string]*gaugeNode{},
-		timings:    lv.NewSpace(),
-		histograms: lv.NewSpace(),
-		logger:     logger,
-		lvs:        lvs,
+		prefix:        prefix,
+		rates:         ratemap.New(),
+		counters:      lv.NewSpace(),
+		gauges:        map[string]*gaugeNode{},
+		distributions: lv.NewSpace(),
+		timings:       lv.NewSpace(),
+		histograms:    lv.NewSpace(),
+		logger:        logger,
+		lvs:           lvs,
 	}
 }
 
@@ -97,6 +99,16 @@ func (d *Dogstatsd) NewTiming(name string, sampleRate float64) *Timing {
 	return &Timing{
 		name: name,
 		obs:  sampleObservations(d.timings.Observe, sampleRate),
+	}
+}
+
+// NewDistribution returns a histogram whose observations are of an unspecified
+// unit, and are forwarded to this Dogstatsd object as distribution metrics.
+func (d *Dogstatsd) NewDistribution(name string, sampleRate float64) *Histogram {
+	d.rates.Set(name, sampleRate)
+	return &Histogram{
+		name: name,
+		obs:  sampleObservations(d.distributions.Observe, sampleRate),
 	}
 }
 
@@ -187,6 +199,21 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 		sampleRate := d.rates.Get(name)
 		for _, value := range values {
 			n, err = fmt.Fprintf(w, "%s%s:%f|h%s%s\n", d.prefix, name, value, sampling(sampleRate), d.tagValues(lvs))
+			if err != nil {
+				return false
+			}
+			count += int64(n)
+		}
+		return true
+	})
+	if err != nil {
+		return count, err
+	}
+
+	d.distributions.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
+		sampleRate := d.rates.Get(name)
+		for _, value := range values {
+			n, err = fmt.Fprintf(w, "%s%s:%f|d%s%s\n", d.prefix, name, value, sampling(sampleRate), d.tagValues(lvs))
 			if err != nil {
 				return false
 			}

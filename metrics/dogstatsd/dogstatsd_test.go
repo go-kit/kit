@@ -88,3 +88,27 @@ func TestTimingSampled(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestDistribution(t *testing.T) {
+	prefix, name := "dogstatsd.", "timing_test"
+	label, value := "wiggle", "bottom"
+	regex := `^` + prefix + name + `:([0-9\.]+)\|d\|#` + label + `:` + value + `$`
+	d := New(prefix, log.NewNopLogger())
+	histogram := d.NewDistribution(name, 1.0).With(label, value)
+	quantiles := teststat.Quantiles(d, regex, 50) // no |@0.X
+	if err := teststat.TestHistogram(histogram, quantiles, 0.01); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDistributionSampled(t *testing.T) {
+	prefix, name := "dogstatsd.", "sampled_timing_test"
+	label, value := "internal", "external"
+	regex := `^` + prefix + name + `:([0-9\.]+)\|d\|@0.03[0]*\|#` + label + `:` + value + `$`
+	d := New(prefix, log.NewNopLogger())
+	distribution := d.NewDistribution(name, 0.03).With(label, value)
+	quantiles := teststat.Quantiles(d, regex, 50)
+	if err := teststat.TestHistogram(distribution, quantiles, 0.02); err != nil {
+		t.Fatal(err)
+	}
+}
