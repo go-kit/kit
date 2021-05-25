@@ -95,8 +95,15 @@ func ServerFinalizer(f ...ServerFinalizerFunc) ServerOption {
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	hj, hijackable := w.(http.Hijacker)
+
 	if len(s.finalizer) > 0 {
-		iw := &interceptingWriter{w, http.StatusOK, 0}
+		var iw *interceptingWriter
+		if hijackable {
+			iw = &interceptingWriter{w, hj, http.StatusOK, 0}
+		} else {
+			iw = &interceptingWriter{w, nil, http.StatusOK, 0}
+		}
 		defer func() {
 			ctx = context.WithValue(ctx, ContextKeyResponseHeaders, iw.Header())
 			ctx = context.WithValue(ctx, ContextKeyResponseSize, iw.written)
@@ -226,6 +233,7 @@ type Headerer interface {
 
 type interceptingWriter struct {
 	http.ResponseWriter
+	http.Hijacker
 	code    int
 	written int64
 }
