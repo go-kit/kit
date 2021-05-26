@@ -17,6 +17,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
+	github.com/felixge/httpsnoop v1.0.2
 	github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db // indirect
 	github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8 // indirect
 	github.com/go-logfmt/logfmt v0.5.0
