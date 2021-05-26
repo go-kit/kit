@@ -98,15 +98,31 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	if len(s.finalizer) > 0 {
-		iw := &interceptingWriter{httpsnoop.Wrap(w, httpsnoop.Hooks{}), http.StatusOK, 0}
+		metrics := httpsnoop.Metrics{Code: http.StatusOK}
+
+		w = httpsnoop.Wrap(w, httpsnoop.Hooks{
+			WriteHeader: func(whf httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+				return func(code int) {
+					metrics.Code = code
+					whf(code)
+				}
+			},
+			Write: func(wf httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+				return func(b []byte) (int, error) {
+					n, err := wf(b)
+					metrics.Written += int64(n)
+					return n, err
+				}
+			},
+		})
+
 		defer func() {
-			ctx = context.WithValue(ctx, ContextKeyResponseHeaders, iw.Header())
-			ctx = context.WithValue(ctx, ContextKeyResponseSize, iw.written)
+			ctx = context.WithValue(ctx, ContextKeyResponseHeaders, w.Header())
+			ctx = context.WithValue(ctx, ContextKeyResponseSize, metrics.Written)
 			for _, f := range s.finalizer {
-				f(ctx, iw.code, r)
+				f(ctx, metrics.Code, r)
 			}
 		}()
-		w = iw
 	}
 
 	for _, f := range s.before {
@@ -224,23 +240,4 @@ type StatusCoder interface {
 // the Content-Type is set.
 type Headerer interface {
 	Headers() http.Header
-}
-
-type interceptingWriter struct {
-	http.ResponseWriter
-	code    int
-	written int64
-}
-
-// WriteHeader may not be explicitly called, so care must be taken to
-// initialize w.code to its default value of http.StatusOK.
-func (w *interceptingWriter) WriteHeader(code int) {
-	w.code = code
-	w.ResponseWriter.WriteHeader(code)
-}
-
-func (w *interceptingWriter) Write(p []byte) (int, error) {
-	n, err := w.ResponseWriter.Write(p)
-	w.written += int64(n)
-	return n, err
 }
