@@ -21,50 +21,49 @@ type TestResponse struct {
 	Error  string `json:"err"`
 }
 
-var natsServer *server.Server
-
-func init() {
-	natsServer = server.New(&server.Options{
+func newNATSConn(t *testing.T) (*server.Server, *nats.Conn) {
+	s, err := server.NewServer(&server.Options{
 		Host: "localhost",
-		Port: 4222,
+		Port: 0,
 	})
-
-	go func() {
-		natsServer.Start()
-	}()
-
-	if ok := natsServer.ReadyForConnections(2 * time.Second); !ok {
-		panic("Failed start of NATS")
-	}
-}
-
-func newNatsConn(t *testing.T) *nats.Conn {
-	// Subscriptions and connections are closed asynchronously, so it's possible
-	// that there's still a subscription from an old connection that must be closed
-	// before the current test can be run.
-	for tries := 20; tries > 0; tries-- {
-		if natsServer.NumSubscriptions() == 0 {
-			break
-		}
-
-		time.Sleep(5 * time.Millisecond)
-	}
-
-	if n := natsServer.NumSubscriptions(); n > 0 {
-		t.Fatalf("found %d active subscriptions on the server", n)
-	}
-
-	nc, err := nats.Connect("nats://"+natsServer.Addr().String(), nats.Name(t.Name()))
 	if err != nil {
-		t.Fatalf("failed to connect to gnatsd server: %s", err)
+		t.Fatal(err)
 	}
 
-	return nc
+	go s.Start()
+
+	for i := 0; i < 5 && !s.Running(); i++ {
+		t.Logf("Running %v", s.Running())
+		time.Sleep(time.Second)
+	}
+	if !s.Running() {
+		s.Shutdown()
+		s.WaitForShutdown()
+		t.Fatal("not yet running")
+	}
+
+	t.Log(s.Addr().String())
+
+	if ok := s.ReadyForConnections(5 * time.Second); !ok {
+		t.Fatal("not ready for connections")
+	}
+
+	//if n := s.NumSubscriptions(); n > 0 {
+	//	t.Fatalf("found %d active subscriptions on the server", n)
+	//}
+
+	c, err := nats.Connect("nats://"+s.Addr().String(), nats.Name(t.Name()))
+	if err != nil {
+		t.Fatalf("failed to connect to NATS server: %s", err)
+	}
+
+	return s, c
 }
 
 func TestSubscriberBadDecode(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
@@ -72,7 +71,7 @@ func TestSubscriberBadDecode(t *testing.T) {
 		func(context.Context, string, *nats.Conn, interface{}) error { return nil },
 	)
 
-	resp := testRequest(t, nc, handler)
+	resp := testRequest(t, c, handler)
 
 	if want, have := "dang", resp.Error; want != have {
 		t.Errorf("want %s, have %s", want, have)
@@ -81,8 +80,9 @@ func TestSubscriberBadDecode(t *testing.T) {
 }
 
 func TestSubscriberBadEndpoint(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errors.New("dang") },
@@ -90,7 +90,7 @@ func TestSubscriberBadEndpoint(t *testing.T) {
 		func(context.Context, string, *nats.Conn, interface{}) error { return nil },
 	)
 
-	resp := testRequest(t, nc, handler)
+	resp := testRequest(t, c, handler)
 
 	if want, have := "dang", resp.Error; want != have {
 		t.Errorf("want %s, have %s", want, have)
@@ -98,8 +98,9 @@ func TestSubscriberBadEndpoint(t *testing.T) {
 }
 
 func TestSubscriberBadEncode(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
@@ -107,7 +108,7 @@ func TestSubscriberBadEncode(t *testing.T) {
 		func(context.Context, string, *nats.Conn, interface{}) error { return errors.New("dang") },
 	)
 
-	resp := testRequest(t, nc, handler)
+	resp := testRequest(t, c, handler)
 
 	if want, have := "dang", resp.Error; want != have {
 		t.Errorf("want %s, have %s", want, have)
@@ -115,8 +116,9 @@ func TestSubscriberBadEncode(t *testing.T) {
 }
 
 func TestSubscriberErrorEncoder(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	errTeapot := errors.New("teapot")
 	code := func(err error) error {
@@ -138,13 +140,13 @@ func TestSubscriberErrorEncoder(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := nc.Publish(reply, b); err != nil {
+			if err := c.Publish(reply, b); err != nil {
 				t.Fatal(err)
 			}
 		}),
 	)
 
-	resp := testRequest(t, nc, handler)
+	resp := testRequest(t, c, handler)
 
 	if want, have := errTeapot.Error(), resp.Error; want != have {
 		t.Errorf("want %s, have %s", want, have)
@@ -168,8 +170,9 @@ func TestSubscriberHappySubject(t *testing.T) {
 }
 
 func TestMultipleSubscriberBefore(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	var (
 		response = struct{ Body string }{"go eat a fly ugly\n"}
@@ -187,7 +190,7 @@ func TestMultipleSubscriberBefore(t *testing.T) {
 				return err
 			}
 
-			return nc.Publish(reply, b)
+			return c.Publish(reply, b)
 		},
 		natstransport.SubscriberBefore(func(ctx context.Context, _ *nats.Msg) context.Context {
 			ctx = context.WithValue(ctx, "one", 1)
@@ -204,7 +207,7 @@ func TestMultipleSubscriberBefore(t *testing.T) {
 		}),
 	)
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +216,7 @@ func TestMultipleSubscriberBefore(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
+		_, err := c.Request("natstransport.test", []byte("test data"), 2*time.Second)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -229,8 +232,9 @@ func TestMultipleSubscriberBefore(t *testing.T) {
 }
 
 func TestMultipleSubscriberAfter(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	var (
 		response = struct{ Body string }{"go eat a fly ugly\n"}
@@ -247,25 +251,21 @@ func TestMultipleSubscriberAfter(t *testing.T) {
 			if err != nil {
 				return err
 			}
-
-			return nc.Publish(reply, b)
+			return c.Publish(reply, b)
 		},
 		natstransport.SubscriberAfter(func(ctx context.Context, nc *nats.Conn) context.Context {
-			ctx = context.WithValue(ctx, "one", 1)
-
-			return ctx
+			return context.WithValue(ctx, "one", 1)
 		}),
 		natstransport.SubscriberAfter(func(ctx context.Context, nc *nats.Conn) context.Context {
 			if _, ok := ctx.Value("one").(int); !ok {
 				t.Error("Value was not set properly when multiple ServerAfters are used")
 			}
-
 			close(done)
 			return ctx
 		}),
 	)
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +274,7 @@ func TestMultipleSubscriberAfter(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
+		_, err := c.Request("natstransport.test", []byte("test data"), 2*time.Second)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -290,8 +290,9 @@ func TestMultipleSubscriberAfter(t *testing.T) {
 }
 
 func TestSubscriberFinalizerFunc(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	var (
 		response = struct{ Body string }{"go eat a fly ugly\n"}
@@ -309,14 +310,14 @@ func TestSubscriberFinalizerFunc(t *testing.T) {
 				return err
 			}
 
-			return nc.Publish(reply, b)
+			return c.Publish(reply, b)
 		},
 		natstransport.SubscriberFinalizer(func(ctx context.Context, _ *nats.Msg) {
 			close(done)
 		}),
 	)
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,7 +326,7 @@ func TestSubscriberFinalizerFunc(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
+		_, err := c.Request("natstransport.test", []byte("test data"), 2*time.Second)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -341,8 +342,9 @@ func TestSubscriberFinalizerFunc(t *testing.T) {
 }
 
 func TestEncodeJSONResponse(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(context.Context, interface{}) (interface{}, error) {
@@ -354,13 +356,13 @@ func TestEncodeJSONResponse(t *testing.T) {
 		natstransport.EncodeJSONResponse,
 	)
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer sub.Unsubscribe()
 
-	r, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
+	r, err := c.Request("natstransport.test", []byte("test data"), 2*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -379,8 +381,9 @@ func (m responseError) Error() string {
 }
 
 func TestErrorEncoder(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	errResp := struct {
 		Error string `json:"err"`
@@ -393,13 +396,13 @@ func TestErrorEncoder(t *testing.T) {
 		natstransport.EncodeJSONResponse,
 	)
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer sub.Unsubscribe()
 
-	r, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
+	r, err := c.Request("natstransport.test", []byte("test data"), 2*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,8 +419,9 @@ func TestErrorEncoder(t *testing.T) {
 type noContentResponse struct{}
 
 func TestEncodeNoContent(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(context.Context, interface{}) (interface{}, error) { return noContentResponse{}, nil },
@@ -425,13 +429,13 @@ func TestEncodeNoContent(t *testing.T) {
 		natstransport.EncodeJSONResponse,
 	)
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer sub.Unsubscribe()
 
-	r, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
+	r, err := c.Request("natstransport.test", []byte("test data"), 2*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -442,8 +446,9 @@ func TestEncodeNoContent(t *testing.T) {
 }
 
 func TestNoOpRequestDecoder(t *testing.T) {
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
 		func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -456,13 +461,13 @@ func TestNoOpRequestDecoder(t *testing.T) {
 		natstransport.EncodeJSONResponse,
 	)
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer sub.Unsubscribe()
 
-	r, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
+	r, err := c.Request("natstransport.test", []byte("test data"), 2*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -490,16 +495,17 @@ func testSubscriber(t *testing.T) (step func(), resp <-chan *nats.Msg) {
 	)
 
 	go func() {
-		nc := newNatsConn(t)
-		defer nc.Close()
+		s, c := newNATSConn(t)
+		defer func() { s.Shutdown(); s.WaitForShutdown() }()
+		defer c.Close()
 
-		sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
+		sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer sub.Unsubscribe()
 
-		r, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
+		r, err := c.Request("natstransport.test", []byte("test data"), 2*time.Second)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -510,14 +516,14 @@ func testSubscriber(t *testing.T) (step func(), resp <-chan *nats.Msg) {
 	return func() { stepch <- true }, response
 }
 
-func testRequest(t *testing.T, nc *nats.Conn, handler *natstransport.Subscriber) TestResponse {
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(nc))
+func testRequest(t *testing.T, c *nats.Conn, handler *natstransport.Subscriber) TestResponse {
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer sub.Unsubscribe()
 
-	r, err := nc.Request("natstransport.test", []byte("test data"), 2*time.Second)
+	r, err := c.Request("natstransport.test", []byte("test data"), 2*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -19,11 +19,12 @@ func TestPublisher(t *testing.T) {
 		}
 	)
 
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
-		if err := nc.Publish(msg.Reply, []byte(testdata)); err != nil {
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
+		if err := c.Publish(msg.Reply, []byte(testdata)); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -33,7 +34,7 @@ func TestPublisher(t *testing.T) {
 	defer sub.Unsubscribe()
 
 	publisher := natstransport.NewPublisher(
-		nc,
+		c,
 		"natstransport.test",
 		encode,
 		decode,
@@ -63,11 +64,12 @@ func TestPublisherBefore(t *testing.T) {
 		}
 	)
 
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
-		if err := nc.Publish(msg.Reply, msg.Data); err != nil {
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
+		if err := c.Publish(msg.Reply, msg.Data); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -77,7 +79,7 @@ func TestPublisherBefore(t *testing.T) {
 	defer sub.Unsubscribe()
 
 	publisher := natstransport.NewPublisher(
-		nc,
+		c,
 		"natstransport.test",
 		encode,
 		decode,
@@ -111,11 +113,12 @@ func TestPublisherAfter(t *testing.T) {
 		}
 	)
 
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
-		if err := nc.Publish(msg.Reply, []byte(testdata)); err != nil {
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
+		if err := c.Publish(msg.Reply, []byte(testdata)); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -125,7 +128,7 @@ func TestPublisherAfter(t *testing.T) {
 	defer sub.Unsubscribe()
 
 	publisher := natstransport.NewPublisher(
-		nc,
+		c,
 		"natstransport.test",
 		encode,
 		decode,
@@ -158,13 +161,14 @@ func TestPublisherTimeout(t *testing.T) {
 		}
 	)
 
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
 	ch := make(chan struct{})
 	defer close(ch)
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
 		<-ch
 	})
 	if err != nil {
@@ -173,7 +177,7 @@ func TestPublisherTimeout(t *testing.T) {
 	defer sub.Unsubscribe()
 
 	publisher := natstransport.NewPublisher(
-		nc,
+		c,
 		"natstransport.test",
 		encode,
 		decode,
@@ -195,11 +199,12 @@ func TestPublisherCancellation(t *testing.T) {
 		}
 	)
 
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
-		if err := nc.Publish(msg.Reply, []byte(testdata)); err != nil {
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
+		if err := c.Publish(msg.Reply, []byte(testdata)); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -209,7 +214,7 @@ func TestPublisherCancellation(t *testing.T) {
 	defer sub.Unsubscribe()
 
 	publisher := natstransport.NewPublisher(
-		nc,
+		c,
 		"natstransport.test",
 		encode,
 		decode,
@@ -227,13 +232,14 @@ func TestPublisherCancellation(t *testing.T) {
 func TestEncodeJSONRequest(t *testing.T) {
 	var data string
 
-	nc := newNatsConn(t)
-	defer nc.Close()
+	s, c := newNATSConn(t)
+	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	defer c.Close()
 
-	sub, err := nc.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
+	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
 		data = string(msg.Data)
 
-		if err := nc.Publish(msg.Reply, []byte("")); err != nil {
+		if err := c.Publish(msg.Reply, []byte("")); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -243,7 +249,7 @@ func TestEncodeJSONRequest(t *testing.T) {
 	defer sub.Unsubscribe()
 
 	publisher := natstransport.NewPublisher(
-		nc,
+		c,
 		"natstransport.test",
 		natstransport.EncodeJSONRequest,
 		func(context.Context, *nats.Msg) (interface{}, error) { return nil, nil },
