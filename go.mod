@@ -21,7 +21,7 @@ require (
 	github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8 // indirect
 	github.com/go-logfmt/logfmt v0.5.0
 	github.com/go-stack/stack v1.8.0
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.2
 	github.com/gorilla/mux v1.7.3
 	github.com/hashicorp/consul/api v1.3.0
 	github.com/hashicorp/go-version v1.2.0 // indirect
@@ -29,8 +29,8 @@ require (
 	github.com/hudl/fargo v1.3.0
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
 	github.com/lightstep/lightstep-tracer-go v0.22.0
-	github.com/nats-io/nats-server/v2 v2.1.2
-	github.com/nats-io/nats.go v1.9.1
+	github.com/nats-io/nats-server/v2 v2.2.6
+	github.com/nats-io/nats.go v1.11.0
 	github.com/oklog/oklog v0.3.2
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7 // indirect
@@ -53,7 +53,7 @@ require (
 	go.opencensus.io v0.22.3
 	go.uber.org/zap v1.13.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
+	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 	golang.org/x/tools v0.0.0-20200103221440-774c71fcf114
 	google.golang.org/grpc v1.26.0
 	gopkg.in/gcfg.v1 v1.2.3 // indirect
