@@ -17,8 +17,7 @@ const (
 
 	// JWTTokenContextKey is an alias for JWTContextKey.
 	//
-	// Deprecated: only exists for historical compatibility.
-	// JWTContextKey would be preferable.
+	// Deprecated: prefer JWTContextKey.
 	JWTTokenContextKey = JWTContextKey
 
 	// JWTClaimsContextKey holds the key used to store the JWT Claims in the
