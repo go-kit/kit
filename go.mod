@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/VividCortex/gohistogram v1.0.0
 	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5
-	github.com/apache/thrift v0.13.0
+	github.com/apache/thrift v0.14.1
 	github.com/aryann/difflib v0.0.0-20170710044230-e206f873d14a
 	github.com/aws/aws-lambda-go v1.13.3
 	github.com/aws/aws-sdk-go v1.27.0
