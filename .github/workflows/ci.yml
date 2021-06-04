@@ -43,6 +43,11 @@ jobs:
         env:
           eureka.server.responseCacheUpdateIntervalMs: 1000
 
+      nats:
+        image: nats:2.2.6
+        ports:
+          - 4222
+
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2.1.3
@@ -59,6 +64,7 @@ jobs:
           CONSUL_ADDR: localhost:${{ job.services.consul.ports[8500] }}
           ZK_ADDR: localhost:${{ job.services.zk.ports[2181] }}
           EUREKA_ADDR: http://localhost:${{ job.services.eureka.ports[8761] }}/eureka
+          NATS_URL: nats://localhost:${{ job.services.nats.ports[4222] }}
         run: go test -v -race -coverprofile=coverage.coverprofile -covermode=atomic -tags integration ./...
 
       - name: Upload coverage

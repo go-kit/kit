@@ -1,15 +1,17 @@
+// +build integration
+
 package nats_test
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 
 	"github.com/go-kit/kit/endpoint"
@@ -21,48 +23,22 @@ type TestResponse struct {
 	Error  string `json:"err"`
 }
 
-func newNATSConn(t *testing.T) (*server.Server, *nats.Conn) {
-	s, err := server.NewServer(&server.Options{
-		Host: "localhost",
-		Port: 0,
-	})
-	if err != nil {
-		t.Fatal(err)
+func newNATSConn(t *testing.T) *nats.Conn {
+	url := os.Getenv("NATS_URL")
+	if url == "" {
+		t.Skip("NATS_URL not set; skipping integration test")
 	}
 
-	go s.Start()
-
-	for i := 0; i < 5 && !s.Running(); i++ {
-		t.Logf("Running %v", s.Running())
-		time.Sleep(time.Second)
-	}
-	if !s.Running() {
-		s.Shutdown()
-		s.WaitForShutdown()
-		t.Fatal("not yet running")
-	}
-
-	t.Log(s.Addr().String())
-
-	if ok := s.ReadyForConnections(5 * time.Second); !ok {
-		t.Fatal("not ready for connections")
-	}
-
-	//if n := s.NumSubscriptions(); n > 0 {
-	//	t.Fatalf("found %d active subscriptions on the server", n)
-	//}
-
-	c, err := nats.Connect("nats://"+s.Addr().String(), nats.Name(t.Name()))
+	c, err := nats.Connect(url, nats.Name(t.Name()))
 	if err != nil {
 		t.Fatalf("failed to connect to NATS server: %s", err)
 	}
 
-	return s, c
+	return c
 }
 
 func TestSubscriberBadDecode(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
@@ -80,8 +56,7 @@ func TestSubscriberBadDecode(t *testing.T) {
 }
 
 func TestSubscriberBadEndpoint(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
@@ -98,8 +73,7 @@ func TestSubscriberBadEndpoint(t *testing.T) {
 }
 
 func TestSubscriberBadEncode(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
@@ -116,8 +90,7 @@ func TestSubscriberBadEncode(t *testing.T) {
 }
 
 func TestSubscriberErrorEncoder(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	errTeapot := errors.New("teapot")
@@ -170,8 +143,7 @@ func TestSubscriberHappySubject(t *testing.T) {
 }
 
 func TestMultipleSubscriberBefore(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	var (
@@ -232,8 +204,7 @@ func TestMultipleSubscriberBefore(t *testing.T) {
 }
 
 func TestMultipleSubscriberAfter(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	var (
@@ -290,8 +261,7 @@ func TestMultipleSubscriberAfter(t *testing.T) {
 }
 
 func TestSubscriberFinalizerFunc(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	var (
@@ -342,8 +312,7 @@ func TestSubscriberFinalizerFunc(t *testing.T) {
 }
 
 func TestEncodeJSONResponse(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
@@ -381,8 +350,7 @@ func (m responseError) Error() string {
 }
 
 func TestErrorEncoder(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	errResp := struct {
@@ -419,8 +387,7 @@ func TestErrorEncoder(t *testing.T) {
 type noContentResponse struct{}
 
 func TestEncodeNoContent(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
@@ -446,8 +413,7 @@ func TestEncodeNoContent(t *testing.T) {
 }
 
 func TestNoOpRequestDecoder(t *testing.T) {
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	handler := natstransport.NewSubscriber(
@@ -495,8 +461,7 @@ func testSubscriber(t *testing.T) (step func(), resp <-chan *nats.Msg) {
 	)
 
 	go func() {
-		s, c := newNATSConn(t)
-		defer func() { s.Shutdown(); s.WaitForShutdown() }()
+		c := newNATSConn(t)
 		defer c.Close()
 
 		sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))

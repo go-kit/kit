@@ -24,3 +24,8 @@ services:
       eureka.server.responseCacheUpdateIntervalMs: 1000
     ports:
       - "8761:8761"
+
+  nats:
+    image: nats:2.2.6
+    ports:
+      - "4222:4222"

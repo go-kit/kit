@@ -1,3 +1,5 @@
+// +build integration
+
 package nats_test
 
 import (
@@ -19,8 +21,7 @@ func TestPublisher(t *testing.T) {
 		}
 	)
 
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
@@ -64,8 +65,7 @@ func TestPublisherBefore(t *testing.T) {
 		}
 	)
 
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
@@ -113,8 +113,7 @@ func TestPublisherAfter(t *testing.T) {
 		}
 	)
 
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
@@ -161,8 +160,7 @@ func TestPublisherTimeout(t *testing.T) {
 		}
 	)
 
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	ch := make(chan struct{})
@@ -199,8 +197,7 @@ func TestPublisherCancellation(t *testing.T) {
 		}
 	)
 
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
@@ -232,8 +229,7 @@ func TestPublisherCancellation(t *testing.T) {
 func TestEncodeJSONRequest(t *testing.T) {
 	var data string
 
-	s, c := newNATSConn(t)
-	defer func() { s.Shutdown(); s.WaitForShutdown() }()
+	c := newNATSConn(t)
 	defer c.Close()
 
 	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", func(msg *nats.Msg) {
