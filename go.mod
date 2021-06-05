@@ -50,15 +50,15 @@ require (
 	github.com/sony/gobreaker v0.4.1
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/streadway/handy v0.0.0-20190108123426-d5acb3125c2a
-	go.etcd.io/etcd/client/pkg/v3 v3.5.0-beta.4
-	go.etcd.io/etcd/client/v2 v2.305.0-beta.4
-	go.etcd.io/etcd/client/v3 v3.5.0-beta.4
+	go.etcd.io/etcd/client/pkg/v3 v3.5.0-rc.0
+	go.etcd.io/etcd/client/v2 v2.305.0-rc.0
+	go.etcd.io/etcd/client/v3 v3.5.0-rc.0
 	go.opencensus.io v0.22.3
-	go.uber.org/zap v1.16.1-0.20210329175301-c23abee72d19
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+	go.uber.org/zap v1.17.0
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
-	golang.org/x/tools v0.0.0-20210106214847-113979e3529a
-	google.golang.org/grpc v1.37.0
+	golang.org/x/tools v0.1.2
+	google.golang.org/grpc v1.38.0
 	gopkg.in/gcfg.v1 v1.2.3 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	sourcegraph.com/sourcegraph/appdash v0.0.0-20190731080439-ebfcffb1b5c0
