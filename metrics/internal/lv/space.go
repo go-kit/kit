@@ -52,12 +52,21 @@ func (s *Space) Reset() *Space {
 }
 
 func (s *Space) nodeFor(name string) *node {
+	// First check if the node is already present without taking write lock.
+	s.mtx.RLock()
+	n, ok := s.nodes[name]
+	s.mtx.RUnlock()
+	if ok {
+		return n
+	}
+
+	// Slow path, we need to create the node.
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	if s.nodes == nil {
 		s.nodes = map[string]*node{}
 	}
-	n, ok := s.nodes[name]
+	n, ok = s.nodes[name]
 	if !ok {
 		n = &node{}
 		s.nodes[name] = n
@@ -69,39 +78,43 @@ func (s *Space) nodeFor(name string) *node {
 // possible label values. The node collects observations and has child nodes
 // with greater specificity.
 type node struct {
+	// mtx protects access to observations
 	mtx          sync.RWMutex
 	observations []float64
-	children     map[pair]*node
+	children     sync.Map  // map[pair]*node
 }
 
 type pair struct{ label, value string }
 
 func (n *node) observe(lvs LabelValues, value float64) {
-	n.mtx.Lock()
-	defer n.mtx.Unlock()
 	if len(lvs) <= 0 {
+		n.mtx.Lock()
 		n.observations = append(n.observations, value)
+		n.mtx.Unlock()
 		return
 	}
 	if len(lvs) < 2 {
 		panic("too few LabelValues; programmer error!")
 	}
 	head, tail := pair{lvs[0], lvs[1]}, lvs[2:]
-	if n.children == nil {
-		n.children = map[pair]*node{}
+	n.getChild(head).observe(tail, value)
+}
+
+func (n *node) getChild(head pair) *node {
+	// First check if child node exists, without allocating new node.
+	child, ok := n.children.Load(head)
+	if ok {
+		return child.(*node)
 	}
-	child, ok := n.children[head]
-	if !ok {
-		child = &node{}
-		n.children[head] = child
-	}
-	child.observe(tail, value)
+	// Allocate a new node and try again.
+	child, _ = n.children.LoadOrStore(head, &node{})
+	return child.(*node)
 }
 
 func (n *node) add(lvs LabelValues, delta float64) {
-	n.mtx.Lock()
-	defer n.mtx.Unlock()
 	if len(lvs) <= 0 {
+		n.mtx.Lock()
+		defer n.mtx.Unlock()
 		var value float64
 		if len(n.observations) > 0 {
 			value = last(n.observations) + delta
@@ -114,28 +127,34 @@ func (n *node) add(lvs LabelValues, delta float64) {
 	if len(lvs) < 2 {
 		panic("too few LabelValues; programmer error!")
 	}
+
 	head, tail := pair{lvs[0], lvs[1]}, lvs[2:]
-	if n.children == nil {
-		n.children = map[pair]*node{}
-	}
-	child, ok := n.children[head]
-	if !ok {
-		child = &node{}
-		n.children[head] = child
-	}
-	child.add(tail, delta)
+	n.getChild(head).add(tail, delta)
 }
 
 func (n *node) walk(lvs LabelValues, fn func(LabelValues, []float64) bool) bool {
+	shouldContinue := n.checkObservations(lvs, fn)
+	if !shouldContinue {
+		return false
+	}
+
+	n.children.Range(func(key, value interface{}) bool {
+		p := key.(pair)
+		child := value.(*node)
+		shouldContinue = child.walk(append(lvs, p.label, p.value), fn)
+		return shouldContinue
+	})
+
+	return shouldContinue
+}
+
+// checkObservations calls the function with the observed values.
+// Returns false to abort the traversal.
+func (n *node) checkObservations(lvs LabelValues, fn func(LabelValues, []float64) bool) bool {
 	n.mtx.RLock()
 	defer n.mtx.RUnlock()
 	if len(n.observations) > 0 && !fn(lvs, n.observations) {
 		return false
-	}
-	for p, child := range n.children {
-		if !child.walk(append(lvs, p.label, p.value), fn) {
-			return false
-		}
 	}
 	return true
 }
