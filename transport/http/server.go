@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/felixge/httpsnoop"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/transport"
