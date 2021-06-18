@@ -42,17 +42,17 @@ require (
 	github.com/pact-foundation/pact-go v1.0.4
 	github.com/pborman/uuid v1.2.0
 	github.com/performancecopilot/speed v3.0.0+incompatible
-	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v1.5.1
+	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.11.0
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.6.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/sony/gobreaker v0.4.1
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/streadway/handy v0.0.0-20190108123426-d5acb3125c2a
-	go.etcd.io/etcd/client/pkg/v3 v3.5.0-rc.0
-	go.etcd.io/etcd/client/v2 v2.305.0-rc.0
-	go.etcd.io/etcd/client/v3 v3.5.0-rc.0
+	go.etcd.io/etcd/client/pkg/v3 v3.5.0
+	go.etcd.io/etcd/client/v2 v2.305.0
+	go.etcd.io/etcd/client/v3 v3.5.0
 	go.opencensus.io v0.22.3
 	go.uber.org/zap v1.17.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c

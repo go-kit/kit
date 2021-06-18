@@ -18,7 +18,7 @@ jobs:
 
     services:
       etcd:
-        image: quay.io/coreos/etcd:v3.4.3
+        image: gcr.io/etcd-development/etcd:v3.5.0
         ports:
           - 2379
         env:
