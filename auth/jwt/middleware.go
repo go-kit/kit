@@ -12,9 +12,13 @@ import (
 type contextKey string
 
 const (
-	// JWTTokenContextKey holds the key used to store a JWT Token in the
-	// context.
-	JWTTokenContextKey contextKey = "JWTToken"
+	// JWTContextKey holds the key used to store a JWT in the context.
+	JWTContextKey contextKey = "JWTToken"
+
+	// JWTTokenContextKey is an alias for JWTContextKey.
+	//
+	// Deprecated: prefer JWTContextKey.
+	JWTTokenContextKey = JWTContextKey
 
 	// JWTClaimsContextKey holds the key used to store the JWT Claims in the
 	// context.
@@ -27,13 +31,13 @@ var (
 	ErrTokenContextMissing = errors.New("token up for parsing was not passed through the context")
 
 	// ErrTokenInvalid denotes a token was not able to be validated.
-	ErrTokenInvalid = errors.New("JWT Token was invalid")
+	ErrTokenInvalid = errors.New("JWT was invalid")
 
 	// ErrTokenExpired denotes a token's expire header (exp) has since passed.
-	ErrTokenExpired = errors.New("JWT Token is expired")
+	ErrTokenExpired = errors.New("JWT is expired")
 
-	// ErrTokenMalformed denotes a token was not formatted as a JWT token.
-	ErrTokenMalformed = errors.New("JWT Token is malformed")
+	// ErrTokenMalformed denotes a token was not formatted as a JWT.
+	ErrTokenMalformed = errors.New("JWT is malformed")
 
 	// ErrTokenNotActive denotes a token's not before header (nbf) is in the
 	// future.
@@ -44,7 +48,7 @@ var (
 	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
 )
 
-// NewSigner creates a new JWT token generating middleware, specifying key ID,
+// NewSigner creates a new JWT generating middleware, specifying key ID,
 // signing string, signing method and the claims you would like it to contain.
 // Tokens are signed with a Key ID header (kid) which is useful for determining
 // the key to use for parsing. Particularly useful for clients.
@@ -59,7 +63,7 @@ func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims jwt.Clai
 			if err != nil {
 				return nil, err
 			}
-			ctx = context.WithValue(ctx, JWTTokenContextKey, tokenString)
+			ctx = context.WithValue(ctx, JWTContextKey, tokenString)
 
 			return next(ctx, request)
 		}
@@ -82,7 +86,7 @@ func StandardClaimsFactory() jwt.Claims {
 	return &jwt.StandardClaims{}
 }
 
-// NewParser creates a new JWT token parsing middleware, specifying a
+// NewParser creates a new JWT parsing middleware, specifying a
 // jwt.Keyfunc interface, the signing method and the claims type to be used. NewParser
 // adds the resulting claims to endpoint context or returns error on invalid token.
 // Particularly useful for servers.
@@ -90,7 +94,7 @@ func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims ClaimsFa
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			// tokenString is stored in the context from the transport handlers.
-			tokenString, ok := ctx.Value(JWTTokenContextKey).(string)
+			tokenString, ok := ctx.Value(JWTContextKey).(string)
 			if !ok {
 				return nil, ErrTokenContextMissing
 			}

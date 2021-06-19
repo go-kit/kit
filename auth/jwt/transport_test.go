@@ -15,7 +15,7 @@ func TestHTTPToContext(t *testing.T) {
 	// When the header doesn't exist
 	ctx := reqFunc(context.Background(), &http.Request{})
 
-	if ctx.Value(JWTTokenContextKey) != nil {
+	if ctx.Value(JWTContextKey) != nil {
 		t.Error("Context shouldn't contain the encoded JWT")
 	}
 
@@ -24,7 +24,7 @@ func TestHTTPToContext(t *testing.T) {
 	header.Set("Authorization", "no expected auth header format value")
 	ctx = reqFunc(context.Background(), &http.Request{Header: header})
 
-	if ctx.Value(JWTTokenContextKey) != nil {
+	if ctx.Value(JWTContextKey) != nil {
 		t.Error("Context shouldn't contain the encoded JWT")
 	}
 
@@ -32,7 +32,7 @@ func TestHTTPToContext(t *testing.T) {
 	header.Set("Authorization", generateAuthHeaderFromToken(signedKey))
 	ctx = reqFunc(context.Background(), &http.Request{Header: header})
 
-	token := ctx.Value(JWTTokenContextKey).(string)
+	token := ctx.Value(JWTContextKey).(string)
 	if token != signedKey {
 		t.Errorf("Context doesn't contain the expected encoded token value; expected: %s, got: %s", signedKey, token)
 	}
@@ -41,7 +41,7 @@ func TestHTTPToContext(t *testing.T) {
 func TestContextToHTTP(t *testing.T) {
 	reqFunc := ContextToHTTP()
 
-	// No JWT Token is passed in the context
+	// No JWT is passed in the context
 	ctx := context.Background()
 	r := http.Request{}
 	reqFunc(ctx, &r)
@@ -51,8 +51,8 @@ func TestContextToHTTP(t *testing.T) {
 		t.Error("authorization key should not exist in metadata")
 	}
 
-	// Correct JWT Token is passed in the context
-	ctx = context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
+	// Correct JWT is passed in the context
+	ctx = context.WithValue(context.Background(), JWTContextKey, signedKey)
 	r = http.Request{Header: http.Header{}}
 	reqFunc(ctx, &r)
 
@@ -60,7 +60,7 @@ func TestContextToHTTP(t *testing.T) {
 	expected := generateAuthHeaderFromToken(signedKey)
 
 	if token != expected {
-		t.Errorf("Authorization header does not contain the expected JWT token; expected %s, got %s", expected, token)
+		t.Errorf("Authorization header does not contain the expected JWT; expected %s, got %s", expected, token)
 	}
 }
 
@@ -70,36 +70,36 @@ func TestGRPCToContext(t *testing.T) {
 
 	// No Authorization header is passed
 	ctx := reqFunc(context.Background(), md)
-	token := ctx.Value(JWTTokenContextKey)
+	token := ctx.Value(JWTContextKey)
 	if token != nil {
-		t.Error("Context should not contain a JWT Token")
+		t.Error("Context should not contain a JWT")
 	}
 
 	// Invalid Authorization header is passed
 	md["authorization"] = []string{fmt.Sprintf("%s", signedKey)}
 	ctx = reqFunc(context.Background(), md)
-	token = ctx.Value(JWTTokenContextKey)
+	token = ctx.Value(JWTContextKey)
 	if token != nil {
-		t.Error("Context should not contain a JWT Token")
+		t.Error("Context should not contain a JWT")
 	}
 
 	// Authorization header is correct
 	md["authorization"] = []string{fmt.Sprintf("Bearer %s", signedKey)}
 	ctx = reqFunc(context.Background(), md)
-	token, ok := ctx.Value(JWTTokenContextKey).(string)
+	token, ok := ctx.Value(JWTContextKey).(string)
 	if !ok {
-		t.Fatal("JWT Token not passed to context correctly")
+		t.Fatal("JWT not passed to context correctly")
 	}
 
 	if token != signedKey {
-		t.Errorf("JWT tokens did not match: expecting %s got %s", signedKey, token)
+		t.Errorf("JWTs did not match: expecting %s got %s", signedKey, token)
 	}
 }
 
 func TestContextToGRPC(t *testing.T) {
 	reqFunc := ContextToGRPC()
 
-	// No JWT Token is passed in the context
+	// No JWT is passed in the context
 	ctx := context.Background()
 	md := metadata.MD{}
 	reqFunc(ctx, &md)
@@ -109,17 +109,17 @@ func TestContextToGRPC(t *testing.T) {
 		t.Error("authorization key should not exist in metadata")
 	}
 
-	// Correct JWT Token is passed in the context
-	ctx = context.WithValue(context.Background(), JWTTokenContextKey, signedKey)
+	// Correct JWT is passed in the context
+	ctx = context.WithValue(context.Background(), JWTContextKey, signedKey)
 	md = metadata.MD{}
 	reqFunc(ctx, &md)
 
 	token, ok := md["authorization"]
 	if !ok {
-		t.Fatal("JWT Token not passed to metadata correctly")
+		t.Fatal("JWT not passed to metadata correctly")
 	}
 
 	if token[0] != generateAuthHeaderFromToken(signedKey) {
-		t.Errorf("JWT tokens did not match: expecting %s got %s", signedKey, token[0])
+		t.Errorf("JWTs did not match: expecting %s got %s", signedKey, token[0])
 	}
 }

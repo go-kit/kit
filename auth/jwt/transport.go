@@ -26,7 +26,7 @@ func HTTPToContext() http.RequestFunc {
 			return ctx
 		}
 
-		return context.WithValue(ctx, JWTTokenContextKey, token)
+		return context.WithValue(ctx, JWTContextKey, token)
 	}
 }
 
@@ -34,7 +34,7 @@ func HTTPToContext() http.RequestFunc {
 // useful for clients.
 func ContextToHTTP() http.RequestFunc {
 	return func(ctx context.Context, r *stdhttp.Request) context.Context {
-		token, ok := ctx.Value(JWTTokenContextKey).(string)
+		token, ok := ctx.Value(JWTContextKey).(string)
 		if ok {
 			r.Header.Add("Authorization", generateAuthHeaderFromToken(token))
 		}
@@ -54,7 +54,7 @@ func GRPCToContext() grpc.ServerRequestFunc {
 
 		token, ok := extractTokenFromAuthHeader(authHeader[0])
 		if ok {
-			ctx = context.WithValue(ctx, JWTTokenContextKey, token)
+			ctx = context.WithValue(ctx, JWTContextKey, token)
 		}
 
 		return ctx
@@ -65,7 +65,7 @@ func GRPCToContext() grpc.ServerRequestFunc {
 // useful for clients.
 func ContextToGRPC() grpc.ClientRequestFunc {
 	return func(ctx context.Context, md *metadata.MD) context.Context {
-		token, ok := ctx.Value(JWTTokenContextKey).(string)
+		token, ok := ctx.Value(JWTContextKey).(string)
 		if ok {
 			// capital "Key" is illegal in HTTP/2.
 			(*md)["authorization"] = []string{generateAuthHeaderFromToken(token)}
