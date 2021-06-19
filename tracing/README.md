@@ -63,6 +63,12 @@ OpenTracing interface and are highlighted in the [addsvc] example.
 
 [Zipkin] support is available through the [zipkin-go-opentracing] package.
 
+## OpenTelemetry
+
+[OpenTelemetry] came to life as a result of merging [OpenCensus] and [OpenTracing].
+Go kit instrumentation can be found in [opentelemetry-go-contrib]
+which is a central repository of instrumentation libraries.
+
 [Dapper]: http://research.google.com/pubs/pub36356.html
 [addsvc]:https://github.com/go-kit/kit/tree/master/examples/addsvc
 [README]: https://github.com/go-kit/kit/blob/master/tracing/zipkin/README.md
@@ -84,3 +90,6 @@ OpenTracing interface and are highlighted in the [addsvc] example.
 
 [OpenCensus]: https://opencensus.io/
 [opencensus-go]: https://github.com/census-instrumentation/opencensus-go
+
+[OpenTelemetry]: https://opentelemetry.io/
+[opentelemetry-go-contrib]: https://github.com/open-telemetry/opentelemetry-go-contrib
