@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/cloudwatchiface"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/go-kit/kit/log"
@@ -23,6 +23,11 @@ const (
 	maxConcurrentRequests = 20
 )
 
+// CloudWatchAPI is an interface that defines the set of Amazon CloudWatch API operations required by CloudWatch.
+type CloudWatchAPI interface {
+	PutMetricData(ctx context.Context, params *cloudwatch.PutMetricDataInput, optFns ...func(*cloudwatch.Options)) (*cloudwatch.PutMetricDataOutput, error)
+}
+
 // CloudWatch receives metrics observations and forwards them to CloudWatch.
 // Create a CloudWatch object, use it to create metrics, and pass those metrics as
 // dependencies to the components that will use them.
@@ -32,7 +37,7 @@ type CloudWatch struct {
 	mtx                   sync.RWMutex
 	sem                   chan struct{}
 	namespace             string
-	svc                   cloudwatchiface.ClientAPI
+	svc                   CloudWatchAPI
 	counters              *lv.Space
 	logger                log.Logger
 	numConcurrentRequests int
@@ -66,7 +71,7 @@ func WithConcurrentRequests(n int) Option {
 // Namespace is applied to all created metrics and maps to the CloudWatch namespace.
 // Callers must ensure that regular calls to Send are performed, either
 // manually or with one of the helper methods.
-func New(namespace string, svc cloudwatchiface.ClientAPI, options ...Option) *CloudWatch {
+func New(namespace string, svc CloudWatchAPI, options ...Option) *CloudWatch {
 	cw := &CloudWatch{
 		namespace:             namespace,
 		svc:                   svc,
@@ -131,10 +136,10 @@ func (cw *CloudWatch) Send() error {
 	defer cw.mtx.RUnlock()
 	now := time.Now()
 
-	var datums []cloudwatch.MetricDatum
+	var datums []types.MetricDatum
 
 	cw.counters.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
-		datums = append(datums, cloudwatch.MetricDatum{
+		datums = append(datums, types.MetricDatum{
 			MetricName:      aws.String(name),
 			Dimensions:      makeDimensions(lvs...),
 			StatisticValues: stats(values),
@@ -143,9 +148,9 @@ func (cw *CloudWatch) Send() error {
 		return true
 	})
 
-	var batches [][]cloudwatch.MetricDatum
+	var batches [][]types.MetricDatum
 	for len(datums) > 0 {
-		var batch []cloudwatch.MetricDatum
+		var batch []types.MetricDatum
 		lim := len(datums)
 		if lim > maxConcurrentRequests {
 			lim = maxConcurrentRequests
@@ -162,11 +167,10 @@ func (cw *CloudWatch) Send() error {
 			defer func() {
 				<-cw.sem
 			}()
-			req := cw.svc.PutMetricDataRequest(&cloudwatch.PutMetricDataInput{
+			_, err := cw.svc.PutMetricData(context.TODO(), &cloudwatch.PutMetricDataInput{
 				Namespace:  aws.String(cw.namespace),
 				MetricData: batch,
 			})
-			_, err := req.Send(context.TODO())
 			return err
 		})
 	}
@@ -177,14 +181,14 @@ var zero = float64(0.0)
 
 // Just build this once to reduce construction costs whenever
 // someone does a Send with no aggregated values.
-var zeros = cloudwatch.StatisticSet{
+var zeros = types.StatisticSet{
 	Maximum:     &zero,
 	Minimum:     &zero,
 	Sum:         &zero,
 	SampleCount: &zero,
 }
 
-func stats(a []float64) *cloudwatch.StatisticSet {
+func stats(a []float64) *types.StatisticSet {
 	count := float64(len(a))
 	if count == 0 {
 		return &zeros
@@ -203,7 +207,7 @@ func stats(a []float64) *cloudwatch.StatisticSet {
 		}
 	}
 
-	return &cloudwatch.StatisticSet{
+	return &types.StatisticSet{
 		Maximum:     &max,
 		Minimum:     &min,
 		Sum:         &sum,
@@ -211,10 +215,10 @@ func stats(a []float64) *cloudwatch.StatisticSet {
 	}
 }
 
-func makeDimensions(labelValues ...string) []cloudwatch.Dimension {
-	dimensions := make([]cloudwatch.Dimension, len(labelValues)/2)
+func makeDimensions(labelValues ...string) []types.Dimension {
+	dimensions := make([]types.Dimension, len(labelValues)/2)
 	for i, j := 0, 0; i < len(labelValues); i, j = i+2, j+1 {
-		dimensions[j] = cloudwatch.Dimension{
+		dimensions[j] = types.Dimension{
 			Name:  aws.String(labelValues[i]),
 			Value: aws.String(labelValues[i+1]),
 		}
