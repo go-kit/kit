@@ -31,7 +31,7 @@ require (
 	github.com/nats-io/nats.go v1.11.0
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/openzipkin/zipkin-go v0.2.2
+	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/performancecopilot/speed v3.0.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
