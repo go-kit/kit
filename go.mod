@@ -7,7 +7,7 @@ require (
 	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5
 	github.com/aryann/difflib v0.0.0-20170710044230-e206f873d14a
 	github.com/aws/aws-lambda-go v1.13.3
-	github.com/aws/aws-sdk-go v1.27.0
+	github.com/aws/aws-sdk-go v1.38.65
 	github.com/aws/aws-sdk-go-v2 v0.18.0
 	github.com/casbin/casbin/v2 v2.1.2
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
