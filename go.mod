@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.65
 	github.com/aws/aws-sdk-go-v2 v1.6.0
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.4.1
-	github.com/casbin/casbin/v2 v2.1.2
+	github.com/casbin/casbin/v2 v2.31.5
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/clbanning/x2j v0.0.0-20191024224557-825249438eec // indirect
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
