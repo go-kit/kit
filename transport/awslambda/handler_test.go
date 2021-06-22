@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/transport"
@@ -20,6 +19,17 @@ const (
 	KeyAfterOne  key = iota
 	KeyEncMode   key = iota
 )
+
+// Created based on github.com/aws/aws-lambda-go@v1.13.3/events.APIGatewayProxyRequest for the purposes of the tests below.
+type apiGatewayProxyRequest struct {
+	Body string `json:"body"`
+}
+
+// Created based on github.com/aws/aws-lambda-go@v1.13.3/events.APIGatewayProxyResponse for the purposes of the tests below.
+type apiGatewayProxyResponse struct {
+	StatusCode int    `json:"statusCode"`
+	Body       string `json:"body"`
+}
 
 func TestDefaultErrorEncoder(t *testing.T) {
 	ctx := context.Background()
@@ -76,7 +86,7 @@ func TestInvokeHappyPath(t *testing.T) {
 			resp []byte,
 			_ error,
 		) {
-			apigwResp := events.APIGatewayProxyResponse{}
+			apigwResp := apiGatewayProxyResponse{}
 			err := json.Unmarshal(resp, &apigwResp)
 			if err != nil {
 				t.Fatalf("Should have no error, but got: %+v", err)
@@ -97,7 +107,7 @@ func TestInvokeHappyPath(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	req, _ := json.Marshal(events.APIGatewayProxyRequest{
+	req, _ := json.Marshal(apiGatewayProxyRequest{
 		Body: `{"name":"john doe"}`,
 	})
 	resp, err := helloHandler.Invoke(ctx, req)
@@ -106,7 +116,7 @@ func TestInvokeHappyPath(t *testing.T) {
 		t.Fatalf("Should have no error, but got: %+v", err)
 	}
 
-	apigwResp := events.APIGatewayProxyResponse{}
+	apigwResp := apiGatewayProxyResponse{}
 	err = json.Unmarshal(resp, &apigwResp)
 	if err != nil {
 		t.Fatalf("Should have no error, but got: %+v", err)
@@ -136,7 +146,7 @@ func TestInvokeFailDecode(t *testing.T) {
 			ctx context.Context,
 			err error,
 		) ([]byte, error) {
-			apigwResp := events.APIGatewayProxyResponse{}
+			apigwResp := apiGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
 			apigwResp.StatusCode = 500
 			resp, err := json.Marshal(apigwResp)
@@ -145,7 +155,7 @@ func TestInvokeFailDecode(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	req, _ := json.Marshal(events.APIGatewayProxyRequest{
+	req, _ := json.Marshal(apiGatewayProxyRequest{
 		Body: `{"name":"john doe"}`,
 	})
 	resp, err := helloHandler.Invoke(ctx, req)
@@ -154,7 +164,7 @@ func TestInvokeFailDecode(t *testing.T) {
 		t.Fatalf("Should have no error, but got: %+v", err)
 	}
 
-	apigwResp := events.APIGatewayProxyResponse{}
+	apigwResp := apiGatewayProxyResponse{}
 	json.Unmarshal(resp, &apigwResp)
 	if apigwResp.StatusCode != 500 {
 		t.Fatalf("Expect status code of 500, instead of %d", apigwResp.StatusCode)
@@ -186,7 +196,7 @@ func TestInvokeFailEndpoint(t *testing.T) {
 			ctx context.Context,
 			err error,
 		) ([]byte, error) {
-			apigwResp := events.APIGatewayProxyResponse{}
+			apigwResp := apiGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
 			apigwResp.StatusCode = 500
 			resp, err := json.Marshal(apigwResp)
@@ -195,7 +205,7 @@ func TestInvokeFailEndpoint(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	req, _ := json.Marshal(events.APIGatewayProxyRequest{
+	req, _ := json.Marshal(apiGatewayProxyRequest{
 		Body: `{"name":"john doe"}`,
 	})
 	resp, err := helloHandler.Invoke(ctx, req)
@@ -204,7 +214,7 @@ func TestInvokeFailEndpoint(t *testing.T) {
 		t.Fatalf("Should have no error, but got: %+v", err)
 	}
 
-	apigwResp := events.APIGatewayProxyResponse{}
+	apigwResp := apiGatewayProxyResponse{}
 	json.Unmarshal(resp, &apigwResp)
 	if apigwResp.StatusCode != 500 {
 		t.Fatalf("Expect status code of 500, instead of %d", apigwResp.StatusCode)
@@ -244,7 +254,7 @@ func TestInvokeFailEncode(t *testing.T) {
 			err error,
 		) ([]byte, error) {
 			// convert error into proper APIGateway response.
-			apigwResp := events.APIGatewayProxyResponse{}
+			apigwResp := apiGatewayProxyResponse{}
 			apigwResp.Body = `{"error":"yes"}`
 			apigwResp.StatusCode = 500
 			resp, err := json.Marshal(apigwResp)
@@ -253,7 +263,7 @@ func TestInvokeFailEncode(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	req, _ := json.Marshal(events.APIGatewayProxyRequest{
+	req, _ := json.Marshal(apiGatewayProxyRequest{
 		Body: `{"name":"john doe"}`,
 	})
 	resp, err := helloHandler.Invoke(ctx, req)
@@ -262,7 +272,7 @@ func TestInvokeFailEncode(t *testing.T) {
 		t.Fatalf("Should have no error, but got: %+v", err)
 	}
 
-	apigwResp := events.APIGatewayProxyResponse{}
+	apigwResp := apiGatewayProxyResponse{}
 	json.Unmarshal(resp, &apigwResp)
 	if apigwResp.StatusCode != 500 {
 		t.Fatalf("Expect status code of 500, instead of %d", apigwResp.StatusCode)
@@ -272,7 +282,7 @@ func TestInvokeFailEncode(t *testing.T) {
 func decodeHelloRequestWithTwoBefores(
 	ctx context.Context, req []byte,
 ) (interface{}, error) {
-	apigwReq := events.APIGatewayProxyRequest{}
+	apigwReq := apiGatewayProxyRequest{}
 	err := json.Unmarshal([]byte(req), &apigwReq)
 	if err != nil {
 		return apigwReq, err
@@ -303,7 +313,7 @@ func decodeHelloRequestWithTwoBefores(
 func encodeResponse(
 	ctx context.Context, response interface{},
 ) ([]byte, error) {
-	apigwResp := events.APIGatewayProxyResponse{}
+	apigwResp := apiGatewayProxyResponse{}
 
 	mode, ok := ctx.Value(KeyEncMode).(string)
 	if ok && mode == "fail_encode" {
