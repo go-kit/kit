@@ -38,7 +38,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/sony/gobreaker v0.4.1
-	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
+	github.com/streadway/amqp v1.0.0
 	github.com/streadway/handy v0.0.0-20190108123426-d5acb3125c2a
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0
 	go.etcd.io/etcd/client/v2 v2.305.0
