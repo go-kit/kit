@@ -27,7 +27,7 @@ jobs:
         options: --health-cmd "ETCDCTL_API=3 etcdctl --endpoints http://localhost:2379 endpoint health" --health-interval 10s --health-timeout 5s --health-retries 5
 
       consul:
-        image: consul:1.7
+        image: consul:1.10
         ports:
           - 8500
 

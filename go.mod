@@ -23,7 +23,7 @@ require (
 	github.com/go-stack/stack v1.8.0
 	github.com/go-zookeeper/zk v1.0.2
 	github.com/google/btree v1.0.0 // indirect
-	github.com/hashicorp/consul/api v1.3.0
+	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/hudl/fargo v1.3.0
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
