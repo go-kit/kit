@@ -35,7 +35,7 @@ require (
 	github.com/performancecopilot/speed v3.0.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/sony/gobreaker v0.4.1
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
