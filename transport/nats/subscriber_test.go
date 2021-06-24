@@ -42,8 +42,6 @@ func newNATSConn(t *testing.T) (*server.Server, *nats.Conn) {
 		t.Fatal("not yet running")
 	}
 
-	t.Log(s.Addr().String())
-
 	if ok := s.ReadyForConnections(5 * time.Second); !ok {
 		t.Fatal("not ready for connections")
 	}
