@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/go-zookeeper/zk"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"

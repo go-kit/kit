@@ -1,7 +1,7 @@
 package zk
 
 import (
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/go-zookeeper/zk"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"

@@ -21,6 +21,7 @@ require (
 	github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8 // indirect
 	github.com/go-logfmt/logfmt v0.5.0
 	github.com/go-stack/stack v1.8.0
+	github.com/go-zookeeper/zk v1.0.2
 	github.com/google/btree v1.0.0 // indirect
 	github.com/hashicorp/consul/api v1.3.0
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
@@ -34,7 +35,6 @@ require (
 	github.com/performancecopilot/speed v3.0.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
-	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
 	github.com/sirupsen/logrus v1.6.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/sony/gobreaker v0.4.1

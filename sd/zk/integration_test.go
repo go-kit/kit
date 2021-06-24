@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	stdzk "github.com/samuel/go-zookeeper/zk"
+	stdzk "github.com/go-zookeeper/zk"
 )
 
 var (
