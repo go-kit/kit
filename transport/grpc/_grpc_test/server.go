@@ -31,6 +31,8 @@ func makeTestEndpoint(svc Service) endpoint.Endpoint {
 }
 
 type serverBinding struct {
+	pb.UnimplementedTestServer
+
 	test grpctransport.Handler
 }
 
