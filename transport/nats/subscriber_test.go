@@ -46,10 +46,6 @@ func newNATSConn(t *testing.T) (*server.Server, *nats.Conn) {
 		t.Fatal("not ready for connections")
 	}
 
-	//if n := s.NumSubscriptions(); n > 0 {
-	//	t.Fatalf("found %d active subscriptions on the server", n)
-	//}
-
 	c, err := nats.Connect("nats://"+s.Addr().String(), nats.Name(t.Name()))
 	if err != nil {
 		t.Fatalf("failed to connect to NATS server: %s", err)
