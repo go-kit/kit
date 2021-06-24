@@ -1,13 +1,12 @@
 package cloudwatch2
 
 import (
-	"net/http"
+	"context"
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/cloudwatchiface"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
 func TestStats(t *testing.T) {
@@ -73,27 +72,16 @@ func TestStats(t *testing.T) {
 }
 
 type mockCloudWatch struct {
-	cloudwatchiface.ClientAPI
+	CloudWatchAPI
 	latestName string
-	latestData []cloudwatch.MetricDatum
+	latestData []types.MetricDatum
 }
 
-func (mcw *mockCloudWatch) PutMetricDataRequest(in *cloudwatch.PutMetricDataInput) cloudwatch.PutMetricDataRequest {
-	mcw.latestName = *in.Namespace
-	mcw.latestData = in.MetricData
-	return cloudwatch.PutMetricDataRequest{
-		// To mock the V2 API, most of the functions spit
-		// out structs that you need to call Send() on.
-		// The non-intuitive thing is that to get the Send() to avoid actually
-		// going across the wire, you just create a dumb aws.Request with either
-		// aws.Request.Data defined (for succes) or with aws.Request.Error
-		// to simulate an Error.
-		Request: &aws.Request{
-			HTTPRequest: &http.Request{Method: "PUT"},
-			Data:        &cloudwatch.PutMetricDataOutput{},
-		},
-		Input: in,
-	}
+func (mcw *mockCloudWatch) PutMetricData(ctx context.Context, params *cloudwatch.PutMetricDataInput, optFns ...func(*cloudwatch.Options)) (*cloudwatch.PutMetricDataOutput, error) {
+	mcw.latestName = *params.Namespace
+	mcw.latestData = params.MetricData
+
+	return nil, nil
 }
 
 func TestSend(t *testing.T) {
