@@ -63,7 +63,7 @@ func TestNewClient(t *testing.T) {
 	if want, have := sessionTimeout, clientImpl.sessionTimeout; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
-	if want, have := payload, clientImpl.rootNodePayload; bytes.Compare(want[0], have[0]) != 0 || bytes.Compare(want[1], have[1]) != 0 {
+	if want, have := payload, clientImpl.rootNodePayload; !bytes.Equal(want[0], have[0]) || !bytes.Equal(want[1], have[1]) {
 		t.Errorf("want %s, have %s", want, have)
 	}
 

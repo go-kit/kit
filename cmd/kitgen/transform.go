@@ -59,7 +59,7 @@ func importPath(targetDir, gopath string) (string, error) {
 		if err != nil {
 			continue
 		}
-		if strings.Index(res, "..") == -1 {
+		if !strings.Contains(res, "..") {
 			return res, nil
 		}
 	}

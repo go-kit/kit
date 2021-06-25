@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +15,7 @@ func TestEncodeProtoRequest(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodGet, "/cat", nil)
 
-	err := EncodeProtoRequest(nil, r, cat)
+	err := EncodeProtoRequest(context.TODO(), r, cat)
 	if err != nil {
 		t.Errorf("expected no encoding errors but got: %s", err)
 		return
@@ -51,7 +52,7 @@ func TestEncodeProtoResponse(t *testing.T) {
 
 	wr := httptest.NewRecorder()
 
-	err := EncodeProtoResponse(nil, wr, cat)
+	err := EncodeProtoResponse(context.TODO(), wr, cat)
 	if err != nil {
 		t.Errorf("expected no encoding errors but got: %s", err)
 		return
