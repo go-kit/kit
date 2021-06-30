@@ -42,15 +42,9 @@ func newNATSConn(t *testing.T) (*server.Server, *nats.Conn) {
 		t.Fatal("not yet running")
 	}
 
-	t.Log(s.Addr().String())
-
 	if ok := s.ReadyForConnections(5 * time.Second); !ok {
 		t.Fatal("not ready for connections")
 	}
-
-	//if n := s.NumSubscriptions(); n > 0 {
-	//	t.Fatalf("found %d active subscriptions on the server", n)
-	//}
 
 	c, err := nats.Connect("nats://"+s.Addr().String(), nats.Name(t.Name()))
 	if err != nil {
