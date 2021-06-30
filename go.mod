@@ -29,6 +29,7 @@ require (
 	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/performancecopilot/speed v3.0.0+incompatible
 	github.com/prometheus/client_golang v1.11.0
+	github.com/rs/zerolog v1.23.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/sony/gobreaker v0.4.1
