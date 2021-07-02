@@ -71,6 +71,7 @@ different starting assumptions.
 
 - [devimteam/microgen](https://github.com/devimteam/microgen)
 - [GrantZheng/kit](https://github.com/GrantZheng/kit)
+- [chaseSpace/kit](https://github.com/chaseSpace/kit)
 - [kujtimiihoxha/kit](https://github.com/kujtimiihoxha/kit) (unmaintained)
 - [nytimes/marvin](https://github.com/nytimes/marvin)
 - [sagikazarmark/mga](https://github.com/sagikazarmark/mga)
