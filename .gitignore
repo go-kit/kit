@@ -1,10 +1,3 @@
-examples/addsvc/addsvc
-examples/addsvc/client/client
-examples/apigateway/apigateway
-examples/profilesvc/profilesvc
-examples/stringsvc1/stringsvc1
-examples/stringsvc2/stringsvc2
-examples/stringsvc3/stringsvc3
 *.coverprofile
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)

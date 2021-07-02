@@ -48,7 +48,7 @@ tracer, err = zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(localEndpoint)
 ```
 
 [zipkin-go]: https://github.com/openzipkin/zipkin-go
-[addsvc]:https://github.com/go-kit/kit/tree/master/examples/addsvc
+[addsvc]: https://github.com/go-kit/examples/tree/master/addsvc
 [Log]: https://github.com/go-kit/kit/tree/master/log
 
 ### Tracing Resources
