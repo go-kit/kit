@@ -49,6 +49,6 @@ for an example.
 That's it!
 The gRPC binding can be bound to a listener and serve normal gRPC requests.
 And within your service, you can use standard go-kit components and idioms.
-See [addsvc](https://github.com/go-kit/kit/tree/master/examples/addsvc) for
+See [addsvc](https://github.com/go-kit/examples/blob/master/addsvc/) for
 a complete working example with gRPC support. And remember: go-kit services
 can support multiple transports simultaneously.
