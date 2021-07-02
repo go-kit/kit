@@ -82,9 +82,11 @@ func (s *Instancer) getInstances() ([]string, error) {
 }
 
 func convertFargoAppToInstances(app *fargo.Application) []string {
-	instances := make([]string, len(app.Instances))
-	for i, inst := range app.Instances {
-		instances[i] = fmt.Sprintf("%s:%d", inst.IPAddr, inst.Port)
+	var instances []string
+	for _, inst := range app.Instances {
+		if inst.Status == fargo.UP {
+			instances = append(instances, fmt.Sprintf("%s:%d", inst.IPAddr, inst.Port))
+		}
 	}
 	return instances
 }
