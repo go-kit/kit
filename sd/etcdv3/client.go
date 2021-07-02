@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"time"
+	"fmt"
 
 	"go.etcd.io/etcd/client/pkg/v3/transport"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -220,6 +221,9 @@ func (c *client) Register(s Service) error {
 			case r := <-c.hbch:
 				// avoid dead loop when channel was closed
 				if r == nil {
+					if err := c.Register(s); err != nil {
+						fmt.Println(err.Error())
+					}
 					return
 				}
 			case <-c.ctx.Done():
