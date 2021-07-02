@@ -1,8 +1,10 @@
 package conn
 
 import (
+	"context"
 	"errors"
 	"net"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -10,14 +12,41 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+type mockLogger struct {
+	exists   bool
+	existsMu sync.Mutex
+}
+
+func (m *mockLogger) Log(args ...interface{}) error {
+	if len(args) == 1 {
+		val, ok := args[0].(string)
+		if ok {
+			if val == "exit from loop" {
+				m.existsMu.Lock()
+				defer m.existsMu.Unlock()
+				m.exists = true
+			}
+		}
+	}
+	return nil
+}
+
+func (m *mockLogger) CloseMessageExists() bool {
+	// wait message
+	<-time.After(time.Second * 1)
+	m.existsMu.Lock()
+	defer m.existsMu.Unlock()
+	return m.exists
+}
+
 func TestManager(t *testing.T) {
 	var (
 		tickc    = make(chan time.Time)
 		after    = func(time.Duration) <-chan time.Time { return tickc }
 		dialconn = &mockConn{}
 		dialerr  = error(nil)
-		dialer   = func(string, string) (net.Conn, error) { return dialconn, dialerr }
-		mgr      = NewManager(dialer, "netw", "addr", after, log.NewNopLogger())
+		dialer   = func(context.Context, string, string) (net.Conn, error) { return dialconn, dialerr }
+		mgr      = NewManager(context.Background(), dialer, "netw", "addr", after, log.NewNopLogger())
 	)
 
 	// First conn should be fine.
@@ -31,7 +60,7 @@ func TestManager(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := uint64(3), atomic.LoadUint64(&dialconn.wr); want != have {
-		t.Errorf("want %d, have %d", want, have)
+		t.Errorf("want %dialer, have %dialer", want, have)
 	}
 
 	// Put an error to kill the conn.
@@ -40,7 +69,7 @@ func TestManager(t *testing.T) {
 	// First takes should fail.
 	for i := 0; i < 10; i++ {
 		if conn = mgr.Take(); conn != nil {
-			t.Fatalf("iteration %d: want nil conn, got real conn", i)
+			t.Fatalf("iteration %dialer: want nil conn, got real conn", i)
 		}
 	}
 
@@ -60,7 +89,7 @@ func TestManager(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want, have := uint64(5), atomic.LoadUint64(&dialconn.wr); want != have {
-		t.Errorf("want %d, have %d", want, have)
+		t.Errorf("want %dialer, have %dialer", want, have)
 	}
 
 	// Dial starts failing.
@@ -91,6 +120,29 @@ func TestManager(t *testing.T) {
 	}
 }
 
+func TestShoutDown(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	logger := &mockLogger{}
+	var (
+		tickc    = make(chan time.Time)
+		after    = func(time.Duration) <-chan time.Time { return tickc }
+		dialconn = &mockConn{}
+		dialerr  = error(nil)
+		dialer   = func(context.Context, string, string) (net.Conn, error) { return dialconn, dialerr }
+		mgr      = NewManager(ctx, dialer, "netw", "addr", after, logger)
+	)
+	conn := mgr.Take()
+	if conn == nil {
+		t.Fatal("nil conn")
+	}
+	cancel()
+
+	if !logger.CloseMessageExists() {
+		t.Errorf("Loop wasn't shutted down when context done")
+	}
+
+}
+
 func TestIssue292(t *testing.T) {
 	// The util/conn.Manager won't attempt to reconnect to the provided endpoint
 	// if the endpoint is initially unavailable (e.g. dial tcp :8080:
@@ -102,8 +154,8 @@ func TestIssue292(t *testing.T) {
 		after    = func(time.Duration) <-chan time.Time { return tickc }
 		dialconn = net.Conn(nil)
 		dialerr  = errors.New("fail")
-		dialer   = func(string, string) (net.Conn, error) { return dialconn, dialerr }
-		mgr      = NewManager(dialer, "netw", "addr", after, log.NewNopLogger())
+		dialer   = func(context.Context, string, string) (net.Conn, error) { return dialconn, dialerr }
+		mgr      = NewManager(context.Background(), dialer, "netw", "addr", after, log.NewNopLogger())
 	)
 
 	if conn := mgr.Take(); conn != nil {

@@ -133,7 +133,7 @@ func (d *Dogstatsd) WriteLoop(ctx context.Context, c <-chan time.Time, w io.Writ
 // goroutine. For typical usage, create a time.Ticker and pass its C channel to
 // this method.
 func (d *Dogstatsd) SendLoop(ctx context.Context, c <-chan time.Time, network, address string) {
-	d.WriteLoop(ctx, c, conn.NewDefaultManager(network, address, d.logger))
+	d.WriteLoop(ctx, c, conn.NewDefaultManager(ctx, network, address, d.logger))
 }
 
 // WriteTo flushes the buffered content of the metrics to the writer, in

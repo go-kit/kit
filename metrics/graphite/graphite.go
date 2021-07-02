@@ -106,7 +106,7 @@ func (g *Graphite) WriteLoop(ctx context.Context, c <-chan time.Time, w io.Write
 // goroutine. For typical usage, create a time.Ticker and pass its C channel to
 // this method.
 func (g *Graphite) SendLoop(ctx context.Context, c <-chan time.Time, network, address string) {
-	g.WriteLoop(ctx, c, conn.NewDefaultManager(network, address, g.logger))
+	g.WriteLoop(ctx, c, conn.NewDefaultManager(ctx, network, address, g.logger))
 }
 
 // WriteTo flushes the buffered content of the metrics to the writer, in
