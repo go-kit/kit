@@ -10,5 +10,5 @@ See [netrpc_binding.go](https://github.com/go-kit/kit/blob/ec8b02591ee873433565a
 That's it!
 The net/rpc binding can be registered to a name, and bound to an HTTP handler, the same as any other net/rpc endpoint.
 And within your service, you can use standard Go kit components and idioms.
-See [addsvc](https://github.com/go-kit/kit/tree/master/examples/addsvc) for a complete working example with net/rpc support.
+See [addsvc](https://github.com/go-kit/examples/tree/master/addsvc) for a complete working example with net/rpc support.
 And remember: Go kit services can support multiple transports simultaneously.

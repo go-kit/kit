@@ -70,7 +70,7 @@ Go kit instrumentation can be found in [opentelemetry-go-contrib]
 which is a central repository of instrumentation libraries.
 
 [Dapper]: http://research.google.com/pubs/pub36356.html
-[addsvc]:https://github.com/go-kit/kit/tree/master/examples/addsvc
+[addsvc]: https://github.com/go-kit/examples/tree/master/addsvc
 [README]: https://github.com/go-kit/kit/blob/master/tracing/zipkin/README.md
 
 [OpenTracing]: http://opentracing.io
