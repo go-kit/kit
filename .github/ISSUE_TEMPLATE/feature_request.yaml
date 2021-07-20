@@ -1,0 +1,8 @@
+name: 🚀 Feature request
+description: Suggest an idea for this project
+body:
+- type: textarea
+  attributes:
+    label: What would you like?
+  validations:
+    required: true
