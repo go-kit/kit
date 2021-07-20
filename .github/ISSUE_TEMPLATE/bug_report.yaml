@@ -1,5 +1,5 @@
-name: 🐛 Bug report
-description: Report a bug to help us improve
+name: Bug report
+description: Report a bug
 body:
 - type: textarea
   attributes:

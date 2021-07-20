@@ -1,5 +1,5 @@
-name: 🚀 Feature request
-description: Suggest an idea for this project
+name: Feature request
+description: Suggest new functionality or an enhancement
 body:
 - type: textarea
   attributes:
