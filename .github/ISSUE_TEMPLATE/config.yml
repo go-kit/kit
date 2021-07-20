@@ -1,0 +1,13 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/go-kit/kit/discussions/new?category=q-a
+
+  - name: Website
+    url: https://gokit.io/
+
+  - name: Reference
+    url: https://pkg.go.dev/github.com/go-kit/kit
+
+  - name: Slack channel
+    url: https://gophers.slack.com/messages/go-kit
