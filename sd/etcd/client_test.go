@@ -129,14 +129,12 @@ type fakeWatcher struct {
 // When an event occurs it just return nil response and error.
 // When an error occur it return a non nil error.
 func (fw *fakeWatcher) Next(context.Context) (*etcd.Response, error) {
-	for {
-		select {
-		case <-fw.event:
-			return nil, nil
-		case <-fw.err:
-			return nil, errors.New("error from underlying etcd watcher")
+	select {
+	case <-fw.event:
+		return nil, nil
+	case <-fw.err:
+		return nil, errors.New("error from underlying etcd watcher")
 
-		}
 	}
 }
 
