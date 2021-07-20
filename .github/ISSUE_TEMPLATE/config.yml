@@ -2,12 +2,16 @@ blank_issues_enabled: false
 contact_links:
   - name: Ask a question
     url: https://github.com/go-kit/kit/discussions/new?category=q-a
+    about: Ask questions and discuss topics with other community members
 
   - name: Website
     url: https://gokit.io/
+    about: Check the website for details, examples and documentation
 
   - name: Reference
     url: https://pkg.go.dev/github.com/go-kit/kit
+    about: Check the Go code reference
 
   - name: Slack channel
     url: https://gophers.slack.com/messages/go-kit
+    about: Ask questions here in realtime
