@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 
-	jwt "github.com/golang-jwt/jwt"
-
 	"github.com/go-kit/kit/endpoint"
+	"github.com/golang-jwt/jwt"
 )
 
 type contextKey string
