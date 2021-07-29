@@ -1,7 +1,7 @@
 package zap
 
 import (
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
