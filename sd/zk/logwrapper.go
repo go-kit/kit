@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-zookeeper/zk"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 )
 
 // wrapLogger wraps a Go kit logger so we can use it as the logging service for

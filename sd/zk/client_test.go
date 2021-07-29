@@ -7,7 +7,7 @@ import (
 
 	stdzk "github.com/go-zookeeper/zk"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 )
 
 func TestNewClient(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 
 	stdconsul "github.com/hashicorp/consul/api"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 )
 
 // Registrar registers service instance liveness information to Consul.

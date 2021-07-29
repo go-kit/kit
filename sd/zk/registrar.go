@@ -1,6 +1,6 @@
 package zk
 
-import "github.com/go-kit/kit/log"
+import "github.com/go-kit/log"
 
 // Registrar registers service instance liveness information to ZooKeeper.
 type Registrar struct {

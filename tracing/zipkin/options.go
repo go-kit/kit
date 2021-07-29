@@ -3,7 +3,7 @@ package zipkin
 import (
 	"net/http"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 )
 
 // TracerOption allows for functional options to our Zipkin tracing middleware.

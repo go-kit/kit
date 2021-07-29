@@ -1,3 +1,4 @@
+//go:build flaky_integration
 // +build flaky_integration
 
 package etcd
@@ -10,8 +11,8 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/log"
 )
 
 // Package sd/etcd provides a wrapper around the etcd key/value store. This
