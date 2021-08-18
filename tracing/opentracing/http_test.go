@@ -10,8 +10,8 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/mocktracer"
 
-	"github.com/go-kit/kit/log"
 	kitot "github.com/go-kit/kit/tracing/opentracing"
+	"github.com/go-kit/log"
 )
 
 func TestTraceHTTPRequestRoundtrip(t *testing.T) {

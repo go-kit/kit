@@ -95,7 +95,7 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/auth/jwt"
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 )
 

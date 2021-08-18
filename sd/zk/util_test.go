@@ -11,8 +11,8 @@ import (
 	"github.com/go-zookeeper/zk"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/log"
 )
 
 var (

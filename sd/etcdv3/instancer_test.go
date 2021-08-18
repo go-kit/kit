@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/log"
 )
 
 var _ sd.Instancer = (*Instancer)(nil) // API check

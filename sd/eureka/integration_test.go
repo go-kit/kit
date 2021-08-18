@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package eureka
@@ -9,7 +10,7 @@ import (
 
 	"github.com/hudl/fargo"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 )
 
 // Package sd/eureka provides a wrapper around the Netflix Eureka service

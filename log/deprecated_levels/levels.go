@@ -1,6 +1,9 @@
+// Package levels implements leveled logging on top of Go kit's log package.
+//
+// Deprecated: Use github.com/go-kit/log/level instead.
 package levels
 
-import "github.com/go-kit/kit/log"
+import "github.com/go-kit/log"
 
 // Levels provides a leveled logging wrapper around a logger. It has five
 // levels: debug, info, warning (warn), error, and critical (crit). If you

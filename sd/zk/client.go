@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-zookeeper/zk"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 )
 
 // DefaultACL is the default ACL to use for creating znodes.
