@@ -3,8 +3,8 @@ package influxstatsd
 import (
 	"testing"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/teststat"
+	"github.com/go-kit/log"
 )
 
 func TestCounter(t *testing.T) {

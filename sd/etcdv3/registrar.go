@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 )
 
 const minHeartBeatTime = 500 * time.Millisecond

@@ -2,13 +2,14 @@ package consul
 
 import (
 	"context"
-	consul "github.com/hashicorp/consul/api"
 	"io"
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/log"
+	consul "github.com/hashicorp/consul/api"
+
 	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/log"
 )
 
 var _ sd.Instancer = (*Instancer)(nil) // API check
