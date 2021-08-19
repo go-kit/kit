@@ -17,7 +17,7 @@ require (
 	github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8 // indirect
 	github.com/go-kit/log v0.1.0
 	github.com/go-zookeeper/zk v1.0.2
-	github.com/golang-jwt/jwt v3.2.1+incompatible
+	github.com/golang-jwt/jwt/v4 v4.0.0
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hudl/fargo v1.3.0
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
