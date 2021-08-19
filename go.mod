@@ -9,8 +9,6 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.7.0
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.5.0
 	github.com/casbin/casbin/v2 v2.31.6
-	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
-	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/go-kit/log v0.1.0
 	github.com/go-zookeeper/zk v1.0.2
 	github.com/golang-jwt/jwt/v4 v4.0.0
@@ -21,7 +19,7 @@ require (
 	github.com/nats-io/nats.go v1.11.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/openzipkin/zipkin-go v0.2.5
-	github.com/performancecopilot/speed v3.0.0+incompatible
+	github.com/performancecopilot/speed/v4 v4.0.0
 	github.com/prometheus/client_golang v1.11.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/sony/gobreaker v0.4.1
