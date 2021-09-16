@@ -1,7 +1,7 @@
 package pcp
 
 import (
-	"github.com/performancecopilot/speed"
+	"github.com/performancecopilot/speed/v4"
 
 	"github.com/go-kit/kit/metrics"
 )
