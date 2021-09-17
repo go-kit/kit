@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.7.0
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.5.0
 	github.com/casbin/casbin/v2 v2.31.6
-	github.com/go-kit/log v0.1.0
+	github.com/go-kit/log v0.2.0
 	github.com/go-zookeeper/zk v1.0.2
 	github.com/golang-jwt/jwt/v4 v4.0.0
 	github.com/hashicorp/consul/api v1.8.1
@@ -50,7 +50,7 @@ require (
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8 // indirect
-	github.com/go-logfmt/logfmt v0.5.0 // indirect
+	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
