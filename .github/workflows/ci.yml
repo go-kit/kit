@@ -11,8 +11,8 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     strategy:
-      matrix:  # Support latest and one minor back
-        go: ['1.15', '1.16']
+      matrix: # Support latest and one minor back
+        go: ["1.16", "1.17"]
     env:
       GOFLAGS: -mod=readonly
 
@@ -47,7 +47,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2.1.3
         with:
-          stable: 'false'
+          stable: "false"
           go-version: ${{ matrix.go }}
 
       - name: Checkout code
