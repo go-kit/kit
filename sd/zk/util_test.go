@@ -1,7 +1,6 @@
 package zk
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -17,7 +16,6 @@ import (
 
 var (
 	path   = "/gokit.test/service.name"
-	e      = func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil }
 	logger = log.NewNopLogger()
 )
 

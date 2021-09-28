@@ -271,10 +271,6 @@ func sum(a []float64) float64 {
 	return v
 }
 
-func last(a []float64) float64 {
-	return a[len(a)-1]
-}
-
 func min(a, b int) int {
 	if a < b {
 		return a
