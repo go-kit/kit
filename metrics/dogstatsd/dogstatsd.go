@@ -209,10 +209,6 @@ func sum(a []float64) float64 {
 	return v
 }
 
-func last(a []float64) float64 {
-	return a[len(a)-1]
-}
-
 func sampling(r float64) string {
 	var sv string
 	if r < 1.0 {
