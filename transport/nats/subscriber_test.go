@@ -116,7 +116,7 @@ func TestSubscriberErrorEncoder(t *testing.T) {
 
 	errTeapot := errors.New("teapot")
 	code := func(err error) error {
-		if err == errTeapot {
+		if errors.Is(err, errTeapot) {
 			return err
 		}
 		return errors.New("dang")
