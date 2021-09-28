@@ -70,7 +70,7 @@ func (s *Instancer) loop(lastIndex uint64) {
 		index := lastIndex
 		instances, index, err = s.getInstances(lastIndex, s.quitc)
 		switch {
-		case err == errStopped:
+		case errors.Is(err, errStopped):
 			return // stopped via quitc
 		case err != nil:
 			s.logger.Log("err", err)
