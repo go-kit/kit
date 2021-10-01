@@ -48,12 +48,6 @@ type CloudWatch struct {
 
 type option func(*CloudWatch)
 
-func (s *CloudWatch) apply(opt option) {
-	if opt != nil {
-		opt(s)
-	}
-}
-
 func WithLogger(logger log.Logger) option {
 	return func(c *CloudWatch) {
 		c.logger = logger

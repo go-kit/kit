@@ -73,14 +73,6 @@ func (s *Instancer) loop(updates <-chan fargo.AppUpdate, done chan<- struct{}) {
 	}
 }
 
-func (s *Instancer) getInstances() ([]string, error) {
-	app, err := s.conn.GetApp(s.app)
-	if err != nil {
-		return nil, err
-	}
-	return convertFargoAppToInstances(app), nil
-}
-
 func convertFargoAppToInstances(app *fargo.Application) []string {
 	instances := make([]string, len(app.Instances))
 	for i, inst := range app.Instances {

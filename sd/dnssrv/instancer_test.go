@@ -94,7 +94,3 @@ func TestIssue892(t *testing.T) {
 		t.Fatalf("want %v, have %v", want, have)
 	}
 }
-
-type nopCloser struct{}
-
-func (nopCloser) Close() error { return nil }
