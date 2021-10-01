@@ -14,9 +14,8 @@ type RequestFunc func(context.Context, *http.Request) context.Context
 
 // Server is a proxying request handler.
 type Server struct {
-	proxy        http.Handler
-	before       []RequestFunc
-	errorEncoder func(w http.ResponseWriter, err error)
+	proxy  http.Handler
+	before []RequestFunc
 }
 
 // NewServer constructs a new server that implements http.Server and will proxy
