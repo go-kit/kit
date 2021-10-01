@@ -1,0 +1,12 @@
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - dupl
+    - gocritic
+    - gosec
+    - gosimple
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
