@@ -17,9 +17,7 @@ func (tc *testClient) GetEntries(prefix string) ([]string, error) {
 	return nil, nil
 }
 
-func (tc *testClient) WatchPrefix(prefix string, ch chan struct{}) {
-	return
-}
+func (tc *testClient) WatchPrefix(prefix string, ch chan struct{}) {}
 
 func (tc *testClient) Register(s Service) error {
 	return tc.registerRes

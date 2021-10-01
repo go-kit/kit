@@ -67,7 +67,6 @@ func (c *endpointCache) Update(event Event) {
 	c.err = event.Err
 	// set new deadline to invalidate Endpoints unless non-error Event is received
 	c.invalidateDeadline = c.timeNow().Add(c.options.invalidateTimeout)
-	return
 }
 
 func (c *endpointCache) updateCache(instances []string) {
