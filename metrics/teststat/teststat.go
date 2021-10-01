@@ -127,8 +127,5 @@ func ExpectedObservationsLessThan(bucket int64) int64 {
 }
 
 func cmp(want, have, tol float64) bool {
-	if (math.Abs(want-have) / want) > tol {
-		return false
-	}
-	return true
+	return (math.Abs(want-have) / want) <= tol
 }
