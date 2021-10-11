@@ -199,10 +199,6 @@ func EncodeXMLRequest(c context.Context, r *http.Request, request interface{}) e
 	return xml.NewEncoder(&b).Encode(request)
 }
 
-//
-//
-//
-
 func makeCreateRequestFunc(method string, target *url.URL, enc EncodeRequestFunc) CreateRequestFunc {
 	return func(ctx context.Context, request interface{}) (*http.Request, error) {
 		req, err := http.NewRequest(method, target.String(), nil)
@@ -210,7 +206,7 @@ func makeCreateRequestFunc(method string, target *url.URL, enc EncodeRequestFunc
 			return nil, err
 		}
 
-		if err = enc(ctx, req, request); err != nil {
+		if err := enc(ctx, req, request); err != nil {
 			return nil, err
 		}
 
