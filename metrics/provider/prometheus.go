@@ -46,7 +46,7 @@ func (p *prometheusProvider) NewGauge(name string) metrics.Gauge {
 	}, []string{})
 }
 
-// NewGauge implements Provider via prometheus.NewSummaryFrom, i.e. the summary
+// NewHistogram implements Provider via prometheus.NewSummaryFrom, i.e. the summary
 // is registered. The metric's namespace and subsystem are taken from the
 // Provider. Help is set to the name of the metric, and no const label names are
 // set. Buckets are ignored.
