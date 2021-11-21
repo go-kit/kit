@@ -44,12 +44,6 @@ type CloudWatch struct {
 // Option is a function adapter to change config of the CloudWatch struct
 type Option func(*CloudWatch)
 
-func (cw *CloudWatch) apply(opt Option) {
-	if opt != nil {
-		opt(cw)
-	}
-}
-
 // WithLogger sets the Logger that will receive error messages generated
 // during the WriteLoop. By default, fmt logger is used.
 func WithLogger(logger log.Logger) Option {
@@ -105,7 +99,7 @@ func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...Option)
 	}
 
 	for _, opt := range options {
-		cw.apply(opt)
+		opt(cw)
 	}
 
 	cw.sem = make(chan struct{}, cw.numConcurrentRequests)
