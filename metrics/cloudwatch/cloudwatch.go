@@ -23,11 +23,6 @@ const (
 	maxValuesInABatch     = 150
 )
 
-type Percentiles []struct {
-	s string
-	f float64
-}
-
 // CloudWatch receives metrics observations and forwards them to CloudWatch.
 // Create a CloudWatch object, use it to create metrics, and pass those metrics as
 // dependencies to the components that will use them.
@@ -46,15 +41,12 @@ type CloudWatch struct {
 	numConcurrentRequests int
 }
 
-type option func(*CloudWatch)
+// Option is a function adapter to change config of the CloudWatch struct
+type Option func(*CloudWatch)
 
-func (s *CloudWatch) apply(opt option) {
-	if opt != nil {
-		opt(s)
-	}
-}
-
-func WithLogger(logger log.Logger) option {
+// WithLogger sets the Logger that will receive error messages generated
+// during the WriteLoop. By default, fmt logger is used.
+func WithLogger(logger log.Logger) Option {
 	return func(c *CloudWatch) {
 		c.logger = logger
 	}
@@ -64,7 +56,7 @@ func WithLogger(logger log.Logger) option {
 // existing/default values.
 // Reason is that Cloudwatch makes you pay per metric, so you can save half the money
 // by only using 2 metrics instead of the default 4.
-func WithPercentiles(percentiles ...float64) option {
+func WithPercentiles(percentiles ...float64) Option {
 	return func(c *CloudWatch) {
 		c.percentiles = make([]float64, 0, len(percentiles))
 		for _, p := range percentiles {
@@ -76,7 +68,11 @@ func WithPercentiles(percentiles ...float64) option {
 	}
 }
 
-func WithConcurrentRequests(n int) option {
+// WithConcurrentRequests sets the upper limit on how many
+// cloudwatch.PutMetricDataRequest may be under way at any
+// given time. If n is greater than 20, 20 is used. By default,
+// the max is set at 10 concurrent requests.
+func WithConcurrentRequests(n int) Option {
 	return func(c *CloudWatch) {
 		if n > maxConcurrentRequests {
 			n = maxConcurrentRequests
@@ -89,7 +85,7 @@ func WithConcurrentRequests(n int) option {
 // Namespace is applied to all created metrics and maps to the CloudWatch namespace.
 // Callers must ensure that regular calls to Send are performed, either
 // manually or with one of the helper methods.
-func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...option) *CloudWatch {
+func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...Option) *CloudWatch {
 	cw := &CloudWatch{
 		sem:                   nil, // set below
 		namespace:             namespace,
@@ -102,8 +98,8 @@ func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...option)
 		percentiles:           []float64{0.50, 0.90, 0.95, 0.99},
 	}
 
-	for _, optFunc := range options {
-		optFunc(cw)
+	for _, opt := range options {
+		opt(cw)
 	}
 
 	cw.sem = make(chan struct{}, cw.numConcurrentRequests)
