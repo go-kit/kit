@@ -151,7 +151,7 @@ type ServerFinalizerFunc func(ctx context.Context, code int, r *http.Request)
 
 // NopRequestDecoder is a DecodeRequestFunc that can be used for requests that do not
 // need to be decoded, and simply returns nil, nil.
-func NopRequestDecoder(ctx context.Context, r *http.Request) (interface{}, error) {
+func NopRequestDecoder(_ context.Context, _ *http.Request) (interface{}, error) {
 	return nil, nil
 }
 

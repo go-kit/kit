@@ -23,7 +23,7 @@ func NewLogErrorHandler(logger log.Logger) *LogErrorHandler {
 	}
 }
 
-func (h *LogErrorHandler) Handle(ctx context.Context, err error) {
+func (h *LogErrorHandler) Handle(_ context.Context, err error) {
 	h.logger.Log("err", err)
 }
 
