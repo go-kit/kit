@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // The golang AMQP implementation requires the []byte representation of

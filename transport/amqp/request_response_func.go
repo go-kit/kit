@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // RequestFunc may take information from a publisher request and put it into a

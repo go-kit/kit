@@ -21,9 +21,9 @@ require (
 	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/performancecopilot/speed/v4 v4.0.0
 	github.com/prometheus/client_golang v1.11.0
+	github.com/rabbitmq/amqp091-go v1.2.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/sony/gobreaker v0.4.1
-	github.com/streadway/amqp v1.0.0
 	github.com/streadway/handy v0.0.0-20200128134331-0f66f006fb2e
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0
 	go.etcd.io/etcd/client/v2 v2.305.0
