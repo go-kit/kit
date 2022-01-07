@@ -3,7 +3,7 @@ package amqp
 import (
 	"context"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // DecodeRequestFunc extracts a user-domain request object from

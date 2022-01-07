@@ -8,7 +8,7 @@ import (
 	"time"
 
 	amqptransport "github.com/go-kit/kit/transport/amqp"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 var (
