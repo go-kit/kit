@@ -22,3 +22,6 @@ jobs:
 
       - name: Run tests
         run: gotip test -v ./endpoint/ ./transport/http2/
+
+      - name: Run tests
+        run: gotip test -v ./endpoint/ ./transport/http3/
