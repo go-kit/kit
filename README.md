@@ -78,6 +78,12 @@ different starting assumptions.
 - [sagikazarmark/protoc-gen-kit](https://github.com/sagikazarmark/protoc-gen-kit)
 - [tuneinc/truss](https://github.com/tuneinc/truss)
 
+## Third-party extensions
+
+Third-party tools and libraries that extends Go kit functionality.
+
+- [alebabai/go-kit-kafka](https://github.com/alebabai/go-kit-kafka), module with Apache Kafka transport abstractions
+
 ## Related projects
 
 Projects with a ★ have had particular influence on Go kit's design (or vice-versa).
