@@ -104,7 +104,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				f(ctx, iw.code, r)
 			}
 		}()
-		w = iw
+		w = iw.reimplementInterfaces()
 	}
 
 	for _, f := range s.before {
@@ -222,23 +222,4 @@ type StatusCoder interface {
 // the Content-Type is set.
 type Headerer interface {
 	Headers() http.Header
-}
-
-type interceptingWriter struct {
-	http.ResponseWriter
-	code    int
-	written int64
-}
-
-// WriteHeader may not be explicitly called, so care must be taken to
-// initialize w.code to its default value of http.StatusOK.
-func (w *interceptingWriter) WriteHeader(code int) {
-	w.code = code
-	w.ResponseWriter.WriteHeader(code)
-}
-
-func (w *interceptingWriter) Write(p []byte) (int, error) {
-	n, err := w.ResponseWriter.Write(p)
-	w.written += int64(n)
-	return n, err
 }
