@@ -2,6 +2,7 @@ package consul
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"testing"
 	"time"
@@ -260,4 +261,67 @@ func TestInstancerWithInvalidIndex(t *testing.T) {
 	case <-time.Tick(time.Millisecond * 500):
 		t.Error("failed, to receive call in time")
 	}
+}
+
+type indexTestClient struct {
+	client *testClient
+	index  uint64
+	errs   chan error
+}
+
+func newIndexTestClient(c *testClient, errs chan error) *indexTestClient {
+	return &indexTestClient{
+		client: c,
+		index:  0,
+		errs:   errs,
+	}
+}
+
+func (i *indexTestClient) Register(r *consul.AgentServiceRegistration) error {
+	return i.client.Register(r)
+}
+
+func (i *indexTestClient) Deregister(r *consul.AgentServiceRegistration) error {
+	return i.client.Deregister(r)
+}
+
+func (i *indexTestClient) Service(service, tag string, passingOnly bool, queryOpts *consul.QueryOptions) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
+
+	// Assumes this is the first call Service, loop hasn't begun running yet
+	if i.index == 0 && queryOpts.WaitIndex == 0 {
+		i.index = 100
+		entries, meta, err := i.client.Service(service, tag, passingOnly, queryOpts)
+		meta.LastIndex = i.index
+		return entries, meta, err
+	}
+
+	if queryOpts.WaitIndex < i.index {
+		i.errs <- fmt.Errorf("wait index %d is less than or equal to previous value", queryOpts.WaitIndex)
+	}
+
+	entries, meta, err := i.client.Service(service, tag, passingOnly, queryOpts)
+	i.index++
+	meta.LastIndex = i.index
+	return entries, meta, err
+}
+
+func TestInstancerLoopIndex(t *testing.T) {
+
+	var (
+		errs   = make(chan error, 1)
+		logger = log.NewNopLogger()
+		client = newIndexTestClient(newTestClient(consulState), errs)
+	)
+
+	go func() {
+		for err := range errs {
+			t.Error(err)
+			t.FailNow()
+		}
+	}()
+
+	instancer := NewInstancer(client, logger, "search", []string{"api"}, true)
+	defer instancer.Stop()
+
+	time.Sleep(2 * time.Second)
 }
