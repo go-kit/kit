@@ -91,7 +91,7 @@ func SubscriberFinalizer(f ...SubscriberFinalizerFunc) SubscriberOption {
 }
 
 // ServeMsg provides nats.MsgHandler.
-func (s Subscriber) ServeMsg(nc *nats.Conn) func(msg *nats.Msg) {
+func (s Subscriber) ServeMsg(nc *nats.Conn) nats.MsgHandler {
 	return func(msg *nats.Msg) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
