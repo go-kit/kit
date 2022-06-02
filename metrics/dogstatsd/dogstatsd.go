@@ -141,9 +141,14 @@ func (d *Dogstatsd) SendLoop(ctx context.Context, c <-chan time.Time, network, a
 // lost if there is a problem with the write. Clients should be sure to call
 // WriteTo regularly, ideally through the WriteLoop or SendLoop helper methods.
 func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
-	var n int
+	var (
+		n          int
+		counters   = d.counters.Reset()
+		timings    = d.timings.Reset()
+		histograms = d.histograms.Reset()
+	)
 
-	d.counters.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
+	counters.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
 		n, err = fmt.Fprintf(w, "%s%s:%f|c%s%s\n", d.prefix, name, sum(values), sampling(d.rates.Get(name)), d.tagValues(lvs))
 		if err != nil {
 			return false
@@ -168,7 +173,7 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 	}
 	d.mtx.RUnlock()
 
-	d.timings.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
+	timings.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
 		sampleRate := d.rates.Get(name)
 		for _, value := range values {
 			n, err = fmt.Fprintf(w, "%s%s:%f|ms%s%s\n", d.prefix, name, value, sampling(sampleRate), d.tagValues(lvs))
@@ -183,7 +188,7 @@ func (d *Dogstatsd) WriteTo(w io.Writer) (count int64, err error) {
 		return count, err
 	}
 
-	d.histograms.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
+	histograms.Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
 		sampleRate := d.rates.Get(name)
 		for _, value := range values {
 			n, err = fmt.Fprintf(w, "%s%s:%f|h%s%s\n", d.prefix, name, value, sampling(sampleRate), d.tagValues(lvs))
