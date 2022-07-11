@@ -17,7 +17,7 @@ business value.
 
 ## Sponsors
 
-Click on Sponsor, above, for more information on sponsorship.
+Click [here](https://github.com/sponsors/peterbourgon) or Sponsor, above, for more information on sponsorship.
 
 ## Motivation
 
