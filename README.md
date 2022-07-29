@@ -13,11 +13,11 @@ business value.
 
 - Website: [gokit.io](https://gokit.io)
 - Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
-- Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](https://gophersinvite.herokuapp.com/))
+- Slack: [gophers.slack.com](https://gophers.slack.com) 
 
 ## Sponsors
 
-Click [here](https://github.com/sponsors/peterbourgon) or Sponsor, above, for more information on sponsorship.
+Click [here](https://github.com/sponsors/peterbourgon) to if you would like to sponsor us!
 
 ## Motivation
 
