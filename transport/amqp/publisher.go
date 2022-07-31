@@ -129,8 +129,8 @@ func DefaultDeliverer(
 	err := p.ch.Publish(
 		getPublishExchange(ctx),
 		getPublishKey(ctx),
-		false, //mandatory
-		false, //immediate
+		false, // mandatory
+		false, // immediate
 		*pub,
 	)
 	if err != nil {
@@ -140,11 +140,11 @@ func DefaultDeliverer(
 
 	msg, err := p.ch.Consume(
 		p.q.Name,
-		"", //consumer
+		"", // consumer
 		autoAck,
-		false, //exclusive
-		false, //noLocal
-		false, //noWait
+		false, // exclusive
+		false, // noLocal
+		false, // noWait
 		getConsumeArgs(ctx),
 	)
 	if err != nil {
@@ -156,7 +156,7 @@ func DefaultDeliverer(
 		case d := <-msg:
 			if d.CorrelationId == pub.CorrelationId {
 				if !autoAck {
-					d.Ack(false) //multiple
+					d.Ack(false) // multiple
 				}
 				return &d, nil
 			}
@@ -180,8 +180,8 @@ func SendAndForgetDeliverer(
 	err := p.ch.Publish(
 		getPublishExchange(ctx),
 		getPublishKey(ctx),
-		false, //mandatory
-		false, //immediate
+		false, // mandatory
+		false, // immediate
 		*pub,
 	)
 	return nil, err

@@ -221,7 +221,7 @@ var errKeyAPI = errors.New("emulate error returned by KeysAPI.Get")
 var getEntriesTestTable = []struct {
 	input getResult // value returned by the underlying etcd.KeysAPI.Get
 	resp  []string  // response expected in output of GetEntries
-	err   error     //error expected in output of GetEntries
+	err   error     // error expected in output of GetEntries
 
 }{
 	// test case: an error is returned by etcd.KeysAPI.Get

@@ -232,8 +232,8 @@ func DefaultErrorEncoder(ctx context.Context,
 func SingleNackRequeueErrorEncoder(ctx context.Context,
 	err error, deliv *amqp.Delivery, ch Channel, pub *amqp.Publishing) {
 	deliv.Nack(
-		false, //multiple
-		true,  //requeue
+		false, // multiple
+		true,  // requeue
 	)
 	duration := getNackSleepDuration(ctx)
 	time.Sleep(duration)
