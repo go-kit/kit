@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix: # Support latest and one minor back
-        go: ["1.17", "1.18"]
+        go: ["1.17", "1.18", "1.19"]
     env:
       GOFLAGS: -mod=readonly
 
