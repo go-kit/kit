@@ -120,6 +120,7 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 - [Beego](https://beego.vip/)
 - [Revel](https://revel.github.io/) (considered [harmful](https://github.com/go-kit/kit/issues/350))
 - [GoBuffalo](https://gobuffalo.io/)
+- [Fiber](https://gofiber.io/)
 
 ## Additional reading
 
