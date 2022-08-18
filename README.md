@@ -75,7 +75,7 @@ different starting assumptions.
 - [kujtimiihoxha/kit](https://github.com/kujtimiihoxha/kit) (unmaintained)
 - [nytimes/marvin](https://github.com/nytimes/marvin)
 - [sagikazarmark/mga](https://github.com/sagikazarmark/mga)
-- [sagikazarmark/protoc-gen-kit](https://github.com/sagikazarmark/protoc-gen-kit)
+- [sagikazarmark/protoc-gen-go-kit](https://github.com/sagikazarmark/protoc-gen-go-kit)
 - [tuneinc/truss](https://github.com/tuneinc/truss)
 
 ## Related projects
