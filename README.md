@@ -69,7 +69,7 @@ version 0, so it should be compatible with non-modules environments.
 There are several third-party tools that can generate Go kit code based on
 different starting assumptions.
 
-- [devimteam/microgen](https://github.com/devimteam/microgen)
+- [RecoLabs/microgen](https://github.com/RecoLabs/microgen)
 - [GrantZheng/kit](https://github.com/GrantZheng/kit)
 - [chaseSpace/kit](https://github.com/chaseSpace/kit)
 - [kujtimiihoxha/kit](https://github.com/kujtimiihoxha/kit) (unmaintained)
