@@ -12,13 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix: # Support latest and one minor back
-        go: ["1.17", "1.18", "1.19"]
+        go: ["1.19", "1.20"]
     env:
       GOFLAGS: -mod=readonly
 
     services:
       etcd:
-        image: gcr.io/etcd-development/etcd:v3.5.0
+        image: gcr.io/etcd-development/etcd:v3.5.9
         ports:
           - 2379
         env:
@@ -27,12 +27,12 @@ jobs:
         options: --health-cmd "ETCDCTL_API=3 etcdctl --endpoints http://localhost:2379 endpoint health" --health-interval 10s --health-timeout 5s --health-retries 5
 
       consul:
-        image: consul:1.10
+        image: consul:1.15
         ports:
           - 8500
 
       zk:
-        image: zookeeper:3.5
+        image: zookeeper:3.8
         ports:
           - 2181
 
