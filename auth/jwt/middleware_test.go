@@ -175,6 +175,13 @@ func TestJWTParser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parser returned error: %s", err)
 	}
+	regCl, ok := ctx1.(context.Context).Value(JWTClaimsContextKey).(*jwt.RegisteredClaims)
+	if !ok {
+		t.Fatal("Claims were not passed into context correctly")
+	}
+	if len(regCl.Audience) != 1 || regCl.Audience[0] != registeredClaims.Audience[0] {
+		t.Fatalf("JWT jwt.RegisteredClaims.Audience did not match: expecting %s got %s", registeredClaims.Audience, regCl.Audience)
+	}
 
 	// test valid customized claims token
 	parser = NewParser(keys, method, func() jwt.Claims { return &customClaims{} })(e)
@@ -186,6 +193,9 @@ func TestJWTParser(t *testing.T) {
 	custCl, ok := ctx1.(context.Context).Value(JWTClaimsContextKey).(*customClaims)
 	if !ok {
 		t.Fatal("Claims were not passed into context correctly")
+	}
+	if len(custCl.Audience) != 1 || custCl.Audience[0] != registeredClaims.Audience[0] {
+		t.Fatalf("JWT customClaims.Audience did not match: expecting %s got %s", registeredClaims.Audience, custCl.Audience)
 	}
 	if !custCl.VerifyMyProperty(myProperty) {
 		t.Fatalf("JWT customClaims.MyProperty did not match: expecting %s got %s", myProperty, custCl.MyProperty)
