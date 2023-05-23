@@ -18,7 +18,7 @@ jobs:
 
     services:
       etcd:
-        image: gcr.io/etcd-development/etcd:v3.5.9
+        image: gcr.io/etcd-development/etcd:v3.5.8
         ports:
           - 2379
         env:
