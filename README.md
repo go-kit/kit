@@ -75,7 +75,7 @@ different starting assumptions.
 - [nytimes/marvin](https://github.com/nytimes/marvin)
 - [sagikazarmark/mga](https://github.com/sagikazarmark/mga)
 - [sagikazarmark/protoc-gen-go-kit](https://github.com/sagikazarmark/protoc-gen-go-kit)
-- [tuneinc/truss](https://github.com/tuneinc/truss)
+- [metaverse/truss](https://github.com/metaverse/truss)
 
 ## Related projects
 
