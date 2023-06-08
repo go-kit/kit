@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	test "github.com/go-kit/kit/transport/grpc/_grpc_test"
 	"github.com/go-kit/kit/transport/grpc/_grpc_test/pb"
@@ -33,7 +34,7 @@ func TestGRPCClient(t *testing.T) {
 		_ = server.Serve(sc)
 	}()
 
-	cc, err := grpc.Dial(hostPort, grpc.WithInsecure())
+	cc, err := grpc.Dial(hostPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("unable to Dial: %+v", err)
 	}
