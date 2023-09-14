@@ -3,6 +3,8 @@ package consul
 import (
 	"errors"
 	"fmt"
+	"net"
+	"strconv"
 	"time"
 
 	consul "github.com/hashicorp/consul/api"
@@ -181,7 +183,7 @@ func makeInstances(entries []*consul.ServiceEntry) []string {
 		if entry.Service.Address != "" {
 			addr = entry.Service.Address
 		}
-		instances[i] = fmt.Sprintf("%s:%d", addr, entry.Service.Port)
+		instances[i] = net.JoinHostPort(addr, strconv.Itoa(entry.Service.Port))
 	}
 	return instances
 }

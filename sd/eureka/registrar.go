@@ -2,7 +2,9 @@ package eureka
 
 import (
 	"fmt"
+	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -51,7 +53,7 @@ func NewRegistrar(conn fargoConnection, instance *fargo.Instance, logger log.Log
 	return &Registrar{
 		conn:     conn,
 		instance: instance,
-		logger:   log.With(logger, "service", instance.App, "address", fmt.Sprintf("%s:%d", instance.IPAddr, instance.Port)),
+		logger:   log.With(logger, "service", instance.App, "address", net.JoinHostPort(instance.IPAddr, strconv.Itoa(instance.Port))),
 	}
 }
 

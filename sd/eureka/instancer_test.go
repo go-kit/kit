@@ -90,3 +90,19 @@ func TestBadInstancerScheduleUpdates(t *testing.T) {
 		t.Errorf("want %d, have %d", want, have)
 	}
 }
+
+func TestConvertFargoAppToInstances(t *testing.T) {
+	app := &fargo.Application{
+		Instances: []*fargo.Instance{
+			{IPAddr: "10.0.0.10", Port: 8000},
+			{IPAddr: "2001:db8:1::ab9:C0A8:102", Port: 8000},
+		},
+	}
+	expect := []string{"10.0.0.10:8000", "[2001:db8:1::ab9:C0A8:102]:8000"}
+	for i, inst := range convertFargoAppToInstances(app) {
+		if inst != expect[i] {
+			t.Fatalf("instance %s converting is wrong", expect[i])
+		}
+	}
+
+}
