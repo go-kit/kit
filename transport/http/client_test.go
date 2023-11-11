@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	httptransport "github.com/go-kit/kit/transport/http"
+	httptransport "github.com/openmesh/kit/transport/http"
 )
 
 type TestResponse struct {
@@ -54,8 +54,8 @@ func TestHTTPClient(t *testing.T) {
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.ClientBefore(httptransport.SetRequestHeader(headerKey, headerVal)),
-		httptransport.ClientAfter(afterFunc),
+		httptransport.ClientBefore[interface{}, interface{}](httptransport.SetRequestHeader(headerKey, headerVal)),
+		httptransport.ClientAfter[interface{}, interface{}](afterFunc),
 	)
 
 	res, err := client.Endpoint()(context.Background(), struct{}{})
@@ -122,7 +122,7 @@ func TestHTTPClientBufferedStream(t *testing.T) {
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.BufferedStream(true),
+		httptransport.BufferedStream[interface{}, interface{}](true),
 	)
 
 	res, err := client.Endpoint()(context.Background(), struct{}{})
@@ -173,7 +173,7 @@ func TestClientFinalizer(t *testing.T) {
 		mustParse(server.URL),
 		encode,
 		decode,
-		httptransport.ClientFinalizer(func(ctx context.Context, err error) {
+		httptransport.ClientFinalizer[interface{}, interface{}](func(ctx context.Context, err error) {
 			responseHeader := ctx.Value(httptransport.ContextKeyResponseHeaders).(http.Header)
 			if want, have := headerVal, responseHeader.Get(headerKey); want != have {
 				t.Errorf("%s: want %q, have %q", headerKey, want, have)
@@ -287,7 +287,7 @@ func TestSetClient(t *testing.T) {
 		&url.URL{},
 		encode,
 		decode,
-		httptransport.SetClient(testHttpClient),
+		httptransport.SetClient[interface{}, interface{}](testHttpClient),
 	).Endpoint()
 
 	resp, err := client(context.Background(), nil)

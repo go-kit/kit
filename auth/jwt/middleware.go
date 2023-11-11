@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/openmesh/kit/endpoint"
 )
 
 type contextKey string
@@ -51,16 +51,16 @@ var (
 // signing string, signing method and the claims you would like it to contain.
 // Tokens are signed with a Key ID header (kid) which is useful for determining
 // the key to use for parsing. Particularly useful for clients.
-func NewSigner(kid string, key []byte, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+func NewSigner[Request, Response any](kid string, key []byte, method jwt.SigningMethod, claims jwt.Claims) endpoint.Middleware[Request, Response] {
+	return func(next endpoint.Endpoint[Request, Response]) endpoint.Endpoint[Request, Response] {
+		return func(ctx context.Context, request Request) (response Response, err error) {
 			token := jwt.NewWithClaims(method, claims)
 			token.Header["kid"] = kid
 
 			// Sign and get the complete encoded token as a string using the secret
 			tokenString, err := token.SignedString(key)
 			if err != nil {
-				return nil, err
+				return *new(Response), err
 			}
 			ctx = context.WithValue(ctx, JWTContextKey, tokenString)
 
@@ -89,13 +89,13 @@ func StandardClaimsFactory() jwt.Claims {
 // jwt.Keyfunc interface, the signing method and the claims type to be used. NewParser
 // adds the resulting claims to endpoint context or returns error on invalid token.
 // Particularly useful for servers.
-func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims ClaimsFactory) endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+func NewParser[Request, Response any](keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims ClaimsFactory) endpoint.Middleware[Request, Response] {
+	return func(next endpoint.Endpoint[Request, Response]) endpoint.Endpoint[Request, Response] {
+		return func(ctx context.Context, request Request) (response Response, err error) {
 			// tokenString is stored in the context from the transport handlers.
 			tokenString, ok := ctx.Value(JWTContextKey).(string)
 			if !ok {
-				return nil, ErrTokenContextMissing
+				return *new(Response), ErrTokenContextMissing
 			}
 
 			// Parse takes the token string and a function for looking up the
@@ -117,25 +117,25 @@ func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims ClaimsFa
 					switch {
 					case e.Errors&jwt.ValidationErrorMalformed != 0:
 						// Token is malformed
-						return nil, ErrTokenMalformed
+						return *new(Response), ErrTokenMalformed
 					case e.Errors&jwt.ValidationErrorExpired != 0:
 						// Token is expired
-						return nil, ErrTokenExpired
+						return *new(Response), ErrTokenExpired
 					case e.Errors&jwt.ValidationErrorNotValidYet != 0:
 						// Token is not active yet
-						return nil, ErrTokenNotActive
+						return *new(Response), ErrTokenNotActive
 					case e.Inner != nil:
 						// report e.Inner
-						return nil, e.Inner
+						return *new(Response), e.Inner
 					}
 					// We have a ValidationError but have no specific Go kit error for it.
 					// Fall through to return original error.
 				}
-				return nil, err
+				return *new(Response), err
 			}
 
 			if !token.Valid {
-				return nil, ErrTokenInvalid
+				return *new(Response), ErrTokenInvalid
 			}
 
 			ctx = context.WithValue(ctx, JWTClaimsContextKey, token.Claims)

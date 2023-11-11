@@ -1,8 +1,8 @@
 package level
 
 import (
-	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/openmesh/kit/log"
 )
 
 // Error returns a logger that includes a Key/ErrorValue pair.

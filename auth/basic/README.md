@@ -7,7 +7,7 @@ More details about this type of authentication can be found in [Mozilla article]
 ## Usage
 
 ```go
-import httptransport "github.com/go-kit/kit/transport/http"
+import httptransport "github.com/openmesh/kit/transport/http"
 
 httptransport.NewServer(
 		AuthMiddleware(cfg.auth.user, cfg.auth.password, "Example Realm")(makeUppercaseEndpoint()),
@@ -17,4 +17,4 @@ httptransport.NewServer(
 	)
 ```
 
-For AuthMiddleware to be able to pick up the Authentication header from an HTTP request we need to pass it through the context with something like ```httptransport.ServerBefore(httptransport.PopulateRequestContext)```.
+For AuthMiddleware to be able to pick up the Authentication header from an HTTP request we need to pass it through the context with something like `httptransport.ServerBefore(httptransport.PopulateRequestContext)`.

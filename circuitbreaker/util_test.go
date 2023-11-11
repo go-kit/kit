@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/endpoint"
 )
 
 func testFailingEndpoint(
 	t *testing.T,
-	breaker endpoint.Middleware,
+	breaker endpoint.Middleware[interface{}, interface{}],
 	primeWith int,
 	shouldPass func(int) bool,
 	requestDelay time.Duration,
@@ -25,7 +25,7 @@ func testFailingEndpoint(
 
 	// Create a mock endpoint and wrap it with the breaker.
 	m := mock{}
-	var e endpoint.Endpoint
+	var e endpoint.Endpoint[interface{}, interface{}]
 	e = m.endpoint
 	e = breaker(e)
 

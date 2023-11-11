@@ -1,7 +1,7 @@
 package zap
 
 import (
-	"github.com/go-kit/log"
+	"github.com/openmesh/kit/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

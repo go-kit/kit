@@ -7,10 +7,10 @@ import (
 
 	consul "github.com/hashicorp/consul/api"
 
-	"github.com/go-kit/kit/sd"
-	"github.com/go-kit/kit/sd/internal/instance"
-	"github.com/go-kit/kit/util/conn"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/sd"
+	"github.com/openmesh/kit/sd/internal/instance"
+	"github.com/openmesh/kit/util/conn"
 )
 
 const defaultIndex = 0

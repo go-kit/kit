@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"testing"
 
-	httptransport "github.com/go-kit/kit/transport/httprp"
+	httptransport "github.com/openmesh/kit/transport/httprp"
 )
 
 func TestServerHappyPathSingleServer(t *testing.T) {
@@ -39,7 +39,7 @@ func TestServerHappyPathSingleServer(t *testing.T) {
 func TestServerHappyPathSingleServerWithServerOptions(t *testing.T) {
 	const (
 		headerKey = "X-TEST-HEADER"
-		headerVal = "go-kit-proxy"
+		headerVal = "openmesh-proxy"
 	)
 
 	originServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +119,7 @@ func TestServerOriginServerUnreachable(t *testing.T) {
 func TestMultipleServerBefore(t *testing.T) {
 	const (
 		headerKey = "X-TEST-HEADER"
-		headerVal = "go-kit-proxy"
+		headerVal = "openmesh-proxy"
 	)
 
 	originServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

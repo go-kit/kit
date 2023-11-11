@@ -1,10 +1,10 @@
 # Go kit
 
-![GitHub Workflow Status](https://github.com/go-kit/kit/workflows/CI/badge.svg)
-[![GoDev](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/go-kit/kit?tab=doc)
-[![codecov](https://codecov.io/gh/go-kit/kit/branch/master/graph/badge.svg)](https://codecov.io/gh/go-kit/kit)
-[![Go Report Card](https://goreportcard.com/badge/go-kit/kit)](https://goreportcard.com/report/go-kit/kit)
-[![Sourcegraph](https://sourcegraph.com/github.com/go-kit/kit/-/badge.svg)](https://sourcegraph.com/github.com/go-kit/kit?badge)
+![GitHub Workflow Status](https://github.com/openmesh/kit/workflows/CI/badge.svg)
+[![GoDev](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/openmesh/kit?tab=doc)
+[![codecov](https://codecov.io/gh/openmesh/kit/branch/master/graph/badge.svg)](https://codecov.io/gh/openmesh/kit)
+[![Go Report Card](https://goreportcard.com/badge/openmesh/kit)](https://goreportcard.com/report/openmesh/kit)
+[![Sourcegraph](https://sourcegraph.com/github.com/openmesh/kit/-/badge.svg)](https://sourcegraph.com/github.com/openmesh/kit?badge)
 
 **Go kit** is a **programming toolkit** for building microservices
 (or elegant monoliths) in Go. We solve common problems in distributed
@@ -12,8 +12,8 @@ systems and application architecture so you can focus on delivering
 business value.
 
 - Website: [gokit.io](https://gokit.io)
-- Mailing list: [go-kit](https://groups.google.com/forum/#!forum/go-kit)
-- Slack: [gophers.slack.com](https://gophers.slack.com) **#go-kit** ([invite](https://gophersinvite.herokuapp.com/))
+- Mailing list: [openmesh](https://groups.google.com/forum/#!forum/openmesh)
+- Slack: [gophers.slack.com](https://gophers.slack.com) **#openmesh** ([invite](https://gophersinvite.herokuapp.com/))
 
 ## Sponsors
 
@@ -34,15 +34,15 @@ comprehensive, robust, and trustable way of building microservices for
 organizations of any size.
 
 For more details, see
- [the website](https://gokit.io),
- [the motivating blog post](http://peter.bourgon.org/go-kit/) and
- [the video of the talk](https://www.youtube.com/watch?v=iFR_7AKkJFU).
+[the website](https://gokit.io),
+[the motivating blog post](http://peter.bourgon.org/openmesh/) and
+[the video of the talk](https://www.youtube.com/watch?v=iFR_7AKkJFU).
 See also the
- [Go kit talk at GopherCon 2015](https://www.youtube.com/watch?v=1AjaZi4QuGo).
+[Go kit talk at GopherCon 2015](https://www.youtube.com/watch?v=1AjaZi4QuGo).
 
 ## Goals
 
-- Operate in a heterogeneous SOA — expect to interact with mostly non-Go-kit services
+- Operate in a heterogeneous SOA — expect to interact with mostly non-openmesh services
 - RPC as the primary messaging pattern
 - Pluggable serialization and transport — not just JSON over HTTP
 - Operate within existing infrastructures — no mandates for specific tools or technologies
@@ -56,7 +56,7 @@ See also the
 ## Contributing
 
 Please see [CONTRIBUTING.md](/CONTRIBUTING.md).
-Thank you, [contributors](https://github.com/go-kit/kit/graphs/contributors)!
+Thank you, [contributors](https://github.com/openmesh/kit/graphs/contributors)!
 
 ## Dependency management
 
@@ -74,7 +74,7 @@ different starting assumptions.
 - [kujtimiihoxha/kit](https://github.com/kujtimiihoxha/kit) (unmaintained)
 - [nytimes/marvin](https://github.com/nytimes/marvin)
 - [sagikazarmark/mga](https://github.com/sagikazarmark/mga)
-- [sagikazarmark/protoc-gen-go-kit](https://github.com/sagikazarmark/protoc-gen-go-kit)
+- [sagikazarmark/protoc-gen-openmesh](https://github.com/sagikazarmark/protoc-gen-openmesh)
 - [metaverse/truss](https://github.com/metaverse/truss)
 
 ## Related projects
@@ -117,7 +117,7 @@ Projects with a ★ have had particular influence on Go kit's design (or vice-ve
 - [Goji](https://github.com/zenazn/goji)
 - [Martini](https://github.com/go-martini/martini)
 - [Beego](https://beego.vip/)
-- [Revel](https://revel.github.io/) (considered [harmful](https://github.com/go-kit/kit/issues/350))
+- [Revel](https://revel.github.io/) (considered [harmful](https://github.com/openmesh/kit/issues/350))
 - [GoBuffalo](https://gobuffalo.io/)
 
 ## Additional reading

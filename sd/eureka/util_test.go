@@ -25,7 +25,7 @@ var (
 	errTest       = errors.New("kaboom")
 	errNotFound   = &fargoUnsuccessfulHTTPResponse{statusCode: 404, messagePrefix: "not found"}
 	loggerTest    = log.NewNopLogger()
-	appNameTest   = "go-kit"
+	appNameTest   = "openmesh"
 	instanceTest1 = &fargo.Instance{
 		HostName:         "serveregistrar1.acme.org",
 		Port:             8080,

@@ -12,8 +12,8 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 
-	"github.com/go-kit/kit/endpoint"
-	natstransport "github.com/go-kit/kit/transport/nats"
+	"github.com/openmesh/kit/endpoint"
+	natstransport "github.com/openmesh/kit/transport/nats"
 )
 
 type TestResponse struct {
@@ -125,7 +125,7 @@ func TestSubscriberErrorEncoder(t *testing.T) {
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errTeapot },
 		func(context.Context, *nats.Msg) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, string, *nats.Conn, interface{}) error { return nil },
-		natstransport.SubscriberErrorEncoder(func(_ context.Context, err error, reply string, nc *nats.Conn) {
+		natstransport.SubscriberErrorEncoder[interface{}, interface{}](func(_ context.Context, err error, reply string, nc *nats.Conn) {
 			var r TestResponse
 			r.Error = code(err).Error()
 
@@ -186,12 +186,12 @@ func TestMultipleSubscriberBefore(t *testing.T) {
 
 			return c.Publish(reply, b)
 		},
-		natstransport.SubscriberBefore(func(ctx context.Context, _ *nats.Msg) context.Context {
+		natstransport.SubscriberBefore[interface{}, interface{}](func(ctx context.Context, _ *nats.Msg) context.Context {
 			ctx = context.WithValue(ctx, "one", 1)
 
 			return ctx
 		}),
-		natstransport.SubscriberBefore(func(ctx context.Context, _ *nats.Msg) context.Context {
+		natstransport.SubscriberBefore[interface{}, interface{}](func(ctx context.Context, _ *nats.Msg) context.Context {
 			if _, ok := ctx.Value("one").(int); !ok {
 				t.Error("Value was not set properly when multiple ServerBefores are used")
 			}
@@ -247,10 +247,10 @@ func TestMultipleSubscriberAfter(t *testing.T) {
 			}
 			return c.Publish(reply, b)
 		},
-		natstransport.SubscriberAfter(func(ctx context.Context, nc *nats.Conn) context.Context {
+		natstransport.SubscriberAfter[interface{}, interface{}](func(ctx context.Context, nc *nats.Conn) context.Context {
 			return context.WithValue(ctx, "one", 1)
 		}),
-		natstransport.SubscriberAfter(func(ctx context.Context, nc *nats.Conn) context.Context {
+		natstransport.SubscriberAfter[interface{}, interface{}](func(ctx context.Context, nc *nats.Conn) context.Context {
 			if _, ok := ctx.Value("one").(int); !ok {
 				t.Error("Value was not set properly when multiple ServerAfters are used")
 			}
@@ -306,7 +306,7 @@ func TestSubscriberFinalizerFunc(t *testing.T) {
 
 			return c.Publish(reply, b)
 		},
-		natstransport.SubscriberFinalizer(func(ctx context.Context, _ *nats.Msg) {
+		natstransport.SubscriberFinalizer[interface{}, interface{}](func(ctx context.Context, _ *nats.Msg) {
 			close(done)
 		}),
 	)
@@ -483,8 +483,8 @@ func testSubscriber(t *testing.T) (step func(), resp <-chan *nats.Msg) {
 			endpoint,
 			func(context.Context, *nats.Msg) (interface{}, error) { return struct{}{}, nil },
 			natstransport.EncodeJSONResponse,
-			natstransport.SubscriberBefore(func(ctx context.Context, msg *nats.Msg) context.Context { return ctx }),
-			natstransport.SubscriberAfter(func(ctx context.Context, nc *nats.Conn) context.Context { return ctx }),
+			natstransport.SubscriberBefore[interface{}, interface{}](func(ctx context.Context, msg *nats.Msg) context.Context { return ctx }),
+			natstransport.SubscriberAfter[interface{}, interface{}](func(ctx context.Context, nc *nats.Conn) context.Context { return ctx }),
 		)
 	)
 
@@ -510,7 +510,7 @@ func testSubscriber(t *testing.T) (step func(), resp <-chan *nats.Msg) {
 	return func() { stepch <- true }, response
 }
 
-func testRequest(t *testing.T, c *nats.Conn, handler *natstransport.Subscriber) TestResponse {
+func testRequest(t *testing.T, c *nats.Conn, handler *natstransport.Subscriber[interface{}, interface{}]) TestResponse {
 	sub, err := c.QueueSubscribe("natstransport.test", "natstransport", handler.ServeMsg(c))
 	if err != nil {
 		t.Fatal(err)

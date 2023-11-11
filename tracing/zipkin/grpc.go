@@ -10,8 +10,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"github.com/go-kit/log"
+	kitgrpc "github.com/openmesh/kit/transport/grpc"
 )
 
 // GRPCClientTrace enables native Zipkin tracing of a Go kit gRPC transport
@@ -26,7 +26,7 @@ import (
 // If instrumenting a client to an external (not on your platform) service, you
 // will probably want to disallow propagation of SpanContext using the
 // AllowPropagation TracerOption and setting it to false.
-func GRPCClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.ClientOption {
+func GRPCClientTrace[Request, Response any](tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.ClientOption[Request, Response] {
 	config := tracerOptions{
 		tags:      make(map[string]string),
 		name:      "",
@@ -38,7 +38,7 @@ func GRPCClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Cli
 		option(&config)
 	}
 
-	clientBefore := kitgrpc.ClientBefore(
+	clientBefore := kitgrpc.ClientBefore[Request, Response](
 		func(ctx context.Context, md *metadata.MD) context.Context {
 			var (
 				spanContext model.SpanContext
@@ -73,7 +73,7 @@ func GRPCClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Cli
 		},
 	)
 
-	clientAfter := kitgrpc.ClientAfter(
+	clientAfter := kitgrpc.ClientAfter[Request, Response](
 		func(ctx context.Context, _ metadata.MD, _ metadata.MD) context.Context {
 			if span := zipkin.SpanFromContext(ctx); span != nil {
 				span.Finish()
@@ -83,7 +83,7 @@ func GRPCClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Cli
 		},
 	)
 
-	clientFinalizer := kitgrpc.ClientFinalizer(
+	clientFinalizer := kitgrpc.ClientFinalizer[Request, Response](
 		func(ctx context.Context, err error) {
 			if span := zipkin.SpanFromContext(ctx); span != nil {
 				if err != nil {
@@ -99,7 +99,7 @@ func GRPCClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Cli
 		},
 	)
 
-	return func(c *kitgrpc.Client) {
+	return func(c *kitgrpc.Client[Request, Response]) {
 		clientBefore(c)
 		clientAfter(c)
 		clientFinalizer(c)
@@ -120,7 +120,7 @@ func GRPCClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Cli
 // If instrumenting a service to external (not on your platform) clients, you
 // will probably want to disallow propagation of a client SpanContext using
 // the AllowPropagation TracerOption and setting it to false.
-func GRPCServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.ServerOption {
+func GRPCServerTrace[Request, Response any](tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.ServerOption[Request, Response] {
 	config := tracerOptions{
 		tags:      make(map[string]string),
 		name:      "",
@@ -132,7 +132,7 @@ func GRPCServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Ser
 		option(&config)
 	}
 
-	serverBefore := kitgrpc.ServerBefore(
+	serverBefore := kitgrpc.ServerBefore[Request, Response](
 		func(ctx context.Context, md metadata.MD) context.Context {
 			var (
 				spanContext model.SpanContext
@@ -173,7 +173,7 @@ func GRPCServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Ser
 		},
 	)
 
-	serverAfter := kitgrpc.ServerAfter(
+	serverAfter := kitgrpc.ServerAfter[Request, Response](
 		func(ctx context.Context, _ *metadata.MD, _ *metadata.MD) context.Context {
 			if span := zipkin.SpanFromContext(ctx); span != nil {
 				span.Finish()
@@ -183,7 +183,7 @@ func GRPCServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Ser
 		},
 	)
 
-	serverFinalizer := kitgrpc.ServerFinalizer(
+	serverFinalizer := kitgrpc.ServerFinalizer[Request, Response](
 		func(ctx context.Context, err error) {
 			if span := zipkin.SpanFromContext(ctx); span != nil {
 				if err != nil {
@@ -206,7 +206,7 @@ func GRPCServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kitgrpc.Ser
 		},
 	)
 
-	return func(s *kitgrpc.Server) {
+	return func(s *kitgrpc.Server[Request, Response]) {
 		serverBefore(s)
 		serverAfter(s)
 		serverFinalizer(s)

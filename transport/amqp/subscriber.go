@@ -5,17 +5,17 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/transport"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/transport"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // Subscriber wraps an endpoint and provides a handler for AMQP Delivery messages.
-type Subscriber struct {
-	e                 endpoint.Endpoint
-	dec               DecodeRequestFunc
-	enc               EncodeResponseFunc
+type Subscriber[Request, Response any] struct {
+	e                 endpoint.Endpoint[Request, Response]
+	dec               DecodeRequestFunc[Request]
+	enc               EncodeResponseFunc[Response]
 	before            []RequestFunc
 	after             []SubscriberResponseFunc
 	responsePublisher ResponsePublisher
@@ -25,13 +25,13 @@ type Subscriber struct {
 
 // NewSubscriber constructs a new subscriber, which provides a handler
 // for AMQP Delivery messages.
-func NewSubscriber(
-	e endpoint.Endpoint,
-	dec DecodeRequestFunc,
-	enc EncodeResponseFunc,
-	options ...SubscriberOption,
-) *Subscriber {
-	s := &Subscriber{
+func NewSubscriber[Request, Response any](
+	e endpoint.Endpoint[Request, Response],
+	dec DecodeRequestFunc[Request],
+	enc EncodeResponseFunc[Response],
+	options ...SubscriberOption[Request, Response],
+) *Subscriber[Request, Response] {
+	s := &Subscriber[Request, Response]{
 		e:                 e,
 		dec:               dec,
 		enc:               enc,
@@ -46,33 +46,33 @@ func NewSubscriber(
 }
 
 // SubscriberOption sets an optional parameter for subscribers.
-type SubscriberOption func(*Subscriber)
+type SubscriberOption[Request, Response any] func(*Subscriber[Request, Response])
 
 // SubscriberBefore functions are executed on the publisher delivery object
 // before the request is decoded.
-func SubscriberBefore(before ...RequestFunc) SubscriberOption {
-	return func(s *Subscriber) { s.before = append(s.before, before...) }
+func SubscriberBefore[Request, Response any](before ...RequestFunc) SubscriberOption[Request, Response] {
+	return func(s *Subscriber[Request, Response]) { s.before = append(s.before, before...) }
 }
 
 // SubscriberAfter functions are executed on the subscriber reply after the
 // endpoint is invoked, but before anything is published to the reply.
-func SubscriberAfter(after ...SubscriberResponseFunc) SubscriberOption {
-	return func(s *Subscriber) { s.after = append(s.after, after...) }
+func SubscriberAfter[Request, Response any](after ...SubscriberResponseFunc) SubscriberOption[Request, Response] {
+	return func(s *Subscriber[Request, Response]) { s.after = append(s.after, after...) }
 }
 
 // SubscriberResponsePublisher is used by the subscriber to deliver response
 // objects to the original sender.
 // By default, the DefaultResponsePublisher is used.
-func SubscriberResponsePublisher(rp ResponsePublisher) SubscriberOption {
-	return func(s *Subscriber) { s.responsePublisher = rp }
+func SubscriberResponsePublisher[Request, Response any](rp ResponsePublisher) SubscriberOption[Request, Response] {
+	return func(s *Subscriber[Request, Response]) { s.responsePublisher = rp }
 }
 
 // SubscriberErrorEncoder is used to encode errors to the subscriber reply
 // whenever they're encountered in the processing of a request. Clients can
 // use this to provide custom error formatting. By default,
 // errors will be published with the DefaultErrorEncoder.
-func SubscriberErrorEncoder(ee ErrorEncoder) SubscriberOption {
-	return func(s *Subscriber) { s.errorEncoder = ee }
+func SubscriberErrorEncoder[Request, Response any](ee ErrorEncoder) SubscriberOption[Request, Response] {
+	return func(s *Subscriber[Request, Response]) { s.errorEncoder = ee }
 }
 
 // SubscriberErrorLogger is used to log non-terminal errors. By default, no errors
@@ -80,22 +80,22 @@ func SubscriberErrorEncoder(ee ErrorEncoder) SubscriberOption {
 // of error handling, including logging in more detail, should be performed in a
 // custom SubscriberErrorEncoder which has access to the context.
 // Deprecated: Use SubscriberErrorHandler instead.
-func SubscriberErrorLogger(logger log.Logger) SubscriberOption {
-	return func(s *Subscriber) { s.errorHandler = transport.NewLogErrorHandler(logger) }
+func SubscriberErrorLogger[Request, Response any](logger log.Logger) SubscriberOption[Request, Response] {
+	return func(s *Subscriber[Request, Response]) { s.errorHandler = transport.NewLogErrorHandler(logger) }
 }
 
 // SubscriberErrorHandler is used to handle non-terminal errors. By default, non-terminal errors
 // are ignored. This is intended as a diagnostic measure. Finer-grained control
 // of error handling, including logging in more detail, should be performed in a
 // custom SubscriberErrorEncoder which has access to the context.
-func SubscriberErrorHandler(errorHandler transport.ErrorHandler) SubscriberOption {
-	return func(s *Subscriber) { s.errorHandler = errorHandler }
+func SubscriberErrorHandler[Request, Response any](errorHandler transport.ErrorHandler) SubscriberOption[Request, Response] {
+	return func(s *Subscriber[Request, Response]) { s.errorHandler = errorHandler }
 }
 
 // ServeDelivery handles AMQP Delivery messages
 // It is strongly recommended to use *amqp.Channel as the
 // Channel interface implementation.
-func (s Subscriber) ServeDelivery(ch Channel) func(deliv *amqp.Delivery) {
+func (s Subscriber[Request, Response]) ServeDelivery(ch Channel) func(deliv *amqp.Delivery) {
 	return func(deliv *amqp.Delivery) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

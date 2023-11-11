@@ -3,24 +3,24 @@ package lb
 import (
 	"sync/atomic"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd"
 )
 
 // NewRoundRobin returns a load balancer that returns services in sequence.
-func NewRoundRobin(s sd.Endpointer) Balancer {
-	return &roundRobin{
+func NewRoundRobin[Request, Response any](s sd.Endpointer[Request, Response]) Balancer[Request, Response] {
+	return &roundRobin[Request, Response]{
 		s: s,
 		c: 0,
 	}
 }
 
-type roundRobin struct {
-	s sd.Endpointer
+type roundRobin[Request, Response any] struct {
+	s sd.Endpointer[Request, Response]
 	c uint64
 }
 
-func (rr *roundRobin) Endpoint() (endpoint.Endpoint, error) {
+func (rr *roundRobin[Request, Response]) Endpoint() (endpoint.Endpoint[Request, Response], error) {
 	endpoints, err := rr.s.Endpoints()
 	if err != nil {
 		return nil, err

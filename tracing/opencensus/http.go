@@ -8,11 +8,11 @@ import (
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.opencensus.io/trace"
 
-	kithttp "github.com/go-kit/kit/transport/http"
+	kithttp "github.com/openmesh/kit/transport/http"
 )
 
 // HTTPClientTrace enables OpenCensus tracing of a Go kit HTTP transport client.
-func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
+func HTTPClientTrace[Request, Response any](options ...TracerOption) kithttp.ClientOption[Request, Response] {
 	cfg := TracerOptions{}
 
 	for _, option := range options {
@@ -23,7 +23,7 @@ func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
 		cfg.HTTPPropagate = &b3.HTTPFormat{}
 	}
 
-	clientBefore := kithttp.ClientBefore(
+	clientBefore := kithttp.ClientBefore[Request, Response](
 		func(ctx context.Context, req *http.Request) context.Context {
 			var name string
 
@@ -56,7 +56,7 @@ func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
 		},
 	)
 
-	clientAfter := kithttp.ClientAfter(
+	clientAfter := kithttp.ClientAfter[Request, Response](
 		func(ctx context.Context, res *http.Response) context.Context {
 			if span := trace.FromContext(ctx); span != nil {
 				span.SetStatus(ochttp.TraceStatus(res.StatusCode, http.StatusText(res.StatusCode)))
@@ -68,7 +68,7 @@ func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
 		},
 	)
 
-	clientFinalizer := kithttp.ClientFinalizer(
+	clientFinalizer := kithttp.ClientFinalizer[Request, Response](
 		func(ctx context.Context, err error) {
 			if span := trace.FromContext(ctx); span != nil {
 				if err != nil {
@@ -82,7 +82,7 @@ func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
 		},
 	)
 
-	return func(c *kithttp.Client) {
+	return func(c *kithttp.Client[Request, Response]) {
 		clientBefore(c)
 		clientAfter(c)
 		clientFinalizer(c)
@@ -90,7 +90,7 @@ func HTTPClientTrace(options ...TracerOption) kithttp.ClientOption {
 }
 
 // HTTPServerTrace enables OpenCensus tracing of a Go kit HTTP transport server.
-func HTTPServerTrace(options ...TracerOption) kithttp.ServerOption {
+func HTTPServerTrace[Request, Response any](options ...TracerOption) kithttp.ServerOption[Request, Response] {
 	cfg := TracerOptions{}
 
 	for _, option := range options {
@@ -101,7 +101,7 @@ func HTTPServerTrace(options ...TracerOption) kithttp.ServerOption {
 		cfg.HTTPPropagate = &b3.HTTPFormat{}
 	}
 
-	serverBefore := kithttp.ServerBefore(
+	serverBefore := kithttp.ServerBefore[Request, Response](
 		func(ctx context.Context, req *http.Request) context.Context {
 			var (
 				spanContext trace.SpanContext
@@ -151,7 +151,7 @@ func HTTPServerTrace(options ...TracerOption) kithttp.ServerOption {
 		},
 	)
 
-	serverFinalizer := kithttp.ServerFinalizer(
+	serverFinalizer := kithttp.ServerFinalizer[Request, Response](
 		func(ctx context.Context, code int, r *http.Request) {
 			if span := trace.FromContext(ctx); span != nil {
 				span.SetStatus(ochttp.TraceStatus(code, http.StatusText(code)))
@@ -167,7 +167,7 @@ func HTTPServerTrace(options ...TracerOption) kithttp.ServerOption {
 		},
 	)
 
-	return func(s *kithttp.Server) {
+	return func(s *kithttp.Server[Request, Response]) {
 		serverBefore(s)
 		serverFinalizer(s)
 	}

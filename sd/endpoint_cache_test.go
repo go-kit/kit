@@ -6,16 +6,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/endpoint"
 )
 
 func TestEndpointCache(t *testing.T) {
 	var (
-		ca    = make(closer)
-		cb    = make(closer)
-		c     = map[string]io.Closer{"a": ca, "b": cb}
-		f     = func(instance string) (endpoint.Endpoint, io.Closer, error) { return endpoint.Nop, c[instance], nil }
+		ca = make(closer)
+		cb = make(closer)
+		c  = map[string]io.Closer{"a": ca, "b": cb}
+		f  = func(instance string) (endpoint.Endpoint[interface{}, interface{}], io.Closer, error) {
+			return endpoint.Nop, c[instance], nil
+		}
 		cache = newEndpointCache(f, log.NewNopLogger(), endpointerOptions{})
 	)
 
@@ -81,10 +83,12 @@ func TestEndpointCache(t *testing.T) {
 
 func TestEndpointCacheErrorAndTimeout(t *testing.T) {
 	var (
-		ca      = make(closer)
-		cb      = make(closer)
-		c       = map[string]io.Closer{"a": ca, "b": cb}
-		f       = func(instance string) (endpoint.Endpoint, io.Closer, error) { return endpoint.Nop, c[instance], nil }
+		ca = make(closer)
+		cb = make(closer)
+		c  = map[string]io.Closer{"a": ca, "b": cb}
+		f  = func(instance string) (endpoint.Endpoint[interface{}, interface{}], io.Closer, error) {
+			return endpoint.Nop, c[instance], nil
+		}
 		timeOut = 100 * time.Millisecond
 		cache   = newEndpointCache(f, log.NewNopLogger(), endpointerOptions{
 			invalidateOnError: true,
@@ -141,7 +145,7 @@ func TestEndpointCacheErrorAndTimeout(t *testing.T) {
 }
 
 func TestBadFactory(t *testing.T) {
-	cache := newEndpointCache(func(string) (endpoint.Endpoint, io.Closer, error) {
+	cache := newEndpointCache(func(string) (endpoint.Endpoint[interface{}, interface{}], io.Closer, error) {
 		return nil, nil, errors.New("bad factory")
 	}, log.NewNopLogger(), endpointerOptions{})
 
@@ -149,7 +153,7 @@ func TestBadFactory(t *testing.T) {
 	assertEndpointsLen(t, cache, 0)
 }
 
-func assertEndpointsLen(t *testing.T, cache *endpointCache, l int) {
+func assertEndpointsLen(t *testing.T, cache *endpointCache[interface{}, interface{}], l int) {
 	endpoints, err := cache.Endpoints()
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
@@ -160,7 +164,7 @@ func assertEndpointsLen(t *testing.T, cache *endpointCache, l int) {
 	}
 }
 
-func assertEndpointsError(t *testing.T, cache *endpointCache, wantErr string) {
+func assertEndpointsError(t *testing.T, cache *endpointCache[interface{}, interface{}], wantErr string) {
 	endpoints, err := cache.Endpoints()
 	if err == nil {
 		t.Errorf("expecting error, not good")

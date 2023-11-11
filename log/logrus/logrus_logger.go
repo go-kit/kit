@@ -1,12 +1,12 @@
 // Package logrus provides an adapter to the
-// go-kit log.Logger interface.
+// openmesh log.Logger interface.
 package logrus
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/go-kit/log"
+	"github.com/openmesh/kit/log"
 	"github.com/sirupsen/logrus"
 )
 

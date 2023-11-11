@@ -4,8 +4,8 @@ import (
 	"errors"
 	"os"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/term"
+	"github.com/openmesh/kit/log"
+	"github.com/openmesh/kit/log/term"
 )
 
 func ExampleNewLogger_redErrors() {

@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/go-kit/kit/transport/http/jsonrpc"
+	"github.com/openmesh/kit/transport/http/jsonrpc"
 )
 
 type TestResponse struct {
@@ -88,18 +88,18 @@ func TestBeforeAfterFuncs(t *testing.T) {
 			afterCalled := false
 			finalizerCalled := false
 
-			sut := jsonrpc.NewClient(
+			sut := jsonrpc.NewClient[interface{}, interface{}](
 				testUrl,
 				"dummy",
-				jsonrpc.ClientBefore(func(ctx context.Context, req *http.Request) context.Context {
+				jsonrpc.ClientBefore[interface{}, interface{}](func(ctx context.Context, req *http.Request) context.Context {
 					beforeCalled = true
 					return ctx
 				}),
-				jsonrpc.ClientAfter(func(ctx context.Context, resp *http.Response) context.Context {
+				jsonrpc.ClientAfter[interface{}, interface{}](func(ctx context.Context, resp *http.Response) context.Context {
 					afterCalled = true
 					return ctx
 				}),
-				jsonrpc.ClientFinalizer(func(ctx context.Context, err error) {
+				jsonrpc.ClientFinalizer[interface{}, interface{}](func(ctx context.Context, err error) {
 					finalizerCalled = true
 				}),
 			)
@@ -180,17 +180,17 @@ func TestClientHappyPath(t *testing.T) {
 	}))
 	defer server.Close()
 
-	sut := jsonrpc.NewClient(
+	sut := jsonrpc.NewClient[interface{}, interface{}](
 		mustParse(server.URL),
 		"add",
-		jsonrpc.ClientRequestEncoder(encode),
-		jsonrpc.ClientResponseDecoder(decode),
-		jsonrpc.ClientBefore(beforeFunc),
-		jsonrpc.ClientAfter(afterFunc),
-		jsonrpc.ClientRequestIDGenerator(gen),
-		jsonrpc.ClientFinalizer(fin),
-		jsonrpc.SetClient(http.DefaultClient),
-		jsonrpc.BufferedStream(false),
+		jsonrpc.ClientRequestEncoder[interface{}, interface{}](encode),
+		jsonrpc.ClientResponseDecoder[interface{}, interface{}](decode),
+		jsonrpc.ClientBefore[interface{}, interface{}](beforeFunc),
+		jsonrpc.ClientAfter[interface{}, interface{}](afterFunc),
+		jsonrpc.ClientRequestIDGenerator[interface{}, interface{}](gen),
+		jsonrpc.ClientFinalizer[interface{}, interface{}](fin),
+		jsonrpc.SetClient[interface{}, interface{}](http.DefaultClient),
+		jsonrpc.BufferedStream[interface{}, interface{}](false),
 	)
 
 	type addRequest struct {
@@ -259,7 +259,7 @@ func TestCanUseDefaults(t *testing.T) {
 	}))
 	defer server.Close()
 
-	sut := jsonrpc.NewClient(
+	sut := jsonrpc.NewClient[interface{}, interface{}](
 		mustParse(server.URL),
 		"add",
 	)
@@ -315,7 +315,7 @@ func TestClientCanHandleJSONRPCError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	sut := jsonrpc.NewClient(mustParse(server.URL), "add")
+	sut := jsonrpc.NewClient[interface{}, interface{}](mustParse(server.URL), "add")
 
 	_, err := sut.Endpoint()(context.Background(), 5)
 	if err == nil {

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	natstransport "github.com/go-kit/kit/transport/nats"
 	"github.com/nats-io/nats.go"
+	natstransport "github.com/openmesh/kit/transport/nats"
 )
 
 func TestPublisher(t *testing.T) {
@@ -83,7 +83,7 @@ func TestPublisherBefore(t *testing.T) {
 		"natstransport.test",
 		encode,
 		decode,
-		natstransport.PublisherBefore(func(ctx context.Context, msg *nats.Msg) context.Context {
+		natstransport.PublisherBefore[interface{}, interface{}](func(ctx context.Context, msg *nats.Msg) context.Context {
 			msg.Data = []byte(strings.ToUpper(string(testdata)))
 			return ctx
 		}),
@@ -132,7 +132,7 @@ func TestPublisherAfter(t *testing.T) {
 		"natstransport.test",
 		encode,
 		decode,
-		natstransport.PublisherAfter(func(ctx context.Context, msg *nats.Msg) context.Context {
+		natstransport.PublisherAfter[interface{}, interface{}](func(ctx context.Context, msg *nats.Msg) context.Context {
 			msg.Data = []byte(strings.ToUpper(string(msg.Data)))
 			return ctx
 		}),
@@ -181,7 +181,7 @@ func TestPublisherTimeout(t *testing.T) {
 		"natstransport.test",
 		encode,
 		decode,
-		natstransport.PublisherTimeout(time.Second),
+		natstransport.PublisherTimeout[interface{}, interface{}](time.Second),
 	)
 
 	_, err = publisher.Endpoint()(context.Background(), struct{}{})

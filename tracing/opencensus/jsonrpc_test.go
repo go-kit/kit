@@ -17,9 +17,9 @@ import (
 	"go.opencensus.io/trace"
 	"go.opencensus.io/trace/propagation"
 
-	"github.com/go-kit/kit/endpoint"
-	ockit "github.com/go-kit/kit/tracing/opencensus"
-	jsonrpc "github.com/go-kit/kit/transport/http/jsonrpc"
+	"github.com/openmesh/kit/endpoint"
+	ockit "github.com/openmesh/kit/tracing/opencensus"
+	jsonrpc "github.com/openmesh/kit/transport/http/jsonrpc"
 )
 
 func TestJSONRPCClientTrace(t *testing.T) {
@@ -44,17 +44,17 @@ func TestJSONRPCClientTrace(t *testing.T) {
 	}
 
 	for _, tr := range traces {
-		clientTracer := ockit.JSONRPCClientTrace(
+		clientTracer := ockit.JSONRPCClientTrace[interface{}, interface{}](
 			ockit.WithName(tr.name),
 			ockit.WithSampler(trace.AlwaysSample()),
 		)
 		ep := jsonrpc.NewClient(
 			rURL,
 			endpointName,
-			jsonrpc.ClientRequestEncoder(func(ctx context.Context, i interface{}) (json.RawMessage, error) {
+			jsonrpc.ClientRequestEncoder[interface{}, interface{}](func(ctx context.Context, i interface{}) (json.RawMessage, error) {
 				return json.RawMessage(`{}`), nil
 			}),
-			jsonrpc.ClientResponseDecoder(func(ctx context.Context, r jsonrpc.Response) (response interface{}, err error) {
+			jsonrpc.ClientResponseDecoder[interface{}, interface{}](func(ctx context.Context, r jsonrpc.Response) (response interface{}, err error) {
 				return nil, tr.err
 			}),
 			clientTracer,
@@ -125,7 +125,7 @@ func TestJSONRPCServerTrace(t *testing.T) {
 
 		handler := jsonrpc.NewServer(
 			jsonrpc.EndpointCodecMap{
-				endpointName: jsonrpc.EndpointCodec{
+				endpointName: jsonrpc.EndpointCodec[interface{}, interface{}]{
 					Endpoint: endpoint.Nop,
 					Decode:   func(context.Context, json.RawMessage) (interface{}, error) { return nil, nil },
 					Encode:   func(context.Context, interface{}) (json.RawMessage, error) { return nil, tr.err },

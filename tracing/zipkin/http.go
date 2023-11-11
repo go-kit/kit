@@ -9,8 +9,8 @@ import (
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 
-	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/go-kit/log"
+	kithttp "github.com/openmesh/kit/transport/http"
 )
 
 // HTTPClientTrace enables native Zipkin tracing of a Go kit HTTP transport
@@ -25,7 +25,7 @@ import (
 // If instrumenting a client to an external (not on your platform) service, you
 // will probably want to disallow propagation of SpanContext using the
 // AllowPropagation TracerOption and setting it to false.
-func HTTPClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.ClientOption {
+func HTTPClientTrace[Request, Response any](tracer *zipkin.Tracer, options ...TracerOption) kithttp.ClientOption[Request, Response] {
 	config := tracerOptions{
 		tags:      make(map[string]string),
 		name:      "",
@@ -37,7 +37,7 @@ func HTTPClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Cli
 		option(&config)
 	}
 
-	clientBefore := kithttp.ClientBefore(
+	clientBefore := kithttp.ClientBefore[Request, Response](
 		func(ctx context.Context, req *http.Request) context.Context {
 			var (
 				spanContext model.SpanContext
@@ -78,7 +78,7 @@ func HTTPClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Cli
 		},
 	)
 
-	clientAfter := kithttp.ClientAfter(
+	clientAfter := kithttp.ClientAfter[Request, Response](
 		func(ctx context.Context, res *http.Response) context.Context {
 			if span := zipkin.SpanFromContext(ctx); span != nil {
 				zipkin.TagHTTPResponseSize.Set(span, strconv.FormatInt(res.ContentLength, 10))
@@ -93,7 +93,7 @@ func HTTPClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Cli
 		},
 	)
 
-	clientFinalizer := kithttp.ClientFinalizer(
+	clientFinalizer := kithttp.ClientFinalizer[Request, Response](
 		func(ctx context.Context, err error) {
 			if span := zipkin.SpanFromContext(ctx); span != nil {
 				if err != nil {
@@ -109,7 +109,7 @@ func HTTPClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Cli
 		},
 	)
 
-	return func(c *kithttp.Client) {
+	return func(c *kithttp.Client[Request, Response]) {
 		clientBefore(c)
 		clientAfter(c)
 		clientFinalizer(c)
@@ -129,7 +129,7 @@ func HTTPClientTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Cli
 // If instrumenting a service to external (not on your platform) clients, you
 // will probably want to disallow propagation of a client SpanContext using
 // the AllowPropagation TracerOption and setting it to false.
-func HTTPServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.ServerOption {
+func HTTPServerTrace[Request, Response any](tracer *zipkin.Tracer, options ...TracerOption) kithttp.ServerOption[Request, Response] {
 	config := tracerOptions{
 		tags:      make(map[string]string),
 		name:      "",
@@ -141,7 +141,7 @@ func HTTPServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Ser
 		option(&config)
 	}
 
-	serverBefore := kithttp.ServerBefore(
+	serverBefore := kithttp.ServerBefore[Request, Response](
 		func(ctx context.Context, req *http.Request) context.Context {
 			var (
 				spanContext model.SpanContext
@@ -185,7 +185,7 @@ func HTTPServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Ser
 		},
 	)
 
-	serverAfter := kithttp.ServerAfter(
+	serverAfter := kithttp.ServerAfter[Request, Response](
 		func(ctx context.Context, _ http.ResponseWriter) context.Context {
 			if span := zipkin.SpanFromContext(ctx); span != nil {
 				span.Finish()
@@ -195,7 +195,7 @@ func HTTPServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Ser
 		},
 	)
 
-	serverFinalizer := kithttp.ServerFinalizer(
+	serverFinalizer := kithttp.ServerFinalizer[Request, Response](
 		func(ctx context.Context, code int, r *http.Request) {
 			if span := zipkin.SpanFromContext(ctx); span != nil {
 				zipkin.TagHTTPStatusCode.Set(span, strconv.Itoa(code))
@@ -217,7 +217,7 @@ func HTTPServerTrace(tracer *zipkin.Tracer, options ...TracerOption) kithttp.Ser
 		},
 	)
 
-	return func(s *kithttp.Server) {
+	return func(s *kithttp.Server[Request, Response]) {
 		serverBefore(s)
 		serverAfter(s)
 		serverFinalizer(s)

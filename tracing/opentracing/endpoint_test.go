@@ -13,10 +13,10 @@ import (
 	otlog "github.com/opentracing/opentracing-go/log"
 	"github.com/opentracing/opentracing-go/mocktracer"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd"
-	"github.com/go-kit/kit/sd/lb"
-	kitot "github.com/go-kit/kit/tracing/opentracing"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd"
+	"github.com/openmesh/kit/sd/lb"
+	kitot "github.com/openmesh/kit/tracing/opentracing"
 )
 
 const (
@@ -55,7 +55,7 @@ func TestTraceEndpoint(t *testing.T) {
 	defer parentSpan.Finish()
 	ctx := opentracing.ContextWithSpan(context.Background(), parentSpan)
 
-	tracedEndpoint := kitot.TraceEndpoint(tracer, "testOp")(endpoint.Nop)
+	tracedEndpoint := kitot.TraceEndpoint[interface{}, interface{}](tracer, "testOp")(endpoint.Nop)
 	if _, err := tracedEndpoint(ctx, struct{}{}); err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestTraceEndpointNoContextSpan(t *testing.T) {
 	tracer := mocktracer.New()
 
 	// Empty/background context.
-	tracedEndpoint := kitot.TraceEndpoint(tracer, "testOp")(endpoint.Nop)
+	tracedEndpoint := kitot.TraceEndpoint[interface{}, interface{}](tracer, "testOp")(endpoint.Nop)
 	if _, err := tracedEndpoint(context.Background(), struct{}{}); err != nil {
 		t.Fatal(err)
 	}
@@ -106,12 +106,12 @@ func TestTraceEndpointWithOptions(t *testing.T) {
 	tracer := mocktracer.New()
 
 	// span 1 without options
-	mw := kitot.TraceEndpoint(tracer, span1)
+	mw := kitot.TraceEndpoint[interface{}, interface{}](tracer, span1)
 	tracedEndpoint := mw(endpoint.Nop)
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
 	// span 2 with options
-	mw = kitot.TraceEndpoint(
+	mw = kitot.TraceEndpoint[interface{}, interface{}](
 		tracer,
 		span2,
 		kitot.WithOptions(kitot.EndpointOptions{}),
@@ -122,7 +122,7 @@ func TestTraceEndpointWithOptions(t *testing.T) {
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
 	// span 3 with lb error
-	mw = kitot.TraceEndpoint(
+	mw = kitot.TraceEndpoint[interface{}, interface{}](
 		tracer,
 		span3,
 		kitot.WithOptions(kitot.EndpointOptions{}),
@@ -132,7 +132,7 @@ func TestTraceEndpointWithOptions(t *testing.T) {
 			5,
 			1*time.Second,
 			lb.NewRoundRobin(
-				sd.FixedEndpointer{
+				sd.FixedEndpointer[interface{}, interface{}]{
 					func(context.Context, interface{}) (interface{}, error) {
 						return nil, err1
 					},
@@ -143,7 +143,7 @@ func TestTraceEndpointWithOptions(t *testing.T) {
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
 	// span 4 with disabled IgnoreBusinessError option
-	mw = kitot.TraceEndpoint(
+	mw = kitot.TraceEndpoint[interface{}, interface{}](
 		tracer,
 		span4,
 		kitot.WithIgnoreBusinessError(false),
@@ -156,7 +156,7 @@ func TestTraceEndpointWithOptions(t *testing.T) {
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
 	// span 5 with enabled IgnoreBusinessError option
-	mw = kitot.TraceEndpoint(tracer, span5, kitot.WithIgnoreBusinessError(true))
+	mw = kitot.TraceEndpoint[interface{}, interface{}](tracer, span5, kitot.WithIgnoreBusinessError(true))
 	tracedEndpoint = mw(func(context.Context, interface{}) (interface{}, error) {
 		return failedResponse{
 			err: err3,
@@ -165,7 +165,7 @@ func TestTraceEndpointWithOptions(t *testing.T) {
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
 	// span 6 with OperationNameFunc option
-	mw = kitot.TraceEndpoint(
+	mw = kitot.TraceEndpoint[interface{}, interface{}](
 		tracer,
 		span6,
 		kitot.WithOperationNameFunc(func(ctx context.Context, name string) string {
@@ -176,7 +176,7 @@ func TestTraceEndpointWithOptions(t *testing.T) {
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
 	// span 7 with Tags options
-	mw = kitot.TraceEndpoint(
+	mw = kitot.TraceEndpoint[interface{}, interface{}](
 		tracer,
 		span7,
 		kitot.WithTags(map[string]interface{}{
@@ -191,7 +191,7 @@ func TestTraceEndpointWithOptions(t *testing.T) {
 	_, _ = tracedEndpoint(context.Background(), struct{}{})
 
 	// span 8 with TagsFunc options
-	mw = kitot.TraceEndpoint(
+	mw = kitot.TraceEndpoint[interface{}, interface{}](
 		tracer,
 		span8,
 		kitot.WithTags(map[string]interface{}{
@@ -352,7 +352,7 @@ func TestTraceServer(t *testing.T) {
 	tracer := mocktracer.New()
 
 	// Empty/background context.
-	tracedEndpoint := kitot.TraceServer(tracer, "testOp")(endpoint.Nop)
+	tracedEndpoint := kitot.TraceServer[interface{}, interface{}](tracer, "testOp")(endpoint.Nop)
 	if _, err := tracedEndpoint(context.Background(), struct{}{}); err != nil {
 		t.Fatal(err)
 	}
@@ -380,7 +380,7 @@ func TestTraceClient(t *testing.T) {
 	tracer := mocktracer.New()
 
 	// Empty/background context.
-	tracedEndpoint := kitot.TraceClient(tracer, "testOp")(endpoint.Nop)
+	tracedEndpoint := kitot.TraceClient[interface{}, interface{}](tracer, "testOp")(endpoint.Nop)
 	if _, err := tracedEndpoint(context.Background(), struct{}{}); err != nil {
 		t.Fatal(err)
 	}

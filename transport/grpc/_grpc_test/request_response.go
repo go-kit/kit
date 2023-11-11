@@ -3,7 +3,7 @@ package test
 import (
 	"context"
 
-	"github.com/go-kit/kit/transport/grpc/_grpc_test/pb"
+	"github.com/openmesh/kit/transport/grpc/_grpc_test/pb"
 )
 
 func encodeRequest(ctx context.Context, req interface{}) (interface{}, error) {

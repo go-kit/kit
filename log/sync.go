@@ -21,9 +21,9 @@ type SwapLogger = log.SwapLogger
 //
 // If w implements the following interface, so does the returned writer.
 //
-//    interface {
-//        Fd() uintptr
-//    }
+//	interface {
+//	    Fd() uintptr
+//	}
 func NewSyncWriter(w io.Writer) io.Writer {
 	return log.NewSyncWriter(w)
 }

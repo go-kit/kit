@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
-	httptransport "github.com/go-kit/kit/transport/http"
+	"github.com/openmesh/kit/endpoint"
+	httptransport "github.com/openmesh/kit/transport/http"
 )
 
 func TestServerBadDecode(t *testing.T) {
@@ -68,7 +68,7 @@ func TestServerErrorEncoder(t *testing.T) {
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, errTeapot },
 		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
-		httptransport.ServerErrorEncoder(func(_ context.Context, err error, w http.ResponseWriter) { w.WriteHeader(code(err)) }),
+		httptransport.ServerErrorEncoder[interface{}, interface{}](func(_ context.Context, err error, w http.ResponseWriter) { w.WriteHeader(code(err)) }),
 	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -108,12 +108,12 @@ func TestMultipleServerBefore(t *testing.T) {
 			w.Write([]byte(responseBody))
 			return nil
 		},
-		httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context {
+		httptransport.ServerBefore[interface{}, interface{}](func(ctx context.Context, r *http.Request) context.Context {
 			ctx = context.WithValue(ctx, "one", 1)
 
 			return ctx
 		}),
-		httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context {
+		httptransport.ServerBefore[interface{}, interface{}](func(ctx context.Context, r *http.Request) context.Context {
 			if _, ok := ctx.Value("one").(int); !ok {
 				t.Error("Value was not set properly when multiple ServerBefores are used")
 			}
@@ -153,12 +153,12 @@ func TestMultipleServerAfter(t *testing.T) {
 			w.Write([]byte(responseBody))
 			return nil
 		},
-		httptransport.ServerAfter(func(ctx context.Context, w http.ResponseWriter) context.Context {
+		httptransport.ServerAfter[interface{}, interface{}](func(ctx context.Context, w http.ResponseWriter) context.Context {
 			ctx = context.WithValue(ctx, "one", 1)
 
 			return ctx
 		}),
-		httptransport.ServerAfter(func(ctx context.Context, w http.ResponseWriter) context.Context {
+		httptransport.ServerAfter[interface{}, interface{}](func(ctx context.Context, w http.ResponseWriter) context.Context {
 			if _, ok := ctx.Value("one").(int); !ok {
 				t.Error("Value was not set properly when multiple ServerAfters are used")
 			}
@@ -198,7 +198,7 @@ func TestServerFinalizer(t *testing.T) {
 			w.Write([]byte(responseBody))
 			return nil
 		},
-		httptransport.ServerFinalizer(func(ctx context.Context, code int, _ *http.Request) {
+		httptransport.ServerFinalizer[interface{}, interface{}](func(ctx context.Context, code int, _ *http.Request) {
 			if want, have := statusCode, code; want != have {
 				t.Errorf("StatusCode: want %d, have %d", want, have)
 			}
@@ -424,8 +424,8 @@ func testServer(t *testing.T) (step func(), resp <-chan *http.Response) {
 			endpoint,
 			func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 			func(context.Context, http.ResponseWriter, interface{}) error { return nil },
-			httptransport.ServerBefore(func(ctx context.Context, r *http.Request) context.Context { return ctx }),
-			httptransport.ServerAfter(func(ctx context.Context, w http.ResponseWriter) context.Context { return ctx }),
+			httptransport.ServerBefore[interface{}, interface{}](func(ctx context.Context, r *http.Request) context.Context { return ctx }),
+			httptransport.ServerAfter[interface{}, interface{}](func(ctx context.Context, w http.ResponseWriter) context.Context { return ctx }),
 		)
 	)
 	go func() {

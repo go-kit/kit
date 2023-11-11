@@ -8,7 +8,7 @@ import (
 
 	"github.com/afex/hystrix-go/hystrix"
 
-	"github.com/go-kit/kit/circuitbreaker"
+	"github.com/openmesh/kit/circuitbreaker"
 )
 
 func TestHystrix(t *testing.T) {
@@ -25,7 +25,7 @@ func TestHystrix(t *testing.T) {
 	})
 
 	var (
-		breaker          = circuitbreaker.Hystrix(commandName)
+		breaker          = circuitbreaker.Hystrix[interface{}, interface{}](commandName)
 		primeWith        = hystrix.DefaultVolumeThreshold * 2
 		shouldPass       = func(n int) bool { return (float64(n) / float64(primeWith+n)) <= (float64(errorPercent-1) / 100.0) }
 		openCircuitError = hystrix.ErrCircuitOpen.Error()

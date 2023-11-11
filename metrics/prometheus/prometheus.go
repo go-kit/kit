@@ -7,8 +7,8 @@ package prometheus
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/metrics/internal/lv"
+	"github.com/openmesh/kit/metrics"
+	"github.com/openmesh/kit/metrics/internal/lv"
 )
 
 // Counter implements Counter, via a Prometheus CounterVec.

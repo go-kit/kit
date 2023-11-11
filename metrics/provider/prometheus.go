@@ -3,8 +3,8 @@ package provider
 import (
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 
-	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/openmesh/kit/metrics"
+	"github.com/openmesh/kit/metrics/prometheus"
 )
 
 type prometheusProvider struct {

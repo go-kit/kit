@@ -8,19 +8,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd"
 )
 
 var _ sd.Instancer = (*Cache)(nil) // API check
 
 // The test verifies the following:
-//   registering causes initial notification of the current state
-//   instances are sorted
-//   different update causes new notification
-//   identical notifications cause no updates
-//   no updates after de-registering
+//
+//	registering causes initial notification of the current state
+//	instances are sorted
+//	different update causes new notification
+//	identical notifications cause no updates
+//	no updates after de-registering
 func TestCache(t *testing.T) {
 	e1 := sd.Event{Instances: []string{"y", "x"}} // not sorted
 	e2 := sd.Event{Instances: []string{"c", "a", "b"}}
@@ -98,7 +99,7 @@ func TestDataRace(t *testing.T) {
 	nullEndpoint := func(_ context.Context, _ interface{}) (interface{}, error) {
 		return nil, nil
 	}
-	nullFactory := func(instance string) (endpoint.Endpoint, io.Closer, error) {
+	nullFactory := func(instance string) (endpoint.Endpoint[interface{}, interface{}], io.Closer, error) {
 		return nullEndpoint, nil, nil
 	}
 	logger := log.Logger(log.LoggerFunc(func(keyvals ...interface{}) error {

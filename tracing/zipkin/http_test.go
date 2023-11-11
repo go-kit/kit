@@ -15,9 +15,9 @@ import (
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 	"github.com/openzipkin/zipkin-go/reporter/recorder"
 
-	"github.com/go-kit/kit/endpoint"
-	zipkinkit "github.com/go-kit/kit/tracing/zipkin"
-	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/openmesh/kit/endpoint"
+	zipkinkit "github.com/openmesh/kit/tracing/zipkin"
+	kithttp "github.com/openmesh/kit/transport/http"
 )
 
 const (
@@ -35,7 +35,7 @@ func TestHTTPClientTracePropagatesParentSpan(t *testing.T) {
 
 	rURL, _ := url.Parse("https://httpbin.org/get")
 
-	clientTracer := zipkinkit.HTTPClientTrace(tr)
+	clientTracer := zipkinkit.HTTPClientTrace[interface{}, interface{}](tr)
 	ep := kithttp.NewClient(
 		"GET",
 		rURL,
@@ -104,7 +104,7 @@ func testHTTPClientTraceCase(t *testing.T, responseStatusCode int, errTagValue s
 	rMethod := "GET"
 	rURL, _ := url.Parse(ts.URL)
 
-	clientTracer := zipkinkit.HTTPClientTrace(
+	clientTracer := zipkinkit.HTTPClientTrace[interface{}, interface{}](
 		tr,
 		zipkinkit.Name(testName),
 		zipkinkit.Tags(map[string]string{testTagKey: testTagValue}),
@@ -175,7 +175,7 @@ func TestHTTPServerTrace(t *testing.T) {
 		endpoint.Nop,
 		func(context.Context, *http.Request) (interface{}, error) { return nil, nil },
 		func(context.Context, http.ResponseWriter, interface{}) error { return errors.New("dummy") },
-		zipkinkit.HTTPServerTrace(tr),
+		zipkinkit.HTTPServerTrace[interface{}, interface{}](tr),
 	)
 
 	server := httptest.NewServer(handler)
@@ -233,7 +233,7 @@ func TestHTTPServerTraceIsRequestBasedSampled(t *testing.T) {
 		endpoint.Nop,
 		func(context.Context, *http.Request) (interface{}, error) { return nil, nil },
 		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
-		zipkinkit.HTTPServerTrace(tr, zipkinkit.RequestSampler(func(r *http.Request) bool {
+		zipkinkit.HTTPServerTrace[interface{}, interface{}](tr, zipkinkit.RequestSampler(func(r *http.Request) bool {
 			return r.Method == httpMethod
 		})),
 	)

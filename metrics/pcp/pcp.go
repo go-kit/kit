@@ -3,7 +3,7 @@ package pcp
 import (
 	"github.com/performancecopilot/speed/v4"
 
-	"github.com/go-kit/kit/metrics"
+	"github.com/openmesh/kit/metrics"
 )
 
 // Reporter encapsulates a speed client.

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/transport"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/transport"
 )
 
 type key int
@@ -50,29 +50,29 @@ func TestInvokeHappyPath(t *testing.T) {
 		makeTest01HelloEndpoint(svc),
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
-		HandlerErrorHandler(transport.NewLogErrorHandler(log.NewNopLogger())),
-		HandlerBefore(func(
+		HandlerErrorHandler[interface{}, interface{}](transport.NewLogErrorHandler(log.NewNopLogger())),
+		HandlerBefore[interface{}, interface{}](func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
-		HandlerBefore(func(
+		HandlerBefore[interface{}, interface{}](func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
-		HandlerAfter(func(
+		HandlerAfter[interface{}, interface{}](func(
 			ctx context.Context,
 			response interface{},
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyAfterOne, "af1")
 			return ctx
 		}),
-		HandlerAfter(func(
+		HandlerAfter[interface{}, interface{}](func(
 			ctx context.Context,
 			response interface{},
 		) context.Context {
@@ -81,7 +81,7 @@ func TestInvokeHappyPath(t *testing.T) {
 			}
 			return ctx
 		}),
-		HandlerFinalizer(func(
+		HandlerFinalizer[interface{}, interface{}](func(
 			_ context.Context,
 			resp []byte,
 			_ error,
@@ -142,7 +142,7 @@ func TestInvokeFailDecode(t *testing.T) {
 		makeTest01HelloEndpoint(svc),
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
-		HandlerErrorEncoder(func(
+		HandlerErrorEncoder[interface{}, interface{}](func(
 			ctx context.Context,
 			err error,
 		) ([]byte, error) {
@@ -178,21 +178,21 @@ func TestInvokeFailEndpoint(t *testing.T) {
 		makeTest01FailEndpoint(svc),
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
-		HandlerBefore(func(
+		HandlerBefore[interface{}, interface{}](func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
-		HandlerBefore(func(
+		HandlerBefore[interface{}, interface{}](func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
-		HandlerErrorEncoder(func(
+		HandlerErrorEncoder[interface{}, interface{}](func(
 			ctx context.Context,
 			err error,
 		) ([]byte, error) {
@@ -228,28 +228,28 @@ func TestInvokeFailEncode(t *testing.T) {
 		makeTest01HelloEndpoint(svc),
 		decodeHelloRequestWithTwoBefores,
 		encodeResponse,
-		HandlerBefore(func(
+		HandlerBefore[interface{}, interface{}](func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeOne, "bef1")
 			return ctx
 		}),
-		HandlerBefore(func(
+		HandlerBefore[interface{}, interface{}](func(
 			ctx context.Context,
 			payload []byte,
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyBeforeTwo, "bef2")
 			return ctx
 		}),
-		HandlerAfter(func(
+		HandlerAfter[interface{}, interface{}](func(
 			ctx context.Context,
 			response interface{},
 		) context.Context {
 			ctx = context.WithValue(ctx, KeyEncMode, "fail_encode")
 			return ctx
 		}),
-		HandlerErrorEncoder(func(
+		HandlerErrorEncoder[interface{}, interface{}](func(
 			ctx context.Context,
 			err error,
 		) ([]byte, error) {
@@ -340,7 +340,7 @@ type helloResponse struct {
 	Greeting string `json:"greeting"`
 }
 
-func makeTest01HelloEndpoint(svc serviceTest01) endpoint.Endpoint {
+func makeTest01HelloEndpoint(svc serviceTest01) endpoint.Endpoint[interface{}, interface{}] {
 	return func(_ context.Context, request interface{}) (interface{}, error) {
 		req := request.(helloRequest)
 		greeting := svc.hello(req.Name)
@@ -348,7 +348,7 @@ func makeTest01HelloEndpoint(svc serviceTest01) endpoint.Endpoint {
 	}
 }
 
-func makeTest01FailEndpoint(_ serviceTest01) endpoint.Endpoint {
+func makeTest01FailEndpoint(_ serviceTest01) endpoint.Endpoint[interface{}, interface{}] {
 	return func(_ context.Context, request interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("test error endpoint")
 	}

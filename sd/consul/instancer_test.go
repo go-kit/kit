@@ -9,8 +9,8 @@ import (
 
 	consul "github.com/hashicorp/consul/api"
 
-	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/sd"
 )
 
 var _ sd.Instancer = (*Instancer)(nil) // API check

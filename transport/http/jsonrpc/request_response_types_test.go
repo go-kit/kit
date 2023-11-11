@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/go-kit/kit/transport/http/jsonrpc"
+	"github.com/openmesh/kit/transport/http/jsonrpc"
 )
 
 func TestCanUnMarshalID(t *testing.T) {

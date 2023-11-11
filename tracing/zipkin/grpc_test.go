@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/go-kit/kit/endpoint"
-	kitzipkin "github.com/go-kit/kit/tracing/zipkin"
-	grpctransport "github.com/go-kit/kit/transport/grpc"
+	"github.com/openmesh/kit/endpoint"
+	kitzipkin "github.com/openmesh/kit/tracing/zipkin"
+	grpctransport "github.com/openmesh/kit/transport/grpc"
 )
 
 type dummy struct{}
@@ -30,7 +30,7 @@ func TestGRPCClientTrace(t *testing.T) {
 
 	tr, _ := zipkin.NewTracer(rec)
 
-	clientTracer := kitzipkin.GRPCClientTrace(tr)
+	clientTracer := kitzipkin.GRPCClientTrace[interface{}, interface{}](tr)
 
 	cc, err := grpc.Dial(
 		"",
@@ -78,7 +78,7 @@ func TestGRPCServerTrace(t *testing.T) {
 
 	tr, _ := zipkin.NewTracer(rec)
 
-	serverTracer := kitzipkin.GRPCServerTrace(tr)
+	serverTracer := kitzipkin.GRPCServerTrace[interface{}, interface{}](tr)
 
 	server := grpctransport.NewServer(
 		endpoint.Nop,

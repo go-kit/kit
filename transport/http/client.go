@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/endpoint"
 )
 
 // HTTPClient is an interface that models *http.Client.
@@ -19,10 +19,10 @@ type HTTPClient interface {
 }
 
 // Client wraps a URL and provides a method that implements endpoint.Endpoint.
-type Client struct {
+type Client[Request, Response any] struct {
 	client         HTTPClient
-	req            CreateRequestFunc
-	dec            DecodeResponseFunc
+	req            CreateRequestFunc[Request]
+	dec            DecodeResponseFunc[Response]
 	before         []RequestFunc
 	after          []ClientResponseFunc
 	finalizer      []ClientFinalizerFunc
@@ -30,15 +30,15 @@ type Client struct {
 }
 
 // NewClient constructs a usable Client for a single remote method.
-func NewClient(method string, tgt *url.URL, enc EncodeRequestFunc, dec DecodeResponseFunc, options ...ClientOption) *Client {
+func NewClient[Request, Response any](method string, tgt *url.URL, enc EncodeRequestFunc[Request], dec DecodeResponseFunc[Response], options ...ClientOption[Request, Response]) *Client[Request, Response] {
 	return NewExplicitClient(makeCreateRequestFunc(method, tgt, enc), dec, options...)
 }
 
 // NewExplicitClient is like NewClient but uses a CreateRequestFunc instead of a
 // method, target URL, and EncodeRequestFunc, which allows for more control over
 // the outgoing HTTP request.
-func NewExplicitClient(req CreateRequestFunc, dec DecodeResponseFunc, options ...ClientOption) *Client {
-	c := &Client{
+func NewExplicitClient[Request, Response any](req CreateRequestFunc[Request], dec DecodeResponseFunc[Response], options ...ClientOption[Request, Response]) *Client[Request, Response] {
+	c := &Client[Request, Response]{
 		client: http.DefaultClient,
 		req:    req,
 		dec:    dec,
@@ -50,45 +50,45 @@ func NewExplicitClient(req CreateRequestFunc, dec DecodeResponseFunc, options ..
 }
 
 // ClientOption sets an optional parameter for clients.
-type ClientOption func(*Client)
+type ClientOption[Request, Response any] func(*Client[Request, Response])
 
 // SetClient sets the underlying HTTP client used for requests.
 // By default, http.DefaultClient is used.
-func SetClient(client HTTPClient) ClientOption {
-	return func(c *Client) { c.client = client }
+func SetClient[Request, Response any](client HTTPClient) ClientOption[Request, Response] {
+	return func(c *Client[Request, Response]) { c.client = client }
 }
 
 // ClientBefore adds one or more RequestFuncs to be applied to the outgoing HTTP
 // request before it's invoked.
-func ClientBefore(before ...RequestFunc) ClientOption {
-	return func(c *Client) { c.before = append(c.before, before...) }
+func ClientBefore[Request, Response any](before ...RequestFunc) ClientOption[Request, Response] {
+	return func(c *Client[Request, Response]) { c.before = append(c.before, before...) }
 }
 
 // ClientAfter adds one or more ClientResponseFuncs, which are applied to the
 // incoming HTTP response prior to it being decoded. This is useful for
 // obtaining anything off of the response and adding it into the context prior
 // to decoding.
-func ClientAfter(after ...ClientResponseFunc) ClientOption {
-	return func(c *Client) { c.after = append(c.after, after...) }
+func ClientAfter[Request, Response any](after ...ClientResponseFunc) ClientOption[Request, Response] {
+	return func(c *Client[Request, Response]) { c.after = append(c.after, after...) }
 }
 
 // ClientFinalizer adds one or more ClientFinalizerFuncs to be executed at the
 // end of every HTTP request. Finalizers are executed in the order in which they
 // were added. By default, no finalizer is registered.
-func ClientFinalizer(f ...ClientFinalizerFunc) ClientOption {
-	return func(s *Client) { s.finalizer = append(s.finalizer, f...) }
+func ClientFinalizer[Request, Response any](f ...ClientFinalizerFunc) ClientOption[Request, Response] {
+	return func(s *Client[Request, Response]) { s.finalizer = append(s.finalizer, f...) }
 }
 
 // BufferedStream sets whether the HTTP response body is left open, allowing it
 // to be read from later. Useful for transporting a file as a buffered stream.
 // That body has to be drained and closed to properly end the request.
-func BufferedStream(buffered bool) ClientOption {
-	return func(c *Client) { c.bufferedStream = buffered }
+func BufferedStream[Request, Response any](buffered bool) ClientOption[Request, Response] {
+	return func(c *Client[Request, Response]) { c.bufferedStream = buffered }
 }
 
 // Endpoint returns a usable Go kit endpoint that calls the remote HTTP endpoint.
-func (c Client) Endpoint() endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+func (c Client[Request, Response]) Endpoint() endpoint.Endpoint[Request, Response] {
+	return func(ctx context.Context, request Request) (Response, error) {
 		ctx, cancel := context.WithCancel(ctx)
 
 		var (
@@ -110,7 +110,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		req, err := c.req(ctx, request)
 		if err != nil {
 			cancel()
-			return nil, err
+			return *new(Response), err
 		}
 
 		for _, f := range c.before {
@@ -120,7 +120,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 		resp, err = c.client.Do(req.WithContext(ctx))
 		if err != nil {
 			cancel()
-			return nil, err
+			return *new(Response), err
 		}
 
 		// If the caller asked for a buffered stream, we don't cancel the
@@ -139,7 +139,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		response, err := c.dec(ctx, resp)
 		if err != nil {
-			return nil, err
+			return *new(Response), err
 		}
 
 		return response, nil
@@ -203,8 +203,8 @@ func EncodeXMLRequest(c context.Context, r *http.Request, request interface{}) e
 //
 //
 
-func makeCreateRequestFunc(method string, target *url.URL, enc EncodeRequestFunc) CreateRequestFunc {
-	return func(ctx context.Context, request interface{}) (*http.Request, error) {
+func makeCreateRequestFunc[Request any](method string, target *url.URL, enc EncodeRequestFunc[Request]) CreateRequestFunc[Request] {
+	return func(ctx context.Context, request Request) (*http.Request, error) {
 		req, err := http.NewRequest(method, target.String(), nil)
 		if err != nil {
 			return nil, err

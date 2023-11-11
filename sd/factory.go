@@ -3,7 +3,7 @@ package sd
 import (
 	"io"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/endpoint"
 )
 
 // Factory is a function that converts an instance string (e.g. host:port) to a
@@ -14,4 +14,4 @@ import (
 //
 // Users are expected to provide their own factory functions that assume
 // specific transports, or can deduce transports by parsing the instance string.
-type Factory func(instance string) (endpoint.Endpoint, io.Closer, error)
+type Factory[Request, Response any] func(instance string) (endpoint.Endpoint[Request, Response], io.Closer, error)

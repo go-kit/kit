@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/go-kit/kit/metrics"
+	"github.com/openmesh/kit/metrics"
 )
 
 // TestCounter puts some deltas through the counter, and then calls the value

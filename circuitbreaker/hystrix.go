@@ -5,7 +5,7 @@ import (
 
 	"github.com/afex/hystrix-go/hystrix"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/endpoint"
 )
 
 // Hystrix returns an endpoint.Middleware that implements the circuit
@@ -15,15 +15,15 @@ import (
 //
 // See https://godoc.org/github.com/afex/hystrix-go/hystrix for more
 // information.
-func Hystrix(commandName string) endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			var resp interface{}
+func Hystrix[Request, Response any](commandName string) endpoint.Middleware[Request, Response] {
+	return func(next endpoint.Endpoint[Request, Response]) endpoint.Endpoint[Request, Response] {
+		return func(ctx context.Context, request Request) (response Response, err error) {
+			var resp Response
 			if err := hystrix.Do(commandName, func() (err error) {
 				resp, err = next(ctx, request)
 				return err
 			}, nil); err != nil {
-				return nil, err
+				return *new(Response), err
 			}
 			return resp, nil
 		}

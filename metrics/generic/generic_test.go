@@ -16,8 +16,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/go-kit/kit/metrics/generic"
-	"github.com/go-kit/kit/metrics/teststat"
+	"github.com/openmesh/kit/metrics/generic"
+	"github.com/openmesh/kit/metrics/teststat"
 )
 
 func TestCounter(t *testing.T) {

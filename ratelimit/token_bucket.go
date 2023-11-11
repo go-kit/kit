@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/endpoint"
 )
 
 // ErrLimited is returned in the request path when the rate limiter is
@@ -21,11 +21,11 @@ type Allower interface {
 // NewErroringLimiter returns an endpoint.Middleware that acts as a rate
 // limiter. Requests that would exceed the
 // maximum request rate are simply rejected with an error.
-func NewErroringLimiter(limit Allower) endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (interface{}, error) {
+func NewErroringLimiter[Request, Response any](limit Allower) endpoint.Middleware[Request, Response] {
+	return func(next endpoint.Endpoint[Request, Response]) endpoint.Endpoint[Request, Response] {
+		return func(ctx context.Context, request Request) (Response, error) {
 			if !limit.Allow() {
-				return nil, ErrLimited
+				return *new(Response), ErrLimited
 			}
 			return next(ctx, request)
 		}
@@ -42,11 +42,11 @@ type Waiter interface {
 // NewDelayingLimiter returns an endpoint.Middleware that acts as a
 // request throttler. Requests that would
 // exceed the maximum request rate are delayed via the Waiter function
-func NewDelayingLimiter(limit Waiter) endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (interface{}, error) {
+func NewDelayingLimiter[Request, Response any](limit Waiter) endpoint.Middleware[Request, Response] {
+	return func(next endpoint.Endpoint[Request, Response]) endpoint.Endpoint[Request, Response] {
+		return func(ctx context.Context, request Request) (Response, error) {
 			if err := limit.Wait(ctx); err != nil {
-				return nil, err
+				return *new(Response), err
 			}
 			return next(ctx, request)
 		}

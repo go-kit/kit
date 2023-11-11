@@ -13,10 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/metrics/internal/convert"
-	"github.com/go-kit/kit/metrics/internal/lv"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/metrics"
+	"github.com/openmesh/kit/metrics/internal/convert"
+	"github.com/openmesh/kit/metrics/internal/lv"
 )
 
 const (

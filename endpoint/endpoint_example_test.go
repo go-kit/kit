@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/endpoint"
 )
 
 func ExampleChain() {
@@ -33,8 +33,8 @@ var (
 	req = struct{}{}
 )
 
-func annotate(s string) endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
+func annotate(s string) endpoint.Middleware[interface{}, interface{}] {
+	return func(next endpoint.Endpoint[interface{}, interface{}]) endpoint.Endpoint[interface{}, interface{}] {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			fmt.Println(s, "pre")
 			defer fmt.Println(s, "post")

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	amqptransport "github.com/go-kit/kit/transport/amqp"
+	amqptransport "github.com/openmesh/kit/transport/amqp"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -69,7 +69,7 @@ func TestBadDecode(t *testing.T) {
 		func(context.Context, *amqp.Delivery) (response interface{}, err error) {
 			return struct{}{}, errors.New("err!")
 		},
-		amqptransport.PublisherBefore(
+		amqptransport.PublisherBefore[interface{}, interface{}](
 			amqptransport.SetCorrelationID(cid),
 		),
 	)
@@ -114,7 +114,7 @@ func TestPublisherTimeout(t *testing.T) {
 		func(context.Context, *amqp.Delivery) (response interface{}, err error) {
 			return struct{}{}, nil
 		},
-		amqptransport.PublisherTimeout(50*time.Millisecond),
+		amqptransport.PublisherTimeout[interface{}, interface{}](50*time.Millisecond),
 	)
 
 	var err error
@@ -170,7 +170,7 @@ func TestSuccessfulPublisher(t *testing.T) {
 		q,
 		testReqEncoder,
 		testResDeliveryDecoder,
-		amqptransport.PublisherBefore(
+		amqptransport.PublisherBefore[interface{}, interface{}](
 			amqptransport.SetCorrelationID(cid),
 		),
 	)
@@ -241,8 +241,8 @@ func TestSendAndForgetPublisher(t *testing.T) {
 		func(context.Context, *amqp.Delivery) (response interface{}, err error) {
 			return struct{}{}, nil
 		},
-		amqptransport.PublisherDeliverer(amqptransport.SendAndForgetDeliverer),
-		amqptransport.PublisherTimeout(50*time.Millisecond),
+		amqptransport.PublisherDeliverer[interface{}, interface{}](amqptransport.SendAndForgetDeliverer),
+		amqptransport.PublisherTimeout[interface{}, interface{}](50*time.Millisecond),
 	)
 
 	var err error

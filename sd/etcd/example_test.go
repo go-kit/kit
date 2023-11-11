@@ -5,10 +5,10 @@ import (
 	"io"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd"
-	"github.com/go-kit/kit/sd/lb"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd"
+	"github.com/openmesh/kit/sd/lb"
 )
 
 func Example() {
@@ -56,8 +56,8 @@ func Example() {
 		panic(err)
 	}
 	endpointer := sd.NewEndpointer(instancer, barFactory, logger)
-	balancer := lb.NewRoundRobin(endpointer)
-	retry := lb.Retry(3, 3*time.Second, balancer)
+	balancer := lb.NewRoundRobin[interface{}, interface{}](endpointer)
+	retry := lb.Retry[interface{}, interface{}](3, 3*time.Second, balancer)
 
 	// And now retry can be used like any other endpoint.
 	req := struct{}{}
@@ -66,4 +66,6 @@ func Example() {
 	}
 }
 
-func barFactory(string) (endpoint.Endpoint, io.Closer, error) { return endpoint.Nop, nil, nil }
+func barFactory(string) (endpoint.Endpoint[interface{}, interface{}], io.Closer, error) {
+	return endpoint.Nop, nil, nil
+}

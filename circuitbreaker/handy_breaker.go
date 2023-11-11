@@ -6,7 +6,7 @@ import (
 
 	"github.com/streadway/handy/breaker"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/endpoint"
 )
 
 // HandyBreaker returns an endpoint.Middleware that implements the circuit
@@ -16,11 +16,11 @@ import (
 //
 // See http://godoc.org/github.com/streadway/handy/breaker for more
 // information.
-func HandyBreaker(cb breaker.Breaker) endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+func HandyBreaker[Request, Response any](cb breaker.Breaker) endpoint.Middleware[Request, Response] {
+	return func(next endpoint.Endpoint[Request, Response]) endpoint.Endpoint[Request, Response] {
+		return func(ctx context.Context, request Request) (response Response, err error) {
 			if !cb.Allow() {
-				return nil, breaker.ErrCircuitOpen
+				return *new(Response), breaker.ErrCircuitOpen
 			}
 
 			defer func(begin time.Time) {

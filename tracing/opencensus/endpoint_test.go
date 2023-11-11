@@ -8,10 +8,10 @@ import (
 
 	"go.opencensus.io/trace"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd"
-	"github.com/go-kit/kit/sd/lb"
-	"github.com/go-kit/kit/tracing/opencensus"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd"
+	"github.com/openmesh/kit/sd/lb"
+	"github.com/openmesh/kit/tracing/opencensus"
 )
 
 const (
@@ -58,27 +58,27 @@ func TestTraceEndpoint(t *testing.T) {
 		trace.StringAttribute("string", "value"),
 		trace.Int64Attribute("int64", 42),
 	}
-	mw := opencensus.TraceEndpoint(
+	mw := opencensus.TraceEndpoint[interface{}, interface{}](
 		span1, opencensus.WithEndpointAttributes(span1Attrs...),
 	)
 	mw(endpoint.Nop)(ctx, nil)
 
 	// span 2
 	opts := opencensus.EndpointOptions{}
-	mw = opencensus.TraceEndpoint(span2, opencensus.WithEndpointConfig(opts))
+	mw = opencensus.TraceEndpoint[interface{}, interface{}](span2, opencensus.WithEndpointConfig(opts))
 	mw(passEndpoint)(ctx, err1)
 
 	// span3
-	mw = opencensus.TraceEndpoint(span3)
-	ep := lb.Retry(5, 1*time.Second, lb.NewRoundRobin(sd.FixedEndpointer{passEndpoint}))
+	mw = opencensus.TraceEndpoint[interface{}, interface{}](span3)
+	ep := lb.Retry(5, 1*time.Second, lb.NewRoundRobin(sd.FixedEndpointer[interface{}, interface{}]{passEndpoint}))
 	mw(ep)(ctx, err2)
 
 	// span4
-	mw = opencensus.TraceEndpoint(span4)
+	mw = opencensus.TraceEndpoint[interface{}, interface{}](span4)
 	mw(passEndpoint)(ctx, failedResponse{err: err3})
 
 	// span5
-	mw = opencensus.TraceEndpoint(span5, opencensus.WithIgnoreBusinessError(true))
+	mw = opencensus.TraceEndpoint[interface{}, interface{}](span5, opencensus.WithIgnoreBusinessError(true))
 	mw(passEndpoint)(ctx, failedResponse{err: err4})
 
 	// span6
@@ -86,7 +86,7 @@ func TestTraceEndpoint(t *testing.T) {
 		trace.StringAttribute("string", "value"),
 		trace.Int64Attribute("int64", 42),
 	}
-	mw = opencensus.TraceEndpoint(
+	mw = opencensus.TraceEndpoint[interface{}, interface{}](
 		"",
 		opencensus.WithSpanName(func(ctx context.Context, name string) string {
 			return span6

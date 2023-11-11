@@ -4,7 +4,7 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/go-kit/kit/metrics"
+	"github.com/openmesh/kit/metrics"
 )
 
 // PopulateNormalHistogram makes a series of normal random observations into the

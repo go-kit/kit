@@ -1,6 +1,6 @@
-module github.com/go-kit/kit
+module github.com/openmesh/kit
 
-go 1.17
+go 1.21
 
 require (
 	github.com/VividCortex/gohistogram v1.0.0

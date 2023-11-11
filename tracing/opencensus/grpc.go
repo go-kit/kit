@@ -9,20 +9,20 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	kitgrpc "github.com/go-kit/kit/transport/grpc"
+	kitgrpc "github.com/openmesh/kit/transport/grpc"
 )
 
 const propagationKey = "grpc-trace-bin"
 
 // GRPCClientTrace enables OpenCensus tracing of a Go kit gRPC transport client.
-func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
+func GRPCClientTrace[Request, Response any](options ...TracerOption) kitgrpc.ClientOption[Request, Response] {
 	cfg := TracerOptions{}
 
 	for _, option := range options {
 		option(&cfg)
 	}
 
-	clientBefore := kitgrpc.ClientBefore(
+	clientBefore := kitgrpc.ClientBefore[Request, Response](
 		func(ctx context.Context, md *metadata.MD) context.Context {
 			var name string
 
@@ -48,7 +48,7 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 		},
 	)
 
-	clientFinalizer := kitgrpc.ClientFinalizer(
+	clientFinalizer := kitgrpc.ClientFinalizer[Request, Response](
 		func(ctx context.Context, err error) {
 			if span := trace.FromContext(ctx); span != nil {
 				if s, ok := status.FromError(err); ok {
@@ -61,21 +61,21 @@ func GRPCClientTrace(options ...TracerOption) kitgrpc.ClientOption {
 		},
 	)
 
-	return func(c *kitgrpc.Client) {
+	return func(c *kitgrpc.Client[Request, Response]) {
 		clientBefore(c)
 		clientFinalizer(c)
 	}
 }
 
 // GRPCServerTrace enables OpenCensus tracing of a Go kit gRPC transport server.
-func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
+func GRPCServerTrace[Request, Response any](options ...TracerOption) kitgrpc.ServerOption[Request, Response] {
 	cfg := TracerOptions{}
 
 	for _, option := range options {
 		option(&cfg)
 	}
 
-	serverBefore := kitgrpc.ServerBefore(
+	serverBefore := kitgrpc.ServerBefore[Request, Response](
 		func(ctx context.Context, md metadata.MD) context.Context {
 			var name string
 
@@ -129,7 +129,7 @@ func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
 		},
 	)
 
-	serverFinalizer := kitgrpc.ServerFinalizer(
+	serverFinalizer := kitgrpc.ServerFinalizer[Request, Response](
 		func(ctx context.Context, err error) {
 			if span := trace.FromContext(ctx); span != nil {
 				if s, ok := status.FromError(err); ok {
@@ -142,7 +142,7 @@ func GRPCServerTrace(options ...TracerOption) kitgrpc.ServerOption {
 		},
 	)
 
-	return func(s *kitgrpc.Server) {
+	return func(s *kitgrpc.Server[Request, Response]) {
 		serverBefore(s)
 		serverFinalizer(s)
 	}

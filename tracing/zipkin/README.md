@@ -9,6 +9,7 @@ its default configuration you will run [Zipkin] with a HTTP collector, In memory
 Span storage backend and web UI on port 9411.
 
 Example:
+
 ```
 docker run -d -p 9411:9411 openzipkin/zipkin
 ```
@@ -48,12 +49,13 @@ tracer, err = zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(localEndpoint)
 ```
 
 [zipkin-go]: https://github.com/openzipkin/zipkin-go
-[addsvc]: https://github.com/go-kit/examples/tree/master/addsvc
-[Log]: https://github.com/go-kit/kit/tree/master/log
+[addsvc]: https://github.com/openmesh/examples/tree/master/addsvc
+[Log]: https://github.com/openmesh/kit/tree/master/log
 
 ### Tracing Resources
 
 Here is an example of how you could trace resources and work with local spans.
+
 ```go
 import (
 	zipkin "github.com/openzipkin/zipkin-go"

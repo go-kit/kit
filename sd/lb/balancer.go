@@ -3,12 +3,12 @@ package lb
 import (
 	"errors"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/endpoint"
 )
 
 // Balancer yields endpoints according to some heuristic.
-type Balancer interface {
-	Endpoint() (endpoint.Endpoint, error)
+type Balancer[Request, Response any] interface {
+	Endpoint() (endpoint.Endpoint[Request, Response], error)
 }
 
 // ErrNoEndpoints is returned when no qualifying endpoints are available.

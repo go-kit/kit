@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-kit/kit/endpoint"
-	grpctransport "github.com/go-kit/kit/transport/grpc"
-	"github.com/go-kit/kit/transport/grpc/_grpc_test/pb"
+	"github.com/openmesh/kit/endpoint"
+	grpctransport "github.com/openmesh/kit/transport/grpc"
+	"github.com/openmesh/kit/transport/grpc/_grpc_test/pb"
 )
 
 type service struct{}

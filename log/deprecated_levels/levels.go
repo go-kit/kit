@@ -3,7 +3,7 @@
 // Deprecated: Use github.com/go-kit/log/level instead.
 package levels
 
-import "github.com/go-kit/log"
+import "github.com/openmesh/kit/log"
 
 // Levels provides a leveled logging wrapper around a logger. It has five
 // levels: debug, info, warning (warn), error, and critical (crit). If you

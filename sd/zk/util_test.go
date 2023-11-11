@@ -9,9 +9,9 @@ import (
 
 	"github.com/go-zookeeper/zk"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd"
 )
 
 var (
@@ -103,8 +103,8 @@ func (c *fakeClient) ErrorIsConsumedWithin(timeout time.Duration) error {
 
 func (c *fakeClient) Stop() {}
 
-func newFactory(fakeError string) sd.Factory {
-	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+func newFactory(fakeError string) sd.Factory[interface{}, interface{}] {
+	return func(instance string) (endpoint.Endpoint[interface{}, interface{}], io.Closer, error) {
 		if fakeError == instance {
 			return nil, nil, errors.New(fakeError)
 		}
@@ -112,8 +112,8 @@ func newFactory(fakeError string) sd.Factory {
 	}
 }
 
-func asyncTest(timeout time.Duration, want int, s sd.Endpointer) (err error) {
-	var endpoints []endpoint.Endpoint
+func asyncTest(timeout time.Duration, want int, s sd.Endpointer[interface{}, interface{}]) (err error) {
+	var endpoints []endpoint.Endpoint[interface{}, interface{}]
 	have := -1 // want can never be <0
 	t := time.After(timeout)
 	for {

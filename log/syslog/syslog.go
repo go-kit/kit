@@ -7,8 +7,8 @@ package syslog
 import (
 	"io"
 
-	"github.com/go-kit/log"
 	"github.com/go-kit/log/syslog"
+	"github.com/openmesh/kit/log"
 )
 
 // SyslogWriter is an interface wrapping stdlib syslog Writer.

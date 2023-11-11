@@ -9,7 +9,7 @@ import (
 
 	stdconsul "github.com/hashicorp/consul/api"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/endpoint"
 )
 
 func TestClientRegistration(t *testing.T) {
@@ -141,7 +141,7 @@ func registration2entry(r *stdconsul.AgentServiceRegistration) *stdconsul.Servic
 	}
 }
 
-func testFactory(instance string) (endpoint.Endpoint, io.Closer, error) {
+func testFactory(instance string) (endpoint.Endpoint[interface{}, interface{}], io.Closer, error) {
 	return func(context.Context, interface{}) (interface{}, error) {
 		return instance, nil
 	}, nil, nil

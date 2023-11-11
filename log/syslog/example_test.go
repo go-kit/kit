@@ -1,6 +1,5 @@
-// +build !windows
-// +build !plan9
-// +build !nacl
+//go:build !windows && !plan9 && !nacl
+// +build !windows,!plan9,!nacl
 
 package syslog_test
 
@@ -9,9 +8,9 @@ import (
 
 	gosyslog "log/syslog"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
-	"github.com/go-kit/kit/log/syslog"
+	"github.com/openmesh/kit/log"
+	"github.com/openmesh/kit/log/level"
+	"github.com/openmesh/kit/log/syslog"
 )
 
 func ExampleNewSyslogLogger_defaultPrioritySelector() {

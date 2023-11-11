@@ -11,9 +11,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/go-kit/kit/endpoint"
-	ockit "github.com/go-kit/kit/tracing/opencensus"
-	grpctransport "github.com/go-kit/kit/transport/grpc"
+	"github.com/openmesh/kit/endpoint"
+	ockit "github.com/openmesh/kit/tracing/opencensus"
+	grpctransport "github.com/openmesh/kit/transport/grpc"
 )
 
 type dummy struct{}
@@ -51,7 +51,7 @@ func TestGRPCClientTrace(t *testing.T) {
 	}
 
 	for _, tr := range traces {
-		clientTracer := ockit.GRPCClientTrace(
+		clientTracer := ockit.GRPCClientTrace[interface{}, interface{}](
 			ockit.WithName(tr.name),
 			ockit.WithSampler(trace.AlwaysSample()),
 		)
@@ -139,7 +139,7 @@ func TestGRPCServerTrace(t *testing.T) {
 			func(context.Context, interface{}) (interface{}, error) {
 				return nil, tr.err
 			},
-			ockit.GRPCServerTrace(
+			ockit.GRPCServerTrace[interface{}, interface{}](
 				ockit.WithName(tr.name),
 				ockit.WithSampler(trace.AlwaysSample()),
 			),

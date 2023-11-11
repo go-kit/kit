@@ -12,10 +12,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 
-	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/metrics/generic"
-	"github.com/go-kit/kit/metrics/internal/lv"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/metrics"
+	"github.com/openmesh/kit/metrics/generic"
+	"github.com/openmesh/kit/metrics/internal/lv"
 )
 
 const (

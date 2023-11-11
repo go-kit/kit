@@ -14,8 +14,8 @@ will be added to the context via the `jwt.JWTClaimsContextKey`.
 import (
 	stdjwt "github.com/golang-jwt/jwt/v4"
 
-	"github.com/go-kit/kit/auth/jwt"
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/auth/jwt"
+	"github.com/openmesh/kit/endpoint"
 )
 
 func main() {
@@ -36,8 +36,8 @@ the token string and add it to the context via the `jwt.JWTContextKey`.
 import (
 	stdjwt "github.com/golang-jwt/jwt/v4"
 
-	"github.com/go-kit/kit/auth/jwt"
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/auth/jwt"
+	"github.com/openmesh/kit/endpoint"
 )
 
 func main() {
@@ -67,9 +67,9 @@ Example of use in a client:
 import (
 	stdjwt "github.com/golang-jwt/jwt/v4"
 
-	grpctransport "github.com/go-kit/kit/transport/grpc"
-	"github.com/go-kit/kit/auth/jwt"
-	"github.com/go-kit/kit/endpoint"
+	grpctransport "github.com/openmesh/kit/transport/grpc"
+	"github.com/openmesh/kit/auth/jwt"
+	"github.com/openmesh/kit/endpoint"
 )
 
 func main() {
@@ -94,9 +94,9 @@ Example of use in a server:
 import (
 	"context"
 
-	"github.com/go-kit/kit/auth/jwt"
+	"github.com/openmesh/kit/auth/jwt"
 	"github.com/go-kit/log"
-	grpctransport "github.com/go-kit/kit/transport/grpc"
+	grpctransport "github.com/openmesh/kit/transport/grpc"
 )
 
 func MakeGRPCServer(ctx context.Context, endpoints Endpoints, logger log.Logger) pb.ExampleServer {

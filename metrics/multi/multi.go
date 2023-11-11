@@ -4,7 +4,7 @@
 // transitioning from one system to another.
 package multi
 
-import "github.com/go-kit/kit/metrics"
+import "github.com/openmesh/kit/metrics"
 
 // Counter collects multiple individual counters and treats them as a unit.
 type Counter []metrics.Counter

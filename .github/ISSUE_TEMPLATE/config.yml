@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Ask a question
-    url: https://github.com/go-kit/kit/discussions/new?category=q-a
+    url: https://github.com/openmesh/kit/discussions/new?category=q-a
     about: Questions and discussions with the Go kit community
 
   - name: Website
@@ -9,9 +9,9 @@ contact_links:
     about: Project overview, examples, frequently asked questions, etc.
 
   - name: Reference
-    url: https://pkg.go.dev/github.com/go-kit/kit
+    url: https://pkg.go.dev/github.com/openmesh/kit
     about: Go kit package documentation
 
   - name: Slack channel
-    url: https://gophers.slack.com/messages/go-kit
+    url: https://gophers.slack.com/messages/openmesh
     about: Real-time discussions and Q&A

@@ -24,7 +24,7 @@ func TestStructBaseContext(t *testing.T) {
 	ctx = context.WithValue(ctx, CasbinPolicyContextKey, a)
 
 	// positive case
-	middleware := NewEnforcer("alice", "/alice_data/resource1", "GET")(e)
+	middleware := NewEnforcer[interface{}, interface{}]("alice", "/alice_data/resource1", "GET")(e)
 	ctx1, err := middleware(ctx, struct{}{})
 	if err != nil {
 		t.Fatalf("Enforcer returned error: %s", err)
@@ -35,7 +35,7 @@ func TestStructBaseContext(t *testing.T) {
 	}
 
 	// negative case
-	middleware = NewEnforcer("alice", "/alice_data/resource2", "POST")(e)
+	middleware = NewEnforcer[interface{}, interface{}]("alice", "/alice_data/resource2", "POST")(e)
 	_, err = middleware(ctx, struct{}{})
 	if err == nil {
 		t.Fatalf("Enforcer should return error")
@@ -48,7 +48,7 @@ func TestFileBaseContext(t *testing.T) {
 	ctx = context.WithValue(ctx, CasbinPolicyContextKey, "testdata/basic_policy.csv")
 
 	// positive case
-	middleware := NewEnforcer("alice", "data1", "read")(e)
+	middleware := NewEnforcer[interface{}, interface{}]("alice", "data1", "read")(e)
 	_, err := middleware(ctx, struct{}{})
 	if err != nil {
 		t.Fatalf("Enforcer returned error: %s", err)

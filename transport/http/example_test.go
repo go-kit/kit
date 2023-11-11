@@ -18,7 +18,7 @@ func ExamplePopulateRequestContext() {
 		},
 		func(context.Context, *http.Request) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, http.ResponseWriter, interface{}) error { return nil },
-		ServerBefore(PopulateRequestContext),
+		ServerBefore[interface{}, interface{}](PopulateRequestContext),
 	)
 
 	server := httptest.NewServer(handler)

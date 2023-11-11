@@ -70,26 +70,20 @@ Go kit instrumentation can be found in [opentelemetry-go-contrib]
 which is a central repository of instrumentation libraries.
 
 [Dapper]: http://research.google.com/pubs/pub36356.html
-[addsvc]: https://github.com/go-kit/examples/tree/master/addsvc
-[README]: https://github.com/go-kit/kit/blob/master/tracing/zipkin/README.md
-
+[addsvc]: https://github.com/openmesh/examples/tree/master/addsvc
+[README]: https://github.com/openmesh/kit/blob/master/tracing/zipkin/README.md
 [OpenTracing]: http://opentracing.io
 [opentracing-go]: https://github.com/opentracing/opentracing-go
-
 [Zipkin]: http://zipkin.io/
 [Open Zipkin GitHub]: https://github.com/openzipkin
 [zipkin-go-opentracing]: https://github.com/openzipkin-contrib/zipkin-go-opentracing
 [zipkin-go]: https://github.com/openzipkin/zipkin-go
 [Zipkin's Gitter]: https://gitter.im/openzipkin/zipkin
-
 [Appdash]: https://github.com/sourcegraph/appdash
 [appdash/opentracing]: https://github.com/sourcegraph/appdash/tree/master/opentracing
-
 [LightStep]: http://lightstep.com/
 [lightstep-tracer-go]: https://github.com/lightstep/lightstep-tracer-go
-
 [OpenCensus]: https://opencensus.io/
 [opencensus-go]: https://github.com/census-instrumentation/opencensus-go
-
 [OpenTelemetry]: https://opentelemetry.io/
 [opentelemetry-go-contrib]: https://github.com/open-telemetry/opentelemetry-go-contrib

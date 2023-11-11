@@ -8,21 +8,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd"
 )
 
 func TestRoundRobin(t *testing.T) {
 	var (
 		counts    = []int{0, 0, 0}
-		endpoints = []endpoint.Endpoint{
+		endpoints = []endpoint.Endpoint[interface{}, interface{}]{
 			func(context.Context, interface{}) (interface{}, error) { counts[0]++; return struct{}{}, nil },
 			func(context.Context, interface{}) (interface{}, error) { counts[1]++; return struct{}{}, nil },
 			func(context.Context, interface{}) (interface{}, error) { counts[2]++; return struct{}{}, nil },
 		}
 	)
 
-	endpointer := sd.FixedEndpointer(endpoints)
+	endpointer := sd.FixedEndpointer[interface{}, interface{}](endpoints)
 	balancer := NewRoundRobin(endpointer)
 
 	for i, want := range [][]int{
@@ -46,7 +46,7 @@ func TestRoundRobin(t *testing.T) {
 }
 
 func TestRoundRobinNoEndpoints(t *testing.T) {
-	endpointer := sd.FixedEndpointer{}
+	endpointer := sd.FixedEndpointer[interface{}, interface{}]{}
 	balancer := NewRoundRobin(endpointer)
 	_, err := balancer.Endpoint()
 	if want, have := ErrNoEndpoints, err; want != have {
@@ -55,7 +55,7 @@ func TestRoundRobinNoEndpoints(t *testing.T) {
 }
 
 func TestRoundRobinNoRace(t *testing.T) {
-	balancer := NewRoundRobin(sd.FixedEndpointer([]endpoint.Endpoint{
+	balancer := NewRoundRobin[interface{}, interface{}](sd.FixedEndpointer[interface{}, interface{}]([]endpoint.Endpoint[interface{}, interface{}]{
 		endpoint.Nop,
 		endpoint.Nop,
 		endpoint.Nop,

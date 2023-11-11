@@ -3,8 +3,8 @@ package statsd
 import (
 	"testing"
 
-	"github.com/go-kit/kit/metrics/teststat"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/metrics/teststat"
 )
 
 func TestCounter(t *testing.T) {

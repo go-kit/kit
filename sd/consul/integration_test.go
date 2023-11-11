@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/log"
 	stdconsul "github.com/hashicorp/consul/api"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd"
 )
 
 func TestIntegration(t *testing.T) {
@@ -41,7 +41,7 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Build an Instancer on r.Name + r.Tags.
-	factory := func(instance string) (endpoint.Endpoint, io.Closer, error) {
+	factory := func(instance string) (endpoint.Endpoint[interface{}, interface{}], io.Closer, error) {
 		t.Logf("factory invoked for %q", instance)
 		return endpoint.Nop, nil, nil
 	}

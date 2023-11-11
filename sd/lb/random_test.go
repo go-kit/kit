@@ -5,14 +5,14 @@ import (
 	"math"
 	"testing"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd"
 )
 
 func TestRandom(t *testing.T) {
 	var (
 		n          = 7
-		endpoints  = make([]endpoint.Endpoint, n)
+		endpoints  = make([]endpoint.Endpoint[interface{}, interface{}], n)
 		counts     = make([]int, n)
 		seed       = int64(12345)
 		iterations = 1000000
@@ -25,7 +25,7 @@ func TestRandom(t *testing.T) {
 		endpoints[i] = func(context.Context, interface{}) (interface{}, error) { counts[i0]++; return struct{}{}, nil }
 	}
 
-	endpointer := sd.FixedEndpointer(endpoints)
+	endpointer := sd.FixedEndpointer[interface{}, interface{}](endpoints)
 	balancer := NewRandom(endpointer, seed)
 
 	for i := 0; i < iterations; i++ {
@@ -42,7 +42,7 @@ func TestRandom(t *testing.T) {
 }
 
 func TestRandomNoEndpoints(t *testing.T) {
-	endpointer := sd.FixedEndpointer{}
+	endpointer := sd.FixedEndpointer[interface{}, interface{}]{}
 	balancer := NewRandom(endpointer, 1415926)
 	_, err := balancer.Endpoint()
 	if want, have := ErrNoEndpoints, err; want != have {

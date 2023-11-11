@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd"
-	"github.com/go-kit/kit/sd/internal/instance"
 	"github.com/go-kit/log"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd"
+	"github.com/openmesh/kit/sd/internal/instance"
 )
 
 func TestDefaultEndpointer(t *testing.T) {
@@ -16,7 +16,7 @@ func TestDefaultEndpointer(t *testing.T) {
 		ca = make(closer)
 		cb = make(closer)
 		c  = map[string]io.Closer{"a": ca, "b": cb}
-		f  = func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		f  = func(instance string) (endpoint.Endpoint[interface{}, interface{}], io.Closer, error) {
 			return endpoint.Nop, c[instance], nil
 		}
 		instancer = &mockInstancer{instance.NewCache()}
@@ -27,7 +27,7 @@ func TestDefaultEndpointer(t *testing.T) {
 	endpointer := sd.NewEndpointer(instancer, f, log.NewNopLogger(), sd.InvalidateOnError(time.Minute))
 
 	var (
-		endpoints []endpoint.Endpoint
+		endpoints []endpoint.Endpoint[interface{}, interface{}]
 		err       error
 	)
 	if !within(time.Second, func() bool {

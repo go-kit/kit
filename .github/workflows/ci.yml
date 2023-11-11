@@ -61,8 +61,8 @@ jobs:
           EUREKA_ADDR: http://localhost:${{ job.services.eureka.ports[8761] }}/eureka
         run: go test -v -race -coverprofile=coverage.coverprofile -covermode=atomic -tags integration ./...
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: coverage.coverprofile
+      # - name: Upload coverage
+      #   uses: codecov/codecov-action@v1
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     file: coverage.coverprofile

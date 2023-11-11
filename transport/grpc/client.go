@@ -8,17 +8,17 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/openmesh/kit/endpoint"
 )
 
 // Client wraps a gRPC connection and provides a method that implements
 // endpoint.Endpoint.
-type Client struct {
+type Client[Request, Response any] struct {
 	client      *grpc.ClientConn
 	serviceName string
 	method      string
-	enc         EncodeRequestFunc
-	dec         DecodeResponseFunc
+	enc         EncodeRequestFunc[Request]
+	dec         DecodeResponseFunc[Response]
 	grpcReply   reflect.Type
 	before      []ClientRequestFunc
 	after       []ClientResponseFunc
@@ -28,16 +28,16 @@ type Client struct {
 // NewClient constructs a usable Client for a single remote endpoint.
 // Pass an zero-value protobuf message of the RPC response type as
 // the grpcReply argument.
-func NewClient(
+func NewClient[Request, Response any](
 	cc *grpc.ClientConn,
 	serviceName string,
 	method string,
-	enc EncodeRequestFunc,
-	dec DecodeResponseFunc,
+	enc EncodeRequestFunc[Request],
+	dec DecodeResponseFunc[Response],
 	grpcReply interface{},
-	options ...ClientOption,
-) *Client {
-	c := &Client{
+	options ...ClientOption[Request, Response],
+) *Client[Request, Response] {
+	c := &Client[Request, Response]{
 		client: cc,
 		method: fmt.Sprintf("/%s/%s", serviceName, method),
 		enc:    enc,
@@ -61,31 +61,31 @@ func NewClient(
 }
 
 // ClientOption sets an optional parameter for clients.
-type ClientOption func(*Client)
+type ClientOption[Request, Response any] func(*Client[Request, Response])
 
 // ClientBefore sets the RequestFuncs that are applied to the outgoing gRPC
 // request before it's invoked.
-func ClientBefore(before ...ClientRequestFunc) ClientOption {
-	return func(c *Client) { c.before = append(c.before, before...) }
+func ClientBefore[Request, Response any](before ...ClientRequestFunc) ClientOption[Request, Response] {
+	return func(c *Client[Request, Response]) { c.before = append(c.before, before...) }
 }
 
 // ClientAfter sets the ClientResponseFuncs that are applied to the incoming
 // gRPC response prior to it being decoded. This is useful for obtaining
 // response metadata and adding onto the context prior to decoding.
-func ClientAfter(after ...ClientResponseFunc) ClientOption {
-	return func(c *Client) { c.after = append(c.after, after...) }
+func ClientAfter[Request, Response any](after ...ClientResponseFunc) ClientOption[Request, Response] {
+	return func(c *Client[Request, Response]) { c.after = append(c.after, after...) }
 }
 
 // ClientFinalizer is executed at the end of every gRPC request.
 // By default, no finalizer is registered.
-func ClientFinalizer(f ...ClientFinalizerFunc) ClientOption {
-	return func(s *Client) { s.finalizer = append(s.finalizer, f...) }
+func ClientFinalizer[Request, Response any](f ...ClientFinalizerFunc) ClientOption[Request, Response] {
+	return func(s *Client[Request, Response]) { s.finalizer = append(s.finalizer, f...) }
 }
 
 // Endpoint returns a usable endpoint that will invoke the gRPC specified by the
 // client.
-func (c Client) Endpoint() endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+func (c Client[Request, Response]) Endpoint() endpoint.Endpoint[Request, Response] {
+	return func(ctx context.Context, request Request) (response Response, err error) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
@@ -101,7 +101,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		req, err := c.enc(ctx, request)
 		if err != nil {
-			return nil, err
+			return *new(Response), err
 		}
 
 		md := &metadata.MD{}
@@ -116,7 +116,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 			ctx, c.method, req, grpcReply, grpc.Header(&header),
 			grpc.Trailer(&trailer),
 		); err != nil {
-			return nil, err
+			return *new(Response), err
 		}
 
 		for _, f := range c.after {
@@ -125,7 +125,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		response, err = c.dec(ctx, grpcReply)
 		if err != nil {
-			return nil, err
+			return *new(Response), err
 		}
 		return response, nil
 	}

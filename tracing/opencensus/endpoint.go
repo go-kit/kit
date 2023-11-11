@@ -6,8 +6,8 @@ import (
 
 	"go.opencensus.io/trace"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/sd/lb"
+	"github.com/openmesh/kit/endpoint"
+	"github.com/openmesh/kit/sd/lb"
 )
 
 // TraceEndpointDefaultName is the default endpoint span name to use.
@@ -18,7 +18,7 @@ const TraceEndpointDefaultName = "gokit/endpoint"
 // tracing middleware, generic OpenCensus transport middleware or custom before
 // and after transport functions as service propagation of SpanContext is not
 // provided in this middleware.
-func TraceEndpoint(name string, options ...EndpointOption) endpoint.Middleware {
+func TraceEndpoint[Request, Response any](name string, options ...EndpointOption) endpoint.Middleware[Request, Response] {
 	if name == "" {
 		name = TraceEndpointDefaultName
 	}
@@ -29,8 +29,8 @@ func TraceEndpoint(name string, options ...EndpointOption) endpoint.Middleware {
 		o(cfg)
 	}
 
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	return func(next endpoint.Endpoint[Request, Response]) endpoint.Endpoint[Request, Response] {
+		return func(ctx context.Context, request Request) (response Response, err error) {
 			if cfg.GetName != nil {
 				if newName := cfg.GetName(ctx, name); newName != "" {
 					name = newName
@@ -75,7 +75,7 @@ func TraceEndpoint(name string, options ...EndpointOption) endpoint.Middleware {
 				}
 
 				// test for business error
-				if res, ok := response.(endpoint.Failer); ok && res.Failed() != nil {
+				if res, ok := interface{}(response).(endpoint.Failer); ok && res.Failed() != nil {
 					span.AddAttributes(
 						trace.StringAttribute("gokit.business.error", res.Failed().Error()),
 					)

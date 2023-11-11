@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	amqptransport "github.com/go-kit/kit/transport/amqp"
+	amqptransport "github.com/openmesh/kit/transport/amqp"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -48,7 +48,7 @@ func TestSubscriberBadDecode(t *testing.T) {
 		func(context.Context, *amqp.Publishing, interface{}) error {
 			return nil
 		},
-		amqptransport.SubscriberErrorEncoder(amqptransport.ReplyErrorEncoder),
+		amqptransport.SubscriberErrorEncoder[interface{}, interface{}](amqptransport.ReplyErrorEncoder),
 	)
 
 	outputChan := make(chan amqp.Publishing, 1)
@@ -80,7 +80,7 @@ func TestSubscriberBadEndpoint(t *testing.T) {
 		func(context.Context, *amqp.Publishing, interface{}) error {
 			return nil
 		},
-		amqptransport.SubscriberErrorEncoder(amqptransport.ReplyErrorEncoder),
+		amqptransport.SubscriberErrorEncoder[interface{}, interface{}](amqptransport.ReplyErrorEncoder),
 	)
 
 	outputChan := make(chan amqp.Publishing, 1)
@@ -114,7 +114,7 @@ func TestSubscriberBadEncoder(t *testing.T) {
 		func(context.Context, *amqp.Publishing, interface{}) error {
 			return errors.New("err!")
 		},
-		amqptransport.SubscriberErrorEncoder(amqptransport.ReplyErrorEncoder),
+		amqptransport.SubscriberErrorEncoder[interface{}, interface{}](amqptransport.ReplyErrorEncoder),
 	)
 
 	outputChan := make(chan amqp.Publishing, 1)
@@ -157,7 +157,7 @@ func TestSubscriberSuccess(t *testing.T) {
 		testEndpoint,
 		testReqDecoder,
 		amqptransport.EncodeJSONResponse,
-		amqptransport.SubscriberErrorEncoder(amqptransport.ReplyErrorEncoder),
+		amqptransport.SubscriberErrorEncoder[interface{}, interface{}](amqptransport.ReplyErrorEncoder),
 	)
 
 	checkReplyToFunc := func(exchange, key string, mandatory, immediate bool) {
@@ -233,8 +233,8 @@ func TestNopResponseSubscriber(t *testing.T) {
 		testEndpoint,
 		testReqDecoder,
 		amqptransport.EncodeJSONResponse,
-		amqptransport.SubscriberResponsePublisher(amqptransport.NopResponsePublisher),
-		amqptransport.SubscriberErrorEncoder(amqptransport.ReplyErrorEncoder),
+		amqptransport.SubscriberResponsePublisher[interface{}, interface{}](amqptransport.NopResponsePublisher),
+		amqptransport.SubscriberErrorEncoder[interface{}, interface{}](amqptransport.ReplyErrorEncoder),
 	)
 
 	checkReplyToFunc := func(exchange, key string, mandatory, immediate bool) {}
@@ -267,8 +267,8 @@ func TestSubscriberMultipleBefore(t *testing.T) {
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, *amqp.Delivery) (interface{}, error) { return struct{}{}, nil },
 		amqptransport.EncodeJSONResponse,
-		amqptransport.SubscriberErrorEncoder(amqptransport.ReplyErrorEncoder),
-		amqptransport.SubscriberBefore(
+		amqptransport.SubscriberErrorEncoder[interface{}, interface{}](amqptransport.ReplyErrorEncoder),
+		amqptransport.SubscriberBefore[interface{}, interface{}](
 			amqptransport.SetPublishExchange(exchange),
 			amqptransport.SetPublishKey(key),
 			amqptransport.SetPublishDeliveryMode(deliveryMode),
@@ -331,7 +331,7 @@ func TestDefaultContentMetaData(t *testing.T) {
 		func(context.Context, interface{}) (interface{}, error) { return struct{}{}, nil },
 		func(context.Context, *amqp.Delivery) (interface{}, error) { return struct{}{}, nil },
 		amqptransport.EncodeJSONResponse,
-		amqptransport.SubscriberErrorEncoder(amqptransport.ReplyErrorEncoder),
+		amqptransport.SubscriberErrorEncoder[interface{}, interface{}](amqptransport.ReplyErrorEncoder),
 	)
 	checkReplyToFunc := func(exch, k string, mandatory, immediate bool) {}
 	outputChan := make(chan amqp.Publishing, 1)

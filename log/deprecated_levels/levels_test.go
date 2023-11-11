@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	levels "github.com/go-kit/kit/log/deprecated_levels"
-	"github.com/go-kit/log"
+	"github.com/openmesh/kit/log"
+	levels "github.com/openmesh/kit/log/deprecated_levels"
 )
 
 func TestDefaultLevels(t *testing.T) {
