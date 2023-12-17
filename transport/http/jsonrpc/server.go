@@ -15,6 +15,25 @@ type requestIDKeyType struct{}
 
 var requestIDKey requestIDKeyType
 
+// RequestIDFromContext returns the request id from context.
+func RequestIDFromContext(ctx context.Context) *RequestID {
+	if ctx == nil {
+		return nil
+	}
+
+	v := ctx.Value(requestIDKey)
+	if v == nil {
+		return nil
+	}
+
+	vv, ok := v.(*RequestID)
+	if !ok {
+		return nil
+	}
+
+	return vv
+}
+
 // Server wraps an endpoint and implements http.Handler.
 type Server struct {
 	ecm          EndpointCodecMap
@@ -198,12 +217,8 @@ func DefaultErrorEncoder(ctx context.Context, err error, w http.ResponseWriter) 
 
 	w.WriteHeader(http.StatusOK)
 
-	var requestID *RequestID
-	if v := ctx.Value(requestIDKey); v != nil {
-		requestID = v.(*RequestID)
-	}
 	_ = json.NewEncoder(w).Encode(Response{
-		ID:      requestID,
+		ID:      RequestIDFromContext(ctx),
 		JSONRPC: Version,
 		Error:   &e,
 	})
