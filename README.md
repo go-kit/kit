@@ -84,6 +84,7 @@ different starting assumptions.
 - [sagikazarmark/mga](https://github.com/sagikazarmark/mga)
 - [sagikazarmark/protoc-gen-go-kit](https://github.com/sagikazarmark/protoc-gen-go-kit)
 - [metaverse/truss](https://github.com/metaverse/truss)
+- [goadesign/goakit](https://github.com/goadesign/plugins/tree/v3/goakit)
 
 ## Related projects
 
