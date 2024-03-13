@@ -86,6 +86,12 @@ different starting assumptions.
 - [metaverse/truss](https://github.com/metaverse/truss)
 - [goadesign/goakit](https://github.com/goadesign/plugins/tree/v3/goakit)
 
+## Third-party extensions
+
+Third-party tools and libraries that extends Go kit functionality.
+
+- [alebabai/go-kit-kafka](https://github.com/alebabai/go-kit-kafka), module with Apache Kafka transport abstractions
+
 ## Related projects
 
 Projects with a ★ have had particular influence on Go kit's design (or vice-versa).
