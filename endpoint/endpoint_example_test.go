@@ -9,9 +9,9 @@ import (
 
 func ExampleChain() {
 	e := endpoint.Chain(
-		annotate("first"),
-		annotate("second"),
-		annotate("third"),
+		annotate[any, any]("first"),
+		annotate[any, any]("second"),
+		annotate[any, any]("third"),
 	)(myEndpoint)
 
 	if _, err := e(ctx, req); err != nil {
@@ -33,13 +33,13 @@ var (
 	req = struct{}{}
 )
 
-func annotate(s string) endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (interface{}, error) {
+func annotate[Req any, Resp any](s string) endpoint.Middleware[Req, Resp] {
+	return func(next endpoint.Endpoint[Req, Resp]) endpoint.Endpoint[Req, Resp] {
+		return endpoint.Endpoint[Req, Resp](func(ctx context.Context, request Req) (Resp, error) {
 			fmt.Println(s, "pre")
 			defer fmt.Println(s, "post")
 			return next(ctx, request)
-		}
+		})
 	}
 }
 

@@ -1,0 +1,27 @@
+name: Tip
+
+on:
+  push:
+    branches:
+      - generics
+  pull_request:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up gotip
+        run: |
+          go install golang.org/dl/gotip@latest
+          gotip download
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: gotip test -v ./endpoint/ ./transport/http2/
+
+      - name: Run tests
+        run: gotip test -v ./endpoint/ ./transport/http3/
