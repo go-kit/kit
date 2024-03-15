@@ -61,6 +61,21 @@ var consulState = []*consul.ServiceEntry{
 			},
 		},
 	},
+	{
+		Node: &consul.Node{
+			Address: "10.0.0.1",
+			Node:    "app01.local",
+		},
+		Service: &consul.AgentService{
+			Address: "2001:db8:1::ab9:C0A8:102",
+			ID:      "search-db-1",
+			Port:    9000,
+			Service: "search",
+			Tags: []string{
+				"ipv6",
+			},
+		},
+	},
 }
 
 func TestInstancer(t *testing.T) {
@@ -131,6 +146,33 @@ func TestInstancerAddressOverride(t *testing.T) {
 	}
 
 	if want, have := "10.0.0.10:9000", response.(string); want != have {
+		t.Errorf("want %q, have %q", want, have)
+	}
+}
+
+func TestInstancerAddressIpv6(t *testing.T) {
+	s := NewInstancer(newTestClient(consulState), log.NewNopLogger(), "search", []string{"ipv6"}, true)
+	defer s.Stop()
+
+	state := s.cache.State()
+	if want, have := 1, len(state.Instances); want != have {
+		t.Fatalf("want %d, have %d", want, have)
+	}
+
+	endpoint, closer, err := testFactory(state.Instances[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closer != nil {
+		defer closer.Close()
+	}
+
+	response, err := endpoint(context.Background(), struct{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want, have := "[2001:db8:1::ab9:C0A8:102]:9000", response.(string); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
 }

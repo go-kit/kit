@@ -1,7 +1,8 @@
 package eureka
 
 import (
-	"fmt"
+	"net"
+	"strconv"
 
 	"github.com/hudl/fargo"
 
@@ -84,7 +85,7 @@ func (s *Instancer) getInstances() ([]string, error) {
 func convertFargoAppToInstances(app *fargo.Application) []string {
 	instances := make([]string, len(app.Instances))
 	for i, inst := range app.Instances {
-		instances[i] = fmt.Sprintf("%s:%d", inst.IPAddr, inst.Port)
+		instances[i] = net.JoinHostPort(inst.IPAddr, strconv.Itoa(inst.Port))
 	}
 	return instances
 }
