@@ -1,8 +1,10 @@
 package dogstatsd
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/go-kit/kit/metrics/internal/lv"
 	"github.com/go-kit/kit/metrics/teststat"
 	"github.com/go-kit/log"
 )
@@ -87,4 +89,75 @@ func TestTimingSampled(t *testing.T) {
 	if err := teststat.TestHistogram(histogram, quantiles, 0.02); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestDogstatsd_WriteToDiscardsMetricsOnError(t *testing.T) {
+	walker := func(counter *int) func(string, lv.LabelValues, []float64) bool {
+		return func(string, lv.LabelValues, []float64) bool {
+			*counter++
+			return true
+		}
+	}
+
+	d := New("dogstatsd.", log.NewNopLogger())
+
+	// Add some metrics.
+	d.NewCounter("counter-1", 1.0).Add(1.0)
+	d.NewTiming("timing-1", 1.0).Observe(1.0)
+	d.NewHistogram("histogram-1", 1.0).Observe(1.0)
+
+	// Count metrics buffered in the Dogstatsd object.
+	var (
+		countersCount   int
+		timingsCount    int
+		histogramsCount int
+	)
+	d.counters.Walk(walker(&countersCount))
+	d.timings.Walk(walker(&timingsCount))
+	d.histograms.Walk(walker(&histogramsCount))
+
+	// Assert we have one of each type.
+	if countersCount != 1 {
+		t.Fatalf("expected counters count to be 1; got %d", countersCount)
+	}
+	if timingsCount != 1 {
+		t.Fatalf("expected timings count to be 1; got %d", timingsCount)
+	}
+	if histogramsCount != 1 {
+		t.Fatalf("expected histograms count to be 1; got %d", histogramsCount)
+	}
+
+	// Simulate an error while sending metrics.
+	count, err := d.WriteTo(errorWriter{})
+	if count != 0 {
+		t.Fatalf("expected count to be 0; got %d", count)
+	}
+	if err == nil {
+		t.Fatalf("expected error to be nil; got %v", err)
+	}
+
+	// Reset counters and count again.
+	countersCount = 0
+	timingsCount = 0
+	histogramsCount = 0
+	d.counters.Walk(walker(&countersCount))
+	d.timings.Walk(walker(&timingsCount))
+	d.histograms.Walk(walker(&histogramsCount))
+
+	// Assert buffered metrics were cleared.
+	if countersCount != 0 {
+		t.Fatalf("expected counters count to be 0; got %d", countersCount)
+	}
+	if timingsCount != 0 {
+		t.Fatalf("expected timings count to be 0; got %d", timingsCount)
+	}
+	if histogramsCount != 0 {
+		t.Fatalf("expected histograms count to be 0; got %d", histogramsCount)
+	}
+}
+
+type errorWriter struct{}
+
+func (w errorWriter) Write([]byte) (int, error) {
+	return 0, errors.New("boom")
 }
