@@ -12,7 +12,7 @@ will be added to the context via the `jwt.JWTClaimsContextKey`.
 
 ```go
 import (
-	stdjwt "github.com/golang-jwt/jwt/v4"
+	stdjwt "github.com/golang-jwt/jwt/v5"
 
 	"github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/endpoint"
@@ -23,7 +23,7 @@ func main() {
 	{
 		kf := func(token *stdjwt.Token) (interface{}, error) { return []byte("SigningString"), nil }
 		exampleEndpoint = MakeExampleEndpoint(service)
-		exampleEndpoint = jwt.NewParser(kf, stdjwt.SigningMethodHS256, jwt.StandardClaimsFactory)(exampleEndpoint)
+		exampleEndpoint = jwt.NewParser(kf, stdjwt.SigningMethodHS256, jwt.RegisteredClaimsFactory)(exampleEndpoint)
 	}
 }
 ```
@@ -34,7 +34,7 @@ the token string and add it to the context via the `jwt.JWTContextKey`.
 
 ```go
 import (
-	stdjwt "github.com/golang-jwt/jwt/v4"
+	stdjwt "github.com/golang-jwt/jwt/v5"
 
 	"github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/endpoint"
@@ -65,7 +65,7 @@ Example of use in a client:
 
 ```go
 import (
-	stdjwt "github.com/golang-jwt/jwt/v4"
+	stdjwt "github.com/golang-jwt/jwt/v5"
 
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"github.com/go-kit/kit/auth/jwt"

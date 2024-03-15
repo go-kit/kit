@@ -33,7 +33,7 @@ func TestGRPCClientTrace(t *testing.T) {
 	trace.RegisterExporter(rec)
 
 	cc, err := grpc.Dial(
-		"",
+		"scheme:///test.server",
 		grpc.WithUnaryInterceptor(unaryInterceptor),
 		grpc.WithInsecure(),
 	)

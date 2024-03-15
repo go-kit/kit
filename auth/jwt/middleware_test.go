@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -9,12 +10,12 @@ import (
 	"crypto/subtle"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type customClaims struct {
 	MyProperty string `json:"my_property"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 func (c customClaims) VerifyMyProperty(p string) bool {
@@ -22,20 +23,20 @@ func (c customClaims) VerifyMyProperty(p string) bool {
 }
 
 var (
-	kid            = "kid"
-	key            = []byte("test_signing_key")
-	myProperty     = "some value"
-	method         = jwt.SigningMethodHS256
-	invalidMethod  = jwt.SigningMethodRS256
-	mapClaims      = jwt.MapClaims{"user": "go-kit"}
-	standardClaims = jwt.StandardClaims{Audience: "go-kit"}
-	myCustomClaims = customClaims{MyProperty: myProperty, StandardClaims: standardClaims}
+	kid              = "kid"
+	key              = []byte("test_signing_key")
+	myProperty       = "some value"
+	method           = jwt.SigningMethodHS256
+	invalidMethod    = jwt.SigningMethodRS256
+	mapClaims        = jwt.MapClaims{"user": "go-kit"}
+	registeredClaims = jwt.RegisteredClaims{Audience: []string{"go-kit"}}
+	myCustomClaims   = customClaims{MyProperty: myProperty, RegisteredClaims: registeredClaims}
 	// Signed tokens generated at https://jwt.io/
-	signedKey         = "eyJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiZ28ta2l0In0.14M2VmYyApdSlV_LZ88ajjwuaLeIFplB8JpyNy0A19E"
-	standardSignedKey = "eyJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJnby1raXQifQ.L5ypIJjCOOv3jJ8G5SelaHvR04UJuxmcBN5QW3m_aoY"
-	customSignedKey   = "eyJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsInR5cCI6IkpXVCJ9.eyJteV9wcm9wZXJ0eSI6InNvbWUgdmFsdWUiLCJhdWQiOiJnby1raXQifQ.s8F-IDrV4WPJUsqr7qfDi-3GRlcKR0SRnkTeUT_U-i0"
-	invalidKey        = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.e30.vKVCKto-Wn6rgz3vBdaZaCBGfCBDTXOENSo_X2Gq7qA"
-	malformedKey      = "malformed.jwt.token"
+	signedKey           = "eyJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiZ28ta2l0In0.14M2VmYyApdSlV_LZ88ajjwuaLeIFplB8JpyNy0A19E"
+	registeredSignedKey = "eyJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiZ28ta2l0Il19.vqB-qPpEqKyEYqNsDsM7ZrWYG7ZEhJLwBXMzR0H3ajo"
+	customSignedKey     = "eyJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsInR5cCI6IkpXVCJ9.eyJteV9wcm9wZXJ0eSI6InNvbWUgdmFsdWUiLCJhdWQiOlsiZ28ta2l0Il19.Yus4v91ScNgx6_zgLJVYofo2vpZziA_vds7WPWwwgbE"
+	invalidKey          = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.e30.vKVCKto-Wn6rgz3vBdaZaCBGfCBDTXOENSo_X2Gq7qA"
+	malformedKey        = "malformed.jwt.token"
 )
 
 func signingValidator(t *testing.T, signer endpoint.Endpoint, expectedKey string) {
@@ -60,8 +61,8 @@ func TestNewSigner(t *testing.T) {
 	signer := NewSigner(kid, key, method, mapClaims)(e)
 	signingValidator(t, signer, signedKey)
 
-	signer = NewSigner(kid, key, method, standardClaims)(e)
-	signingValidator(t, signer, standardSignedKey)
+	signer = NewSigner(kid, key, method, registeredClaims)(e)
+	signingValidator(t, signer, registeredSignedKey)
 
 	signer = NewSigner(kid, key, method, myCustomClaims)(e)
 	signingValidator(t, signer, customSignedKey)
@@ -101,7 +102,7 @@ func TestJWTParser(t *testing.T) {
 		t.Error("Parser should have returned an error")
 	}
 
-	if err != ErrUnexpectedSigningMethod {
+	if !errors.Is(err, ErrUnexpectedSigningMethod) {
 		t.Errorf("unexpected error returned, expected: %s got: %s", ErrUnexpectedSigningMethod, err)
 	}
 
@@ -134,7 +135,7 @@ func TestJWTParser(t *testing.T) {
 	}
 
 	// Test for malformed token error response
-	parser = NewParser(keys, method, StandardClaimsFactory)(e)
+	parser = NewParser(keys, method, RegisteredClaimsFactory)(e)
 	ctx = context.WithValue(context.Background(), JWTContextKey, malformedKey)
 	ctx1, err = parser(ctx, struct{}{})
 	if want, have := ErrTokenMalformed, err; want != have {
@@ -142,8 +143,8 @@ func TestJWTParser(t *testing.T) {
 	}
 
 	// Test for expired token error response
-	parser = NewParser(keys, method, StandardClaimsFactory)(e)
-	expired := jwt.NewWithClaims(method, jwt.StandardClaims{ExpiresAt: time.Now().Unix() - 100})
+	parser = NewParser(keys, method, RegisteredClaimsFactory)(e)
+	expired := jwt.NewWithClaims(method, jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(-time.Second * 100))})
 	token, err := expired.SignedString(key)
 	if err != nil {
 		t.Fatalf("Unable to Sign Token: %+v", err)
@@ -155,8 +156,8 @@ func TestJWTParser(t *testing.T) {
 	}
 
 	// Test for not activated token error response
-	parser = NewParser(keys, method, StandardClaimsFactory)(e)
-	notactive := jwt.NewWithClaims(method, jwt.StandardClaims{NotBefore: time.Now().Unix() + 100})
+	parser = NewParser(keys, method, RegisteredClaimsFactory)(e)
+	notactive := jwt.NewWithClaims(method, jwt.RegisteredClaims{NotBefore: jwt.NewNumericDate(time.Now().Add(time.Second * 100))})
 	token, err = notactive.SignedString(key)
 	if err != nil {
 		t.Fatalf("Unable to Sign Token: %+v", err)
@@ -167,19 +168,19 @@ func TestJWTParser(t *testing.T) {
 		t.Fatalf("Expected %+v, got %+v", want, have)
 	}
 
-	// test valid standard claims token
-	parser = NewParser(keys, method, StandardClaimsFactory)(e)
-	ctx = context.WithValue(context.Background(), JWTContextKey, standardSignedKey)
+	// test valid registered claims token
+	parser = NewParser(keys, method, RegisteredClaimsFactory)(e)
+	ctx = context.WithValue(context.Background(), JWTContextKey, registeredSignedKey)
 	ctx1, err = parser(ctx, struct{}{})
 	if err != nil {
 		t.Fatalf("Parser returned error: %s", err)
 	}
-	stdCl, ok := ctx1.(context.Context).Value(JWTClaimsContextKey).(*jwt.StandardClaims)
+	regCl, ok := ctx1.(context.Context).Value(JWTClaimsContextKey).(*jwt.RegisteredClaims)
 	if !ok {
 		t.Fatal("Claims were not passed into context correctly")
 	}
-	if !stdCl.VerifyAudience("go-kit", true) {
-		t.Fatalf("JWT jwt.StandardClaims.Audience did not match: expecting %s got %s", standardClaims.Audience, stdCl.Audience)
+	if len(regCl.Audience) != 1 || regCl.Audience[0] != registeredClaims.Audience[0] {
+		t.Fatalf("JWT jwt.RegisteredClaims.Audience did not match: expecting %s got %s", registeredClaims.Audience, regCl.Audience)
 	}
 
 	// test valid customized claims token
@@ -193,8 +194,8 @@ func TestJWTParser(t *testing.T) {
 	if !ok {
 		t.Fatal("Claims were not passed into context correctly")
 	}
-	if !custCl.VerifyAudience("go-kit", true) {
-		t.Fatalf("JWT customClaims.Audience did not match: expecting %s got %s", standardClaims.Audience, custCl.Audience)
+	if len(custCl.Audience) != 1 || custCl.Audience[0] != registeredClaims.Audience[0] {
+		t.Fatalf("JWT customClaims.Audience did not match: expecting %s got %s", registeredClaims.Audience, custCl.Audience)
 	}
 	if !custCl.VerifyMyProperty(myProperty) {
 		t.Fatalf("JWT customClaims.MyProperty did not match: expecting %s got %s", myProperty, custCl.MyProperty)

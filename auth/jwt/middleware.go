@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type contextKey string
@@ -79,10 +79,10 @@ func MapClaimsFactory() jwt.Claims {
 	return jwt.MapClaims{}
 }
 
-// StandardClaimsFactory is a ClaimsFactory that returns
-// an empty jwt.StandardClaims.
-func StandardClaimsFactory() jwt.Claims {
-	return &jwt.StandardClaims{}
+// RegisteredClaimsFactory is a ClaimsFactory that returns
+// an empty jwt.RegisteredClaims.
+func RegisteredClaimsFactory() jwt.Claims {
+	return &jwt.RegisteredClaims{}
 }
 
 // NewParser creates a new JWT parsing middleware, specifying a
@@ -113,23 +113,16 @@ func NewParser(keyFunc jwt.Keyfunc, method jwt.SigningMethod, newClaims ClaimsFa
 				return keyFunc(token)
 			})
 			if err != nil {
-				if e, ok := err.(*jwt.ValidationError); ok {
-					switch {
-					case e.Errors&jwt.ValidationErrorMalformed != 0:
-						// Token is malformed
-						return nil, ErrTokenMalformed
-					case e.Errors&jwt.ValidationErrorExpired != 0:
-						// Token is expired
-						return nil, ErrTokenExpired
-					case e.Errors&jwt.ValidationErrorNotValidYet != 0:
-						// Token is not active yet
-						return nil, ErrTokenNotActive
-					case e.Inner != nil:
-						// report e.Inner
-						return nil, e.Inner
-					}
-					// We have a ValidationError but have no specific Go kit error for it.
-					// Fall through to return original error.
+				switch {
+				case errors.Is(err, jwt.ErrTokenMalformed):
+					// Token is malformed
+					return nil, ErrTokenMalformed
+				case errors.Is(err, jwt.ErrTokenExpired):
+					// Token is expired
+					return nil, ErrTokenExpired
+				case errors.Is(err, jwt.ErrTokenNotValidYet):
+					// Token is not active yet
+					return nil, ErrTokenNotActive
 				}
 				return nil, err
 			}
