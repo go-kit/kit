@@ -250,7 +250,7 @@ func (g *Gauge) Add(delta float64) {
 	g.add(g.name, g.lvs, delta)
 }
 
-// Histogram is an Influx histrogram. Observations are aggregated into a
+// Histogram is an Influx histogram. Observations are aggregated into a
 // generic.Histogram and emitted as per-quantile gauges to the Influx server.
 type Histogram struct {
 	name string
