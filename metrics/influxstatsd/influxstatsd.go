@@ -310,7 +310,7 @@ func (t *Timing) Observe(value float64) {
 	t.obs(t.name, t.lvs, value)
 }
 
-// Histogram is a InfluxStatsD histrogram. Observations are forwarded to a
+// Histogram is a InfluxStatsD histogram. Observations are forwarded to a
 // Influxstatsd object, and collected (but not aggregated) per timeseries.
 type Histogram struct {
 	name string
