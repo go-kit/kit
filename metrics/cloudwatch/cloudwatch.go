@@ -8,15 +8,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/generic"
 	"github.com/go-kit/kit/metrics/internal/lv"
 	"github.com/go-kit/log"
 )
+
+type CloudWatchAPI interface {
+	PutMetricData(context.Context, *cloudwatch.PutMetricDataInput) (*cloudwatch.PutMetricDataOutput, error)
+}
 
 const (
 	maxConcurrentRequests = 20
@@ -32,7 +36,7 @@ type CloudWatch struct {
 	mtx                   sync.RWMutex
 	sem                   chan struct{}
 	namespace             string
-	svc                   cloudwatchiface.CloudWatchAPI
+	svc                   CloudWatchAPI
 	counters              *lv.Space
 	gauges                *lv.Space
 	histograms            *lv.Space
@@ -85,7 +89,7 @@ func WithConcurrentRequests(n int) Option {
 // Namespace is applied to all created metrics and maps to the CloudWatch namespace.
 // Callers must ensure that regular calls to Send are performed, either
 // manually or with one of the helper methods.
-func New(namespace string, svc cloudwatchiface.CloudWatchAPI, options ...Option) *CloudWatch {
+func New(namespace string, svc CloudWatchAPI, options ...Option) *CloudWatch {
 	cw := &CloudWatch{
 		sem:                   nil, // set below
 		namespace:             namespace,
@@ -157,11 +161,11 @@ func (cw *CloudWatch) Send() error {
 	defer cw.mtx.RUnlock()
 	now := time.Now()
 
-	var datums []*cloudwatch.MetricDatum
+	var datums []types.MetricDatum
 
 	cw.counters.Reset().Walk(func(name string, lvs lv.LabelValues, values []float64) bool {
 		value := sum(values)
-		datums = append(datums, &cloudwatch.MetricDatum{
+		datums = append(datums, types.MetricDatum{
 			MetricName: aws.String(name),
 			Dimensions: makeDimensions(lvs...),
 			Value:      aws.Float64(value),
@@ -175,7 +179,7 @@ func (cw *CloudWatch) Send() error {
 			return true
 		}
 
-		datum := &cloudwatch.MetricDatum{
+		datum := types.MetricDatum{
 			MetricName: aws.String(name),
 			Dimensions: makeDimensions(lvs...),
 			Timestamp:  aws.Time(now),
@@ -192,8 +196,8 @@ func (cw *CloudWatch) Send() error {
 			if len(datum.Values) == maxValuesInABatch {
 				break
 			}
-			datum.Values = append(datum.Values, aws.Float64(value))
-			datum.Counts = append(datum.Counts, aws.Float64(float64(count)))
+			datum.Values = append(datum.Values, value)
+			datum.Counts = append(datum.Counts, float64(count))
 		}
 
 		datums = append(datums, datum)
@@ -217,7 +221,7 @@ func (cw *CloudWatch) Send() error {
 
 		for _, perc := range cw.percentiles {
 			value := histogram.Quantile(perc)
-			datums = append(datums, &cloudwatch.MetricDatum{
+			datums = append(datums, types.MetricDatum{
 				MetricName: aws.String(fmt.Sprintf("%s_%s", name, formatPerc(perc))),
 				Dimensions: makeDimensions(lvs...),
 				Value:      aws.Float64(value),
@@ -227,9 +231,9 @@ func (cw *CloudWatch) Send() error {
 		return true
 	})
 
-	var batches [][]*cloudwatch.MetricDatum
+	var batches [][]types.MetricDatum
 	for len(datums) > 0 {
-		var batch []*cloudwatch.MetricDatum
+		var batch []types.MetricDatum
 		lim := min(len(datums), maxConcurrentRequests)
 		batch, datums = datums[:lim], datums[lim:]
 		batches = append(batches, batch)
@@ -237,12 +241,14 @@ func (cw *CloudWatch) Send() error {
 
 	var errors = make(chan error, len(batches))
 	for _, batch := range batches {
-		go func(batch []*cloudwatch.MetricDatum) {
+		go func(batch []types.MetricDatum) {
 			cw.sem <- struct{}{}
 			defer func() {
 				<-cw.sem
 			}()
-			_, err := cw.svc.PutMetricData(&cloudwatch.PutMetricDataInput{
+
+			// using TODO context, should be passed in ideally
+			_, err := cw.svc.PutMetricData(context.TODO(), &cloudwatch.PutMetricDataInput{
 				Namespace:  aws.String(cw.namespace),
 				MetricData: batch,
 			})
@@ -349,10 +355,10 @@ func (h *Histogram) Observe(value float64) {
 	h.obs(h.name, h.lvs, value)
 }
 
-func makeDimensions(labelValues ...string) []*cloudwatch.Dimension {
-	dimensions := make([]*cloudwatch.Dimension, len(labelValues)/2)
+func makeDimensions(labelValues ...string) []types.Dimension {
+	dimensions := make([]types.Dimension, len(labelValues)/2)
 	for i, j := 0, 0; i < len(labelValues); i, j = i+2, j+1 {
-		dimensions[j] = &cloudwatch.Dimension{
+		dimensions[j] = types.Dimension{
 			Name:  aws.String(labelValues[i]),
 			Value: aws.String(labelValues[i+1]),
 		}

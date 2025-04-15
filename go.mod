@@ -5,7 +5,6 @@ go 1.17
 require (
 	github.com/VividCortex/gohistogram v1.0.0
 	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5
-	github.com/aws/aws-sdk-go v1.40.45
 	github.com/aws/aws-sdk-go-v2 v1.9.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.8.1
 	github.com/casbin/casbin/v2 v2.37.0

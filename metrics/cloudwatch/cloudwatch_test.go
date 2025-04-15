@@ -1,14 +1,15 @@
 package cloudwatch
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
 	"sync"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/teststat"
@@ -20,20 +21,20 @@ const metricNameToGenerateError = "metric_name_used_to_throw_an_error"
 var errTest = errors.New("test error")
 
 type mockCloudWatch struct {
-	cloudwatchiface.CloudWatchAPI
+	CloudWatchAPI
 	mtx                sync.RWMutex
 	valuesReceived     map[string][]float64
-	dimensionsReceived map[string][]*cloudwatch.Dimension
+	dimensionsReceived map[string][]types.Dimension
 }
 
 func newMockCloudWatch() *mockCloudWatch {
 	return &mockCloudWatch{
 		valuesReceived:     map[string][]float64{},
-		dimensionsReceived: map[string][]*cloudwatch.Dimension{},
+		dimensionsReceived: map[string][]types.Dimension{},
 	}
 }
 
-func (mcw *mockCloudWatch) PutMetricData(input *cloudwatch.PutMetricDataInput) (*cloudwatch.PutMetricDataOutput, error) {
+func (mcw *mockCloudWatch) PutMetricData(_ context.Context, input *cloudwatch.PutMetricDataInput) (*cloudwatch.PutMetricDataOutput, error) {
 	mcw.mtx.Lock()
 	defer mcw.mtx.Unlock()
 	for _, datum := range input.MetricData {
@@ -43,7 +44,7 @@ func (mcw *mockCloudWatch) PutMetricData(input *cloudwatch.PutMetricDataInput) (
 
 		if len(datum.Values) > 0 {
 			for _, v := range datum.Values {
-				mcw.valuesReceived[*datum.MetricName] = append(mcw.valuesReceived[*datum.MetricName], *v)
+				mcw.valuesReceived[*datum.MetricName] = append(mcw.valuesReceived[*datum.MetricName], v)
 			}
 		} else {
 			mcw.valuesReceived[*datum.MetricName] = append(mcw.valuesReceived[*datum.MetricName], *datum.Value)
