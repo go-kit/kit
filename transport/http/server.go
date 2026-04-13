@@ -174,7 +174,7 @@ func EncodeJSONResponse(_ context.Context, w http.ResponseWriter, response inter
 		code = sc.StatusCode()
 	}
 	w.WriteHeader(code)
-	if code == http.StatusNoContent {
+	if code == http.StatusNoContent || code == http.StatusNotModified || (code >= 100 && code < 200) {
 		return nil
 	}
 	return json.NewEncoder(w).Encode(response)
