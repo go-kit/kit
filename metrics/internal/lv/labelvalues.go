@@ -10,5 +10,10 @@ func (lvs LabelValues) With(labelValues ...string) LabelValues {
 	if len(labelValues)%2 != 0 {
 		labelValues = append(labelValues, "unknown")
 	}
-	return append(lvs, labelValues...)
+	// Create a new slice to avoid aliasing the underlying array.
+	// Without this, sibling With calls (e.g., c1.With("a","1") and
+	// c1.With("b","2")) can overwrite each other's label values.
+	result := make(LabelValues, len(lvs), len(lvs)+len(labelValues))
+	copy(result, lvs)
+	return append(result, labelValues...)
 }
