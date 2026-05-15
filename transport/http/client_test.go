@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -205,7 +204,7 @@ func TestEncodeJSONRequest(t *testing.T) {
 	var body string
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		b, err := ioutil.ReadAll(r.Body)
+		b, err := io.ReadAll(r.Body)
 		if err != nil && err != io.EOF {
 			t.Fatal(err)
 		}
@@ -266,7 +265,7 @@ func TestSetClient(t *testing.T) {
 	var (
 		encode = func(context.Context, *http.Request, interface{}) error { return nil }
 		decode = func(_ context.Context, r *http.Response) (interface{}, error) {
-			t, err := ioutil.ReadAll(r.Body)
+			t, err := io.ReadAll(r.Body)
 			if err != nil {
 				return nil, err
 			}
@@ -278,7 +277,7 @@ func TestSetClient(t *testing.T) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Request:    req,
-			Body:       ioutil.NopCloser(bytes.NewBufferString("hello, world!")),
+			Body:       io.NopCloser(bytes.NewBufferString("hello, world!")),
 		}, nil
 	})
 
@@ -311,7 +310,7 @@ func TestNewExplicitClient(t *testing.T) {
 	}
 
 	dec := func(_ context.Context, resp *http.Response) (response interface{}, err error) {
-		buf, err := ioutil.ReadAll(resp.Body)
+		buf, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		return string(buf), err
 	}

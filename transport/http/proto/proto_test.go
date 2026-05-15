@@ -2,7 +2,7 @@ package proto
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,7 +27,7 @@ func TestEncodeProtoRequest(t *testing.T) {
 		return
 	}
 
-	bod, err := ioutil.ReadAll(r.Body)
+	bod, err := io.ReadAll(r.Body)
 	if err != nil {
 		t.Errorf("expected no read errors but got: %s", err)
 		return
@@ -71,7 +71,7 @@ func TestEncodeProtoResponse(t *testing.T) {
 		return
 	}
 
-	bod, err := ioutil.ReadAll(w.Body)
+	bod, err := io.ReadAll(w.Body)
 	if err != nil {
 		t.Errorf("expected no read errors but got: %s", err)
 		return

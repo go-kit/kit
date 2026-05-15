@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -180,7 +179,7 @@ func EncodeJSONRequest(c context.Context, r *http.Request, request interface{}) 
 		}
 	}
 	var b bytes.Buffer
-	r.Body = ioutil.NopCloser(&b)
+	r.Body = io.NopCloser(&b)
 	return json.NewEncoder(&b).Encode(request)
 }
 
@@ -195,7 +194,7 @@ func EncodeXMLRequest(c context.Context, r *http.Request, request interface{}) e
 		}
 	}
 	var b bytes.Buffer
-	r.Body = ioutil.NopCloser(&b)
+	r.Body = io.NopCloser(&b)
 	return xml.NewEncoder(&b).Encode(request)
 }
 

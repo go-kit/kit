@@ -3,7 +3,7 @@ package http_test
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -83,7 +83,7 @@ func TestServerHappyPath(t *testing.T) {
 	step()
 	resp := <-response
 	defer resp.Body.Close()
-	buf, _ := ioutil.ReadAll(resp.Body)
+	buf, _ := io.ReadAll(resp.Body)
 	if want, have := http.StatusOK, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d (%s)", want, have, buf)
 	}
@@ -255,7 +255,7 @@ func TestEncodeJSONResponse(t *testing.T) {
 	if want, have := "Snowden", resp.Header.Get("X-Edward"); want != have {
 		t.Errorf("X-Edward: want %q, have %q", want, have)
 	}
-	buf, _ := ioutil.ReadAll(resp.Body)
+	buf, _ := io.ReadAll(resp.Body)
 	if want, have := `{"foo":"bar"}`, strings.TrimSpace(string(buf)); want != have {
 		t.Errorf("Body: want %s, have %s", want, have)
 	}
@@ -327,7 +327,7 @@ func TestAddMultipleHeadersErrorEncoder(t *testing.T) {
 			t.Errorf("Header: unexpected header %s: %v", k, expect[k])
 		}
 	}
-	if b, _ := ioutil.ReadAll(resp.Body); errStr != string(b) {
+	if b, _ := io.ReadAll(resp.Body); errStr != string(b) {
 		t.Errorf("ErrorEncoder: got: %q, expected: %q", b, errStr)
 	}
 }
@@ -353,7 +353,7 @@ func TestEncodeNoContent(t *testing.T) {
 	if want, have := http.StatusNoContent, resp.StatusCode; want != have {
 		t.Errorf("StatusCode: want %d, have %d", want, have)
 	}
-	buf, _ := ioutil.ReadAll(resp.Body)
+	buf, _ := io.ReadAll(resp.Body)
 	if want, have := 0, len(buf); want != have {
 		t.Errorf("Body: want no content, have %d bytes", have)
 	}
@@ -387,7 +387,7 @@ func TestEnhancedError(t *testing.T) {
 	if want, have := "1", resp.Header.Get("X-Enhanced"); want != have {
 		t.Errorf("X-Enhanced: want %q, have %q", want, have)
 	}
-	buf, _ := ioutil.ReadAll(resp.Body)
+	buf, _ := io.ReadAll(resp.Body)
 	if want, have := `{"err":"enhanced"}`, strings.TrimSpace(string(buf)); want != have {
 		t.Errorf("Body: want %s, have %s", want, have)
 	}

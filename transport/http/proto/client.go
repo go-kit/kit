@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -32,6 +32,6 @@ func EncodeProtoRequest(_ context.Context, r *http.Request, preq interface{}) er
 		return err
 	}
 	r.ContentLength = int64(len(b))
-	r.Body = ioutil.NopCloser(bytes.NewReader(b))
+	r.Body = io.NopCloser(bytes.NewReader(b))
 	return nil
 }
