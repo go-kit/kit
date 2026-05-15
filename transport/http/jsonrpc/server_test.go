@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -99,7 +98,7 @@ func TestServerBadDecode(t *testing.T) {
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	resp, _ := http.Post(server.URL, "application/json", addBody())
-	buf, _ := ioutil.ReadAll(resp.Body)
+	buf, _ := io.ReadAll(resp.Body)
 	if want, have := http.StatusOK, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d: %s", want, have, buf)
 	}
@@ -124,7 +123,7 @@ func TestServerBadEndpoint(t *testing.T) {
 	if want, have := http.StatusOK, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
-	buf, _ := ioutil.ReadAll(resp.Body)
+	buf, _ := io.ReadAll(resp.Body)
 	expectErrorCode(t, jsonrpc.InternalError, buf)
 	expectValidRequestID(t, 1, buf)
 }
@@ -144,7 +143,7 @@ func TestServerBadEncode(t *testing.T) {
 	if want, have := http.StatusOK, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
-	buf, _ := ioutil.ReadAll(resp.Body)
+	buf, _ := io.ReadAll(resp.Body)
 	expectErrorCode(t, jsonrpc.InternalError, buf)
 	expectValidRequestID(t, 1, buf)
 }
@@ -196,7 +195,7 @@ func TestCanRejectInvalidJSON(t *testing.T) {
 	if want, have := http.StatusOK, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
-	buf, _ := ioutil.ReadAll(resp.Body)
+	buf, _ := io.ReadAll(resp.Body)
 	expectErrorCode(t, jsonrpc.ParseError, buf)
 	expectNilRequestID(t, buf)
 }
@@ -210,7 +209,7 @@ func TestServerUnregisteredMethod(t *testing.T) {
 	if want, have := http.StatusOK, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d", want, have)
 	}
-	buf, _ := ioutil.ReadAll(resp.Body)
+	buf, _ := io.ReadAll(resp.Body)
 	expectErrorCode(t, jsonrpc.MethodNotFoundError, buf)
 }
 
@@ -219,7 +218,7 @@ func TestServerHappyPath(t *testing.T) {
 	step()
 	resp := <-response
 	defer resp.Body.Close() // nolint
-	buf, _ := ioutil.ReadAll(resp.Body)
+	buf, _ := io.ReadAll(resp.Body)
 	if want, have := http.StatusOK, resp.StatusCode; want != have {
 		t.Errorf("want %d, have %d (%s)", want, have, buf)
 	}

@@ -1,7 +1,7 @@
 package circuitbreaker_test
 
 import (
-	"io/ioutil"
+	"io"
 	stdlog "log"
 	"testing"
 	"time"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestHystrix(t *testing.T) {
-	stdlog.SetOutput(ioutil.Discard)
+	stdlog.SetOutput(io.Discard)
 
 	const (
 		commandName   = "my-endpoint"

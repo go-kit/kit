@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"sync/atomic"
@@ -179,7 +179,7 @@ func (c Client) Endpoint() endpoint.Endpoint {
 
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		var b bytes.Buffer
-		req.Body = ioutil.NopCloser(&b)
+		req.Body = io.NopCloser(&b)
 		err = json.NewEncoder(&b).Encode(rpcReq)
 		if err != nil {
 			return nil, err

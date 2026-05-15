@@ -2,7 +2,7 @@ package httprp_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -30,7 +30,7 @@ func TestServerHappyPathSingleServer(t *testing.T) {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
-	responseBody, _ := ioutil.ReadAll(resp.Body)
+	responseBody, _ := io.ReadAll(resp.Body)
 	if want, have := "hey", string(responseBody); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
@@ -68,7 +68,7 @@ func TestServerHappyPathSingleServerWithServerOptions(t *testing.T) {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
-	responseBody, _ := ioutil.ReadAll(resp.Body)
+	responseBody, _ := io.ReadAll(resp.Body)
 	if want, have := "hey", string(responseBody); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}
@@ -151,7 +151,7 @@ func TestMultipleServerBefore(t *testing.T) {
 		t.Errorf("want %d, have %d", want, have)
 	}
 
-	responseBody, _ := ioutil.ReadAll(resp.Body)
+	responseBody, _ := io.ReadAll(resp.Body)
 	if want, have := "hey", string(responseBody); want != have {
 		t.Errorf("want %q, have %q", want, have)
 	}

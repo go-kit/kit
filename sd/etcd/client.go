@@ -5,9 +5,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	etcd "go.etcd.io/etcd/client/v2"
@@ -81,7 +81,7 @@ func NewClient(ctx context.Context, machines []string, options ClientOptions) (C
 		if err != nil {
 			return nil, err
 		}
-		caCertCt, err := ioutil.ReadFile(options.CACert)
+		caCertCt, err := os.ReadFile(options.CACert)
 		if err != nil {
 			return nil, err
 		}
