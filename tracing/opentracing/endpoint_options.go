@@ -25,6 +25,10 @@ type EndpointOptions struct {
 	// GetTags is an optional function that can extract tags
 	// from the context and add them to the span.
 	GetTags func(ctx context.Context) opentracing.Tags
+
+	// SpanReferenceType defines the reference type used when creating a child span.
+	// Defaults to opentracing.ChildOf. Use opentracing.FollowsFrom for async operations.
+	SpanReferenceType opentracing.SpanReferenceType
 }
 
 // EndpointOption allows for functional options to endpoint tracing middleware.
@@ -70,5 +74,14 @@ func WithTags(tags opentracing.Tags) EndpointOption {
 func WithTagsFunc(getTags func(ctx context.Context) opentracing.Tags) EndpointOption {
 	return func(o *EndpointOptions) {
 		o.GetTags = getTags
+	}
+}
+
+// WithSpanReferenceType sets the reference type for span relationships
+// Use opentracing.ChildOf for synchronous operations (default)
+// Use opentracing.FollowsFrom for asynchronous operations (producer/consumer)
+func WithSpanReferenceType(spanReferenceType opentracing.SpanReferenceType) EndpointOption {
+	return func(o *EndpointOptions) {
+		o.SpanReferenceType = spanReferenceType
 	}
 }
