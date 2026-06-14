@@ -19,7 +19,8 @@ import (
 // If `ctx` doesn't yet have a Span, the new one is created.
 func TraceEndpoint(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
 	cfg := &EndpointOptions{
-		Tags: make(opentracing.Tags),
+		Tags:              make(opentracing.Tags),
+		SpanReferenceType: opentracing.ChildOfRef,
 	}
 
 	for _, opt := range opts {
@@ -35,11 +36,22 @@ func TraceEndpoint(tracer opentracing.Tracer, operationName string, opts ...Endp
 			}
 
 			var span opentracing.Span
+
 			if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
-				span = tracer.StartSpan(
-					operationName,
-					opentracing.ChildOf(parentSpan.Context()),
-				)
+				switch cfg.SpanReferenceType {
+				case opentracing.FollowsFromRef:
+					span = tracer.StartSpan(
+						operationName,
+						opentracing.FollowsFrom(parentSpan.Context()),
+					)
+				case opentracing.ChildOfRef:
+					fallthrough
+				default:
+					span = tracer.StartSpan(
+						operationName,
+						opentracing.ChildOf(parentSpan.Context()),
+					)
+				}
 			} else {
 				span = tracer.StartSpan(operationName)
 			}
@@ -98,7 +110,7 @@ func TraceEndpoint(tracer opentracing.Tracer, operationName string, opts ...Endp
 }
 
 // TraceServer returns a Middleware that wraps the `next` Endpoint in an
-// OpenTracing Span called `operationName` with server span.kind tag..
+// OpenTracing Span called `operationName` with server span.kind tag.
 func TraceServer(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
 	opts = append(opts, WithTags(map[string]interface{}{
 		otext.SpanKindRPCServer.Key: otext.SpanKindRPCServer.Value,
@@ -113,6 +125,32 @@ func TraceClient(tracer opentracing.Tracer, operationName string, opts ...Endpoi
 	opts = append(opts, WithTags(map[string]interface{}{
 		otext.SpanKindRPCClient.Key: otext.SpanKindRPCClient.Value,
 	}))
+
+	return TraceEndpoint(tracer, operationName, opts...)
+}
+
+// TraceProducer returns a Middleware that wraps the `next` Endpoint in an
+// OpenTracing Span called `operationName` with producer span.kind tag.
+func TraceProducer(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
+	opts = append(opts,
+		WithTags(map[string]interface{}{
+			otext.SpanKindProducer.Key: otext.SpanKindProducer.Value,
+		}),
+		WithSpanReferenceType(opentracing.FollowsFromRef),
+	)
+
+	return TraceEndpoint(tracer, operationName, opts...)
+}
+
+// TraceConsumer returns a Middleware that wraps the `next` Endpoint in an
+// OpenTracing Span called `operationName` with consumer span.kind tag.
+func TraceConsumer(tracer opentracing.Tracer, operationName string, opts ...EndpointOption) endpoint.Middleware {
+	opts = append(opts,
+		WithTags(map[string]interface{}{
+			otext.SpanKindConsumer.Key: otext.SpanKindConsumer.Value,
+		}),
+		WithSpanReferenceType(opentracing.FollowsFromRef),
+	)
 
 	return TraceEndpoint(tracer, operationName, opts...)
 }

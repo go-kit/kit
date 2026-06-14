@@ -403,3 +403,129 @@ func TestTraceClient(t *testing.T) {
 		t.Fatalf("Want %q, have %q", want, have)
 	}
 }
+
+func TestTraceProducer(t *testing.T) {
+	tracer := mocktracer.New()
+
+	// Empty/background context.
+	tracedEndpoint := kitot.TraceProducer(tracer, "testOp")(endpoint.Nop)
+	if _, err := tracedEndpoint(context.Background(), struct{}{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// tracedEndpoint created a new Span.
+	finishedSpans := tracer.FinishedSpans()
+	if want, have := 1, len(finishedSpans); want != have {
+		t.Fatalf("Want %v span(s), found %v", want, have)
+	}
+
+	span := finishedSpans[0]
+
+	if want, have := "testOp", span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := map[string]interface{}{
+		otext.SpanKindProducer.Key: otext.SpanKindProducer.Value,
+	}, span.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+}
+
+func TestTraceConsumer(t *testing.T) {
+	tracer := mocktracer.New()
+
+	// Empty/background context.
+	tracedEndpoint := kitot.TraceConsumer(tracer, "testOp")(endpoint.Nop)
+	if _, err := tracedEndpoint(context.Background(), struct{}{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// tracedEndpoint created a new Span.
+	finishedSpans := tracer.FinishedSpans()
+	if want, have := 1, len(finishedSpans); want != have {
+		t.Fatalf("Want %v span(s), found %v", want, have)
+	}
+
+	span := finishedSpans[0]
+
+	if want, have := "testOp", span.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := map[string]interface{}{
+		otext.SpanKindConsumer.Key: otext.SpanKindConsumer.Value,
+	}, span.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+}
+
+func TestTraceProducerFollowsFromRef(t *testing.T) {
+	tracer := mocktracer.New()
+
+	// Initialize the ctx with a parent Span.
+	parentSpan := tracer.StartSpan("parent").(*mocktracer.MockSpan)
+	defer parentSpan.Finish()
+	ctx := opentracing.ContextWithSpan(context.Background(), parentSpan)
+
+	tracedEndpoint := kitot.TraceProducer(tracer, "testOp")(endpoint.Nop)
+	if _, err := tracedEndpoint(ctx, struct{}{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// tracedEndpoint created a new Span.
+	finishedSpans := tracer.FinishedSpans()
+	if want, have := 1, len(finishedSpans); want != have {
+		t.Fatalf("Want %v span(s), found %v", want, have)
+	}
+
+	endpointSpan := finishedSpans[0]
+	if want, have := "testOp", endpointSpan.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := map[string]interface{}{
+		otext.SpanKindProducer.Key: otext.SpanKindProducer.Value,
+	}, endpointSpan.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := parentSpan.SpanContext.SpanID, endpointSpan.ParentID; want != have {
+		t.Errorf("Want ParentID %q, have %q", want, have)
+	}
+}
+
+func TestTraceConsumerFollowsFromRef(t *testing.T) {
+	tracer := mocktracer.New()
+
+	// Initialize the ctx with a parent Span.
+	parentSpan := tracer.StartSpan("parent").(*mocktracer.MockSpan)
+	defer parentSpan.Finish()
+	ctx := opentracing.ContextWithSpan(context.Background(), parentSpan)
+
+	tracedEndpoint := kitot.TraceConsumer(tracer, "testOp")(endpoint.Nop)
+	if _, err := tracedEndpoint(ctx, struct{}{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// tracedEndpoint created a new Span.
+	finishedSpans := tracer.FinishedSpans()
+	if want, have := 1, len(finishedSpans); want != have {
+		t.Fatalf("Want %v span(s), found %v", want, have)
+	}
+
+	endpointSpan := finishedSpans[0]
+	if want, have := "testOp", endpointSpan.OperationName; want != have {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := map[string]interface{}{
+		otext.SpanKindConsumer.Key: otext.SpanKindConsumer.Value,
+	}, endpointSpan.Tags(); fmt.Sprint(want) != fmt.Sprint(have) {
+		t.Fatalf("Want %q, have %q", want, have)
+	}
+
+	if want, have := parentSpan.SpanContext.SpanID, endpointSpan.ParentID; want != have {
+		t.Errorf("Want ParentID %q, have %q", want, have)
+	}
+}
