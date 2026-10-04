@@ -22,6 +22,7 @@ type Request struct {
 // The value SHOULD normally not be Null and
 // Numbers SHOULD NOT contain fractional parts.
 type RequestID struct {
+	number      json.Number
 	intValue    int
 	intError    error
 	floatValue  float32
@@ -40,11 +41,18 @@ func (id *RequestID) UnmarshalJSON(b []byte) error {
 	id.intError = json.Unmarshal(b, &id.intValue)
 	id.floatError = json.Unmarshal(b, &id.floatValue)
 	id.stringError = json.Unmarshal(b, &id.stringValue)
+	id.number = ""
+	if id.stringError != nil {
+		_ = json.Unmarshal(b, &id.number)
+	}
 
 	return nil
 }
 
 func (id *RequestID) MarshalJSON() ([]byte, error) {
+	if id.number != "" {
+		return json.Marshal(id.number)
+	}
 	if id.intError == nil {
 		return json.Marshal(id.intValue)
 	} else if id.floatError == nil {
